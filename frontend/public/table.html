@@ -2583,30 +2583,17 @@ function drawQR(canvas, text, size) {
       colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     });
-    // qrcodejs creates an img inside tmp — draw it onto our canvas
-    const img = tmp.querySelector('img') || tmp.querySelector('canvas');
-    if (img) {
+    // give qrcodejs time to finish rendering the img
+    setTimeout(() => {
+      const img = tmp.querySelector('img') || tmp.querySelector('canvas');
+      if (!img) { if (tmp.parentNode) document.body.removeChild(tmp); drawQRFallback(canvas, text, size); return; }
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
-      if (img.tagName === 'CANVAS') {
-        ctx.drawImage(img, 0, 0, size, size);
-        document.body.removeChild(tmp);
-      } else {
-        if (img.complete) {
-          ctx.drawImage(img, 0, 0, size, size);
-          if (tmp.parentNode) document.body.removeChild(tmp);
-        } else {
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0, size, size);
-            if (tmp.parentNode) document.body.removeChild(tmp);
-          };
-        }
-      }
-    } else {
-      document.body.removeChild(tmp);
-      drawQRFallback(canvas, text, size);
-    }
+      const draw = () => { ctx.drawImage(img, 0, 0, size, size); if (tmp.parentNode) document.body.removeChild(tmp); };
+      if (img.tagName === 'CANVAS' || img.complete) { draw(); }
+      else { img.onload = draw; img.onerror = () => { if (tmp.parentNode) document.body.removeChild(tmp); drawQRFallback(canvas, text, size); }; }
+    }, 100);
   } catch(e) {
     console.warn('QR error:', e);
     drawQRFallback(canvas, text, size);
