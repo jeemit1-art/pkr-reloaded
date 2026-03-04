@@ -115,8 +115,8 @@ export default function EventPage() {
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
         <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px',height:56,display:'flex',alignItems:'center',gap:12}}>
           <button onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
-          <div style={{flex:1}}>
-            <div className="display" style={{fontSize:20,color:'var(--white)',fontWeight:500}}>{event.name}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
           </div>
           {/* Push bell */}
           {canUsePush() && (
@@ -133,8 +133,6 @@ export default function EventPage() {
             <div style={{display:'flex',gap:6}}>
               <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
               <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
-              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
-              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
             </div>
           )}
         </div>
@@ -179,6 +177,12 @@ export default function EventPage() {
         {/* ── Games tab ── */}
         {tab==='games' && (
           <div>
+            {isHost && (
+              <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
+              </div>
+            )}
             {upcoming.length===0 && settled.length===0 && (
               <div className="empty-state">
                 <div className="empty-state-icon">♠</div>
