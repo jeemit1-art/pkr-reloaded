@@ -366,7 +366,7 @@ html,body{
 <!-- GAME SCREEN -->
 <div id="gameScreen" class="screen" hidden>
   <div class="topbar">
-    <button class="tb-back" id="backBtn" onclick="window._pkrBack()">‹ PKR</button>
+    <button class="tb-back" id="backBtn" onclick="window._pkrBack ? window._pkrBack() : renderHome()">‹ PKR</button>
     <div style="display:flex;flex-direction:column;flex:1">
       <div class="tb-title" id="topbarTitle">The Table</div>
       <div id="gameCodeBadge" style="display:none;font-size:0.88rem;color:var(--gold);letter-spacing:2.5px;font-weight:700;line-height:1;padding-left:12px"></div>
@@ -1545,10 +1545,10 @@ async function confirmNewGame() {
           '<span style="font-size:1rem">⚠️</span>' +
           '<div style="flex:1;font-size:0.82rem;color:#d4c4a0;line-height:1.4">' +
             '<strong style="color:#ff9f43">Not linked to PKR.</strong> ' +
-            "This game won't appear on your event leaderboard. " +
+            'This game won't appear on your event leaderboard. ' +
             '<a href="/dashboard" style="color:var(--gold);text-decoration:underline">Open PKR</a> and start the game from there to sync results.' +
           '</div>' +
-          '<button onclick="document.getElementById(&apos;pkrUnlinkedBanner&apos;).remove()" ' +
+          '<button onclick="document.getElementById('pkrUnlinkedBanner').remove()" ' +
             'style="background:none;border:none;color:#6b5a4e;font-size:1.1rem;cursor:pointer;padding:2px 6px">✕</button>';
         document.body.prepend(banner);
       }, 800);
@@ -1906,8 +1906,9 @@ function endGame() {
     stopSyncPolling();
     setCloudRole(null, null, null);
     state.game = null; state.players = {};
-    saveState(); renderHome();
+    saveState();
     toast('Game ended — results saved ✓');
+    setTimeout(function(){ if(window._pkrBack) window._pkrBack(); else renderHome(); }, 800);
   });
   noBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -3615,7 +3616,7 @@ async function showSeatClaimScreen(code) {
     renderSeatClaimScreen(code, data);
   } catch(e) {
     document.getElementById('liveInner').innerHTML =
-      '<div style="text-align:center;padding:60px 32px;color:var(--red)">Game not found.<br><br><a href="javascript:void(0)" onclick="window._pkrBack()" style="color:var(--gold)">← PKR</a></div>';
+      '<div style="text-align:center;padding:60px 32px;color:var(--red)">Game not found.<br><br><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold)">← PKR</a></div>';
   }
 }
 
@@ -3971,7 +3972,7 @@ async function autoJoinGroup(groupId) {
       }
     }
   } catch(e) {
-    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px 32px"><div style="font-size:0.9rem;color:var(--red);margin-bottom:16px">Group not found.</div><a href="javascript:void(0)" onclick="window._pkrBack()" style="color:var(--gold);font-size:0.82rem">← PKR</a></div>';
+    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px 32px"><div style="font-size:0.9rem;color:var(--red);margin-bottom:16px">Group not found.</div><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold);font-size:0.82rem">← PKR</a></div>';
   }
 }
 
@@ -3989,7 +3990,7 @@ async function autoJoinGame(code) {
     // Show join screen to get their name + enable notifications
     showJoinPrompt(code, data.gameName);
   } catch(e) {
-    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);font-size:0.9rem">Game not found.<br><br><a href="javascript:void(0)" onclick="window._pkrBack()" style="color:var(--gold)">← PKR</a></div>';
+    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);font-size:0.9rem">Game not found.<br><br><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold)">← PKR</a></div>';
   }
 }
 
@@ -4345,8 +4346,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 (function() {
 
-  window._pkrBack = function(){try{var c=JSON.parse(localStorage.getItem("pkrCtx")||"null");if(c&&c.eventId){window.location.href="/events/"+c.eventId;return;}}catch(e){}window.location.href="/dashboard";};
-function getPkrCtx() {
+  function getPkrCtx() {
     try { return JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) { return null; }
   }
 
