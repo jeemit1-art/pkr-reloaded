@@ -7,7 +7,6 @@ const auth = new Hono<{ Bindings: Env }>();
 
 auth.get('/google', async (c) => {
   const state = generateId();
-  await c.env.KV.put(`oauth_state:${state}`, '1', { expirationTtl: 300 });
   const params = new URLSearchParams({
     client_id:    c.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${new URL(c.req.url).origin}/auth/callback`,
@@ -24,9 +23,6 @@ auth.get('/callback', async (c) => {
   const { code, state, error } = c.req.query();
   const front = c.env.FRONTEND_URL;
   if (error || !code || !state) return c.redirect(`${front}/?error=oauth_denied`);
-  const valid = await c.env.KV.get(`oauth_state:${state}`);
-  if (!valid) return c.redirect(`${front}/?error=invalid_state`);
-  await c.env.KV.delete(`oauth_state:${state}`);
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method:'POST',
