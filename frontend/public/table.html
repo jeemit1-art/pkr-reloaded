@@ -3615,7 +3615,7 @@ async function showSeatClaimScreen(code) {
     renderSeatClaimScreen(code, data);
   } catch(e) {
     document.getElementById('liveInner').innerHTML =
-      '<div style="text-align:center;padding:60px 32px;color:var(--red)">Game not found.<br><br><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold)">← PKR</a></div>';
+      '<div style="text-align:center;padding:60px 32px;color:var(--red)">Game not found.<br><br><a href="javascript:void(0)" onclick="window._pkrBack()" style="color:var(--gold)">← PKR</a></div>';
   }
 }
 
@@ -4345,7 +4345,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 (function() {
 
-  function getPkrCtx() {
+  window._pkrBack = function(){try{var c=JSON.parse(localStorage.getItem("pkrCtx")||"null");if(c&&c.eventId){window.location.href="/events/"+c.eventId;return;}}catch(e){}window.location.href="/dashboard";};
+function getPkrCtx() {
     try { return JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) { return null; }
   }
 
