@@ -52,14 +52,24 @@ events.get('/invite/:token', authMiddleware, async (c) => {
     await c.env.DB.prepare('UPDATE event_members SET role=? WHERE event_id=? AND user_id=?').bind(role,eventId,userId).run();
   }
   await c.env.KV.delete(`invite:${token}`);
-  const event = await c.env.DB.prepare('SELECT * FROM events WHERE id=?').bind(eventId).first();
+  const event = await c.env.DB.prepare(`
+    SELECT e.*,
+      (SELECT COUNT(*) FROM event_members WHERE event_id=e.id) as member_count,
+      (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
+    FROM events e WHERE e.id=?
+  `).bind(eventId).first();
   return c.json({ok:true,event,role});
 });
 
 events.get('/:id', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
-  const event = await c.env.DB.prepare('SELECT * FROM events WHERE id=?').bind(eventId).first();
+  const event = await c.env.DB.prepare(`
+    SELECT e.*,
+      (SELECT COUNT(*) FROM event_members WHERE event_id=e.id) as member_count,
+      (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
+    FROM events e WHERE e.id=?
+  `).bind(eventId).first();
   if (!event) return c.json({error:'Not found'},404);
   const members = await c.env.DB.prepare(`
     SELECT u.id,u.name,u.avatar_url,u.email,em.role,em.joined_at
