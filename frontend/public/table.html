@@ -1186,7 +1186,7 @@ function renderTab() {
 function renderGamesTab(body) {
   // If currently in a game, show game view (existing behaviour)
   if (state.game) {
-    _renderGamesTabWithGame(body);
+    openGame();
     return;
   }
 
