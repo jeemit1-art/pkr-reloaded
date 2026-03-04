@@ -59,7 +59,7 @@ auth.get('/callback', async (c) => {
 
   // ── Store JWT under a short-lived one-time code (30s) instead of passing it in URL ──
   const loginCode = generateId();
-  await c.env.KV.put(`login_code:${loginCode}`, jwt, { expirationTtl: 30 });
+  await c.env.KV.put(`login_code:${loginCode}`, jwt, { expirationTtl: 60 });
 
   const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
   // Pass a short-lived code — dashboard exchanges it for the real JWT
