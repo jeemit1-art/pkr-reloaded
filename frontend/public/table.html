@@ -2843,7 +2843,7 @@ function _doOpenSettleUp(players) {
         pkrSaveBtn.textContent = 'Saving…'; pkrSaveBtn.disabled = true;
         try {
           if (window.recordStats) window.recordStats();
-          await syncSettleToPkr();
+          await window.syncSettleToPkr();
           overlay.remove();
           if (window.stopSyncPolling) window.stopSyncPolling();
           if (window.setCloudRole) window.setCloudRole(null,null,null);
@@ -2924,7 +2924,7 @@ function _doOpenPublish(players) {
         pkrPublishBtn.textContent = 'Saving to PKR…'; pkrPublishBtn.disabled = true;
         try {
           if (window.recordStats) window.recordStats();
-          await syncSettleToPkr();
+          await window.syncSettleToPkr();
           closePublish();
           if (window.stopSyncPolling) window.stopSyncPolling();
           if (window.setCloudRole) window.setCloudRole(null,null,null);
@@ -4449,7 +4449,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ── Settle ────────────────────────────────────────────────────────────────
-  async function syncSettleToPkr() {
+  window.syncSettleToPkr = async function syncSettleToPkr() {
     var ctx = getPkrCtx();
     if (!ctx || !ctx.gameId) return false;
     if (!window.state || !window.state.players) return false;
@@ -4732,7 +4732,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.textContent = 'Saving…'; btn.disabled = true;
         try { if (window.recordStats) window.recordStats(); } catch(e) {}
         try {
-          await syncSettleToPkr();
+          await window.syncSettleToPkr();
         } catch(e) {
           btn.textContent = 'Retry'; btn.disabled = false;
           var old = box.querySelector('.pkr-err'); if (old) old.remove();
