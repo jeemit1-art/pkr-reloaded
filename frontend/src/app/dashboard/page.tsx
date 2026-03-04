@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, User, Event, fmt, saveToken, clearToken } from '@/lib/api';
+import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
 
 function DashboardInner() {
   const router = useRouter();
@@ -37,8 +37,11 @@ function DashboardInner() {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
           const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
           if (res.ok) { const { token } = await res.json(); if (token) saveToken(token); }
-        } catch(e) { console.error('Token exchange failed', e); }
+          else { router.push('/'); return; }
+        } catch(e) { console.error('Token exchange failed', e); router.push('/'); return; }
         window.history.replaceState({},'','/dashboard');
+      } else if (!getToken()) {
+        router.push('/'); return;
       }
       try {
         const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);
