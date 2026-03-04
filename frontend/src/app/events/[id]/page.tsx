@@ -1,4 +1,3 @@
-// cache-bust-v3
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -9,24 +8,24 @@ type Tab = 'games' | 'leaderboard' | 'history';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
-  const params = useParams(); const id = params.id as string;
+  const { id } = useParams<{id:string}>();
   const router  = useRouter();
-  const [event, setEvent]     = useState(null as EventDetail|null);
-  const [games, setGames]     = useState([] as Game[]);
-  const [history, setHistory] = useState([] as Game[]);
-  const [leaders, setLeaders] = useState([] as LeaderboardEntry[]);
-  const [tab, setTab]         = useState('games' as Tab);
+  const [event, setEvent]     = useState<EventDetail|null>(null);
+  const [games, setGames]     = useState<Game[]>([]);
+  const [history, setHistory] = useState<Game[]>([]);
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [tab, setTab]         = useState<Tab>('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState(null as any);
+  const [user, setUser]       = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null as string|null);
-  const [selectedPlayer, setSelectedPlayer] = useState(null as string|null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [inviteRole, setInviteRole] = useState('cohost' as InviteRole);
+  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -90,7 +89,7 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
-  if (!event) return <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{color:"var(--gold)",fontSize:32}}>♠</div></div>;
+  if (!event) return <Loader/>;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
