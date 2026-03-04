@@ -164,7 +164,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {(['games','leaderboard','history']).map(t=>(
+          {TABS.map((t)=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
