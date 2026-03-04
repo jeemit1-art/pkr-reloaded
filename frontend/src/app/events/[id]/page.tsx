@@ -8,24 +8,24 @@ type Tab = 'games' | 'leaderboard' | 'history';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
-  const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
+  const { id } = useParams<{id:string}>();
   const router  = useRouter();
-  const [event, setEvent]     = useState(null as any);
-  const [games, setGames]     = useState([] as any[]);
-  const [history, setHistory] = useState([] as any[]);
-  const [leaders, setLeaders] = useState([] as any[]);
-  const [tab, setTab]         = useState('games');
+  const [event, setEvent]     = useState<EventDetail|null>(null);
+  const [games, setGames]     = useState<Game[]>([]);
+  const [history, setHistory] = useState<Game[]>([]);
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [tab, setTab]         = useState<Tab>('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser] = useState(null as any);
+  const [user, setUser]       = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null as any);
-  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [inviteRole, setInviteRole] = useState('cohost');
+  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -34,13 +34,13 @@ export default function EventPage() {
 
   useEffect(()=>{
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
-      setEvent(e as any); setUser(u as any);
+      setEvent(e); setUser(u);
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
     }).catch(()=>router.push('/dashboard'));
-    api.games.list(id).then((g:any)=>setGames(g));
-    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
-    api.events.history(id).then((h:any)=>setHistory(h));
+    api.games.list(id).then(setGames);
+    api.events.leaderboard(id).then(setLeaders);
+    api.events.history(id).then(setHistory);
   },[id]);
 
   useEffect(()=>{
@@ -59,7 +59,7 @@ export default function EventPage() {
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
       });
-      setGames((gs:any[])=>[g,...gs]);
+      setGames(gs=>[g,...gs]);
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
     } catch(e:any){ alert(e.message); }
@@ -89,7 +89,7 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
-  const ev = event as any; if (!ev) return <Loader/>;
+  if (!event) return <Loader/>;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
@@ -102,8 +102,6 @@ export default function EventPage() {
     scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
     settled:'var(--muted)', cancelled:'var(--red)',
   };
-
-  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
 
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
@@ -164,7 +162,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {TABS.map((t)=>(
+          {(['games','leaderboard','history']).map(t=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
@@ -201,7 +199,7 @@ export default function EventPage() {
                         {(g as any).format && (g as any).format !== 'cash' && (
                           <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
                             letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format)}
+                            {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[(g as any).format] || (g as any).format}
                           </span>
                         )}
                       </div>
@@ -312,7 +310,7 @@ export default function EventPage() {
               <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
                 {confirmDelete.endsWith(':delete')
                   ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
-                  : "This marks the game as cancelled. It will stay in history but won't affect the leaderboard."}
+                  : 'This marks the game as cancelled. It will stay in history but won't affect the leaderboard.'}
               </div>
             </div>
             <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
@@ -325,7 +323,7 @@ export default function EventPage() {
                     await api.games.delete(gameId);
                     setHistory(h=>h.filter(x=>x.id!==gameId));
                     setGames(gs=>gs.filter(g=>g.id!==gameId));
-                    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
+                    api.events.leaderboard(id).then(setLeaders);
                   } else {
                     await api.games.cancel(gameId);
                     setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
@@ -500,7 +498,7 @@ export default function EventPage() {
         <QuickSeatModal
           gameId={quickSeatGameId}
           onClose={()=>setShowQuickSeat(false)}
-          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then((g:any)=>setGames(g)); }}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
         />
       )}
     </div>
@@ -512,7 +510,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
-  const [seated, setSeated] = useState([] as any[]);
+  const [seated, setSeated] = useState<string[]>([]);
 
   async function seat() {
     if (!name.trim()) return;
@@ -591,7 +589,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:{game:Game;
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
               background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
-              {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
+              {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[String((game as any).format)] || (game as any).format}
             </span>
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>

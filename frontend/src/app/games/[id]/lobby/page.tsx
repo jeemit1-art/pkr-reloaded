@@ -80,6 +80,7 @@ export default function LobbyPage() {
   if (!data) return <Loader />;
 
   const { game, event, rsvps, players } = data;
+  const gameWithToken = game as typeof game & { live_token?: string; lobby_views?: number; format?: string };
   const yesCount = rsvps.filter(r => r.status === 'yes').length;
   const maybeCount = rsvps.filter(r => r.status === 'maybe').length;
   const isLive = game.status === 'active' || game.status === 'settled';
@@ -115,7 +116,8 @@ export default function LobbyPage() {
               {label:'Seats', value:game.seats, color:'var(--white)'},
               {label:'Attending', value:yesCount, color:'var(--green)'},
               {label:'Maybe', value:maybeCount, color:'var(--amber)'},
-            ].map(s=>(
+              ...(gameWithToken.lobby_views ? [{label:'Link Opens', value:gameWithToken.lobby_views, color:'var(--faint)'}] : []),
+            ].map((s:any)=>(
               <div key={s.label}>
                 <div className="display" style={{fontSize:20,color:s.color,fontWeight:500,lineHeight:1}}>{s.value}</div>
                 <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',marginTop:3,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.label}</div>
@@ -270,12 +272,15 @@ export default function LobbyPage() {
           </div>
         )}
 
-        {/* Live banner */}
-        {isLive && (
+        {/* Fix #3: Live game — show scorecard inline for late arrivals */}
+        {game.status === 'active' && (
+          <LiveScoreboard gameId={id} liveToken={gameWithToken.live_token} />
+        )}
+        {game.status === 'settled' && (
           <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:3,
             padding:'12px 16px',marginBottom:16,textAlign:'center'}}>
-            <span style={{fontSize:13,color:'var(--gold)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
-              {game.status === 'active' ? '🟢 Game is Live' : '✅ Game Settled'}
+            <span style={{fontSize:13,color:'var(--green)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
+              ✅ Game Settled
             </span>
           </div>
         )}
@@ -386,6 +391,77 @@ function Loader() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.5}}>PKR</div>
+    </div>
+  );
+}
+
+// ── Fix #3: Inline live scoreboard shown to late arrivals on lobby page ──────
+function LiveScoreboard({ gameId, liveToken }: { gameId:string; liveToken?:string }) {
+  const [live, setLive] = useState<any>(null);
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  useEffect(()=>{
+    if (!liveToken) return;
+    api.games.live(liveToken).then(setLive).catch(()=>{});
+    const t = setInterval(()=>{ api.games.live(liveToken).then(setLive).catch(()=>{}); }, 8000);
+    return ()=>clearInterval(t);
+  },[liveToken]);
+
+  if (!liveToken) return null;
+
+  return (
+    <div style={{marginBottom:16}}>
+      <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:3,
+        padding:'10px 14px',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{width:7,height:7,borderRadius:'50%',background:'var(--green)',display:'inline-block',
+            boxShadow:'0 0 6px rgba(76,175,125,0.7)'}}/>
+          <span style={{fontSize:12,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+            Game is Live — Scores updating
+          </span>
+        </div>
+        <a href={`${appUrl}/games/live/${liveToken}`} style={{fontSize:10,color:'var(--muted)',textDecoration:'none',
+          fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.08em'}}>
+          Full view →
+        </a>
+      </div>
+
+      {live && (
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border-sub)',borderRadius:3,overflow:'hidden'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:0,
+            borderBottom:'1px solid var(--border-sub)'}}>
+            {[
+              {l:'Buy-ins', v:`$${(live.totalIn/100).toFixed(0)}`},
+              {l:'Cashouts', v:`$${(live.totalOut/100).toFixed(0)}`},
+              {l:'In Bank', v:`$${(live.bank/100).toFixed(0)}`},
+            ].map((s,i)=>(
+              <div key={s.l} style={{padding:'10px 8px',textAlign:'center',
+                borderRight:i<2?'1px solid var(--border-sub)':'none'}}>
+                <div style={{fontSize:15,color:'var(--white)',fontWeight:500,fontFamily:'var(--font-display),serif'}}>{s.v}</div>
+                <div style={{fontSize:9,color:'var(--faint)',textTransform:'uppercase',letterSpacing:'0.14em',
+                  fontFamily:'var(--font-body),sans-serif',marginTop:2}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          {[...live.players].sort((a:any,b:any)=>(b.buy_ins||0)-(a.buy_ins||0)).map((p:any,i:number)=>{
+            const net = p.cashout != null ? p.cashout - p.buy_ins : null;
+            return (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',
+                borderBottom:'1px solid var(--border-sub)'}}>
+                <span style={{fontSize:10,color:'var(--faint)',width:16,textAlign:'center'}}>{p.seat_number||i+1}</span>
+                <span style={{flex:1,fontSize:13,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
+                <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>×{p.buy_ins}</span>
+                {net!=null && (
+                  <span style={{fontSize:13,fontWeight:600,color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)',
+                    fontFamily:'var(--font-display),serif'}}>
+                    {net>0?'+':''}{(net/100).toFixed(0)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
