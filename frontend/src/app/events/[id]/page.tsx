@@ -8,24 +8,24 @@ type Tab = 'games' | 'leaderboard' | 'history';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
-  const { id } = useParams<{id:string}>();
+  const { id } = useParams();
   const router  = useRouter();
-  const [event, setEvent]     = useState<EventDetail|null>(null);
-  const [games, setGames]     = useState<Game[]>([]);
-  const [history, setHistory] = useState<Game[]>([]);
-  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
-  const [tab, setTab]         = useState<Tab>('games');
+  const [event, setEvent]     = useState(null);
+  const [games, setGames]     = useState([]);
+  const [history, setHistory] = useState([]);
+  const [leaders, setLeaders] = useState([]);
+  const [tab, setTab]         = useState('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState<any>(null);
+  const [user, setUser]       = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState(null); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
+  const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -103,6 +103,8 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
+  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
@@ -162,7 +164,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {(['games','leaderboard','history']).map(t=>(
+          {TABS.map((t)=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
@@ -199,7 +201,7 @@ export default function EventPage() {
                         {(g as any).format && (g as any).format !== 'cash' && (
                           <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
                             letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[(g as any).format] || (g as any).format}
+                            {String(({'tournament':'🏆 Tournament','rebuy':'♻️ Rebuy','freezeout':'❄️ Freezeout'})[(g as any).format] || (g as any).format)}
                           </span>
                         )}
                       </div>
@@ -310,7 +312,7 @@ export default function EventPage() {
               <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
                 {confirmDelete.endsWith(':delete')
                   ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
-                  : 'This marks the game as cancelled. It will stay in history but won't affect the leaderboard.'}
+                  : "This marks the game as cancelled. It will stay in history but won't affect the leaderboard."}
               </div>
             </div>
             <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
@@ -510,7 +512,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
-  const [seated, setSeated] = useState<string[]>([]);
+  const [seated, setSeated] = useState([]);
 
   async function seat() {
     if (!name.trim()) return;
@@ -589,7 +591,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:{game:Game;
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
               background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
-              {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[String((game as any).format)] || (game as any).format}
+              {String(({'tournament':'🏆 Tournament','rebuy':'♻️ Rebuy','freezeout':'❄️ Freezeout'})[(game as any).format] || (game as any).format)}
             </span>
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
