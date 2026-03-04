@@ -9,7 +9,7 @@ function urlB64ToUint8(b64:string):Uint8Array {
 
 /** Get or register the service worker — avoids .ready which hangs on iOS Safari */
 async function getSwReg():Promise<ServiceWorkerRegistration|null> {
-  if(!('serviceWorker' in navigator)) return null;
+  if(typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
     return (await navigator.serviceWorker.getRegistration())
       ?? await navigator.serviceWorker.register('/sw.js',{scope:'/'});
@@ -66,7 +66,7 @@ export async function subscribePush(eventId:string, userId?:string, displayName?
     if(!reg) return false;
     const {key} = await api.vapidKey();
     const sub = (await reg.pushManager.getSubscription()) ||
-      await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key)});
+      await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key).buffer});
     await api.events.subscribe(eventId, sub.toJSON() as any, userId, displayName);
     localStorage.setItem(`pkr_push_${eventId}`, sub.endpoint);
     return true;
