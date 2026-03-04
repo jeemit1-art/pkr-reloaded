@@ -89,14 +89,15 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
+  const isPWA      = useMemo(()=>isPWAInstalled(),[]);
+  const iosDevice  = useMemo(()=>isIOS(),[]);
+  const safariOnly = useMemo(()=>isSafari(),[]);
+
   if (!event) return null;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
   const installLink = appUrl;
-  const isPWA      = useMemo(()=>isPWAInstalled(),[]);
-  const iosDevice  = useMemo(()=>isIOS(),[]);
-  const safariOnly = useMemo(()=>isSafari(),[]);
 
   const statusColor:any = {
     scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
