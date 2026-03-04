@@ -566,7 +566,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:{game:Game;appUrl:string;eventName:string;isHost:boolean;onClick:()=>void;onQuickSeat:()=>void}) {
+function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
   const statusBg:Record<string,string> = {
