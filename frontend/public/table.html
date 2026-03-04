@@ -2585,13 +2585,14 @@ function drawQR(canvas, text, size) {
         ctx.drawImage(img, 0, 0, size, size);
         document.body.removeChild(tmp);
       } else {
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, size, size);
-          document.body.removeChild(tmp);
-        };
         if (img.complete) {
           ctx.drawImage(img, 0, 0, size, size);
-          document.body.removeChild(tmp);
+          if (tmp.parentNode) document.body.removeChild(tmp);
+        } else {
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, size, size);
+            if (tmp.parentNode) document.body.removeChild(tmp);
+          };
         }
       }
     } else {
