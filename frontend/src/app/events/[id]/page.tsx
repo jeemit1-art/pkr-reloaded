@@ -10,16 +10,16 @@ type InviteRole = 'cohost' | 'member';
 export default function EventPage() {
   const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
   const router  = useRouter();
-  const [event, setEvent]     = useState(null);
-  const [games, setGames]     = useState([]);
-  const [history, setHistory] = useState([]);
-  const [leaders, setLeaders] = useState([]);
+  const [event, setEvent]     = useState(null as any);
+  const [games, setGames]     = useState([] as any[]);
+  const [history, setHistory] = useState([] as any[]);
+  const [leaders, setLeaders] = useState([] as any[]);
   const [tab, setTab]         = useState('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState(null);
+  const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [selectedPlayer, setSelectedPlayer] = useState(null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState(null as any);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
@@ -34,7 +34,7 @@ export default function EventPage() {
 
   useEffect(()=>{
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
-      setEvent(e); setUser(u);
+      setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
     }).catch(()=>router.push('/dashboard'));
@@ -513,7 +513,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
-  const [seated, setSeated] = useState([]);
+  const [seated, setSeated] = useState([] as any[]);
 
   async function seat() {
     if (!name.trim()) return;
