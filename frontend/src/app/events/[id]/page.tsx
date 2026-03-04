@@ -11,16 +11,16 @@ type InviteRole = 'cohost' | 'member';
 export default function EventPage() {
   const params = useParams(); const id = params.id as string;
   const router  = useRouter();
-  const [event, setEvent]     = useState<EventDetail|null>(null);
-  const [games, setGames]     = useState<Game[]>([]);
-  const [history, setHistory] = useState<Game[]>([]);
-  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [event, setEvent]     = useState(null as EventDetail|null);
+  const [games, setGames]     = useState([] as Game[]);
+  const [history, setHistory] = useState([] as Game[]);
+  const [leaders, setLeaders] = useState([] as LeaderboardEntry[]);
   const [tab, setTab]         = useState<Tab>('games');
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser]       = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState(null as string|null);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as string|null); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
