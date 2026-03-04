@@ -1548,7 +1548,7 @@ async function confirmNewGame() {
             'This game won't appear on your event leaderboard. ' +
             '<a href="/dashboard" style="color:var(--gold);text-decoration:underline">Open PKR</a> and start the game from there to sync results.' +
           '</div>' +
-          '<button onclick="document.getElementById('pkrUnlinkedBanner').remove()" ' +
+          '<button onclick="document.getElementById(&apos;pkrUnlinkedBanner&apos;).remove()" ' +
             'style="background:none;border:none;color:#6b5a4e;font-size:1.1rem;cursor:pointer;padding:2px 6px">✕</button>';
         document.body.prepend(banner);
       }, 800);
