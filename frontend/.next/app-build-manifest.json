@@ -15,6 +15,13 @@
       "static/css/9e23aa823578605a.css",
       "static/chunks/app/layout-76355045b7c41fcd.js"
     ],
+    "/events/[id]/page": [
+      "static/chunks/webpack-93ffd2ad00bccab5.js",
+      "static/chunks/fd9d1056-966dd8faaf7d8e39.js",
+      "static/chunks/23-a40206637b3e3efd.js",
+      "static/chunks/main-app-f75f28d6a106ade8.js",
+      "static/chunks/app/events/[id]/page-d3ad355df932c4eb.js"
+    ],
     "/dashboard/page": [
       "static/chunks/webpack-93ffd2ad00bccab5.js",
       "static/chunks/fd9d1056-966dd8faaf7d8e39.js",
@@ -28,13 +35,6 @@
       "static/chunks/23-a40206637b3e3efd.js",
       "static/chunks/main-app-f75f28d6a106ade8.js",
       "static/chunks/app/games/[id]/lobby/page-281d87b3875c209e.js"
-    ],
-    "/events/[id]/page": [
-      "static/chunks/webpack-93ffd2ad00bccab5.js",
-      "static/chunks/fd9d1056-966dd8faaf7d8e39.js",
-      "static/chunks/23-a40206637b3e3efd.js",
-      "static/chunks/main-app-f75f28d6a106ade8.js",
-      "static/chunks/app/events/[id]/page-d3ad355df932c4eb.js"
     ],
     "/games/[id]/page": [
       "static/chunks/webpack-93ffd2ad00bccab5.js",

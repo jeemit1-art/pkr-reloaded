@@ -1,8 +1,8 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/events/[id]/page": "app/events/[id]/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/games/[id]/lobby/page": "app/games/[id]/lobby/page.js",
-  "/events/[id]/page": "app/events/[id]/page.js",
   "/games/[id]/page": "app/games/[id]/page.js",
   "/games/live/[token]/page": "app/games/live/[token]/page.js",
   "/games/results/[token]/page": "app/games/results/[token]/page.js",
