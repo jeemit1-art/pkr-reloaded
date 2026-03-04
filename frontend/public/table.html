@@ -353,7 +353,7 @@ html,body{
 <div id="homeScreen" class="screen">
   <div class="home-hdr">
     <div class="home-logo">♠ The Table</div>
-    <button class="home-plus" id="homeAddBtn" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}openNewGame();})()">+</button>
+    <button class="home-plus" id="homeAddBtn" onclick="window._pkrBack?window._pkrBack():openNewGame()">+</button>
   </div>
   <div class="home-body" id="homeBody"></div>
   <div class="home-tabs">
@@ -960,7 +960,7 @@ function handleGameEndedForPlayer(msg) {
            </div>`
         : `<div style="margin-bottom:28px"></div>`
       }
-      <button onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}currentTab='leaderboard';renderHome();})()" style="padding:13px 32px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);
+      <button onclick="window._pkrBack?window._pkrBack():(currentTab='leaderboard',renderHome())" style="padding:13px 32px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);
         color:#fff;border:none;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.88rem;
         font-weight:700;cursor:pointer">
         🏆 See Leaderboard
@@ -3070,7 +3070,7 @@ function renderInstallScreen(groupId, groupName, isIOS, isAndroid, isStandaloneN
       ` : ''}
 
       <div style="text-align:center;margin-top:8px">
-        <a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
+        <a href="javascript:void(0)" onclick="window._pkrBack?window._pkrBack():window.location.href='/dashboard'" style="font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
       </div>
     </div>`;
 
@@ -3280,7 +3280,7 @@ function renderInstallScreen(groupId, groupName, isIOS, isAndroid, isStandalone,
       ` : ''}
 
       <div style="text-align:center;margin-top:8px">
-        <a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
+        <a href="javascript:void(0)" onclick="window._pkrBack?window._pkrBack():window.location.href='/dashboard'" style="font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
       </div>
     </div>`;
 
@@ -3515,7 +3515,7 @@ async function renderPlayerDashboard(groupId, groupName, grp) {
         <button id="playerChangeNameBtn" style="padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:0.88rem;cursor:pointer">
           Change my name
         </button>
-        <a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="display:block;text-align:center;padding:12px;font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
+        <a href="javascript:void(0)" onclick="window._pkrBack?window._pkrBack():window.location.href='/dashboard'" style="display:block;text-align:center;padding:12px;font-size:0.82rem;color:var(--muted);text-decoration:none">← Back to PKR</a>
       </div>
     </div>`;
 
@@ -3990,7 +3990,7 @@ async function autoJoinGame(code) {
     // Show join screen to get their name + enable notifications
     showJoinPrompt(code, data.gameName);
   } catch(e) {
-    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);font-size:0.9rem">Game not found.<br><br><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold)">← PKR</a></div>';
+    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);font-size:0.9rem">Game not found.<br><br><a href="javascript:void(0)" onclick="window._pkrBack?window._pkrBack():window.location.href=&apos;/dashboard&apos;" style="color:var(--gold)">← PKR</a></div>';
   }
 }
 
