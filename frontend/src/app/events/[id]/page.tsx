@@ -90,7 +90,7 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
-  if (!event) return <Loader/>;
+  if (!event) return <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{color:"var(--gold)",fontSize:32}}>♠</div></div>;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
