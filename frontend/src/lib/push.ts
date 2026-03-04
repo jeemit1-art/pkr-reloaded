@@ -66,7 +66,7 @@ export async function subscribePush(eventId:string, userId?:string, displayName?
     if(!reg) return false;
     const {key} = await api.vapidKey();
     const sub = (await reg.pushManager.getSubscription()) ||
-      await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key)});
+      await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key).buffer as ArrayBuffer});
     await api.events.subscribe(eventId, sub.toJSON() as any, userId, displayName);
     localStorage.setItem(`pkr_push_${eventId}`, sub.endpoint);
     return true;
