@@ -187,7 +187,7 @@ export default function EventPage() {
               </div>
             )}
             {upcoming.map(g=>(
-              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}/>
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}} onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
             ))}
             {settled.length>0 && (
               <>
@@ -569,7 +569,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:any) {
+function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onDelete}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
   const statusBg:Record<string,string> = {
@@ -612,6 +612,16 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:any) {
               ⚡ Quick Seat
             </button>
           )}
+          {isHost && game.status==='scheduled' && (<>
+            <button onClick={(e)=>{e.stopPropagation();onCancel();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}>
+              Cancel
+            </button>
+            <button onClick={(e)=>{e.stopPropagation();onDelete();}}
+              className="btn btn-danger" style={{fontSize:10,padding:'5px 10px'}}>
+              Delete
+            </button>
+          </>)}
           <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'));}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
             📋 RSVP Link
