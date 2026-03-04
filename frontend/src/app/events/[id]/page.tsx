@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
@@ -94,9 +94,9 @@ export default function EventPage() {
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
   const installLink = appUrl;
-  const isPWA = isPWAInstalled();
-  const iosDevice = isIOS();
-  const safariOnly = isSafari();
+  const isPWA      = useMemo(()=>isPWAInstalled(),[]);
+  const iosDevice  = useMemo(()=>isIOS(),[]);
+  const safariOnly = useMemo(()=>isSafari(),[]);
 
   const statusColor:any = {
     scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
