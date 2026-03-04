@@ -10,7 +10,7 @@ type InviteRole = 'cohost' | 'member';
 export default function EventPage() {
   const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
   const router  = useRouter();
-  const [event, setEvent]     = useState(null);
+  const [event, setEvent]     = useState(null as any);
   const [games, setGames]     = useState([] as any[]);
   const [history, setHistory] = useState([] as any[]);
   const [leaders, setLeaders] = useState([] as any[]);
@@ -18,8 +18,8 @@ export default function EventPage() {
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser] = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [selectedPlayer, setSelectedPlayer] = useState(null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState(null as any);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
@@ -89,7 +89,7 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
-  if (!event) return <Loader/>;
+  const ev = event as any; if (!ev) return <Loader/>;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
