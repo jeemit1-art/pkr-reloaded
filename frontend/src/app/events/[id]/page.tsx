@@ -8,7 +8,7 @@ type Tab = 'games' | 'leaderboard' | 'history';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
-  const { id } = useParams();
+  const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
   const router  = useRouter();
   const [event, setEvent]     = useState(null);
   const [games, setGames]     = useState([]);
