@@ -60,9 +60,39 @@ auth.get('/callback', async (c) => {
   }
 
   const jwt = await signJWT({ sub:userId, email:gu.email, name:gu.name }, c.env.JWT_SECRET);
+
+  // ── Store JWT under a short-lived one-time code (30s) instead of passing it in URL ──
+  const loginCode = generateId();
+  await c.env.KV.put(`login_code:${loginCode}`, jwt, { expirationTtl: 30 });
+
   const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
-  // Pass token in URL for iOS Safari which blocks cross-domain cookies
-  return new Response(null, { status:302, headers:{ Location:`${front}/dashboard?token=${jwt}`, 'Set-Cookie':cookie } });
+  // Pass a short-lived code — dashboard exchanges it for the real JWT
+  return new Response(null, {
+    status: 302,
+    headers: { Location:`${front}/dashboard?code=${loginCode}`, 'Set-Cookie': cookie },
+  });
+});
+
+// Exchange one-time login code for JWT (called by dashboard on load)
+auth.get('/token', async (c) => {
+  const code = c.req.query('code');
+  if (!code) return c.json({ error: 'code required' }, 400);
+  const jwt = await c.env.KV.get(`login_code:${code}`);
+  if (!jwt) return c.json({ error: 'Invalid or expired code' }, 404);
+  await c.env.KV.delete(`login_code:${code}`);
+  return c.json({ token: jwt });
+});
+
+// Token refresh — issue new JWT if current one is valid
+auth.post('/refresh', authMiddleware, async (c) => {
+  const user = await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
+    .bind(c.get('userId')).first<{id:string; email:string; name:string}>();
+  if (!user) return c.json({ error: 'User not found' }, 404);
+  const jwt = await signJWT({ sub: user.id, email: user.email, name: user.name }, c.env.JWT_SECRET);
+  const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
+  return new Response(JSON.stringify({ token: jwt }), {
+    headers: { 'Content-Type':'application/json', 'Set-Cookie': cookie },
+  });
 });
 
 auth.get('/me', authMiddleware, async (c) => {

@@ -24,20 +24,32 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
-  const { scheduled_at, location, notes, seats, game_password } = await c.req.json();
+  const { scheduled_at, location, notes, seats, game_password, repeat, format } = await c.req.json();
   if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
   const id = generateId();
   const liveToken = generateId();
+  const gameFormat = ['cash','tournament','rebuy','freezeout'].includes(format) ? format : 'cash';
   await c.env.DB.prepare(
-    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
-  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled').run();
+    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat).run();
+
+  // ── Recurring: auto-schedule next game ──────────────────────────────────
+  if (repeat === 'weekly' || repeat === 'fortnightly') {
+    const offsetDays = repeat === 'weekly' ? 7 : 14;
+    const nextTs = scheduled_at + offsetDays * 24 * 60 * 60;
+    const nextId = generateId();
+    const nextToken = generateId();
+    await c.env.DB.prepare(
+      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat).run();
+  }
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
   const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
     title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
     body:`${dt}${location?' · '+location:''}`,
-    data:{ gameId:id, eventId, type:'game_scheduled' },
+    data:{ gameId:id, eventId, type:'game_scheduled', lobby_path:`/games/${id}/lobby` },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
   return c.json(game,201);
@@ -51,11 +63,12 @@ games.get('/games/:id', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too
   const transfers = game.status==='settled'
     ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
     : [];
-  return c.json({...game, players:players.results, rsvps:rsvps.results, transfers});
+  return c.json({...game, buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
 });
 
 /* ── Update game ── */
@@ -74,6 +87,17 @@ games.put('/games/:id', authMiddleware, async (c) => {
   ).bind(scheduled_at||null,location||null,notes||null,status||null,seats||null,game_password||null,gameId).run();
   const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
   return c.json(updated);
+});
+
+/* ── Cancel game (soft — keeps record, hides from active list) ── */
+games.post('/games/:id/cancel', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  if (game.status === 'settled') return c.json({error:'Cannot cancel a settled game'},400);
+  await c.env.DB.prepare("UPDATE games SET status='cancelled' WHERE id=?").bind(gameId).run();
+  return c.json({ok:true, message:'Game cancelled'});
 });
 
 /* ── Delete game (host only) ── */
@@ -97,9 +121,15 @@ games.delete('/games/:id', authMiddleware, async (c) => {
 games.get('/games/:id/lobby', async (c) => {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare(
-    'SELECT id,event_id,scheduled_at,location,notes,seats,status FROM games WHERE id=?'
+    'SELECT id,event_id,scheduled_at,location,notes,seats,status,live_token,format,lobby_views FROM games WHERE id=?'
   ).bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+
+  // ── Fix #4: Increment lobby view counter (fire and forget) ──────────────
+  c.executionCtx.waitUntil(
+    c.env.DB.prepare('UPDATE games SET lobby_views=COALESCE(lobby_views,0)+1 WHERE id=?').bind(gameId).run()
+  );
+
   const event   = await c.env.DB.prepare('SELECT id,name FROM events WHERE id=?').bind(game.event_id).first();
   const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
@@ -180,6 +210,15 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       c.env.DB.prepare("UPDATE games SET status='active' WHERE id=?").bind(gameId),
     ]);
     const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+
+    // Notify all subscribers that the game is live
+    const eventData = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+    c.executionCtx.waitUntil(sendPushToEvent(c.env, game.event_id, {
+      title: `🃏 ${eventData?.name||'PKR'} — Game is Live`,
+      body: `Cards are in the air. Good luck!`,
+      data: { gameId, eventId: game.event_id, type: 'game_started', live_token: game.live_token },
+    }));
+
     return c.json({ok:true, players:players.results});
   } catch(e:any) {
     return c.json({error: e.message||'Internal error'}, 500);
@@ -240,7 +279,7 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
       body: `Buy-in #${player.buy_ins} added to your seat.`,
-      data: { gameId, eventId: game.event_id, type: 'buyin' },
+      data: { gameId, eventId: game.event_id, type: 'buyin', live_token: game.live_token },
     }));
   }
   return c.json({ok:true, players:players.results});
@@ -266,7 +305,7 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData?.name||'PKR'}`,
       body: `Net result: ${netStr}. Check results when settled.`,
-      data: { gameId, eventId: game.event_id, type: 'cashout' },
+      data: { gameId, eventId: game.event_id, type: 'cashout', live_token: game.live_token },
     }));
   }
   return c.json({ok:true, players:players.results});
@@ -328,7 +367,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       INSERT INTO game_players(game_id,user_id,display_name,buy_ins,cashout,net,settled_at,created_at)
       VALUES(?,?,?,?,?,?,?,unixepoch())
       ON CONFLICT(game_id,user_id) DO UPDATE SET
-        cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+        buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
     `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout,p.net,now)),
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
@@ -349,7 +388,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   c.executionCtx.waitUntil(sendPushToEvent(c.env, game.event_id, {
     title:`✅ ${event?.name||'PKR'} — Game Settled`,
     body:'Results are in. Check the leaderboard!',
-    data:{ gameId, eventId:game.event_id, type:'game_settled' },
+    data:{ gameId, eventId:game.event_id, type:'game_settled', results_token:resultsToken },
   }));
 
   return c.json(payload,201);
@@ -447,7 +486,7 @@ function minimumTransfers(
   let i=0,j=0;
   while (i<debts.length && j<creds.length) {
     const amt = Math.min(debts[i].bal, creds[j].bal);
-    if (amt>0) out.push({from:debts[i].user_id,from_name:debts[i].display_name,to:creds[j].user_id,to_name:creds[j].display_name,amount:amt});
+    if (amt>=100) out.push({from:debts[i].user_id,from_name:debts[i].display_name,to:creds[j].user_id,to_name:creds[j].display_name,amount:amt}); // skip transfers under $1
     debts[i].bal-=amt; creds[j].bal-=amt;
     if (debts[i].bal===0) i++;
     if (creds[j].bal===0) j++;

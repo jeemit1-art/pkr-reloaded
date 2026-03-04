@@ -5,6 +5,7 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from 
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 
 type Tab = 'games' | 'leaderboard' | 'history';
+type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
   const { id } = useParams<{id:string}>();
@@ -17,10 +18,15 @@ export default function EventPage() {
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser]       = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showQuickSeat, setShowQuickSeat] = useState(false);
+  const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:''});
+  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
+  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -50,17 +56,21 @@ export default function EventPage() {
         scheduled_at:ts, location:form.location||undefined,
         notes:form.notes||undefined, seats:parseInt(form.seats)||9,
         game_password:form.game_password||undefined,
+        repeat: form.repeat !== 'none' ? form.repeat : undefined,
+        format: form.format,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
-      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:''});
+      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
     } catch(e:any){ alert(e.message); }
     finally { setSaving(false); }
   }
 
-  async function generateInvite() {
-    try { const r = await api.events.invite(id); setInviteUrl(r.url); setShowInvite(true); }
-    catch(e:any){ alert(e.message); }
+  async function generateInvite(role: InviteRole = 'cohost') {
+    try {
+      const r = await api.events.invite(id, role);
+      setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
+    } catch(e:any){ alert(e.message); }
   }
 
   async function togglePush() {
@@ -119,7 +129,8 @@ export default function EventPage() {
             <div style={{display:'flex',gap:6}}>
               <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
               <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
-              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={generateInvite}>Invite</button>
+              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
+              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
             </div>
           )}
         </div>
@@ -151,7 +162,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {(['games','leaderboard','history'] as Tab[]).map(t=>(
+          {(['games','leaderboard','history']).map(t=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
@@ -172,7 +183,7 @@ export default function EventPage() {
               </div>
             )}
             {upcoming.map(g=>(
-              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} onClick={()=>router.push(`/games/${g.id}`)}/>
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}/>
             ))}
             {settled.length>0 && (
               <>
@@ -185,6 +196,12 @@ export default function EventPage() {
                       <div style={{flex:1}}>
                         <div style={{fontSize:14,color:'var(--ivory)'}}>{fmtDate(g.scheduled_at)}</div>
                         {g.location && <div style={{fontSize:11,color:'var(--muted)'}}>{g.location}</div>}
+                        {(g as any).format && (g as any).format !== 'cash' && (
+                          <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
+                            letterSpacing:'0.08em',textTransform:'uppercase'}}>
+                            {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[(g as any).format] || (g as any).format}
+                          </span>
+                        )}
                       </div>
                       <span className="badge badge-settled">Settled</span>
                       <span style={{color:'var(--faint)',fontSize:16}}>›</span>
@@ -208,7 +225,11 @@ export default function EventPage() {
             {leaders.length>0 && (
               <div className="card">
                 {leaders.map((l,i)=>(
-                  <div key={l.user_id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<leaders.length-1?'1px solid var(--border-sub)':'none'}}>
+                  <div key={l.user_id} onClick={()=>setSelectedPlayer(l.display_name)}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<leaders.length-1?'1px solid var(--border-sub)':'none',
+                    cursor:'pointer',transition:'background 0.12s'}}
+                    onMouseEnter={e=>(e.currentTarget.style.background='rgba(201,168,76,0.04)')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='')}>
                     <div style={{width:28,textAlign:'center',fontSize:i<3?18:13,color:i===0?'var(--gold)':i===1?'var(--ivory)':i===2?'var(--amber)':'var(--faint)'}}>
                       {i===0?'♛':i===1?'♝':i===2?'♞':`${i+1}`}
                     </div>
@@ -223,6 +244,16 @@ export default function EventPage() {
                 ))}
               </div>
             )}
+
+            {/* Fix 8: Player drill-down — show their individual game history */}
+            {selectedPlayer && (
+              <PlayerHistoryCard
+                player={selectedPlayer}
+                history={history}
+                leader={leaders.find(l=>l.display_name===selectedPlayer)||null}
+                onClose={()=>setSelectedPlayer(null)}
+              />
+            )}
           </div>
         )}
 
@@ -232,19 +263,34 @@ export default function EventPage() {
             {history.length===0 && <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">No settled games yet.</div></div>}
             <div style={{display:'grid',gap:8}}>
               {history.map(g=>(
-                <div key={g.id} className="card" style={{display:'flex',alignItems:'center'}}>
-                  <div style={{flex:1,padding:'14px 16px',cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
-                    <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
-                    <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{g.location&&`${g.location} · `}{(g as any).player_count||0} players</div>
+                <div key={g.id} className="card">
+                  <div style={{padding:'14px 16px',cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:4}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
+                      <span className="badge badge-settled">{(g as any).player_count||0} players</span>
+                    </div>
+                    {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
+                    {((g as any).top_players||[]).length>0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {((g as any).top_players||[]).map((p:any,i:number)=>(
+                          <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
+                            background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
+                            border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
+                            <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}>{i===0?'♛':i===1?'♝':'♞'}</span>
+                            <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
+                            <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {isHost && (
-                    <button className="btn btn-danger" style={{margin:'0 12px',fontSize:11,padding:'5px 10px'}}
-                      onClick={async()=>{
-                        if(confirm('Delete this game record and recalculate the leaderboard?')){
-                          try { await api.games.delete(g.id); setHistory(h=>h.filter(x=>x.id!==g.id)); api.events.leaderboard(id).then(setLeaders); }
-                          catch(e:any){ alert(e.message); }
-                        }
-                      }}>Delete</button>
+                    <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
+                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
+                      <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
+                        onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -252,6 +298,45 @@ export default function EventPage() {
           </div>
         )}
       </div>
+
+      {/* Fix 6+10: Confirm delete/cancel modal */}
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
+          <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                {confirmDelete.endsWith(':delete') ? 'Delete Game?' : 'Cancel Game?'}
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                {confirmDelete.endsWith(':delete')
+                  ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
+                  : 'This marks the game as cancelled. It will stay in history but won't affect the leaderboard.'}
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmDelete(null)}>Keep it</button>
+              <button className="btn btn-danger" style={{fontSize:12}} onClick={async()=>{
+                const gameId = confirmDelete.replace(':delete','');
+                const isDelete = confirmDelete.endsWith(':delete');
+                try {
+                  if (isDelete) {
+                    await api.games.delete(gameId);
+                    setHistory(h=>h.filter(x=>x.id!==gameId));
+                    setGames(gs=>gs.filter(g=>g.id!==gameId));
+                    api.events.leaderboard(id).then(setLeaders);
+                  } else {
+                    await api.games.cancel(gameId);
+                    setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
+                  }
+                } catch(e:any){ alert(e.message); }
+                setConfirmDelete(null);
+              }}>
+                {confirmDelete.endsWith(':delete') ? 'Delete permanently' : 'Cancel game'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create game modal */}
       {showCreate && (
@@ -286,6 +371,39 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:6}}>Notes</div>
                 <input className="inp" placeholder="Optional" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/>
               </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Repeat</div>
+                <div style={{display:'flex',gap:6}}>
+                  {(['none','weekly','fortnightly']).map(r=>(
+                    <button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
+                        border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
+                      {r==='none'?'Once':r==='weekly'?'Weekly':'Fortnightly'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Format</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {([
+                    {v:'cash',       l:'💰 Cash'},
+                    {v:'tournament', l:'🏆 Tournament'},
+                    {v:'rebuy',      l:'♻️ Rebuy'},
+                    {v:'freezeout',  l:'❄️ Freezeout'},
+                  ]).map(f=>(
+                    <button key={f.v} onClick={()=>setForm(fm=>({...fm,format:f.v}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.format===f.v?'var(--gold)':'var(--bg3)',
+                        color:form.format===f.v?'#0e0e0f':'var(--muted)',
+                        border:form.format===f.v?'1px solid var(--gold)':'1px solid var(--border-sub)',
+                        fontFamily:'var(--font-body),sans-serif'}}>
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
@@ -301,7 +419,7 @@ export default function EventPage() {
       {showInvite && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
           <div className="modal-sheet">
-            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>Co-host Invite</div>
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
             <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
               {inviteUrl}
@@ -374,12 +492,80 @@ export default function EventPage() {
           </div>
         </div>
       )}
+
+      {/* ── Quick Seat Modal (#13) ── */}
+      {showQuickSeat && quickSeatGameId && (
+        <QuickSeatModal
+          gameId={quickSeatGameId}
+          onClose={()=>setShowQuickSeat(false)}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Quick Seat Modal ────────────────────────────────────────────────────────
+function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:()=>void; onSeated:()=>void }) {
+  const [name, setName] = useState('');
+  const [wa, setWa]     = useState('');
+  const [saving, setSaving] = useState(false);
+  const [seated, setSeated] = useState<string[]>([]);
+
+  async function seat() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await api.games.seat(gameId, { display_name: name.trim(), whatsapp: wa || undefined });
+      setSeated(s => [...s, name.trim()]);
+      setName(''); setWa('');
+    } catch(e:any) { alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-sheet">
+        <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>⚡ Quick Seat Players</div>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Add players before launching the table</div>
+
+        {seated.length > 0 && (
+          <div style={{marginBottom:14,display:'flex',flexWrap:'wrap',gap:6}}>
+            {seated.map((n,i) => (
+              <span key={i} style={{padding:'4px 10px',background:'rgba(76,175,125,0.1)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+                ✓ {n}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div style={{display:'grid',gap:10,marginBottom:14}}>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>Name *</div>
+            <input className="inp" placeholder="Player name" value={name} onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&seat()} autoFocus/>
+          </div>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>WhatsApp (optional)</div>
+            <input className="inp" placeholder="+61 400 000 000" type="tel" value={wa} onChange={e=>setWa(e.target.value)}/>
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-primary" style={{flex:1}} disabled={!name.trim()||saving} onClick={seat}>
+            {saving ? 'Seating…' : '+ Seat Player'}
+          </button>
+          <button className="btn btn-ghost" onClick={()=>{ onSeated(); }}>
+            {seated.length > 0 ? 'Done' : 'Cancel'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,onClick}:{game:Game;appUrl:string;eventName:string;onClick:()=>void}) {
+function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:{game:Game;appUrl:string;eventName:string;isHost:boolean;onClick:()=>void;onQuickSeat:()=>void}) {
   const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
   const statusBg:Record<string,string> = {
@@ -399,6 +585,13 @@ function GameCard({game,appUrl,eventName,onClick}:{game:Game;appUrl:string;event
           </div>
           {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>📍 {game.location}</div>}
           {game.notes && <div style={{fontSize:11,color:'var(--faint)',fontStyle:'italic'}}>{game.notes}</div>}
+          {(game as any).format && (game as any).format !== 'cash' && (
+            <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
+              letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
+              background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
+              {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[String((game as any).format)] || (game as any).format}
+            </span>
+          )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
             <span className={`badge badge-${game.status}`}>{game.status}</span>
             <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>{game.seats||9} seats</span>
@@ -409,6 +602,12 @@ function GameCard({game,appUrl,eventName,onClick}:{game:Game;appUrl:string;event
       {/* Quick share row */}
       {(game.status==='scheduled'||game.status==='lobby'||game.status==='active') && (
         <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
+          {isHost && (game.status==='scheduled'||game.status==='lobby') && (
+            <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
+              ⚡ Quick Seat
+            </button>
+          )}
           <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'));}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
             📋 RSVP Link
@@ -426,6 +625,56 @@ function GameCard({game,appUrl,eventName,onClick}:{game:Game;appUrl:string;event
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+
+function PlayerHistoryCard({ player, history, leader, onClose }: {
+  player: string;
+  history: any[];
+  leader: any;
+  onClose: () => void;
+}) {
+  const playerGames = history.filter((g:any)=>
+    (g.top_players||[]).some((p:any)=>p.display_name===player)
+  );
+  return (
+    <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
+      <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
+          {leader && (
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
+              {leader.games_played} games · {leader.games_won} wins · best {leader.biggest_win>0?'+':''}{(leader.biggest_win/100).toFixed(0)} · worst -{(leader.biggest_loss/100).toFixed(0)}
+            </div>
+          )}
+        </div>
+        <button onClick={onClose}
+          style={{background:'none',border:'none',color:'var(--faint)',fontSize:18,cursor:'pointer',padding:'2px 6px'}}>✕</button>
+      </div>
+      {playerGames.length===0 && (
+        <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
+      )}
+      {playerGames.map((g:any)=>{
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
+        const net = pp?.net ?? null;
+        return (
+          <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
+            borderBottom:'1px solid var(--border-sub)'}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif'}}>{new Date(g.scheduled_at*1000).toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'})}</div>
+              {g.location && <div style={{fontSize:10,color:'var(--faint)',marginTop:1}}>{g.location}</div>}
+            </div>
+            {net!==null && (
+              <div style={{fontSize:15,fontWeight:600,fontFamily:'serif',
+                color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)'}}>
+                {net>0?'+':''}{(net/100).toFixed(0)}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

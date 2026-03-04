@@ -4,6 +4,12 @@ import { authMiddleware, requireEventRole, generateId } from '../middleware';
 
 const events = new Hono<{ Bindings: Env }>();
 
+// ── Password hashing helper ──────────────────────────────────────────────────
+async function hashPassword(password: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
 events.get('/', authMiddleware, async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT e.*, em.role,
@@ -20,9 +26,10 @@ events.post('/', authMiddleware, async (c) => {
   const { name, description, buy_in, master_password } = await c.req.json();
   if (!name?.trim()) return c.json({error:'Name required'},400);
   const id = generateId();
+  const hashedPw = master_password ? await hashPassword(master_password) : null;
   await c.env.DB.batch([
     c.env.DB.prepare('INSERT INTO events(id,name,description,buy_in,host_id,master_password) VALUES(?,?,?,?,?,?)')
-      .bind(id,name.trim(),description||null,buy_in||0,userId,master_password||null),
+      .bind(id,name.trim(),description||null,buy_in||0,userId,hashedPw),
     c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)')
       .bind(id,userId,'host'),
   ]);
@@ -34,7 +41,7 @@ events.post('/', authMiddleware, async (c) => {
 events.get('/invite/:token', authMiddleware, async (c) => {
   const token = c.req.param('token');
   const raw = await c.env.KV.get(`invite:${token}`);
-  if (!raw) return c.json({error:'Invite expired or invalid'},404);
+  if (!raw) return c.json({error:'This invite link has expired or already been used. Ask the host to generate a new one.'},404);
   const { eventId, role } = JSON.parse(raw);
   const userId = c.get('userId');
   const existing = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
@@ -66,8 +73,9 @@ events.put('/:id', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
   const { name, description, buy_in, master_password } = await c.req.json();
+  const hashedPw = master_password ? await hashPassword(master_password) : null;
   await c.env.DB.prepare('UPDATE events SET name=?,description=?,buy_in=?,master_password=COALESCE(?,master_password) WHERE id=?')
-    .bind(name,description||null,buy_in||0,master_password||null,eventId).run();
+    .bind(name,description||null,buy_in||0,hashedPw,eventId).run();
   return c.json({ok:true});
 });
 
@@ -79,15 +87,33 @@ events.post('/:id/verify-password', authMiddleware, async (c) => {
   const event = await c.env.DB.prepare('SELECT master_password FROM events WHERE id=?').bind(eventId).first<{master_password:string|null}>();
   if (!event) return c.json({error:'Not found'},404);
   if (!event.master_password) return c.json({ok:true, required:false});
-  return c.json({ok: event.master_password === password, required:true});
+  const hashed = await hashPassword(password);
+  return c.json({ok: event.master_password === hashed, required:true});
 });
 
 events.post('/:id/invite', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'host')) return c.json({error:'Only host can invite'},403);
+  const body = await c.req.json().catch(()=>({})) as {role?:string};
+  const role = body.role === 'member' ? 'member' : 'cohost';
   const token = generateId();
-  await c.env.KV.put(`invite:${token}`, JSON.stringify({eventId,role:'cohost'}), {expirationTtl:60*60*48});
-  return c.json({ token, url:`${c.env.FRONTEND_URL}/invite/${token}`, expires_in:'48h' });
+  const expiresAt = Date.now() + 48*60*60*1000;
+  await c.env.KV.put(`invite:${token}`, JSON.stringify({eventId,role,expiresAt}), {expirationTtl:60*60*48});
+  return c.json({ token, url:`${c.env.FRONTEND_URL}/invite/${token}`, expires_in:'48h', expires_at:expiresAt, role });
+});
+
+// Member PIN join — player enters event PIN to access leaderboard/results without Google login
+events.post('/:id/join', async (c) => {
+  const eventId = c.req.param('id');
+  const { pin } = await c.req.json();
+  if (!pin) return c.json({error:'PIN required'},400);
+  const event = await c.env.DB.prepare('SELECT id,name,master_password FROM events WHERE id=?').bind(eventId).first<any>();
+  if (!event) return c.json({error:'Event not found'},404);
+  if (!event.master_password) return c.json({error:'This event has no PIN set'},400);
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  const hashed = Array.from(new Uint8Array(buf)).map((b:number)=>b.toString(16).padStart(2,'0')).join('');
+  if (hashed !== event.master_password) return c.json({error:'Incorrect PIN'},403);
+  return c.json({ok:true, event_id:eventId, event_name:event.name});
 });
 
 events.post('/:id/subscribe', async (c) => {
@@ -120,7 +146,7 @@ events.get('/:id/leaderboard', authMiddleware, async (c) => {
   return c.json(rows.results);
 });
 
-// Game history with player details
+// Game history with top 3 player results per game
 events.get('/:id/history', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
@@ -129,8 +155,19 @@ events.get('/:id/history', authMiddleware, async (c) => {
       (SELECT COUNT(*) FROM game_players WHERE game_id=g.id) as player_count
     FROM games g WHERE g.event_id=? AND g.status='settled'
     ORDER BY g.scheduled_at DESC
-  `).bind(eventId).all();
-  return c.json(games.results);
+  `).bind(eventId).all<any>();
+
+  // Attach top 3 players (by net) to each game
+  const result = await Promise.all(games.results.map(async (g: any) => {
+    const top = await c.env.DB.prepare(`
+      SELECT display_name, net FROM game_players
+      WHERE game_id=? AND net IS NOT NULL
+      ORDER BY net DESC
+    `).bind(g.id).all<{display_name:string; net:number}>();
+    return { ...g, top_players: top.results };
+  }));
+
+  return c.json(result);
 });
 
 // Known players for this event (for seat autocomplete)

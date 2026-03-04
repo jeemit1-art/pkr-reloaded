@@ -29,12 +29,24 @@ function DashboardInner() {
   }
 
   useEffect(()=>{
-    const token = searchParams.get('token');
-    if (token) { saveToken(token); window.history.replaceState({},'','/dashboard'); }
-    Promise.all([api.auth.me(), api.events.list()])
-      .then(([u,e])=>{ setUser(u); setEvents(e); })
-      .catch(()=>router.push('/'))
-      .finally(()=>setLoading(false));
+    async function init() {
+      const code = searchParams.get('code');
+      if (code) {
+        // Exchange one-time code for JWT (never stored full JWT in URL)
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+          const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
+          if (res.ok) { const { token } = await res.json(); if (token) saveToken(token); }
+        } catch(e) { console.error('Token exchange failed', e); }
+        window.history.replaceState({},'','/dashboard');
+      }
+      try {
+        const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);
+        setUser(u); setEvents(e);
+      } catch { router.push('/'); }
+      finally { setLoading(false); }
+    }
+    init();
   },[]);
 
   async function create() {

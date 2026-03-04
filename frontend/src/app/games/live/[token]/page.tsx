@@ -1,19 +1,40 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, LiveData, fmt, fmtSign, fmtDate } from '@/lib/api';
 
 export default function LivePage() {
   const { token } = useParams<{token:string}>();
-  const [data, setData]   = useState<LiveData|null>(null);
-  const [error, setError] = useState('');
+  const [data, setData]       = useState<LiveData|null>(null);
+  const [error, setError]     = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date|null>(null);
+  const [secsAgo, setSecsAgo] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
   useEffect(()=>{
-    const load = ()=>api.games.live(token).then(setData).catch(()=>setError('Table not found'));
+    async function load() {
+      try {
+        const d = await api.games.live(token);
+        setData(d);
+        setLastUpdated(new Date());
+        // Stop polling once settled
+        if (d.game.status === 'settled' && intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } catch { setError('Table not found'); }
+    }
     load();
-    const t = setInterval(load,5000);
-    return ()=>clearInterval(t);
+    intervalRef.current = setInterval(load, 5000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   },[token]);
+
+  // "X seconds ago" ticker
+  useEffect(()=>{
+    if (!lastUpdated) return;
+    const t = setInterval(()=> setSecsAgo(Math.floor((Date.now()-lastUpdated.getTime())/1000)), 1000);
+    return ()=>clearInterval(t);
+  },[lastUpdated]);
 
   if (error) return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -24,6 +45,9 @@ export default function LivePage() {
 
   const { game, event, players, totalIn, totalOut, bank } = data;
   const sorted = [...players].sort((a,b)=>(b.buy_ins||0)-(a.buy_ins||0));
+  const isSettled = game.status === 'settled';
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const resultsUrl = (game as any).results_token ? `${appUrl}/games/results/${(game as any).results_token}` : '';
 
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
@@ -36,11 +60,13 @@ export default function LivePage() {
           <div>
             <div className="display" style={{fontSize:20,color:'var(--white)',fontWeight:500}}>{event.name}</div>
             <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
-              Live · Read Only · Refreshes every 5s
+              {isSettled ? 'Game settled' : `Live · Read Only · Updated ${secsAgo}s ago`}
             </div>
           </div>
           <span style={{fontSize:9,padding:'3px 9px',borderRadius:1,fontWeight:500,
-            border:'1px solid rgba(76,175,125,0.3)',color:'var(--green)',background:'rgba(76,175,125,0.06)',
+            border:`1px solid ${isSettled?'rgba(76,175,125,0.3)':'rgba(201,168,76,0.3)'}`,
+            color:isSettled?'var(--green)':'var(--gold)',
+            background:isSettled?'rgba(76,175,125,0.06)':'rgba(201,168,76,0.06)',
             letterSpacing:'0.16em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif'}}>
             {game.status}
           </span>
@@ -48,6 +74,24 @@ export default function LivePage() {
       </div>
 
       <div style={{maxWidth:480,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
+
+        {/* Settled banner with results link */}
+        {isSettled && (
+          <div style={{background:'rgba(76,175,125,0.06)',border:'1px solid rgba(76,175,125,0.2)',borderRadius:3,
+            padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+            <div>
+              <div style={{fontSize:13,color:'var(--green)',fontWeight:600,fontFamily:'var(--font-body),sans-serif'}}>✓ Game Settled</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>Final results are locked in.</div>
+            </div>
+            {resultsUrl && (
+              <a href={resultsUrl} style={{padding:'8px 14px',background:'var(--gold)',color:'#000',borderRadius:3,
+                fontSize:11,fontWeight:700,textDecoration:'none',fontFamily:'var(--font-body),sans-serif',
+                letterSpacing:'0.06em',whiteSpace:'nowrap'}}>
+                View Results →
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Bank summary */}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:16}}>
