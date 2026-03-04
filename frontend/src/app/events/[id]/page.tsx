@@ -15,9 +15,9 @@ export default function EventPage() {
   const [games, setGames]     = useState([] as Game[]);
   const [history, setHistory] = useState([] as Game[]);
   const [leaders, setLeaders] = useState([] as LeaderboardEntry[]);
-  const [tab, setTab]         = useState<Tab>('games');
+  const [tab, setTab]         = useState('games' as Tab);
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState<any>(null);
+  const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null as string|null);
   const [selectedPlayer, setSelectedPlayer] = useState(null as string|null); // display_name for drill-down // gameId or gameId+':delete'
@@ -26,7 +26,7 @@ export default function EventPage() {
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
+  const [inviteRole, setInviteRole] = useState('cohost' as InviteRole);
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
