@@ -202,7 +202,7 @@ export default function EventPage() {
                         {(g as any).format && (g as any).format !== 'cash' && (
                           <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
                             letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {String(({'tournament':'🏆 Tournament','rebuy':'♻️ Rebuy','freezeout':'❄️ Freezeout'})[(g as any).format] || (g as any).format)}
+                            {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format)}
                           </span>
                         )}
                       </div>
@@ -592,7 +592,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat}:any) {
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
               background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
-              {String(({'tournament':'🏆 Tournament','rebuy':'♻️ Rebuy','freezeout':'❄️ Freezeout'})[(game as any).format] || (game as any).format)}
+              {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
             </span>
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
