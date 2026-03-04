@@ -11,9 +11,9 @@ export default function EventPage() {
   const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
   const router  = useRouter();
   const [event, setEvent]     = useState(null);
-  const [games, setGames]     = useState([]);
-  const [history, setHistory] = useState([]);
-  const [leaders, setLeaders] = useState([]);
+  const [games, setGames]     = useState([] as any[]);
+  const [history, setHistory] = useState([] as any[]);
+  const [leaders, setLeaders] = useState([] as any[]);
   const [tab, setTab]         = useState('games');
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser]       = useState(null);
@@ -59,7 +59,7 @@ export default function EventPage() {
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
       });
-      setGames(gs=>[g,...gs]);
+      setGames((gs:any[])=>[g,...gs]);
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
     } catch(e:any){ alert(e.message); }
@@ -512,7 +512,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
-  const [seated, setSeated] = useState([]);
+  const [seated, setSeated] = useState([] as any[]);
 
   async function seat() {
     if (!name.trim()) return;
