@@ -1,0 +1,24 @@
+name = "pkr-reloaded-worker"
+main = "src/index.ts"
+compatibility_date = "2024-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_YOUR_KV_ID"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pkr-reloaded-db"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+
+[vars]
+FRONTEND_URL = "https://REPLACE_WITH_YOUR_VERCEL_URL.vercel.app"
+GOOGLE_CLIENT_ID = "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+
+# Secrets – set via terminal commands in Step 4 of the setup guide:
+# wrangler secret put GOOGLE_CLIENT_SECRET
+# wrangler secret put JWT_SECRET
+# wrangler secret put VAPID_PUBLIC_KEY
+# wrangler secret put VAPID_PRIVATE_KEY
+# wrangler secret put VAPID_EMAIL
