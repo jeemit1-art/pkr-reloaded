@@ -34,13 +34,13 @@ export default function EventPage() {
 
   useEffect(()=>{
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
-      setEvent(e); setUser(u);
+      setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
     }).catch(()=>router.push('/dashboard'));
-    api.games.list(id).then(setGames);
-    api.events.leaderboard(id).then(setLeaders);
-    api.events.history(id).then(setHistory);
+    api.games.list(id).then((g:any)=>setGames(g));
+    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
+    api.events.history(id).then((h:any)=>setHistory(h));
   },[id]);
 
   useEffect(()=>{
@@ -325,7 +325,7 @@ export default function EventPage() {
                     await api.games.delete(gameId);
                     setHistory(h=>h.filter(x=>x.id!==gameId));
                     setGames(gs=>gs.filter(g=>g.id!==gameId));
-                    api.events.leaderboard(id).then(setLeaders);
+                    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
                   } else {
                     await api.games.cancel(gameId);
                     setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
@@ -500,7 +500,7 @@ export default function EventPage() {
         <QuickSeatModal
           gameId={quickSeatGameId}
           onClose={()=>setShowQuickSeat(false)}
-          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then((g:any)=>setGames(g)); }}
         />
       )}
     </div>
