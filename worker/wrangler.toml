@@ -1,3 +1,4 @@
+account_id = "4b4794b983d6966f4207d2ff4fd8c991"
 name = "pkr-reloaded-worker"
 main = "src/index.ts"
 compatibility_date = "2024-05-01"
@@ -5,16 +6,16 @@ compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_YOUR_KV_ID"
+id = "35132989116243c6b9a79f7a8151e328"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "pkr-reloaded-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "e21a4823-ef28-496a-9f49-fa3e04dc73bf"
 
 [vars]
-FRONTEND_URL = "https://REPLACE_WITH_YOUR_VERCEL_URL.vercel.app"
-GOOGLE_CLIENT_ID = "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+FRONTEND_URL = "https://pkr-reloaded.vercel.app"
+GOOGLE_CLIENT_ID = "385656194684-dnd32g5qbgb8qrennc2m6avoifmksacr.apps.googleusercontent.com"
 
 # Secrets – set via terminal commands in Step 4 of the setup guide:
 # wrangler secret put GOOGLE_CLIENT_SECRET
