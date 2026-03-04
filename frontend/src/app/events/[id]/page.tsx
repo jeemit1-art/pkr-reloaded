@@ -16,7 +16,7 @@ export default function EventPage() {
   const [leaders, setLeaders] = useState([] as any[]);
   const [tab, setTab]         = useState('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState(null);
+  const [user, setUser] = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null); // display_name for drill-down // gameId or gameId+':delete'
