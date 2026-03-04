@@ -103,8 +103,6 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
-
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
@@ -164,7 +162,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {TABS.map((t)=>(
+          {(['games','leaderboard','history']).map(t=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
@@ -201,7 +199,7 @@ export default function EventPage() {
                         {(g as any).format && (g as any).format !== 'cash' && (
                           <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
                             letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {({'tournament':'🏆 Tournament','rebuy':'♻️ Rebuy','freezeout':'❄️ Freezeout'} as Record<string,string>)[(g as any).format] || (g as any).format}
+                            {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[(g as any).format] || (g as any).format}
                           </span>
                         )}
                       </div>
@@ -312,7 +310,7 @@ export default function EventPage() {
               <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
                 {confirmDelete.endsWith(':delete')
                   ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
-                  : "This marks the game as cancelled. It will stay in history but won't affect the leaderboard."}
+                  : 'This marks the game as cancelled. It will stay in history but won't affect the leaderboard.'}
               </div>
             </div>
             <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>

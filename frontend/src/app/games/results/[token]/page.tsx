@@ -5,10 +5,11 @@ import { api, ResultsData, fmt, fmtSign, fmtDate, waLink } from '@/lib/api';
 
 export default function ResultsPage() {
   const { token } = useParams<{token:string}>();
-  const [data, setData]   = useState<ResultsData|null>(null);
-  const [error, setError] = useState('');
+  const [data, setData]       = useState<ResultsData|null>(null);
+  const [error, setError]     = useState('');
+  const [copied, setCopied]   = useState<number|null>(null);
 
-  useEffect(()=>{ api.games.results(token).then(setData).catch(()=>setError('Results not found')); },[token]);
+  useEffect(()=>{ api.games.results(token as string).then(setData).catch(()=>setError('Results not found')); },[token]);
 
   if (error) return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -31,10 +32,21 @@ export default function ResultsPage() {
     ].filter(Boolean).join('\n');
   }
 
+  function buildTransferMsg(t: typeof transfers[0]) {
+    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Please transfer when you get a chance 🃏`;
+  }
+
   function share() {
     const text = buildShareText();
     if(navigator.share) navigator.share({title:`${event.name} Results`,text});
     else navigator.clipboard.writeText(text).then(()=>alert('Results copied!'));
+  }
+
+  function copyTransferMsg(t: typeof transfers[0], i: number) {
+    navigator.clipboard.writeText(buildTransferMsg(t)).then(()=>{
+      setCopied(i);
+      setTimeout(()=>setCopied(null), 2000);
+    });
   }
 
   return (
@@ -91,29 +103,52 @@ export default function ResultsPage() {
           ))}
         </div>
 
-        {/* Transfers */}
+        {/* Transfers — with copy + WA per row */}
         {transfers.length>0 && (
           <div className="card">
             <div className="section-header">Who Pays Who</div>
             {transfers.map((t,i)=>{
               const recipient = players.find(p=>p.user_id===t.to);
-              const waMsg = `Hi ${t.to_name}, you're owed ${fmt(t.amount)} from ${event.name}`;
+              const waMsg = buildTransferMsg(t);
               return (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',
+                <div key={i} style={{padding:'12px 16px',
                   borderBottom:i<transfers.length-1?'1px solid var(--border-sub)':'none'}}>
-                  <div style={{flex:1,fontSize:13}}>
-                    <span style={{color:'var(--red)',fontFamily:'var(--font-display),serif'}}>{t.from_name}</span>
-                    <span style={{color:'var(--faint)',margin:'0 8px'}}>→</span>
-                    <span style={{color:'var(--green)',fontFamily:'var(--font-display),serif'}}>{t.to_name}</span>
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <span className="display" style={{fontSize:16,color:'var(--ivory)',fontWeight:500}}>
+                  {/* Transfer row */}
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+                    <div style={{flex:1,fontSize:13}}>
+                      <span style={{color:'var(--red)',fontFamily:'var(--font-display),serif'}}>{t.from_name}</span>
+                      <span style={{color:'var(--faint)',margin:'0 8px'}}>→</span>
+                      <span style={{color:'var(--green)',fontFamily:'var(--font-display),serif'}}>{t.to_name}</span>
+                    </div>
+                    <span className="display" style={{fontSize:18,color:'var(--ivory)',fontWeight:500}}>
                       {fmt(t.amount)}
                     </span>
-                    {recipient?.whatsapp && (
-                      <a href={waLink(recipient.whatsapp,waMsg)} target="_blank" rel="noopener noreferrer"
-                        style={{fontSize:11,color:'var(--gold)',textDecoration:'none',
-                          fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.06em'}}>WA</a>
+                  </div>
+                  {/* Actions row — always copy, WA only if number known */}
+                  <div style={{display:'flex',gap:6}}>
+                    <button
+                      onClick={()=>copyTransferMsg(t,i)}
+                      className="btn btn-ghost"
+                      style={{flex:1,fontSize:11,padding:'5px 10px',
+                        color:copied===i?'var(--green)':'var(--muted)',
+                        borderColor:copied===i?'rgba(76,175,125,0.4)':'var(--border-sub)'}}>
+                      {copied===i ? '✓ Copied!' : '📋 Copy reminder'}
+                    </button>
+                    {recipient?.whatsapp ? (
+                      <a href={waLink(recipient.whatsapp, waMsg)} target="_blank" rel="noopener noreferrer"
+                        className="btn btn-ghost"
+                        style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
+                          display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>
+                        📱 Send via WA
+                      </a>
+                    ) : (
+                      <a href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="btn btn-ghost"
+                        style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
+                          display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>
+                        📱 WhatsApp
+                      </a>
                     )}
                   </div>
                 </div>
