@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 
 export default function GamePage() {
   const params = useParams();
@@ -13,8 +13,9 @@ export default function GamePage() {
         const [game, me] = await Promise.all([api.games.get(id), api.auth.me()]);
 
         let isHost = false;
+        const eventId = (game as any).event_id;
         try {
-          const ev = await api.events.get((game as any).event_id);
+          const ev = await api.events.get(eventId);
           const member = (ev.members||[]).find((m: any) => m.id === me.id);
           isHost = member?.role === "host" || member?.role === "cohost";
         } catch {}
@@ -52,16 +53,25 @@ export default function GamePage() {
             defaultBuyin: buyInDollars,
             password:     (game as any).game_password || null,
             lobbyActive:  ["scheduled","lobby"].includes((game as any).status),
-            pkrGameId:    id,
-            pkrEventId:   (game as any).event_id,
           },
           players,
         };
 
+        // Write original app state
         localStorage.setItem("pokerState",    JSON.stringify(state));
         localStorage.setItem("cloudRole",     isHost ? "host" : "player");
         localStorage.setItem("cloudGameCode", (game as any).live_token || "LOCAL");
         localStorage.setItem("cloudMyName",   me.name || (isHost ? "Host" : "Player"));
+
+        // Write PKR context for bridge script in table.html
+        localStorage.setItem("pkrCtx", JSON.stringify({
+          gameId:   id,
+          eventId:  eventId,
+          apiUrl:   process.env.NEXT_PUBLIC_API_URL || "",
+          token:    getToken(),
+          userId:   me.id,
+          userName: me.name,
+        }));
 
         const isLive = ["active","settled"].includes((game as any).status);
         window.location.href = "/table.html" + (isLive ? "#game" : "#lobby");
