@@ -10,22 +10,22 @@ type InviteRole = 'cohost' | 'member';
 export default function EventPage() {
   const { id } = useParams<{id:string}>();
   const router  = useRouter();
-  const [event, setEvent]     = useState<EventDetail|null>(null);
-  const [games, setGames]     = useState<Game[]>([]);
-  const [history, setHistory] = useState<Game[]>([]);
-  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
-  const [tab, setTab]         = useState<Tab>('games');
+  const [event, setEvent]     = useState(null as any);
+  const [games, setGames]     = useState([] as any[]);
+  const [history, setHistory] = useState([] as any[]);
+  const [leaders, setLeaders] = useState([] as any[]);
+  const [tab, setTab]         = useState('games');
   const [isHost, setIsHost]   = useState(false);
-  const [user, setUser]       = useState<any>(null);
+  const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // display_name for drill-down // gameId or gameId+':delete'
+  const [confirmDelete, setConfirmDelete] = useState(null as any);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
-  const [inviteRole, setInviteRole] = useState<InviteRole>('cohost');
+  const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -34,13 +34,13 @@ export default function EventPage() {
 
   useEffect(()=>{
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
-      setEvent(e); setUser(u);
+      setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
     }).catch(()=>router.push('/dashboard'));
-    api.games.list(id).then(setGames);
-    api.events.leaderboard(id).then(setLeaders);
-    api.events.history(id).then(setHistory);
+    api.games.list(id).then((g:any)=>setGames(g));
+    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
+    api.events.history(id).then((h:any)=>setHistory(h));
   },[id]);
 
   useEffect(()=>{
@@ -59,7 +59,7 @@ export default function EventPage() {
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
       });
-      setGames(gs=>[g,...gs]);
+      setGames((gs:any[])=>[g,...gs]);
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
     } catch(e:any){ alert(e.message); }
@@ -89,7 +89,7 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
-  if (!event) return <Loader/>;
+  if (!event) return null;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const settled  = games.filter(g=>g.status==='settled');
@@ -103,6 +103,7 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
+  const TABS_NAV: Tab[] = ['games','leaderboard','history'];
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
@@ -199,7 +200,7 @@ export default function EventPage() {
                         {(g as any).format && (g as any).format !== 'cash' && (
                           <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
                             letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {{tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'}[(g as any).format] || (g as any).format}
+                            {({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format}
                           </span>
                         )}
                       </div>
@@ -323,7 +324,7 @@ export default function EventPage() {
                     await api.games.delete(gameId);
                     setHistory(h=>h.filter(x=>x.id!==gameId));
                     setGames(gs=>gs.filter(g=>g.id!==gameId));
-                    api.events.leaderboard(id).then(setLeaders);
+                    api.events.leaderboard(id).then((l:any)=>setLeaders(l));
                   } else {
                     await api.games.cancel(gameId);
                     setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
@@ -498,7 +499,7 @@ export default function EventPage() {
         <QuickSeatModal
           gameId={quickSeatGameId}
           onClose={()=>setShowQuickSeat(false)}
-          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then((g:any)=>setGames(g)); }}
         />
       )}
     </div>
@@ -510,7 +511,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
-  const [seated, setSeated] = useState<string[]>([]);
+  const [seated, setSeated] = useState([] as any[]);
 
   async function seat() {
     if (!name.trim()) return;
