@@ -4,7 +4,7 @@ import { api } from './api';
 function urlB64ToUint8(b64:string):Uint8Array {
   const pad='='.repeat((4-b64.length%4)%4);
   const raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
-  return Uint8Array.from(raw,c=>c.charCodeAt(0)) as Uint8Array<ArrayBuffer>;
+  return Uint8Array.from(raw,c=>c.charCodeAt(0)) as unknown as Uint8Array<ArrayBuffer>;
 }
 
 /** Get or register the service worker — avoids .ready which hangs on iOS Safari */
