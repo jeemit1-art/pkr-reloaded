@@ -4302,6 +4302,12 @@ document.addEventListener('DOMContentLoaded', function() {
   loadState();
 
   // Restore cloud session if we had one
+  // If PKR bridge sent us here with #game, force reload state then open
+  if (location.hash === '#game') {
+    location.hash = '';
+    loadState(); // re-read freshly written pokerState
+  }
+
   if (cloudRole && cloudGameCode) {
     startSyncPolling();
     maybeShowNotifBanner();
@@ -4310,10 +4316,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         if (cloudRole === 'host') {
           if (!state.game) { renderHome(); }
-          else {
-            // PKR always opens the game table directly — lobby is handled by the PKR lobby page
-            openGame();
-          }
+          else { openGame(); }
         } else if (cloudRole === 'player') {
           enterReadOnlyGame();
           (window.syncFromCloud || syncFromCloud)();
@@ -4325,6 +4328,10 @@ document.addEventListener('DOMContentLoaded', function() {
         renderHome();
       }
     }
+  } else if (location.hash === '' && state.game && !state.game.ended) {
+    // Came from PKR bridge — no cloudRole yet, but state is ready
+    setCloudRole('host', state.game.code || 'LOCAL', state.game.hostName || 'Host');
+    openGame();
   } else if (!checkResultsView() && !checkLiveView()) {
     if (state.game && !state.game.ended) {
       setCloudRole('host', state.game.code || 'LOCAL', 'Host');
