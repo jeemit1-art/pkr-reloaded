@@ -629,6 +629,14 @@ const MASTER_PASSWORD = '7984';
 
 let state = { game: null, players: {} };
 
+window._pkrBack = function() {
+  try {
+    var c = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
+    if (c && c.eventId) { window.location.href = '/events/' + c.eventId; return; }
+  } catch(e) {}
+  window.location.href = '/dashboard';
+};
+
 // ════════════════════════════════════════════════════════
 // CLOUD / WORKER CONFIG
 // ════════════════════════════════════════════════════════
