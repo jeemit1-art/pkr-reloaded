@@ -3971,7 +3971,7 @@ async function autoJoinGroup(groupId) {
       }
     }
   } catch(e) {
-    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px 32px"><div style="font-size:0.9rem;color:var(--red);margin-bottom:16px">Group not found.</div><a href="javascript:void(0)" onclick="(function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}window.location.href='/dashboard';})()" style="color:var(--gold);font-size:0.82rem">← PKR</a></div>';
+    document.getElementById('liveInner').innerHTML = '<div style="text-align:center;padding:60px 32px"><div style="font-size:0.9rem;color:var(--red);margin-bottom:16px">Group not found.</div><a href="javascript:void(0)" onclick="window._pkrBack()" style="color:var(--gold);font-size:0.82rem">← PKR</a></div>';
   }
 }
 
