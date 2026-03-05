@@ -1064,7 +1064,15 @@ function hardReset() {
 }
 
 function loadState() {
-  try { const s = localStorage.getItem(SK); if (s) state = JSON.parse(s); } catch(e) {}
+  try {
+    const s = localStorage.getItem(SK);
+    if (s) {
+      const parsed = JSON.parse(s);
+      state.game = parsed.game || null;
+      state.players = parsed.players || {};
+      window.state = state; // keep window.state in sync
+    }
+  } catch(e) {}
 }
 function saveState() {
   localStorage.setItem(SK, JSON.stringify(state));
@@ -2140,7 +2148,11 @@ function toggleBank() {
 let assigningSid = null;
 
 function openAssign(sid) {
-  if (!state.game) { toast('Start a game first!'); openNewGame(); return; }
+  if (!state.game) {
+    var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+    if (ctx && ctx.eventId) { window.location.href = '/events/' + ctx.eventId; return; }
+    toast('Start a game first!'); openNewGame(); return;
+  }
   assigningSid = sid;
   document.getElementById('assignName').value = '';
   document.getElementById('assignPhone').value = '';
