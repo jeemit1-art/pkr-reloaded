@@ -624,7 +624,18 @@ html,body{
 // ════════════════════════════════════════════════════════
 // STORAGE
 // ════════════════════════════════════════════════════════
-const SK = 'pokerState', STATS_K = 'pokerStats', HIST_K = 'pokerHistory', PHONE_K = 'pokerPhones';
+// Scope localStorage keys to eventId+userId so different hosts never share data
+(function() {
+  try {
+    var ctx = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
+    var scope = (ctx && ctx.eventId && ctx.userId) ? ctx.eventId + '_' + ctx.userId : 'default';
+    window._lsScope = scope;
+  } catch(e) { window._lsScope = 'default'; }
+})();
+var SK      = 'pokerState_'   + window._lsScope;
+var STATS_K = 'pokerStats_'   + window._lsScope;
+var HIST_K  = 'pokerHistory_' + window._lsScope;
+var PHONE_K = 'pokerPhones_'  + window._lsScope;
 const MASTER_PASSWORD = '7984';
 
 let state = { game: null, players: {} };
