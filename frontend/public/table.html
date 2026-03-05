@@ -1907,7 +1907,7 @@ function endGame() {
   title.textContent = 'End Game?';
   const msg = document.createElement('div');
   msg.style.cssText = 'font-size:0.9rem;color:var(--cream2);margin-bottom:20px;line-height:1.6';
-  msg.textContent = 'This will save all results to the leaderboard and return to home.';
+  msg.textContent = 'This will close the game and return to the events page. Make sure you have settled up first.';
   const yesBtn = document.createElement('button');
   yesBtn.style.cssText = 'width:100%;background:linear-gradient(135deg,#c0392b,#8a2010);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:10px;display:block';
   yesBtn.textContent = 'Yes, End Game';
@@ -1916,35 +1916,6 @@ function endGame() {
   noBtn.textContent = 'Cancel';
   yesBtn.addEventListener('click', async () => {
     overlay.remove();
-    // Check if already settled
-    const gameId = state.game && (state.game.code || state.game.startedAt || state.game.name);
-    const alreadySettled = gameId && localStorage.getItem('settled_' + gameId);
-    if (alreadySettled) {
-      // Show already-settled dialog
-      const d = document.createElement('div');
-      d.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
-      d.innerHTML = '<div style="background:#0d1f10;border:1px solid var(--border2);border-radius:16px;padding:24px;width:100%;max-width:320px">' +
-        '<div style="font-size:1rem;font-weight:700;color:var(--gold);margin-bottom:10px">Already Settled</div>' +
-        '<div style="font-size:0.88rem;color:var(--cream2);margin-bottom:20px;line-height:1.6">This game has already been settled and saved to the leaderboard.</div>' +
-        '<button id="unsettleBtn" style="width:100%;padding:12px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:var(--red);border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">Unsettle &amp; Redo</button>' +
-        '<button id="settleCancelBtn" style="width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:0.88rem;cursor:pointer">Cancel</button>' +
-        '</div>';
-      document.body.appendChild(d);
-      document.getElementById('settleCancelBtn').onclick = () => d.remove();
-      document.getElementById('unsettleBtn').onclick = () => {
-        // Remove settled flag and undo stats
-        localStorage.removeItem('settled_' + gameId);
-        // Remove from game history
-        const hist = getGameHistory().filter(h => h.gameId !== gameId);
-        saveGameHistory(hist);
-        // Rebuild stats from scratch from remaining history
-        rebuildStatsFromHistory();
-        d.remove();
-        toast('Unsettled — you can now end the game again');
-      };
-      return;
-    }
-    recordStats();
     // Push a "game ended" flag to cloud BEFORE clearing state, so players detect it
     if (cloudRole === 'host' && cloudGameCode && cloudGameCode !== 'LOCAL') {
       const endedState = JSON.parse(JSON.stringify(state)); // deep copy
