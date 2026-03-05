@@ -673,9 +673,18 @@ const VAPID_PUBLIC  = 'BOjy7FRAI9dZ4ijq0X30ERbwRqpdiSiwD-Sm2AsfZl_hwpXy0b2omZ94_
 let cloudRole      = localStorage.getItem('cloudRole')      || null;
 let cloudGameCode  = localStorage.getItem('cloudGameCode')  || null;
 let cloudMyName    = localStorage.getItem('cloudMyName')    || null;
-let cloudGroupId   = localStorage.getItem('cloudGroupId')   || null;
-  // syncStatsFromCloud disabled — leaderboard now pulls from PKR API only
-let cloudGroupName = localStorage.getItem('cloudGroupName') || null;
+// If running in PKR mode, wipe old group cloud data so it never pollutes stats
+(function() {
+  try {
+    var ctx = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
+    if (ctx && ctx.eventId) {
+      localStorage.removeItem('cloudGroupId');
+      localStorage.removeItem('cloudGroupName');
+    }
+  } catch(e) {}
+})();
+let cloudGroupId   = null; // disabled — PKR API is source of truth
+let cloudGroupName = null;
 let pushSub        = null;  // current push subscription object
 let isReadOnly     = false; // true when viewing as player (no editing)
 let syncInterval   = null;  // polling interval for players
@@ -1057,7 +1066,7 @@ function getStats() {
 function saveStats(s) {
   localStorage.setItem(STATS_K, JSON.stringify(s));
   // Also push to cloud if we have a group
-  if (cloudGroupId) apiSetGroupStats(cloudGroupId, s).catch(() => {});
+  // apiSetGroupStats disabled — PKR API handles stats
 }
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(HIST_K) || '[]'); } catch(e) { return []; }
