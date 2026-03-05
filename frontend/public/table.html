@@ -1072,14 +1072,18 @@ function getStats() {
   try { return JSON.parse(localStorage.getItem(STATS_K) || '{}'); } catch(e) { return {}; }
 }
 function saveStats(s) {
+  // Disabled in PKR mode — leaderboard is managed by PKR API
+  var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+  if (ctx && ctx.eventId) return;
   localStorage.setItem(STATS_K, JSON.stringify(s));
-  // Also push to cloud if we have a group
-  // apiSetGroupStats disabled — PKR API handles stats
 }
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(HIST_K) || '[]'); } catch(e) { return []; }
 }
 function addHistory(name) {
+  // Disabled in PKR mode — player names come from PKR API
+  var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+  if (ctx && ctx.eventId) return;
   const h = getHistory().filter(n => n.toLowerCase() !== name.toLowerCase());
   localStorage.setItem(HIST_K, JSON.stringify([name, ...h].slice(0, 50)));
 }
