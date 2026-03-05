@@ -4368,7 +4368,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Restore cloud session if we had one
   // If PKR bridge sent us here with #game, force reload state then open
   if (location.hash === '#game') {
-    location.hash = '';
+    history.replaceState(null, '', location.pathname); // clear hash without reload
     loadState(); // re-read freshly written pokerState
   }
 
