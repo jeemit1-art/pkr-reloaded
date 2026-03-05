@@ -1916,14 +1916,37 @@ function endGame() {
   noBtn.textContent = 'Cancel';
   yesBtn.addEventListener('click', async () => {
     overlay.remove();
+    // Check if game has been settled via PKR API first
+    var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+    if (ctx && ctx.gameId) {
+      try {
+        const statusRes = await window.pkrApi('/games/' + ctx.gameId);
+        if (statusRes && statusRes.status !== 'settled') {
+          const w = document.createElement('div');
+          w.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
+          w.innerHTML = '<div style="background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center">' +
+            '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+            '<div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Game Not Settled</div>' +
+            '<div style="font-size:0.88rem;color:var(--cream2);margin-bottom:20px;line-height:1.6">Please use <strong>Settle Up</strong> to record results before ending the game.</div>' +
+            '<button id="warnSettleBtn" style="width:100%;padding:12px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);border:none;color:#fff;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">Go to Settle Up</button>' +
+            '<button id="warnEndAnywayBtn" style="width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:0.82rem;cursor:pointer">End Anyway (no results saved)</button>' +
+            '</div>';
+          document.body.appendChild(w);
+          document.getElementById('warnSettleBtn').onclick = () => { w.remove(); openSettleUp(); };
+          document.getElementById('warnEndAnywayBtn').onclick = async () => { w.remove(); await doEndGame(); };
+          return;
+        }
+      } catch(e) { /* if check fails, allow end */ }
+    }
+    await doEndGame();
+  });
+  async function doEndGame() {
     // Push a "game ended" flag to cloud BEFORE clearing state, so players detect it
     if (cloudRole === 'host' && cloudGameCode && cloudGameCode !== 'LOCAL') {
       const endedState = JSON.parse(JSON.stringify(state)); // deep copy
       endedState.game = Object.assign({}, endedState.game, { ended: true });
       await apiSetState(cloudGameCode, endedState).catch(() => {});
-      // Remove from group's active games list
       if (cloudGroupId) await apiGroupEndGame(cloudGroupId, cloudGameCode).catch(() => {});
-      // Notify all players game has ended
       await notifyAll('Game Over!', (state.game ? state.game.name : 'Poker Night') + ' has ended. Check your settlements!');
     }
     stopSyncPolling();
@@ -1932,7 +1955,7 @@ function endGame() {
     saveState();
     toast('Game ended — results saved ✓');
     setTimeout(function(){ if(window._pkrBack) window._pkrBack(); else renderHome(); }, 800);
-  });
+  }
   noBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   box.appendChild(title); box.appendChild(msg); box.appendChild(yesBtn); box.appendChild(noBtn);
