@@ -14,7 +14,7 @@ database_name = "pkr-reloaded-db"
 database_id = "e21a4823-ef28-496a-9f49-fa3e04dc73bf"
 
 [vars]
-FRONTEND_URL = "https://pkr-reloaded.vercel.app"
+FRONTEND_URL = "https://mypkr.app"
 GOOGLE_CLIENT_ID = "385656194684-dnd32g5qbgb8qrennc2m6avoifmksacr.apps.googleusercontent.com"
 
 # Secrets – set via terminal commands in Step 4 of the setup guide:
