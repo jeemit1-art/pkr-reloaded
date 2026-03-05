@@ -2137,22 +2137,35 @@ function openAssign(sid) {
   assigningSid = sid;
   document.getElementById('assignName').value = '';
   document.getElementById('assignPhone').value = '';
-  // Known players
-  const hist = getHistory();
+  // Known players — pull from PKR API scoped to this event
   const seated = new Set(Object.values(state.players).filter(p => p && p.name).map(p => p.name.toLowerCase()));
   const wrap = document.getElementById('knownWrap');
   const list = document.getElementById('knownList');
-  if (hist.length) {
-    list.innerHTML = hist.map(n => `<button class="known-chip${seated.has(n.toLowerCase()) ? ' seated' : ''}" data-name="${esc(n)}">${esc(n)}</button>`).join('');
-    list.querySelectorAll('.known-chip:not(.seated)').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.getElementById('assignName').value = btn.dataset.name;
-        const ph = getPhone(btn.dataset.name);
-        document.getElementById('assignPhone').value = ph && ph.startsWith('61') ? '0' + ph.slice(2) : ph;
+  var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+  function renderKnownPlayers(names) {
+    if (names.length) {
+      list.innerHTML = names.map(n => `<button class="known-chip${seated.has(n.toLowerCase()) ? ' seated' : ''}" data-name="${esc(n)}">${esc(n)}</button>`).join('');
+      list.querySelectorAll('.known-chip:not(.seated)').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('assignName').value = btn.dataset.name;
+          const ph = getPhone(btn.dataset.name);
+          document.getElementById('assignPhone').value = ph && ph.startsWith('61') ? '0' + ph.slice(2) : ph;
+        });
       });
-    });
-    wrap.style.display = 'block';
+      wrap.style.display = 'block';
+    } else { wrap.style.display = 'none'; }
+  }
+  if (ctx && ctx.eventId) {
+    pkrApi('/events/' + ctx.eventId + '/players').then(function(players) {
+      var names = (players||[]).map(function(p){ return p.display_name; });
+      if (!names.length) names = getHistory(); // fallback to local if no cloud players yet
+      renderKnownPlayers(names);
+    }).catch(function() { renderKnownPlayers(getHistory()); });
   } else {
+  const hist = getHistory();
+  renderKnownPlayers(hist);
+  }
+  if (false) {
     wrap.style.display = 'none';
   }
   document.getElementById('assignOverlay').classList.add('show');
