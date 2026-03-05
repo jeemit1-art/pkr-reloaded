@@ -247,6 +247,13 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||1).run();
 
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  // Notify the seated player
+  const evData = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, display_name.trim(), {
+    title: `🪑 You've been seated — ${evData?.name||'PKR'}`,
+    body: `Seat ${seat_number||'assigned'}. Get ready to play!`,
+    data: { gameId, eventId: game.event_id, type: 'seated' },
+  }));
   return c.json({ok:true, players:players.results});
 });
 
