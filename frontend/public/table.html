@@ -4442,13 +4442,22 @@ document.addEventListener('DOMContentLoaded', function() {
           var newPlayers = {};
           data.players.forEach(function(p, i) {
             var sid = 'seat' + (p.seat_number || (i + 1));
+            // Check if player already exists in state with same buy_ins and cashout
+            var existing = window.state && window.state.players && window.state.players[sid];
+            var existingBuyins = existing ? (existing.transactions||[]).filter(function(t){return t.type!=='cashout';}).length : 0;
+            var existingCashout = existing ? (existing.transactions||[]).filter(function(t){return t.type==='cashout';}).reduce(function(a,t){return a+t.amount;},0) : 0;
+            var pkrBuyins = p.buy_ins || 1;
+            var pkrCashout = p.cashout != null ? p.cashout / 100 : null;
+            // Only rebuild transactions if data changed
+            if (existing && existingBuyins === pkrBuyins && (pkrCashout === null || Math.abs(existingCashout - pkrCashout) < 0.01)) {
+              newPlayers[sid] = existing;
+              return;
+            }
             var txns = [];
-            var buyinDollars = (p.buy_ins || 0) / 100;
-            var buyinCount = Math.max(1, Math.round(buyinDollars / defaultBuyin));
-            for (var b = 0; b < buyinCount; b++) {
+            for (var b = 0; b < pkrBuyins; b++) {
               txns.push({ type: 'buyin', amount: defaultBuyin, ts: Date.now() - b * 60000 });
             }
-            if (p.cashout != null) txns.push({ type: 'cashout', amount: p.cashout / 100, ts: Date.now() });
+            if (pkrCashout != null) txns.push({ type: 'cashout', amount: pkrCashout, ts: Date.now() });
             newPlayers[sid] = { name: p.display_name, userId: p.user_id || p.display_name, phone: '', transactions: txns };
           });
           if (window.state) { window.state.players = newPlayers; localStorage.setItem('pokerState', JSON.stringify(window.state)); }
