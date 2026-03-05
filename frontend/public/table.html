@@ -628,9 +628,15 @@ html,body{
 (function() {
   try {
     var ctx = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
-    var scope = (ctx && ctx.eventId && ctx.userId) ? ctx.eventId + '_' + ctx.userId : 'default';
-    window._lsScope = scope;
-  } catch(e) { window._lsScope = 'default'; }
+    if (!ctx || !ctx.eventId || !ctx.userId) {
+      // No valid context — block access and redirect
+      window.location.href = '/dashboard';
+      return;
+    }
+    window._lsScope = ctx.eventId + '_' + ctx.userId;
+  } catch(e) {
+    window.location.href = '/dashboard';
+  }
 })();
 var SK      = 'pokerState_'   + window._lsScope;
 var STATS_K = 'pokerStats_'   + window._lsScope;

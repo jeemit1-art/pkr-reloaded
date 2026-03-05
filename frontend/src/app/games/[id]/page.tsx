@@ -72,7 +72,11 @@ export default function GameBridgePage() {
           // Scope keys to eventId+userId to match table.html scoping
           const lsScope = eventId + '_' + me.id;
           localStorage.setItem("pokerState_" + lsScope, JSON.stringify(state));
-          localStorage.setItem("pokerState", JSON.stringify(state)); // legacy fallback
+          // Clear old unscoped keys so they can't be read by table.html fallback
+          localStorage.removeItem("pokerState");
+          localStorage.removeItem("pokerStats");
+          localStorage.removeItem("pokerHistory");
+          localStorage.removeItem("pokerPhones");
           localStorage.setItem("cloudRole", isHost ? "host" : "player");
           localStorage.setItem("cloudGameCode", (game as any).live_token || "LOCAL");
           localStorage.setItem("cloudMyName", me.name || (isHost ? "Host" : "Player"));
