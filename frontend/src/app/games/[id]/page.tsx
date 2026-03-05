@@ -69,7 +69,10 @@ export default function GameBridgePage() {
             players,
           };
 
-          localStorage.setItem("pokerState", JSON.stringify(state));
+          // Scope keys to eventId+userId to match table.html scoping
+          const lsScope = eventId + '_' + me.id;
+          localStorage.setItem("pokerState_" + lsScope, JSON.stringify(state));
+          localStorage.setItem("pokerState", JSON.stringify(state)); // legacy fallback
           localStorage.setItem("cloudRole", isHost ? "host" : "player");
           localStorage.setItem("cloudGameCode", (game as any).live_token || "LOCAL");
           localStorage.setItem("cloudMyName", me.name || (isHost ? "Host" : "Player"));
