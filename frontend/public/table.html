@@ -558,8 +558,8 @@ html,body{
   <div class="sheet-box">
     <div class="sheet-hdr"><h2>🏆 Leaderboard</h2><button class="panel-close" id="lbCloseBtn" onclick="closeLbSheet()">✕</button></div>
     <div class="sheet-tabs">
-      <button class="sheet-tab active" id="lbTabAll" onclick="switchLbTab('all')">All Time</button>
-      <button class="sheet-tab" id="lbTabGame" onclick="switchLbTab('game')">This Game</button>
+      <button class="sheet-tab" id="lbTabAll" onclick="switchLbTab('all')">All Time</button>
+      <button class="sheet-tab active" id="lbTabGame" onclick="switchLbTab('game')">This Game</button>
     </div>
     <div class="sheet-body" id="lbBody"></div>
   </div>
@@ -2563,6 +2563,7 @@ function hideWaToast() {
 let lbTab = 'all';
 
 function openLeaderboard() {
+  lbTab = 'game';
   lbTab = 'all';
   renderLbSheet();
   document.getElementById('lbSheet').classList.add('show');
@@ -2580,14 +2581,24 @@ function renderLbSheet() {
   const body = document.getElementById('lbBody');
   let players;
   if (lbTab === 'all') {
-    const stats = getStats(), merged = {};
-    Object.values(stats).forEach(s => { merged[s.name.toLowerCase()] = { name: s.name, games: s.games, net: s.net }; });
-    Object.values(state.players || {}).filter(p => p && p.name && pBuyin(p) > 0).forEach(p => {
-      const k = p.name.toLowerCase();
-      if (!merged[k]) merged[k] = { name: p.name, games: 0, net: 0 };
-      merged[k].games++; merged[k].net += pNet(p);
-    });
-    players = Object.values(merged).sort((a, b) => b.net - a.net);
+    var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+    if (ctx && ctx.eventId) {
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:0.82rem">Loading…</div>';
+      pkrApi('/events/' + ctx.eventId + '/leaderboard').then(function(rows) {
+        if (!rows || !rows.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:0.82rem">No history yet</div>'; return; }
+        body.innerHTML = rows.map(function(p, i) {
+          var net = p.total_net / 100;
+          var netStr = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+          return '<div class="lb-row">' +
+            '<div class="lb-rank">' + (i === 0 ? '🏆' : '#' + (i+1)) + '</div>' +
+            '<div class="lb-av">' + esc(inits(p.display_name)) + '</div>' +
+            '<div class="lb-info"><div class="lb-name">' + esc(p.display_name) + '</div><div class="lb-sub">' + p.games_played + ' game' + (p.games_played!==1?'s':'') + '</div></div>' +
+            '<div class="lb-net ' + (net>0?'positive':net<0?'negative':'') + '">' + netStr + '</div></div>';
+        }).join('');
+      }).catch(function() { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Could not load</div>'; });
+      return;
+    }
+    players = [];
   } else {
     players = Object.entries(state.players || {}).filter(([, p]) => p && p.name).map(([, p]) => ({ name: p.name, games: 1, net: pNet(p) })).sort((a, b) => b.net - a.net);
   }
