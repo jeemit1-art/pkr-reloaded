@@ -687,6 +687,7 @@ let cloudMyName    = localStorage.getItem('cloudMyName')    || null;
       // Wipe unscoped legacy keys too
       localStorage.removeItem('pokerStats');
       localStorage.removeItem('pokerHistory');
+      localStorage.removeItem('pokerGameHistory');
     }
   } catch(e) {}
 })();
