@@ -4470,7 +4470,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   })();
 
-  async function pkrApi(path, opts) {
+  window.pkrApi = async function pkrApi(path, opts) {
     var ctx = getPkrCtx();
     if (!ctx) return null;
     var res = await fetch(ctx.apiUrl + path, Object.assign({}, opts, {
