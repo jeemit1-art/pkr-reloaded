@@ -674,7 +674,7 @@ let cloudRole      = localStorage.getItem('cloudRole')      || null;
 let cloudGameCode  = localStorage.getItem('cloudGameCode')  || null;
 let cloudMyName    = localStorage.getItem('cloudMyName')    || null;
 let cloudGroupId   = localStorage.getItem('cloudGroupId')   || null;
-  if (cloudGroupId) syncStatsFromCloud();  // permanent group ID
+  // syncStatsFromCloud disabled — leaderboard now pulls from PKR API only
 let cloudGroupName = localStorage.getItem('cloudGroupName') || null;
 let pushSub        = null;  // current push subscription object
 let isReadOnly     = false; // true when viewing as player (no editing)
@@ -1195,7 +1195,7 @@ function switchTab(tab) {
   });
   // Pull fresh stats from cloud before rendering leaderboard/history
   if (tab !== 'games' && cloudGroupId) {
-    syncStatsFromCloud().then(() => renderTab());
+    renderTab();
   } else {
     renderTab();
   }
