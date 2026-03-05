@@ -413,6 +413,7 @@ html,body{
     <button class="game-tab" id="publishBtn" onclick="openPublish()"><span class="game-tab-icon">📤</span>Publish</button>
     <button class="game-tab" id="lbInGameBtn" onclick="openLeaderboard()"><span class="game-tab-icon">🏆</span>Leaderboard</button>
     <button class="game-tab" id="settleBtn" onclick="openSettleUp()"><span class="game-tab-icon">💸</span>Settle Up</button>
+    <button class="game-tab" id="saveResultsBtn" onclick="saveResultsToPkr()" style="display:none"><span class="game-tab-icon">✅</span>Save Results</button>
     <button class="game-tab red" id="endGameBtn" onclick="endGame()"><span class="game-tab-icon">🏁</span>End Game</button>
   </div>
 </div>
@@ -1906,6 +1907,39 @@ function showConfirmModal(title, message, confirmLabel, onConfirm, danger) {
   document.body.appendChild(overlay);
 }
 
+// ── Show/hide Save Results button based on whether all players have cashed out
+function updateSaveResultsBtn() {
+  var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+  var btn = document.getElementById('saveResultsBtn');
+  if (!btn || !ctx || !ctx.gameId) return;
+  var players = Object.values(state.players||{}).filter(function(p){ return p && p.name && pBuyin(p)>0; });
+  var allCashedOut = players.length >= 2 && players.every(function(p){ return pCash(p) > 0; });
+  btn.style.display = allCashedOut ? '' : 'none';
+}
+
+// ── Save Results to PKR — dedicated button
+async function saveResultsToPkr() {
+  var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
+  if (!ctx || !ctx.gameId) { toast('No PKR game found'); return; }
+  var btn = document.getElementById('saveResultsBtn');
+  if (btn) { btn.innerHTML = '<span class="game-tab-icon">⏳</span>Saving…'; btn.disabled = true; }
+  try {
+    var ok = await window.syncSettleToPkr();
+    if (ok) {
+      if (btn) btn.innerHTML = '<span class="game-tab-icon">✅</span>Saved!';
+      toast('Results saved to PKR ✓');
+      // Update end game button to show it's ready
+      var endBtn = document.getElementById('endGameBtn');
+      if (endBtn) endBtn.style.color = 'var(--green)';
+    } else {
+      throw new Error('No player data to save');
+    }
+  } catch(e) {
+    if (btn) { btn.innerHTML = '<span class="game-tab-icon">✅</span>Save Results'; btn.disabled = false; }
+    toast('⚠️ Save failed: ' + (e.message||'check connection'));
+  }
+}
+
 function endGame() {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
@@ -1925,7 +1959,7 @@ function endGame() {
   noBtn.textContent = 'Cancel';
   yesBtn.addEventListener('click', async () => {
     overlay.remove();
-    // Check if game has been settled via PKR API first
+    // Check if results have been saved to PKR
     var ctx = null; try { ctx = JSON.parse(localStorage.getItem('pkrCtx')||'null'); } catch(e) {}
     if (ctx && ctx.gameId) {
       try {
@@ -1935,13 +1969,15 @@ function endGame() {
           w.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
           w.innerHTML = '<div style="background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center">' +
             '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
-            '<div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Game Not Settled</div>' +
-            '<div style="font-size:0.88rem;color:var(--cream2);margin-bottom:20px;line-height:1.6">Please use <strong>Settle Up</strong> to record results before ending the game.</div>' +
-            '<button id="warnSettleBtn" style="width:100%;padding:12px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);border:none;color:#fff;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">Go to Settle Up</button>' +
-            '<button id="warnEndAnywayBtn" style="width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:0.82rem;cursor:pointer">End Anyway (no results saved)</button>' +
+            '<div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Results Not Saved</div>' +
+            '<div style="font-size:0.88rem;color:var(--cream2);margin-bottom:20px;line-height:1.6">Use <strong>Settle Up</strong> then tap <strong>Save Results</strong> before ending the game, or your results won't be recorded.</div>' +
+            '<button id="warnSettleBtn" style="width:100%;padding:12px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);border:none;color:#fff;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">💸 Settle Up First</button>' +
+            '<button id="warnSaveBtn" style="width:100%;padding:12px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);color:var(--gold);border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">✅ Save Results Now</button>' +
+            '<button id="warnEndAnywayBtn" style="width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:0.82rem;cursor:pointer">End Anyway (results lost)</button>' +
             '</div>';
           document.body.appendChild(w);
           document.getElementById('warnSettleBtn').onclick = () => { w.remove(); openSettleUp(); };
+          document.getElementById('warnSaveBtn').onclick = async () => { w.remove(); await saveResultsToPkr(); };
           document.getElementById('warnEndAnywayBtn').onclick = async () => { w.remove(); await doEndGame(); };
           return;
         }
@@ -2208,6 +2244,7 @@ function confirmAssign() {
   addHistory(name);
   saveState();
   syncToCloud().catch(() => {}); // push to cloud immediately so it isn't overwritten
+  updateSaveResultsBtn(); // show/hide Save Results button
   closeAssign();
   renderTable();
   setTimeout(() => openPanel(sid), 100);
@@ -2904,39 +2941,7 @@ function _doOpenSettleUp(players) {
     box.appendChild(allGood);
   }
 
-  // ── PKR: Add "Save to PKR" footer if pkrCtx exists ──────────────────────
-  try {
-    var _sCtx = JSON.parse(localStorage.getItem('pkrCtx')||'null');
-    if (_sCtx && _sCtx.gameId) {
-      var pkrFooter = document.createElement('div');
-      pkrFooter.style.cssText = 'padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0;background:rgba(201,168,76,0.04)';
-      var pkrSaveBtn = document.createElement('button');
-      pkrSaveBtn.style.cssText = 'width:100%;background:var(--gold);color:#0e0e0f;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer';
-      pkrSaveBtn.textContent = '✓ Save Results to PKR';
-      pkrSaveBtn.onclick = async function() {
-        pkrSaveBtn.textContent = 'Saving…'; pkrSaveBtn.disabled = true;
-        try {
-          if (window.recordStats) window.recordStats();
-          await window.syncSettleToPkr();
-          overlay.remove();
-          if (window.stopSyncPolling) window.stopSyncPolling();
-          if (window.setCloudRole) window.setCloudRole(null,null,null);
-          if(window.state){window.state.game=null;window.state.players={};}
-          if(window.saveState) window.saveState();
-          localStorage.removeItem('pkrCtx');
-          window.location.href = '/events/' + _sCtx.eventId;
-        } catch(e) {
-          pkrSaveBtn.textContent = '✓ Save Results to PKR';
-          pkrSaveBtn.disabled = false;
-          var errEl = pkrFooter.querySelector('.pkr-save-err');
-          if (!errEl) { errEl = document.createElement('div'); errEl.className='pkr-save-err'; errEl.style.cssText='font-size:0.8rem;color:#ff6b5b;margin-top:8px;text-align:center'; pkrFooter.appendChild(errEl); }
-          errEl.textContent = '⚠️ ' + (e.message||'Save failed — check connection');
-        }
-      };
-      pkrFooter.appendChild(pkrSaveBtn);
-      box.appendChild(pkrFooter);
-    }
-  } catch(e) {}
+  // Save Results button is now a dedicated tab button — nothing to add here
 
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   overlay.appendChild(box);
