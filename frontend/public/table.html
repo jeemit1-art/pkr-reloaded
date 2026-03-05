@@ -673,13 +673,20 @@ const VAPID_PUBLIC  = 'BOjy7FRAI9dZ4ijq0X30ERbwRqpdiSiwD-Sm2AsfZl_hwpXy0b2omZ94_
 let cloudRole      = localStorage.getItem('cloudRole')      || null;
 let cloudGameCode  = localStorage.getItem('cloudGameCode')  || null;
 let cloudMyName    = localStorage.getItem('cloudMyName')    || null;
-// If running in PKR mode, wipe old group cloud data so it never pollutes stats
+// If running in PKR mode, wipe all legacy stat keys so they never pollute the UI
 (function() {
   try {
     var ctx = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
     if (ctx && ctx.eventId) {
       localStorage.removeItem('cloudGroupId');
       localStorage.removeItem('cloudGroupName');
+      // Wipe ALL scoped stat/history keys for this scope
+      var scope = ctx.eventId + '_' + ctx.userId;
+      localStorage.removeItem('pokerStats_' + scope);
+      localStorage.removeItem('pokerHistory_' + scope);
+      // Wipe unscoped legacy keys too
+      localStorage.removeItem('pokerStats');
+      localStorage.removeItem('pokerHistory');
     }
   } catch(e) {}
 })();
