@@ -1415,31 +1415,8 @@ function renderLeaderboardTab(body) {
       });
     return;
   }
-  // Fallback to localStorage for offline/legacy mode
-  const stats = getStats();
-  const merged = {};
-  Object.values(stats).forEach(s => { merged[s.name.toLowerCase()] = { name: s.name, games: s.games, net: s.net }; });
-  if (state.game) {
-    Object.values(state.players).filter(p => p && p.name && pBuyin(p) > 0).forEach(p => {
-      const k = p.name.toLowerCase();
-      if (!merged[k]) merged[k] = { name: p.name, games: 0, net: 0 };
-      merged[k].games++;
-      merged[k].net += pNet(p);
-    });
-  }
-  const players = Object.values(merged).sort((a, b) => b.net - a.net);
-  if (!players.length) {
-    body.innerHTML = '<div class="home-empty"><div class="home-empty-icon">🏆</div><div class="home-empty-title">No history yet</div><div class="home-empty-sub">Complete a game to see all-time standings</div></div>';
-    return;
-  }
-  body.innerHTML = '<div class="section-title">All Time Standings</div><div style="padding-bottom:80px">' +
-    players.map((p, i) => `
-      <div class="lb-row">
-        <div class="lb-rank">${i === 0 ? '🏆' : '#' + (i + 1)}</div>
-        <div class="lb-av">${esc(inits(p.name))}</div>
-        <div class="lb-info"><div class="lb-name">${esc(p.name)}</div><div class="lb-sub">${p.games} game${p.games !== 1 ? 's' : ''}</div></div>
-        <div class="lb-net ${nc(p.net)}">${fmtNet(p.net)}</div>
-      </div>`).join('') + '</div>';
+  // No PKR context — show empty state
+  body.innerHTML = '<div class="home-empty"><div class="home-empty-icon">🏆</div><div class="home-empty-title">No history yet</div><div class="home-empty-sub">Complete a game to see all-time standings</div></div>';
 }
 
 function renderHistoryTab(body) {
