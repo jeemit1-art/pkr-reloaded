@@ -242,10 +242,10 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
   const userId = existingPlayer?.user_id || `manual_${generateId()}`;
 
-  // Save to known players for quick-select (cloud)
+  // Save to known players for quick-select — do NOT increment games_played here (done at settle)
   await c.env.DB.prepare(`
-    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
-    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
+    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,0)
+    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp)
   `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
 
   await c.env.DB.prepare(`
@@ -365,7 +365,10 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
 
   // ── Compute settlement ──
-  const positions = results.map(p => ({...p, net: p.cashout - p.buy_ins}));
+  // buy_ins is a count, cashout is in cents. Get event buy_in amount for net calc.
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<{buy_in:number}>();
+  const buyInAmount = eventData?.buy_in || 0;
+  const positions = results.map(p => ({...p, net: p.cashout - (p.buy_ins * buyInAmount)}));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
   const now = Math.floor(Date.now()/1000);

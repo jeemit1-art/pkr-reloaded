@@ -174,7 +174,7 @@ events.get('/:id/history', authMiddleware, async (c) => {
       WHERE game_id=? AND net IS NOT NULL
       ORDER BY net DESC
     `).bind(g.id).all<{display_name:string; net:number}>();
-    return { ...g, top_players: top.results };
+    return { ...g, top_players: top.results, all_players: top.results };
   }));
 
   return c.json(result);

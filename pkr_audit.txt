@@ -1,0 +1,1973 @@
+]633;E;echo "=== AUTH ===";96e0a059-6c90-40c2-9b1e-8f7814f592e9]633;C=== AUTH ===
+import { Hono } from 'hono';
+import { Env, User } from '../types';
+import { signJWT } from '../jwt';
+import { authMiddleware, generateId } from '../middleware';
+
+const auth = new Hono<{ Bindings: Env }>();
+
+auth.get('/google', async (c) => {
+  const state = generateId();
+  const params = new URLSearchParams({
+    client_id:    c.env.GOOGLE_CLIENT_ID,
+    redirect_uri: `${new URL(c.req.url).origin}/auth/callback`,
+    response_type:'code',
+    scope:        'openid email profile',
+    state,
+    access_type:  'offline',
+    prompt:       'select_account',
+  });
+  return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+auth.get('/callback', async (c) => {
+  const { code, state, error } = c.req.query();
+  const front = c.env.FRONTEND_URL;
+  if (error || !code || !state) return c.redirect(`${front}/?error=oauth_denied`);
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({
+      code,
+      client_id:     c.env.GOOGLE_CLIENT_ID,
+      client_secret: c.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri:  `${new URL(c.req.url).origin}/auth/callback`,
+      grant_type:    'authorization_code',
+    }),
+  });
+  if (!tokenRes.ok) return c.redirect(`${front}/?error=token_failed`);
+  const tokens: { access_token:string } = await tokenRes.json();
+
+  const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers:{ Authorization:`Bearer ${tokens.access_token}` },
+  });
+  if (!userRes.ok) return c.redirect(`${front}/?error=userinfo_failed`);
+  const gu: { id:string; email:string; name:string; picture:string } = await userRes.json();
+
+  const existing = await c.env.DB.prepare('SELECT * FROM users WHERE google_sub=?').bind(gu.id).first<User>();
+  let userId: string;
+  if (existing) {
+    userId = existing.id;
+    await c.env.DB.prepare('UPDATE users SET name=?,avatar_url=? WHERE id=?').bind(gu.name,gu.picture,userId).run();
+  } else {
+    userId = generateId();
+    await c.env.DB.prepare('INSERT INTO users(id,google_sub,email,name,avatar_url) VALUES(?,?,?,?,?)')
+      .bind(userId,gu.id,gu.email,gu.name,gu.picture).run();
+  }
+
+  const jwt = await signJWT({ sub:userId, email:gu.email, name:gu.name }, c.env.JWT_SECRET);
+
+  // ── Store JWT under a short-lived one-time code (30s) instead of passing it in URL ──
+  const loginCode = generateId();
+  await c.env.KV.put(`login_code:${loginCode}`, jwt, { expirationTtl: 60 });
+
+  const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
+  // Pass a short-lived code — dashboard exchanges it for the real JWT
+  return new Response(null, {
+    status: 302,
+    headers: { Location:`${front}/dashboard?code=${loginCode}`, 'Set-Cookie': cookie },
+  });
+});
+
+// Exchange one-time login code for JWT (called by dashboard on load)
+auth.get('/token', async (c) => {
+  const code = c.req.query('code');
+  if (!code) return c.json({ error: 'code required' }, 400);
+  const jwt = await c.env.KV.get(`login_code:${code}`);
+  if (!jwt) return c.json({ error: 'Invalid or expired code' }, 404);
+  await c.env.KV.delete(`login_code:${code}`);
+  return c.json({ token: jwt });
+});
+
+// Token refresh — issue new JWT if current one is valid
+auth.post('/refresh', authMiddleware, async (c) => {
+  const user = await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
+    .bind(c.get('userId')).first<{id:string; email:string; name:string}>();
+  if (!user) return c.json({ error: 'User not found' }, 404);
+  const jwt = await signJWT({ sub: user.id, email: user.email, name: user.name }, c.env.JWT_SECRET);
+  const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
+  return new Response(JSON.stringify({ token: jwt }), {
+    headers: { 'Content-Type':'application/json', 'Set-Cookie': cookie },
+  });
+});
+
+auth.get('/me', authMiddleware, async (c) => {
+  const user = await c.env.DB.prepare('SELECT id,email,name,avatar_url FROM users WHERE id=?')
+    .bind(c.get('userId')).first();
+  if (!user) return c.json({ error:'Not found' },404);
+  return c.json(user);
+});
+
+auth.post('/logout', (c) => new Response(JSON.stringify({ok:true}),{
+  headers:{'Content-Type':'application/json','Set-Cookie':'pkr_token=; Path=/; HttpOnly; Max-Age=0'},
+}));
+
+export default auth;=== DASHBOARD ===
+'use client';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
+
+function DashboardInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [user, setUser]   = useState<User|null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm]   = useState({name:'',description:'',buy_in:'',master_password:''});
+  const [saving, setSaving] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(()=>{
+    const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return ()=>window.removeEventListener('beforeinstallprompt', handler);
+  },[]);
+
+  async function installApp() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome==='accepted') setShowInstallBanner(false);
+  }
+
+  useEffect(()=>{
+    async function init() {
+      const code = searchParams.get('code');
+      if (code) {
+        // Exchange one-time code for JWT (never stored full JWT in URL)
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+          const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
+          if (res.ok) { const { token } = await res.json(); if (token) saveToken(token); }
+          else { router.push('/'); return; }
+        } catch(e) { console.error('Token exchange failed', e); router.push('/'); return; }
+        window.history.replaceState({},'','/dashboard');
+      } else if (!getToken()) {
+        router.push('/'); return;
+      }
+      try {
+        const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);
+        setUser(u); setEvents(e);
+      } catch { router.push('/'); }
+      finally { setLoading(false); }
+    }
+    init();
+  },[]);
+
+  async function create() {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const evt = await api.events.create({
+        name: form.name.trim(),
+        description: form.description||undefined,
+        buy_in: form.buy_in ? Math.round(parseFloat(form.buy_in)*100) : 0,
+        master_password: form.master_password||undefined,
+      });
+      setEvents(e=>[evt,...e]);
+      setShowCreate(false);
+      setForm({name:'',description:'',buy_in:'',master_password:''});
+    } catch(e:any){ alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  if (loading) return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.6}}>PKR</div>
+    </div>
+  );
+
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+
+      {/* Install banner */}
+      {showInstallBanner && (
+        <div style={{background:'var(--bg3)',borderBottom:'1px solid var(--border)',
+          padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+          <div>
+            <span style={{fontSize:13,color:'var(--ivory)',fontWeight:500}}>Install PKR</span>
+            <span style={{fontSize:12,color:'var(--muted)',marginLeft:8}}>Add to your home screen</span>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-primary" style={{fontSize:11,padding:'5px 12px'}} onClick={installApp}>Install</button>
+            <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px'}} onClick={()=>setShowInstallBanner(false)}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="nav">
+        <div style={{maxWidth:640,margin:'0 auto',padding:'0 20px',height:56,
+          display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div className="display" style={{fontSize:22,color:'var(--white)',letterSpacing:'0.02em'}}>PKR</div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            {user?.avatar_url && (
+              <img src={user.avatar_url} alt={user.name}
+                style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
+            )}
+            <span style={{fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
+              {user?.name}
+            </span>
+            <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 12px'}}
+              onClick={()=>{ clearToken(); api.auth.logout().then(()=>router.push('/')) }}>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div style={{maxWidth:640,margin:'0 auto',padding:'40px 20px',position:'relative',zIndex:1}}>
+        {/* Page header */}
+        <div style={{marginBottom:36,display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
+          <div>
+            <div style={{fontSize:10,letterSpacing:'0.22em',textTransform:'uppercase',
+              color:'var(--muted)',marginBottom:8,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+              Your Tables
+            </div>
+            <h2 className="display" style={{fontSize:42,color:'var(--white)',fontWeight:600,lineHeight:1}}>
+              Dashboard
+            </h2>
+          </div>
+          <button className="btn btn-primary" onClick={()=>setShowCreate(true)}>
+            + New Table
+          </button>
+        </div>
+
+        {/* Create form */}
+        {showCreate && (
+          <div className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
+            <div style={{fontSize:16,color:'var(--white)',marginBottom:20,
+              fontFamily:'var(--font-display),serif',fontWeight:500}}>
+              New Table
+            </div>
+            <div style={{display:'grid',gap:14}}>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Table Name *</div>
+                <input className="inp" placeholder="e.g. Friday Night Poker"
+                  value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
+                  autoFocus/>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <div className="lbl" style={{marginBottom:6}}>Default Buy-in ($)</div>
+                  <input className="inp" type="number" placeholder="20"
+                    value={form.buy_in} onChange={e=>setForm(p=>({...p,buy_in:e.target.value}))}/>
+                </div>
+                <div>
+                  <div className="lbl" style={{marginBottom:6}}>Master Password</div>
+                  <input className="inp" placeholder="Optional"
+                    value={form.master_password} onChange={e=>setForm(p=>({...p,master_password:e.target.value}))}/>
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Description</div>
+                <input className="inp" placeholder="Optional"
+                  value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:20}}>
+              <button className="btn btn-primary" disabled={!form.name.trim()||saving} onClick={create} style={{flex:1}}>
+                {saving ? 'Creating…' : 'Create Table'}
+              </button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Events list */}
+        {events.length===0 && !showCreate && (
+          <div className="empty-state">
+            <div className="empty-state-icon">♠</div>
+            <div className="empty-state-text">No tables yet.</div>
+            <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>
+              Create your first table to get started.
+            </div>
+          </div>
+        )}
+
+        <div style={{display:'grid',gap:8}}>
+          {events.map((evt,i)=>(
+            <div key={evt.id}
+              className="card animate-up"
+              style={{animationDelay:`${i*0.04}s`,cursor:'pointer',transition:'border-color 0.15s'}}
+              onClick={()=>router.push(`/events/${evt.id}`)}
+              onMouseEnter={e=>(e.currentTarget.style.borderColor='var(--border)')}
+              onMouseLeave={e=>(e.currentTarget.style.borderColor='var(--border-sub)')}>
+              <div style={{padding:'18px 20px',display:'flex',alignItems:'center',gap:16}}>
+                <div style={{
+                  width:40,height:40,borderRadius:2,
+                  background:'var(--bg3)',border:'1px solid var(--border)',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:18,color:'var(--gold)',flexShrink:0,
+                }}>♠</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',
+                    fontWeight:500,marginBottom:3}}>{evt.name}</div>
+                  <div style={{fontSize:11,color:'var(--muted)',display:'flex',gap:12,
+                    fontFamily:'var(--font-body),sans-serif'}}>
+                    {evt.buy_in>0 && <span>{fmt(evt.buy_in)} buy-in</span>}
+                    <span>{evt.game_count||0} games</span>
+                    <span>{evt.member_count||1} member{evt.member_count!==1?'s':''}</span>
+                  </div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  {evt.role && (
+                    <span className={`badge badge-${evt.role}`}>{evt.role}</span>
+                  )}
+                  <span style={{color:'var(--faint)',fontSize:16}}>›</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  return <Suspense><DashboardInner/></Suspense>;
+}=== EVENTS PAGE ===
+'use client';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
+import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
+
+type Tab = 'games' | 'leaderboard' | 'history';
+type InviteRole = 'cohost' | 'member';
+
+export default function EventPage() {
+  const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
+  const router  = useRouter();
+  const [event, setEvent]     = useState(null as any);
+  const [games, setGames]     = useState([] as any[]);
+  const [history, setHistory] = useState([] as any[]);
+  const [leaders, setLeaders] = useState([] as any[]);
+  const [tab, setTab]         = useState('games');
+  const [isHost, setIsHost]   = useState(false);
+  const [user, setUser]       = useState(null as any);
+  const [showCreate, setShowCreate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null as any);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
+  const [showInvite, setShowInvite] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [showQuickSeat, setShowQuickSeat] = useState(false);
+  const [quickSeatGameId, setQuickSeatGameId] = useState('');
+  const [inviteUrl, setInviteUrl]   = useState('');
+  const [inviteRole, setInviteRole] = useState('cohost');
+  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+  const [saving, setSaving] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  useEffect(()=>{
+    Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
+      setEvent(e as any); setUser(u as any);
+      const me = e.members.find((m:any)=>m.id===u.id);
+      setIsHost(me?.role==='host'||me?.role==='cohost');
+    }).catch(()=>router.push('/dashboard'));
+    api.games.list(id).then(setGames);
+    api.events.leaderboard(id).then(setLeaders);
+    api.events.history(id).then(setHistory);
+  },[id]);
+
+  useEffect(()=>{
+    isPushSubscribedToEvent(id).then(setPushEnabled);
+  },[id]);
+
+  async function createGame() {
+    if (!form.scheduled_at) return;
+    setSaving(true);
+    try {
+      const ts = Math.floor(new Date(form.scheduled_at).getTime()/1000);
+      const g = await api.games.create(id,{
+        scheduled_at:ts, location:form.location||undefined,
+        notes:form.notes||undefined, seats:parseInt(form.seats)||9,
+        game_password:form.game_password||undefined,
+        repeat: form.repeat !== 'none' ? form.repeat : undefined,
+        format: form.format,
+      });
+      setGames(gs=>[g,...gs]);
+      setShowCreate(false);
+      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+    } catch(e:any){ alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function generateInvite(role='cohost') {
+    try {
+      const r = await api.events.invite(id, role);
+      setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
+    } catch(e:any){ alert(e.message); }
+  }
+
+  async function togglePush() {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        const result = await unsubscribePush(id);
+        setPushEnabled(result);
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          const result = await subscribePush(id, user?.id, user?.name);
+          setPushEnabled(result);
+        }
+      }
+    } finally { setPushLoading(false); }
+  }
+
+  const isPWA      = useMemo(()=>isPWAInstalled(),[]);
+  const iosDevice  = useMemo(()=>isIOS(),[]);
+  const safariOnly = useMemo(()=>isSafari(),[]);
+
+  if (!event) return null;
+
+  const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
+  const settled  = games.filter(g=>g.status==='settled');
+  const installLink = appUrl;
+
+  const statusColor:any = {
+    scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
+    settled:'var(--muted)', cancelled:'var(--red)',
+  };
+
+  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+
+  const TABS_NAV = ['games','leaderboard','history'];
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+
+      {/* Header */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
+        <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px',height:56,display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
+          </div>
+          {/* Push bell */}
+          {canUsePush() && (
+            <button onClick={togglePush} disabled={pushLoading} title={pushEnabled?'Notifications ON — tap to disable':'Enable push notifications'}
+              style={{background:pushEnabled?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.05)',
+                color:pushEnabled?'var(--green)':'var(--muted)',
+                border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
+                borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
+                display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
+              {pushEnabled ? '🔔' : '🔕'}
+            </button>
+          )}
+          {isHost && (
+            <div style={{display:'flex',gap:6}}>
+              <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
+              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats strip */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
+        <div style={{maxWidth:640,margin:'0 auto',display:'flex',gap:0}}>
+          {[
+            {l:'Buy-in', v:event.buy_in>0?fmt(event.buy_in):'—'},
+            {l:'Games',  v:`${event.game_count||0}`},
+            {l:'Members',v:`${event.member_count||1}`},
+          ].map((s,i)=>(
+            <div key={s.l} style={{padding:'14px 20px',borderRight:i<2?'1px solid var(--border-sub)':'none'}}>
+              <div className="display" style={{fontSize:18,color:'var(--white)',fontWeight:500}}>{s.v}</div>
+              <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.l}</div>
+            </div>
+          ))}
+          {/* Push status chip */}
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',padding:'0 16px'}}>
+            {pushEnabled
+              ? <span style={{fontSize:10,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>🔔 Notified</span>
+              : canUsePush() ? <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>🔕 No alerts</span> : null
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Tab nav */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
+        <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
+          {TABS.map((t)=>(
+            <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
+              {t.charAt(0).toUpperCase()+t.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{maxWidth:640,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
+
+        {/* ── Games tab ── */}
+        {tab==='games' && (
+          <div>
+            {isHost && (
+              <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
+              </div>
+            )}
+            {upcoming.length===0 && settled.length===0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">♠</div>
+                <div className="empty-state-text">No games scheduled yet.</div>
+                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
+              </div>
+            )}
+            {upcoming.map(g=>(
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}} onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
+            ))}
+            {settled.length>0 && (
+              <>
+                <div style={{fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--faint)',margin:'20px 0 10px',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+                  Recent Results
+                </div>
+                {settled.slice(0,3).map(g=>(
+                  <div key={g.id} className="card" style={{marginBottom:8,cursor:'pointer',opacity:0.7}} onClick={()=>router.push(`/games/${g.id}`)}>
+                    <div style={{padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,color:'var(--ivory)'}}>{fmtDate(g.scheduled_at)}</div>
+                        {g.location && <div style={{fontSize:11,color:'var(--muted)'}}>{g.location}</div>}
+                        {(g as any).format && (g as any).format !== 'cash' && (
+                          <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
+                            letterSpacing:'0.08em',textTransform:'uppercase'}}>
+                            {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="badge badge-settled">Settled</span>
+                      <span style={{color:'var(--faint)',fontSize:16}}>›</span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Leaderboard tab ── */}
+        {tab==='leaderboard' && (
+          <div>
+            {leaders.length===0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">🏆</div>
+                <div className="empty-state-text">No results yet. Settle a game to see the leaderboard.</div>
+              </div>
+            )}
+            {leaders.length>0 && (
+              <div className="card">
+                {leaders.map((l,i)=>(
+                  <div key={l.user_id} onClick={()=>setSelectedPlayer(l.display_name)}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<leaders.length-1?'1px solid var(--border-sub)':'none',
+                    cursor:'pointer',transition:'background 0.12s'}}
+                    onMouseEnter={e=>(e.currentTarget.style.background='rgba(201,168,76,0.04)')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='')}>
+                    <div style={{width:28,textAlign:'center',fontSize:i<3?18:13,color:i===0?'var(--gold)':i===1?'var(--ivory)':i===2?'var(--amber)':'var(--faint)'}}>
+                      {i===0?'♛':i===1?'♝':i===2?'♞':`${i+1}`}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:i===0?600:400}}>{l.display_name}</div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{l.games_played} game{l.games_played!==1?'s':''} · best {fmtSign(l.biggest_win)}</div>
+                    </div>
+                    <div className="display" style={{fontSize:20,color:l.total_net>0?'var(--green)':l.total_net<0?'var(--red)':'var(--muted)',fontWeight:500}}>
+                      {fmtSign(l.total_net)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Fix 8: Player drill-down — show their individual game history */}
+            {selectedPlayer && (
+              <PlayerHistoryCard
+                player={selectedPlayer}
+                history={history}
+                leader={leaders.find(l=>l.display_name===selectedPlayer)||null}
+                onClose={()=>setSelectedPlayer(null)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── History tab ── */}
+        {tab==='history' && (
+          <div>
+            {history.length===0 && <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">No settled games yet.</div></div>}
+            <div style={{display:'grid',gap:8}}>
+              {history.map(g=>(
+                <div key={g.id} className="card">
+                  <div style={{padding:'14px 16px',cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:4}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
+                      <span className="badge badge-settled">{(g as any).player_count||0} players</span>
+                    </div>
+                    {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
+                    {((g as any).top_players||[]).length>0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {((g as any).top_players||[]).map((p:any,i:number)=>(
+                          <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
+                            background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
+                            border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
+                            <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}>{i===0?'♛':i===1?'♝':'♞'}</span>
+                            <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
+                            <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {isHost && (
+                    <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
+                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
+                      <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
+                        onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Fix 6+10: Confirm delete/cancel modal */}
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
+          <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                {confirmDelete.endsWith(':delete') ? 'Delete Game?' : 'Cancel Game?'}
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                {confirmDelete.endsWith(':delete')
+                  ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
+                  : "This marks the game as cancelled. It will stay in history but won't affect the leaderboard."}
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmDelete(null)}>Keep it</button>
+              <button className="btn btn-danger" style={{fontSize:12}} onClick={async()=>{
+                const gameId = confirmDelete.replace(':delete','');
+                const isDelete = confirmDelete.endsWith(':delete');
+                try {
+                  if (isDelete) {
+                    await api.games.delete(gameId);
+                    setHistory(h=>h.filter(x=>x.id!==gameId));
+                    setGames(gs=>gs.filter(g=>g.id!==gameId));
+                    api.events.leaderboard(id).then(setLeaders);
+                  } else {
+                    await api.games.cancel(gameId);
+                    setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
+                  }
+                } catch(e:any){ alert(e.message); }
+                setConfirmDelete(null);
+              }}>
+                {confirmDelete.endsWith(':delete') ? 'Delete permanently' : 'Cancel game'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create game modal */}
+      {showCreate && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:20,fontWeight:500}}>Schedule Game</div>
+            <div style={{display:'grid',gap:14}}>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Date & Time *</div>
+                <input className="inp" type="datetime-local" value={form.scheduled_at} onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Location</div>
+                <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Seats</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {['6','7','8','9','10','11','12'].map(n=>(
+                    <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
+                        background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
+                        border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Game Password</div>
+                <input className="inp" placeholder="Optional" value={form.game_password} onChange={e=>setForm(f=>({...f,game_password:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Notes</div>
+                <input className="inp" placeholder="Optional" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Repeat</div>
+                <div style={{display:'flex',gap:6}}>
+                  {(['none','weekly','fortnightly']).map(r=>(
+                    <button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
+                        border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
+                      {r==='none'?'Once':r==='weekly'?'Weekly':'Fortnightly'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Format</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {([
+                    {v:'cash',       l:'💰 Cash'},
+                    {v:'tournament', l:'🏆 Tournament'},
+                    {v:'rebuy',      l:'♻️ Rebuy'},
+                    {v:'freezeout',  l:'❄️ Freezeout'},
+                  ]).map(f=>(
+                    <button key={f.v} onClick={()=>setForm(fm=>({...fm,format:f.v}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.format===f.v?'var(--gold)':'var(--bg3)',
+                        color:form.format===f.v?'#0e0e0f':'var(--muted)',
+                        border:form.format===f.v?'1px solid var(--gold)':'1px solid var(--border-sub)',
+                        fontFamily:'var(--font-body),sans-serif'}}>
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:20}}>
+              <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
+                {saving?'Scheduling…':'Schedule & Notify'}
+              </button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
+              {inviteUrl}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}>Copy Link</button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Join me as co-host on PKR: ${inviteUrl}`)}`}
+                target="_blank" rel="noopener noreferrer" className="btn btn-outline"
+                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>WhatsApp</a>
+              <button className="btn btn-ghost" onClick={()=>setShowInvite(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Install / Share modal */}
+      {showInstall && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInstall(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>Share PKR</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>{event.name}</div>
+
+            {/* Install link */}
+            <div style={{marginBottom:16,padding:'14px',background:'rgba(0,255,136,0.04)',border:'1px solid rgba(0,255,136,0.15)',borderRadius:4}}>
+              <div style={{fontSize:9,letterSpacing:'0.18em',color:'var(--green)',marginBottom:6,fontFamily:'var(--font-body),sans-serif',fontWeight:600,textTransform:'uppercase'}}>📲 Player Install Link</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:10,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                Send to new players so they can install PKR and get push notifications for every game.
+              </div>
+              <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'10px 12px',fontSize:10,color:'var(--ivory)',wordBreak:'break-all',marginBottom:8,fontFamily:'monospace'}}>{installLink}</div>
+              <div style={{display:'flex',gap:6}}>
+                <button className="btn btn-outline" style={{flex:1,fontSize:11,borderColor:'rgba(0,255,136,0.3)',color:'var(--green)'}}
+                  onClick={()=>navigator.clipboard.writeText(installLink).then(()=>alert('Install link copied!'))}>Copy</button>
+                <a href={`https://wa.me/?text=${encodeURIComponent(`Install PKR and join ${event.name}: ${installLink}`)}`}
+                  target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
+                  style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>📱 WhatsApp</a>
+              </div>
+            </div>
+
+            {/* Push toggle */}
+            {canUsePush() && (
+              <div style={{padding:'12px 14px',background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,marginBottom:14}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+                  <div>
+                    <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>🔔 Your Notifications</div>
+                    <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
+                      {pushEnabled ? 'ON — get alerts for games, results & buy-ins.' : 'OFF — enable to stay in the loop.'}
+                    </div>
+                  </div>
+                  <button onClick={togglePush} disabled={pushLoading}
+                    style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:600,
+                      background:pushEnabled?'rgba(255,60,60,0.1)':'var(--gold)',color:pushEnabled?'var(--red)':'#000',
+                      border:`1px solid ${pushEnabled?'rgba(255,60,60,0.3)':'var(--gold)'}`,
+                      fontFamily:'var(--font-body),sans-serif',opacity:pushLoading?0.6:1,whiteSpace:'nowrap'}}>
+                    {pushLoading ? '…' : pushEnabled ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isPWA && iosDevice && safariOnly && (
+              <div style={{padding:'10px 14px',background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:4,marginBottom:14}}>
+                <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}>📱 iPhone: Add to Home Screen</div>
+                <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                  Tap <strong style={{color:'var(--ivory)'}}>Share ↑</strong> → <strong style={{color:'var(--ivory)'}}>Add to Home Screen</strong> to install PKR as a native app.
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-ghost" style={{width:'100%'}} onClick={()=>setShowInstall(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Seat Modal (#13) ── */}
+      {showQuickSeat && quickSeatGameId && (
+        <QuickSeatModal
+          gameId={quickSeatGameId}
+          onClose={()=>setShowQuickSeat(false)}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Quick Seat Modal ────────────────────────────────────────────────────────
+function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:()=>void; onSeated:()=>void }) {
+  const [name, setName] = useState('');
+  const [wa, setWa]     = useState('');
+  const [saving, setSaving] = useState(false);
+  const [seated, setSeated] = useState([] as any[]);
+
+  async function seat() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await api.games.seat(gameId, { display_name: name.trim(), whatsapp: wa || undefined });
+      setSeated(s => [...s, name.trim()]);
+      setName(''); setWa('');
+    } catch(e:any) { alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-sheet">
+        <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>⚡ Quick Seat Players</div>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Add players before launching the table</div>
+
+        {seated.length > 0 && (
+          <div style={{marginBottom:14,display:'flex',flexWrap:'wrap',gap:6}}>
+            {seated.map((n,i) => (
+              <span key={i} style={{padding:'4px 10px',background:'rgba(76,175,125,0.1)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+                ✓ {n}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div style={{display:'grid',gap:10,marginBottom:14}}>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>Name *</div>
+            <input className="inp" placeholder="Player name" value={name} onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&seat()} autoFocus/>
+          </div>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>WhatsApp (optional)</div>
+            <input className="inp" placeholder="+61 400 000 000" type="tel" value={wa} onChange={e=>setWa(e.target.value)}/>
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-primary" style={{flex:1}} disabled={!name.trim()||saving} onClick={seat}>
+            {saving ? 'Seating…' : '+ Seat Player'}
+          </button>
+          <button className="btn btn-ghost" onClick={()=>{ onSeated(); }}>
+            {seated.length > 0 ? 'Done' : 'Cancel'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Game Card with RSVP count + push + links ───
+function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onDelete}:any) {
+  const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
+  const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
+  const statusBg:Record<string,string> = {
+    scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
+    lobby:'rgba(201,168,76,0.12)', settled:'transparent',
+  };
+  const statusDot:Record<string,string> = {
+    scheduled:'var(--amber)', active:'var(--green)', lobby:'var(--gold)', settled:'var(--muted)',
+  };
+  return (
+    <div className="card" style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
+      <div style={{padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}} onClick={onClick}>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>
+            <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{fmtDate(game.scheduled_at)}</div>
+          </div>
+          {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>📍 {game.location}</div>}
+          {game.notes && <div style={{fontSize:11,color:'var(--faint)',fontStyle:'italic'}}>{game.notes}</div>}
+          {(game as any).format && (game as any).format !== 'cash' && (
+            <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
+              letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
+              background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
+              {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
+            </span>
+          )}
+          <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
+            <span className={`badge badge-${game.status}`}>{game.status}</span>
+            <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>{game.seats||9} seats</span>
+          </div>
+        </div>
+        <span style={{color:'var(--faint)',fontSize:16,marginTop:2}}>›</span>
+      </div>
+      {/* Quick share row */}
+      {(game.status==='scheduled'||game.status==='lobby'||game.status==='active') && (
+        <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
+          {isHost && (game.status==='scheduled'||game.status==='lobby') && (
+            <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
+              ⚡ Quick Seat
+            </button>
+          )}
+          {isHost && game.status==='scheduled' && (<>
+            <button onClick={(e)=>{e.stopPropagation();onCancel();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}>
+              Cancel
+            </button>
+            <button onClick={(e)=>{e.stopPropagation();onDelete();}}
+              className="btn btn-danger" style={{fontSize:10,padding:'5px 10px'}}>
+              Delete
+            </button>
+          </>)}
+          <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'));}}
+            className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
+            📋 RSVP Link
+          </button>
+          <a onClick={e=>e.stopPropagation()} href={`https://wa.me/?text=${encodeURIComponent(`🃏 *${eventName}*\n${fmtDate(game.scheduled_at)}${game.location?'\n📍 '+game.location:''}\n\nRSVP: ${lobbyUrl}`)}`}
+            target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
+            style={{fontSize:10,padding:'5px 10px',textDecoration:'none',display:'flex',alignItems:'center'}}>
+            📱 WhatsApp
+          </a>
+          {liveUrl && game.status==='active' && (
+            <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--green)'}}>
+              📡 Live Link
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function PlayerHistoryCard({ player, history, leader, onClose }: {
+  player: string;
+  history: any[];
+  leader: any;
+  onClose: () => void;
+}) {
+  const playerGames = history.filter((g:any)=>
+    (g.top_players||[]).some((p:any)=>p.display_name===player)
+  );
+  return (
+    <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
+      <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
+          {leader && (
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
+              {leader.games_played} games · {leader.games_won} wins · best {leader.biggest_win>0?'+':''}{(leader.biggest_win/100).toFixed(0)} · worst -{(leader.biggest_loss/100).toFixed(0)}
+            </div>
+          )}
+        </div>
+        <button onClick={onClose}
+          style={{background:'none',border:'none',color:'var(--faint)',fontSize:18,cursor:'pointer',padding:'2px 6px'}}>✕</button>
+      </div>
+      {playerGames.length===0 && (
+        <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
+      )}
+      {playerGames.map((g:any)=>{
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
+        const net = pp?.net ?? null;
+        return (
+          <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
+            borderBottom:'1px solid var(--border-sub)'}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif'}}>{new Date(g.scheduled_at*1000).toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'})}</div>
+              {g.location && <div style={{fontSize:10,color:'var(--faint)',marginTop:1}}>{g.location}</div>}
+            </div>
+            {net!==null && (
+              <div style={{fontSize:15,fontWeight:600,fontFamily:'serif',
+                color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)'}}>
+                {net>0?'+':''}{(net/100).toFixed(0)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.5}}>PKR</div>
+    </div>
+  );
+}
+=== GAMES BRIDGE ===
+"use client";
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { api, getToken } from "@/lib/api";
+
+export default function GameBridgePage() {
+  const params = useParams();
+  const id = (Array.isArray(params.id) ? params.id[0] : params.id) as string;
+
+  useEffect(() => {
+    async function bridge() {
+      try {
+        const [game, me] = await Promise.all([api.games.get(id), api.auth.me()]);
+
+        let isHost = false;
+        const eventId = (game as any).event_id;
+        try {
+          const ev = await api.events.get(eventId);
+          const member = (ev.members || []).find((m: any) => m.id === me.id);
+          isHost = member?.role === "host" || member?.role === "cohost";
+        } catch {}
+
+        const buyInDollars = ((game as any).buy_in || 0) / 100;
+
+        // ── Check if we already have live state for this exact game ──
+        // If so, skip re-initialising localStorage so in-progress chips are preserved
+        let skipStateInit = false;
+        try {
+          const existingCtx = JSON.parse(localStorage.getItem("pkrCtx") || "null");
+          const existingState = JSON.parse(localStorage.getItem("pokerState") || "null");
+          if (existingCtx?.gameId === id && existingState?.game && !existingState.game.ended) {
+            skipStateInit = true;
+          }
+        } catch {}
+
+        if (!skipStateInit) {
+          const players: Record<string, any> = {};
+          ((game as any).players || []).forEach((p: any, i: number) => {
+            const sid = "seat" + (p.seat_number || (i + 1));
+            const count = p.buy_ins || 1;
+            const transactions: any[] = [];
+            for (let b = 0; b < count; b++) {
+              transactions.push({ type: "buyin", amount: buyInDollars, ts: Date.now() - (count - b) * 60000 });
+            }
+            if (p.cashout != null) transactions.push({ type: "cashout", amount: p.cashout / 100, ts: Date.now() });
+            players[sid] = { name: p.display_name, userId: p.user_id, phone: p.whatsapp || "", transactions };
+            if (p.whatsapp) {
+              try {
+                const phones = JSON.parse(localStorage.getItem("pokerPhones") || "{}");
+                phones[p.display_name.toLowerCase()] = { name: p.display_name, phone: p.whatsapp };
+                localStorage.setItem("pokerPhones", JSON.stringify(phones));
+              } catch {}
+            }
+          });
+
+          const state = {
+            game: {
+              name: (game as any).event_name || "Poker Night",
+              stakes: "",
+              seats: (game as any).seats || 9,
+              startedAt: Date.now(),
+              gameDate: new Date((game as any).scheduled_at * 1000).toISOString(),
+              location: (game as any).location || "",
+              code: (game as any).live_token || "LOCAL",
+              defaultBuyin: buyInDollars,
+              password: (game as any).game_password || null,
+              lobbyActive: false, // PKR lobby page handles pre-game RSVPs
+            },
+            players,
+          };
+
+          // Scope keys to eventId+userId to match table.html scoping
+          const lsScope = eventId + '_' + me.id;
+          localStorage.setItem("pokerState_" + lsScope, JSON.stringify(state));
+          // Clear old unscoped keys
+          localStorage.removeItem("pokerState");
+          localStorage.removeItem("pokerStats");
+          localStorage.removeItem("pokerHistory");
+          localStorage.removeItem("pokerPhones");
+          // Clear scoped stats keys — leaderboard comes from PKR API now
+          localStorage.removeItem("pokerStats_" + lsScope);
+          localStorage.removeItem("pokerHistory_" + lsScope);
+          localStorage.setItem("cloudRole", isHost ? "host" : "player");
+          localStorage.setItem("cloudGameCode", (game as any).live_token || "LOCAL");
+          localStorage.setItem("cloudMyName", me.name || (isHost ? "Host" : "Player"));
+        }
+
+        // Always refresh pkrCtx with latest token
+        localStorage.setItem("pkrCtx", JSON.stringify({
+          gameId: id,
+          eventId: eventId,
+          apiUrl: process.env.NEXT_PUBLIC_API_URL || "",
+          token: getToken(),
+          userId: me.id,
+          userName: me.name,
+          // Stable settle key — does NOT include Date.now() so retries are safe
+          settleKey: id + "_end",
+        }));
+
+        // Always open the game screen — PKR lobby page handles pre-game RSVPs
+        window.location.href = "/table.html#game";
+      } catch (err) {
+        console.error("Bridge error:", err);
+        const fallbackCtx = (() => { try { return JSON.parse(localStorage.getItem("pkrCtx") || "null"); } catch { return null; } })();
+        window.location.href = fallbackCtx?.eventId ? `/events/${fallbackCtx.eventId}` : "/dashboard";
+      }
+    }
+    bridge();
+  }, [id]);
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"#060e07",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{color:"#c9a84c",fontFamily:"Playfair Display,serif",fontSize:48,opacity:0.6}}>&#9824;</div>
+      <div style={{color:"#6b8c6e",fontFamily:"DM Sans,sans-serif",fontSize:14,letterSpacing:2}}>LOADING</div>
+    </div>
+  );
+}=== WORKER GAMES ===
+import { Hono } from 'hono';
+import { Env, SettleRequest, Transfer } from '../types';
+import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { sendPushToEvent, sendPushToPlayer } from '../push';
+
+const games = new Hono<{ Bindings: Env }>();
+
+/* ═══════════════════════════════════════════
+   CORE GAME CRUD
+═══════════════════════════════════════════ */
+
+games.get('/events/:eventId/games', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const { status } = c.req.query();
+  let q = 'SELECT * FROM games WHERE event_id=?';
+  const b: unknown[] = [eventId];
+  if (status) { q+=' AND status=?'; b.push(status); }
+  q+=' ORDER BY scheduled_at DESC';
+  const rows = await c.env.DB.prepare(q).bind(...b).all();
+  return c.json(rows.results);
+});
+
+games.post('/events/:eventId/games', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
+  const { scheduled_at, location, notes, seats, game_password, repeat, format } = await c.req.json();
+  if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
+  const id = generateId();
+  const liveToken = generateId();
+  const gameFormat = ['cash','tournament','rebuy','freezeout'].includes(format) ? format : 'cash';
+  await c.env.DB.prepare(
+    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat).run();
+
+  // ── Recurring: auto-schedule next game ──────────────────────────────────
+  if (repeat === 'weekly' || repeat === 'fortnightly') {
+    const offsetDays = repeat === 'weekly' ? 7 : 14;
+    const nextTs = scheduled_at + offsetDays * 24 * 60 * 60;
+    const nextId = generateId();
+    const nextToken = generateId();
+    await c.env.DB.prepare(
+      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat).run();
+  }
+
+  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
+  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
+    title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
+    body:`${dt}${location?' · '+location:''}`,
+    data:{ gameId:id, eventId, type:'game_scheduled', lobby_path:`/games/${id}/lobby` },
+  }));
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
+  return c.json(game,201);
+});
+
+/* ── Get single game (with players + rsvps) ── */
+games.get('/games/:id', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
+  // If settled, attach transfers too
+  const transfers = game.status==='settled'
+    ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
+    : [];
+  return c.json({...game, buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
+});
+
+/* ── Update game ── */
+games.put('/games/:id', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Cannot modify settled game. Unsettle first.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { scheduled_at, location, notes, status, seats, game_password } = await c.req.json();
+  await c.env.DB.prepare(`UPDATE games SET
+    scheduled_at=COALESCE(?,scheduled_at), location=COALESCE(?,location),
+    notes=COALESCE(?,notes), status=COALESCE(?,status),
+    seats=COALESCE(?,seats), game_password=COALESCE(?,game_password)
+    WHERE id=?`
+  ).bind(scheduled_at||null,location||null,notes||null,status||null,seats||null,game_password||null,gameId).run();
+  const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
+  return c.json(updated);
+});
+
+/* ── Cancel game (soft — keeps record, hides from active list) ── */
+games.post('/games/:id/cancel', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  if (game.status === 'settled') return c.json({error:'Cannot cancel a settled game'},400);
+  await c.env.DB.prepare("UPDATE games SET status='cancelled' WHERE id=?").bind(gameId).run();
+  return c.json({ok:true, message:'Game cancelled'});
+});
+
+/* ── Delete game (host only) ── */
+games.delete('/games/:id', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can delete games'},403);
+  // Clean leaderboard if settled
+  if (game.status==='settled') {
+    await rebuildLeaderboard(c.env.DB, game.event_id);
+  }
+  await c.env.DB.prepare('DELETE FROM games WHERE id=?').bind(gameId).run();
+  return c.json({ok:true});
+});
+
+/* ═══════════════════════════════════════════
+   PUBLIC VIEWS (no auth)
+═══════════════════════════════════════════ */
+
+games.get('/games/:id/lobby', async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare(
+    'SELECT id,event_id,scheduled_at,location,notes,seats,status,live_token,format,lobby_views FROM games WHERE id=?'
+  ).bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+
+  // ── Fix #4: Increment lobby view counter (fire and forget) ──────────────
+  c.executionCtx.waitUntil(
+    c.env.DB.prepare('UPDATE games SET lobby_views=COALESCE(lobby_views,0)+1 WHERE id=?').bind(gameId).run()
+  );
+
+  const event   = await c.env.DB.prepare('SELECT id,name FROM events WHERE id=?').bind(game.event_id).first();
+  const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ game, event, rsvps:rsvps.results, players:players.results });
+});
+
+games.get('/games/live/:token', async (c) => {
+  const token = c.req.param('token');
+  const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status FROM games WHERE live_token=?').bind(token).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  const event   = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,cashout FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
+  const totalIn  = players.results.reduce((s:number,p:any)=>s+(p.buy_ins||0),0);
+  const totalOut = players.results.reduce((s:number,p:any)=>s+(p.cashout||0),0);
+  return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut });
+});
+
+games.get('/games/results/:token', async (c) => {
+  const token = c.req.param('token');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE results_token=?').bind(token).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  const event     = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  const players   = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY net DESC NULLS LAST').bind(game.id).all();
+  const transfers = await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(game.id).all();
+  return c.json({ game, event, players:players.results, transfers:transfers.results });
+});
+
+/* ═══════════════════════════════════════════
+   RSVP
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/rsvp', async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (game.status==='settled'||game.status==='cancelled') return c.json({error:'Game already ended'},400);
+  const { display_name, whatsapp, status } = await c.req.json();
+  if (!display_name?.trim()) return c.json({error:'Name required'},400);
+  await c.env.DB.prepare(`
+    INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status) VALUES(?,?,?,?,?)
+    ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp)
+  `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes').run();
+  const rsvps = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  return c.json({ok:true, rsvps:rsvps.results});
+});
+
+/* ═══════════════════════════════════════════
+   GAME STATE — start, seat, buy-in, cashout
+   All writes go to D1 (cloud). Auto-save handled
+   by frontend polling PUT /games/:id every 60s.
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/start', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  try {
+    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!game) return c.json({error:'Not found'},404);
+    if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+    if (game.status==='settled') return c.json({error:'Game already settled'},400);
+    if (game.status==='active')  return c.json({error:'Game already active'},400);
+    const { password } = await c.req.json().catch(()=>({password:''}));
+    if (game.game_password && game.game_password !== password) return c.json({error:'Wrong password'},401);
+
+    // Seat all yes-RSVPs — skip if table missing
+    let inserts: any[] = [];
+    try {
+      const rsvps = await c.env.DB.prepare("SELECT * FROM game_rsvps WHERE game_id=? AND status='yes'").bind(gameId).all<any>();
+      let seatNum = 1;
+      inserts = rsvps.results.map((r:any) =>
+        c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
+          VALUES(?,?,?,?,?,1,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
+          .bind(gameId,`rsvp_${r.id}`,r.display_name,r.whatsapp||null,seatNum++)
+      );
+    } catch(_) { /* game_rsvps may not exist yet */ }
+
+    await c.env.DB.batch([
+      ...inserts,
+      c.env.DB.prepare("UPDATE games SET status='active' WHERE id=?").bind(gameId),
+    ]);
+    const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+
+    // Notify all subscribers that the game is live
+    const eventData = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+    c.executionCtx.waitUntil(sendPushToEvent(c.env, game.event_id, {
+      title: `🃏 ${eventData?.name||'PKR'} — Game is Live`,
+      body: `Cards are in the air. Good luck!`,
+      data: { gameId, eventId: game.event_id, type: 'game_started', live_token: game.live_token },
+    }));
+
+    return c.json({ok:true, players:players.results});
+  } catch(e:any) {
+    return c.json({error: e.message||'Internal error'}, 500);
+  }
+});
+
+games.post('/games/:id/seat', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
+  if (!display_name?.trim()) return c.json({error:'Name required'},400);
+  // Reuse existing user_id for this display_name in this event to avoid leaderboard duplicates
+  const existingPlayer = await c.env.DB.prepare(
+    `SELECT DISTINCT user_id FROM game_players gp
+     JOIN games g ON g.id=gp.game_id
+     WHERE g.event_id=? AND gp.display_name=? AND gp.user_id LIKE 'manual_%'
+     LIMIT 1`
+  ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
+  const userId = existingPlayer?.user_id || `manual_${generateId()}`;
+
+  // Save to known players for quick-select (cloud)
+  await c.env.DB.prepare(`
+    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
+    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
+  `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
+
+  await c.env.DB.prepare(`
+    INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
+    ON CONFLICT(game_id,user_id) DO UPDATE SET buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
+  `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||1).run();
+
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  // Notify the seated player
+  const evData = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, display_name.trim(), {
+    title: `🪑 You've been seated — ${evData?.name||'PKR'}`,
+    body: `Seat ${seat_number||'assigned'}. Get ready to play!`,
+    data: { gameId, eventId: game.event_id, type: 'seated' },
+  }));
+  return c.json({ok:true, players:players.results});
+});
+
+games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  await c.env.DB.prepare('DELETE FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  await c.env.DB.prepare('UPDATE game_players SET buy_ins=buy_ins+1 WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  // Notify the specific player their buy-in was recorded
+  const player = players.results.find((p:any) => p.user_id===userId) as any;
+  if (player) {
+    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const buyInAmt = evData?.buy_in ? `$${(evData.buy_in/100).toFixed(0)}` : 'Buy-in';
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
+      body: `Buy-in #${player.buy_ins} added to your seat.`,
+      data: { gameId, eventId: game.event_id, type: 'buyin', live_token: game.live_token },
+    }));
+  }
+  return c.json({ok:true, players:players.results});
+});
+
+games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { cashout } = await c.req.json();
+  await c.env.DB.prepare('UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?').bind(cashout,gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  // Notify the specific player their cashout was recorded
+  const player = players.results.find((p:any) => p.user_id===userId) as any;
+  if (player && cashout != null) {
+    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const buyCost = (player.buy_ins||1) * (evData?.buy_in||0);
+    const net = cashout - buyCost;
+    const netStr = net > 0 ? `+$${(net/100).toFixed(0)}` : net < 0 ? `-$${Math.abs(net/100).toFixed(0)}` : 'even';
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData?.name||'PKR'}`,
+      body: `Net result: ${netStr}. Check results when settled.`,
+      data: { gameId, eventId: game.event_id, type: 'cashout', live_token: game.live_token },
+    }));
+  }
+  return c.json({ok:true, players:players.results});
+});
+
+/* ── Event known players (quick-select) ── */
+games.get('/events/:eventId/players', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const players = await c.env.DB.prepare('SELECT * FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+  return c.json(players.results);
+});
+
+/* ═══════════════════════════════════════════
+   SETTLEMENT — strict single-settle with unsettle
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/settle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const body: SettleRequest = await c.req.json();
+  const { idempotency_key, results } = body;
+  if (!idempotency_key) return c.json({error:'idempotency_key required'},400);
+  if (!results?.length)  return c.json({error:'results required'},400);
+
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+
+  // ── STRICT: already settled = hard block ──
+  if (game.status === 'settled') {
+    const existing = await c.env.DB.prepare('SELECT * FROM settlements WHERE game_id=?').bind(gameId).first<any>();
+    return c.json({
+      error:'Game already settled',
+      already_settled: true,
+      settlement_id: existing?.id,
+      settled_at: existing?.created_at,
+    }, 409);
+  }
+
+  // ── Idempotency check on key (safe retry) ──
+  const cached = await c.env.DB.prepare('SELECT payload_json FROM settlements WHERE idempotency_key=?')
+    .bind(idempotency_key).first<{payload_json:string}>();
+  if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
+
+  // ── Compute settlement ──
+  const positions = results.map(p => ({...p, net: p.cashout - p.buy_ins}));
+  const transfers  = minimumTransfers(positions);
+  const sid = generateId();
+  const now = Math.floor(Date.now()/1000);
+  const resultsToken = generateId();
+  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, settled_at:now, results_token:resultsToken };
+
+  // ── Write everything in one atomic batch ──
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
+      .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
+    c.env.DB.prepare("UPDATE games SET status='settled',results_token=? WHERE id=?").bind(resultsToken,gameId),
+    ...positions.map(p => c.env.DB.prepare(`
+      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,cashout,net,settled_at,created_at)
+      VALUES(?,?,?,?,?,?,?,unixepoch())
+      ON CONFLICT(game_id,user_id) DO UPDATE SET
+        buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout,p.net,now)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.amount)),
+  ]);
+
+  // ── Rebuild leaderboard from ALL settled games (not additive) ──
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  // ── Update event_players games_played ──
+  await c.env.DB.batch(positions.map(p =>
+    c.env.DB.prepare(`
+      INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
+      ON CONFLICT(event_id,display_name) DO UPDATE SET games_played=games_played+1
+    `).bind(generateId(),game.event_id,p.display_name)
+  ));
+
+  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  c.executionCtx.waitUntil(sendPushToEvent(c.env, game.event_id, {
+    title:`✅ ${event?.name||'PKR'} — Game Settled`,
+    body:'Results are in. Check the leaderboard!',
+    data:{ gameId, eventId:game.event_id, type:'game_settled', results_token:resultsToken },
+  }));
+
+  return c.json(payload,201);
+});
+
+/* ── UNSETTLE — cleanly reverses a settlement ── */
+games.post('/games/:id/unsettle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);
+  if (game.status !== 'settled') return c.json({error:'Game is not settled'},400);
+
+  // ── Remove settlement records ──
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
+    // Clear settlement fields on players but keep them seated
+    c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
+  ]);
+
+  // ── Rebuild leaderboard WITHOUT this game ──
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  return c.json({ok:true, message:'Game unsettled. You can now modify players and re-settle.'});
+});
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD — always rebuilt from source data
+   Never additive. No double-counting possible.
+═══════════════════════════════════════════ */
+
+async function rebuildLeaderboard(db: D1Database, eventId: string) {
+  // Get all settled games for this event
+  const settled = await db.prepare(`
+    SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
+    FROM game_players gp
+    JOIN games g ON g.id=gp.game_id
+    WHERE g.event_id=? AND g.status='settled' AND gp.net IS NOT NULL
+    ORDER BY gp.user_id
+  `).bind(eventId).all<any>();
+
+  if (!settled.results.length) {
+    // No settled games — wipe leaderboard for this event
+    await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
+    return;
+  }
+
+  // Aggregate per player from raw results
+  const players: Record<string, {
+    user_id:string; display_name:string; games_played:number; games_won:number;
+    total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
+  }> = {};
+
+  for (const row of settled.results) {
+    if (!players[row.user_id]) {
+      players[row.user_id] = {
+        user_id:row.user_id, display_name:row.display_name,
+        games_played:0, games_won:0, total_net:0,
+        biggest_win:0, biggest_loss:0, last_played:0,
+      };
+    }
+    const p = players[row.user_id];
+    p.games_played++;
+    p.total_net += row.net;
+    if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
+    if (row.net < 0) { p.biggest_loss = Math.max(p.biggest_loss, -row.net); }
+    p.last_played = Math.max(p.last_played, row.settled_at||0);
+  }
+
+  // Wipe and rewrite leaderboard atomically
+  await db.batch([
+    db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
+    ...Object.values(players).map(p =>
+      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
+        VALUES(?,?,?,?,?,?,?,?,?)`)
+        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
+    ),
+  ]);
+}
+
+/* ═══════════════════════════════════════════
+   MINIMUM TRANSFERS ALGORITHM
+═══════════════════════════════════════════ */
+
+function minimumTransfers(
+  positions: Array<{user_id:string; display_name:string; net:number}>
+): Transfer[] {
+  const creds = positions.filter(p=>p.net>0).map(p=>({...p,bal:p.net}));
+  const debts = positions.filter(p=>p.net<0).map(p=>({...p,bal:-p.net}));
+  creds.sort((a,b)=>b.bal-a.bal);
+  debts.sort((a,b)=>b.bal-a.bal);
+  const out: Transfer[] = [];
+  let i=0,j=0;
+  while (i<debts.length && j<creds.length) {
+    const amt = Math.min(debts[i].bal, creds[j].bal);
+    if (amt>=100) out.push({from:debts[i].user_id,from_name:debts[i].display_name,to:creds[j].user_id,to_name:creds[j].display_name,amount:amt}); // skip transfers under $1
+    debts[i].bal-=amt; creds[j].bal-=amt;
+    if (debts[i].bal===0) i++;
+    if (creds[j].bal===0) j++;
+  }
+  return out;
+}
+
+export default games;=== WORKER EVENTS ===
+import { Hono } from 'hono';
+import { Env } from '../types';
+import { authMiddleware, requireEventRole, generateId } from '../middleware';
+
+const events = new Hono<{ Bindings: Env }>();
+
+// ── Password hashing helper ──────────────────────────────────────────────────
+async function hashPassword(password: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+events.get('/', authMiddleware, async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT e.*, em.role,
+      (SELECT COUNT(*) FROM event_members WHERE event_id=e.id) as member_count,
+      (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
+    FROM events e JOIN event_members em ON em.event_id=e.id AND em.user_id=?
+    ORDER BY e.created_at DESC
+  `).bind(c.get('userId')).all();
+  return c.json(rows.results);
+});
+
+events.post('/', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const { name, description, buy_in, master_password } = await c.req.json();
+  if (!name?.trim()) return c.json({error:'Name required'},400);
+  const id = generateId();
+  const hashedPw = master_password ? await hashPassword(master_password) : null;
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO events(id,name,description,buy_in,host_id,master_password) VALUES(?,?,?,?,?,?)')
+      .bind(id,name.trim(),description||null,buy_in||0,userId,hashedPw),
+    c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)')
+      .bind(id,userId,'host'),
+  ]);
+  const event = await c.env.DB.prepare('SELECT * FROM events WHERE id=?').bind(id).first();
+  return c.json(event,201);
+});
+
+// IMPORTANT: /invite/:token MUST be before /:id
+events.get('/invite/:token', authMiddleware, async (c) => {
+  const token = c.req.param('token');
+  const raw = await c.env.KV.get(`invite:${token}`);
+  if (!raw) return c.json({error:'This invite link has expired or already been used. Ask the host to generate a new one.'},404);
+  const { eventId, role } = JSON.parse(raw);
+  const userId = c.get('userId');
+  const existing = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId,userId).first<{role:string}>();
+  if (!existing) {
+    await c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)').bind(eventId,userId,role).run();
+  } else if (existing.role==='member' && role==='cohost') {
+    await c.env.DB.prepare('UPDATE event_members SET role=? WHERE event_id=? AND user_id=?').bind(role,eventId,userId).run();
+  }
+  await c.env.KV.delete(`invite:${token}`);
+  const event = await c.env.DB.prepare(`
+    SELECT e.*,
+      (SELECT COUNT(*) FROM event_members WHERE event_id=e.id) as member_count,
+      (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
+    FROM events e WHERE e.id=?
+  `).bind(eventId).first();
+  return c.json({ok:true,event,role});
+});
+
+events.get('/:id', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const event = await c.env.DB.prepare(`
+    SELECT e.*,
+      (SELECT COUNT(*) FROM event_members WHERE event_id=e.id) as member_count,
+      (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
+    FROM events e WHERE e.id=?
+  `).bind(eventId).first();
+  if (!event) return c.json({error:'Not found'},404);
+  const members = await c.env.DB.prepare(`
+    SELECT u.id,u.name,u.avatar_url,u.email,em.role,em.joined_at
+    FROM event_members em JOIN users u ON u.id=em.user_id WHERE em.event_id=?
+    ORDER BY CASE em.role WHEN 'host' THEN 0 WHEN 'cohost' THEN 1 ELSE 2 END,em.joined_at
+  `).bind(eventId).all();
+  return c.json({...event, members:members.results});
+});
+
+events.put('/:id', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
+  const { name, description, buy_in, master_password } = await c.req.json();
+  const hashedPw = master_password ? await hashPassword(master_password) : null;
+  await c.env.DB.prepare('UPDATE events SET name=?,description=?,buy_in=?,master_password=COALESCE(?,master_password) WHERE id=?')
+    .bind(name,description||null,buy_in||0,hashedPw,eventId).run();
+  return c.json({ok:true});
+});
+
+// Verify master password
+events.post('/:id/verify-password', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const { password } = await c.req.json();
+  const event = await c.env.DB.prepare('SELECT master_password FROM events WHERE id=?').bind(eventId).first<{master_password:string|null}>();
+  if (!event) return c.json({error:'Not found'},404);
+  if (!event.master_password) return c.json({ok:true, required:false});
+  const hashed = await hashPassword(password);
+  return c.json({ok: event.master_password === hashed, required:true});
+});
+
+events.post('/:id/invite', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'host')) return c.json({error:'Only host can invite'},403);
+  const body = await c.req.json().catch(()=>({})) as {role?:string};
+  const role = body.role === 'member' ? 'member' : 'cohost';
+  const token = generateId();
+  const expiresAt = Date.now() + 48*60*60*1000;
+  await c.env.KV.put(`invite:${token}`, JSON.stringify({eventId,role,expiresAt}), {expirationTtl:60*60*48});
+  return c.json({ token, url:`${c.env.FRONTEND_URL}/invite/${token}`, expires_in:'48h', expires_at:expiresAt, role });
+});
+
+// Member PIN join — player enters event PIN to access leaderboard/results without Google login
+events.post('/:id/join', async (c) => {
+  const eventId = c.req.param('id');
+  const { pin } = await c.req.json();
+  if (!pin) return c.json({error:'PIN required'},400);
+  const event = await c.env.DB.prepare('SELECT id,name,master_password FROM events WHERE id=?').bind(eventId).first<any>();
+  if (!event) return c.json({error:'Event not found'},404);
+  if (!event.master_password) return c.json({error:'This event has no PIN set'},400);
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  const hashed = Array.from(new Uint8Array(buf)).map((b:number)=>b.toString(16).padStart(2,'0')).join('');
+  if (hashed !== event.master_password) return c.json({error:'Incorrect PIN'},403);
+  return c.json({ok:true, event_id:eventId, event_name:event.name});
+});
+
+events.post('/:id/subscribe', async (c) => {
+  const eventId = c.req.param('id');
+  const { endpoint, keys, userId, display_name } = await c.req.json();
+  if (!endpoint||!keys?.p256dh||!keys?.auth) return c.json({error:'Invalid subscription'},400);
+  const event = await c.env.DB.prepare('SELECT id FROM events WHERE id=?').bind(eventId).first();
+  if (!event) return c.json({error:'Event not found'},404);
+  await c.env.DB.prepare(`
+    INSERT INTO push_subscriptions(id,event_id,user_id,display_name,endpoint,p256dh,auth_key) VALUES(?,?,?,?,?,?,?)
+    ON CONFLICT(endpoint) DO UPDATE SET
+      event_id=excluded.event_id,
+      user_id=COALESCE(excluded.user_id, user_id),
+      display_name=COALESCE(excluded.display_name, display_name)
+  `).bind(generateId(),eventId,userId||null,display_name||null,endpoint,keys.p256dh,keys.auth).run();
+  return c.json({ok:true});
+});
+
+events.post('/:id/unsubscribe', async (c) => {
+  const { endpoint } = await c.req.json();
+  if (!endpoint) return c.json({error:'endpoint required'},400);
+  await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(endpoint).run();
+  return c.json({ok:true});
+});
+
+events.get('/:id/leaderboard', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const rows = await c.env.DB.prepare('SELECT * FROM leaderboard WHERE event_id=? ORDER BY total_net DESC').bind(eventId).all();
+  return c.json(rows.results);
+});
+
+// Game history with top 3 player results per game
+events.get('/:id/history', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const games = await c.env.DB.prepare(`
+    SELECT g.*,
+      (SELECT COUNT(*) FROM game_players WHERE game_id=g.id) as player_count
+    FROM games g WHERE g.event_id=? AND g.status='settled'
+    ORDER BY g.scheduled_at DESC
+  `).bind(eventId).all<any>();
+
+  // Attach top 3 players (by net) to each game
+  const result = await Promise.all(games.results.map(async (g: any) => {
+    const top = await c.env.DB.prepare(`
+      SELECT display_name, net FROM game_players
+      WHERE game_id=? AND net IS NOT NULL
+      ORDER BY net DESC
+    `).bind(g.id).all<{display_name:string; net:number}>();
+    return { ...g, top_players: top.results };
+  }));
+
+  return c.json(result);
+});
+
+// Known players for this event (for seat autocomplete)
+events.get('/:id/players', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const rows = await c.env.DB.prepare(`
+    SELECT DISTINCT gp.display_name, gp.whatsapp,
+      COUNT(*) as games_played,
+      gp.game_id as id,
+      ? as event_id
+    FROM game_players gp
+    JOIN games g ON g.id = gp.game_id
+    WHERE g.event_id = ?
+    GROUP BY gp.display_name
+    ORDER BY games_played DESC
+    LIMIT 50
+  `).bind(eventId, eventId).all();
+  return c.json(rows.results);
+});
+
+export default events;=== TABLE KEY FUNCTIONS ===
+356:    <button class="home-plus" id="homeAddBtn" onclick="window._pkrBack?window._pkrBack():openNewGame()">+</button>
+369:    <button class="tb-back" id="backBtn" onclick="window._pkrBack ? window._pkrBack() : renderHome()">‹ PKR</button>
+477:      <button class="btn-primary" id="pwConfirmBtn" onclick="const e=(document.getElementById('pwInput').value||'').trim(),c=state.game&&state.game.password;if(e!==c){document.getElementById('pwError').textContent='Incorrect password';document.getElementById('pwInput').value='';document.getElementById('pwInput').focus();return;}document.getElementById('pwOverlay').classList.remove('show');const cb=window._pwCallback||openGame;window._pwCallback=null;cb()">Unlock &amp; Start</button>
+487:      <button id="lobbyMinimiseBtn" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:0.85rem;cursor:pointer" onclick="(function(){document.getElementById('lobbyOverlay').classList.remove('show');try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId&&!(window.state&&window.state.game&&!window.state.game.ended)){window.location.href='/events/'+c.eventId;return;}}catch(e){}renderHome();toast('Lobby saved');})()">Save &amp; Close</button>
+518:      <button class="btn-cancel" style="flex:1" id="lobbyCancelBtn" onclick="(function(){if(confirm('Cancel this game? All RSVP seats will be lost.')){closeLobby();state.game=null;state.players={};saveState();stopSyncPolling();try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}renderHome();}})()">Cancel Game</button>
+519:      <button class="btn-primary" style="flex:2" id="lobbyStartBtn" onclick="const pw=state.game&&state.game.password;if(pw){window._pwCallback=doStartGame;document.getElementById('pwInput').value='';document.getElementById('pwError').textContent='';document.getElementById('pwOverlay').classList.add('show')}else{doStartGame()}">▶ Start Game</button>
+596:        <button class="btn-primary" style="flex:1;background:linear-gradient(135deg,#1a8a4a,#0f5a2e)" id="previewPublishBtn" onclick="window.open(document.getElementById('publishUrl').value,'_blank')">Preview</button>
+634:      window.location.href = '/dashboard';
+637:    window._lsScope = ctx.eventId + '_' + ctx.userId;
+639:    window.location.href = '/dashboard';
+642:var SK      = 'pokerState_'   + window._lsScope;
+643:var STATS_K = 'pokerStats_'   + window._lsScope;
+644:var HIST_K  = 'pokerHistory_' + window._lsScope;
+645:var PHONE_K = 'pokerPhones_'  + window._lsScope;
+649:window.state = state;
+651:window._pkrBack = function() {
+654:    if (c && c.eventId) { window.location.href = '/events/' + c.eventId; return; }
+656:  window.location.href = '/dashboard';
+666:function fetchWithTimeout(url, opts = {}, ms = 5000) {
+702:function setGroupData(groupId, groupName) {
+714:function setCloudRole(role, code, name) {
+730:async function apiCreateGame(gameName, stakes) {
+740:async function apiGetGame(code) {
+746:async function apiSetState(code, stateData) {
+754:async function apiSubscribe(code, playerName, subscription) {
+763:async function apiNotify(code, title, body, target) {
+771:async function apiListPlayers(code) {
+778:async function apiCreateGroup(groupName) {
+788:async function apiGetGroup(groupId) {
+794:async function apiGroupSubscribe(groupId, playerName, subscription) {
+803:async function apiGroupSetGame(groupId, gameCode) {
+811:async function apiGroupNotify(groupId, title, body, target) {
+819:async function apiGetGroupStats(groupId) {
+824:async function apiSetGroupStats(groupId, stats) {
+831:async function apiGetGroupHistory(groupId) {
+836:async function apiSetGroupHistory(groupId, history) {
+843:async function apiGetGroupGames(groupId) {
+848:async function apiGroupAddGame(groupId, gameCode) {
+854:async function apiGroupEndGame(groupId, gameCode) {
+866:async function subscribePush(playerName, gameCode) {
+870:async function subscribePushToGroup(playerName, gameCode) {
+905:function urlBase64ToUint8Array(base64String) {
+908:  const raw     = window.atob(base64);
+913:function registerServiceWorker() {
+925:async function syncToCloud() {
+933:async function syncFromCloud() {
+970:function handleGameEndedForPlayer(msg) {
+1007:      <button onclick="window._pkrBack?window._pkrBack():(currentTab='leaderboard',renderHome())" style="padding:13px 32px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);
+1015:function startSyncPolling() {
+1018:  // Use window.syncToCloud/syncFromCloud so PKR bridge can override them
+1020:    syncInterval = setInterval(function(){ (window.syncToCloud || syncToCloud)(); }, 1000);
+1022:    syncInterval = setInterval(function(){ (window.syncFromCloud || syncFromCloud)(); }, 800);
+1026:function stopSyncPolling() {
+1031:async function notifyAll(title, body) {
+1039:async function notifyPlayer(playerName, title, body) {
+1048:function maybeShowNotifBanner() {
+1058:function hardReset() {
+1067:function loadState() {
+1074:      window.state = state; // keep window.state in sync
+1078:function saveState() {
+1081:function getStats() {
+1084:function saveStats(s) {
+1090:function getHistory() {
+1093:function addHistory(name) {
+1100:function getPhones() {
+1103:function savePhones(p) { localStorage.setItem(PHONE_K, JSON.stringify(p)); }
+1104:function getPhone(name) {
+1107:function setPhone(name, raw) {
+1116:function allContacts() {
+1128:function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+1129:function inits(n) { return (n || '').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?'; }
+1130:function fmt(n) { return '$' + (n || 0).toFixed(2); }
+1131:function fmtNet(n) { return n > 0 ? '+$' + n.toFixed(2) : n < 0 ? '-$' + Math.abs(n).toFixed(2) : '$0.00'; }
+1132:function nc(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero'; }
+1133:function pBuyin(p) { return (p.transactions || []).filter(t => t.type !== 'cashout').reduce((a, t) => a + t.amount, 0); }
+1134:function pCash(p) { return (p.transactions || []).filter(t => t.type === 'cashout').reduce((a, t) => a + t.amount, 0); }
+1135:function pNet(p) { return pCash(p) - pBuyin(p); }
+1136:function pad(n) { return String(n).padStart(2, '0'); }
+1138:function toast(msg) {
+1145:function copyText(text) {
+1153:function fallbackCopy(t) {
+1162:function showScreen(id) {
+1175:async function syncStatsFromCloud() {
+1195:async function syncCloudGames() {
+1204:function renderHome() {
+1212:        window.location.href = '/events/' + _pkrCtx.eventId;
+1221:function switchTab(tab) {
+1235:function renderTab() {
+1242:function renderGamesTab(body) {
+1285:  document.getElementById('firstGameBtn').addEventListener('click', function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}openNewGame();});
+1291:      const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+1410:function renderLeaderboardTab(body) {
+1444:function renderHistoryTab(body) {
+1470:function getGameHistory() {
+1473:function saveGameHistory(h) {
+1479:function recordGameHistory(gameId) {
+1500:function initAutoSchedule() {
+1535:function openNewGame() {
+1549:function closeNewGame() {
+1552:async function confirmNewGame() {

@@ -1913,7 +1913,10 @@ function updateSaveResultsBtn() {
   var btn = document.getElementById('saveResultsBtn');
   if (!btn || !ctx || !ctx.gameId) return;
   var players = Object.values(state.players||{}).filter(function(p){ return p && p.name && pBuyin(p)>0; });
-  var allCashedOut = players.length >= 2 && players.every(function(p){ return pCash(p) > 0; });
+  // Allow $0 cashout — player may have busted. Check cashout transaction exists, not just > 0
+  var allCashedOut = players.length >= 2 && players.every(function(p){
+    return (p.transactions||[]).some(function(t){ return t.type === 'cashout'; });
+  });
   btn.style.display = allCashedOut ? '' : 'none';
 }
 
@@ -4555,11 +4558,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var results = Object.values(window.state.players)
       .filter(function(p) { return p && p.name; })
       .map(function(p) {
-        var biDollars = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
+        var buyinCount = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
         var coDollars = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
         var entry = pkrPlayerMap[(p.name||'').toLowerCase()];
         var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
-        return { user_id: userId, display_name: p.name, buy_ins: Math.round(biDollars*100), cashout: Math.round(coDollars*100) };
+        return { user_id: userId, display_name: p.name, buy_ins: buyinCount, cashout: Math.round(coDollars*100) };
       });
 
     if (!results.length) return false;

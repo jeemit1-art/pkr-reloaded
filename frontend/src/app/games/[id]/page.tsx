@@ -27,7 +27,7 @@ export default function GameBridgePage() {
         let skipStateInit = false;
         try {
           const existingCtx = JSON.parse(localStorage.getItem("pkrCtx") || "null");
-          const existingState = JSON.parse(localStorage.getItem("pokerState") || "null");
+          const existingState = JSON.parse(localStorage.getItem("pokerState_" + eventId + "_" + me.id) || "null");
           if (existingCtx?.gameId === id && existingState?.game && !existingState.game.ended) {
             skipStateInit = true;
           }
@@ -46,9 +46,9 @@ export default function GameBridgePage() {
             players[sid] = { name: p.display_name, userId: p.user_id, phone: p.whatsapp || "", transactions };
             if (p.whatsapp) {
               try {
-                const phones = JSON.parse(localStorage.getItem("pokerPhones") || "{}");
+                const phones = JSON.parse(localStorage.getItem("pokerPhones_" + eventId + "_" + me.id) || "{}");
                 phones[p.display_name.toLowerCase()] = { name: p.display_name, phone: p.whatsapp };
-                localStorage.setItem("pokerPhones", JSON.stringify(phones));
+                localStorage.setItem("pokerPhones_" + eventId + "_" + me.id, JSON.stringify(phones));
               } catch {}
             }
           });
@@ -97,6 +97,16 @@ export default function GameBridgePage() {
           settleKey: id + "_end",
         }));
 
+        // Start the game if still scheduled
+        if ((game as any).status === 'scheduled') {
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/games/${id}/start`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+              body: JSON.stringify({ password: (game as any).game_password || '' }),
+            });
+          } catch(e) { console.warn('Start game failed:', e); }
+        }
         // Always open the game screen — PKR lobby page handles pre-game RSVPs
         window.location.href = "/table.html#game";
       } catch (err) {
