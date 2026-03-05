@@ -233,7 +233,14 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
-  const userId = `manual_${generateId()}`;
+  // Reuse existing user_id for this display_name in this event to avoid leaderboard duplicates
+  const existingPlayer = await c.env.DB.prepare(
+    `SELECT DISTINCT user_id FROM game_players gp
+     JOIN games g ON g.id=gp.game_id
+     WHERE g.event_id=? AND gp.display_name=? AND gp.user_id LIKE 'manual_%'
+     LIMIT 1`
+  ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
+  const userId = existingPlayer?.user_id || `manual_${generateId()}`;
 
   // Save to known players for quick-select (cloud)
   await c.env.DB.prepare(`
