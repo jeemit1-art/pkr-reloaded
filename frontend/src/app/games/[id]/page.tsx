@@ -79,7 +79,7 @@ export default function GamePage() {
   const yesRsvps   = (game.rsvps||[]).filter((r:any)=>r.status==='yes');
   const maybeRsvps = (game.rsvps||[]).filter((r:any)=>r.status==='maybe');
   const seated     = (game.players||[]).filter((p:any)=>p.buy_ins>0);
-  const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null);
+  const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null||game.status==='settled');
 
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
@@ -294,7 +294,94 @@ export default function GamePage() {
                   </div>
                   <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:1}}>
                     x{p.buy_ins} buy-in{p.buy_ins!==1?'s':''}
-                    {p.cashout!=null ? ' · cashed $'+(p.cashout/100).toFixed(0) : ' · still in'}
+                    {(p.cashout!=null || game.status==='settled') ? (p.cashout!=null ? ' · cashed 
+                  </div>
+                </div>
+                {p.net!=null && (
+                  <div className="display" style={{fontSize:16,fontWeight:500,
+                    color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>
+                    {fmtSign(p.net)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Settlements */}
+        {game.status==='settled' && (game.transfers||[]).length>0 && (
+          <div className="card" style={{marginBottom:14}}>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',fontSize:9,
+              letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',
+              fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>Settlements</div>
+            {(game.transfers||[]).map((t:any,i:number)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:8,
+                padding:'12px 16px',borderBottom:'1px solid var(--border-sub)'}}>
+                <span style={{fontSize:13,color:'var(--red)',fontFamily:'var(--font-display),serif',flex:1}}>{t.from_name}</span>
+                <span style={{fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
+                  pays ${(t.amount/100).toFixed(2)}
+                </span>
+                <span style={{fontSize:13,color:'var(--green)',fontFamily:'var(--font-display),serif',flex:1,textAlign:'right'}}>{t.to_name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Host actions */}
+        {isHost && game.status!=='cancelled' && (
+          <div style={{marginTop:24}}>
+            <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',
+              color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:12}}>
+              Host Actions
+            </div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              {game.status==='settled' && (
+                <button className="btn btn-ghost"
+                  style={{fontSize:11,padding:'7px 12px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                  onClick={()=>setConfirm('unsettle')}>↩ Unsettle</button>
+              )}
+              {game.status!=='settled' && (
+                <button className="btn btn-ghost"
+                  style={{fontSize:11,padding:'7px 12px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                  onClick={()=>setConfirm('cancel')}>Cancel Game</button>
+              )}
+              <button className="btn btn-danger" style={{fontSize:11,padding:'7px 12px'}}
+                onClick={()=>setConfirm('delete')}>Delete Game</button>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Confirm modal */}
+      {confirm && (
+        <div className="modal-overlay" onClick={()=>!acting&&setConfirm(null)}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                {confirm==='cancel'?'Cancel Game?':confirm==='delete'?'Delete Game?':'Unsettle Game?'}
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                {confirm==='cancel' && "Marks the game as cancelled. It stays in history but won't appear in active games or affect the leaderboard."}
+                {confirm==='delete' && 'Permanently removes the game and all player data. The leaderboard will be recalculated. This cannot be undone.'}
+                {confirm==='unsettle' && 'Reopens the game as active so results can be corrected. Settle again when done.'}
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirm(null)} disabled={acting}>Keep it</button>
+              <button className={confirm==='unsettle'?'btn btn-primary':'btn btn-danger'}
+                style={{fontSize:12}} disabled={acting}
+                onClick={confirm==='cancel'?doCancel:confirm==='delete'?doDelete:doUnsettle}>
+                {acting?'Working…':confirm==='cancel'?'Cancel game':confirm==='delete'?'Delete permanently':'Yes, Unsettle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
++(p.cashout/100).toFixed(0) : ' · busted out') : ' · still in'}
                   </div>
                 </div>
                 {p.net!=null && (

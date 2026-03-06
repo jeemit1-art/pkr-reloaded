@@ -68,7 +68,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
   const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too
   const transfers = game.status==='settled'
-    ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
+    ? (await c.env.DB.prepare('SELECT id,from_user,to_user,from_name,to_name,amount FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
     : [];
   return c.json({...game, buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
 });
@@ -392,8 +392,8 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       ON CONFLICT(game_id,user_id) DO UPDATE SET
         buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
     `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout,p.net,now)),
-    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
-      .bind(generateId(),gameId,t.from,t.to,t.amount)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,from_name,to_name,amount) VALUES(?,?,?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.from_name||t.from,t.to_name||t.to,t.amount)),
   ]);
 
   // ── Rebuild leaderboard from ALL settled games (not additive) ──
