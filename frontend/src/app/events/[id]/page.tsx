@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
@@ -521,6 +522,14 @@ export default function EventPage() {
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            {/* QR Code */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:16}}>
+              <InviteQR url={inviteUrl}/>
+              <div style={{fontSize:10,color:'var(--muted)',marginTop:8,letterSpacing:'0.12em',
+                textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif'}}>
+                Scan to join
+              </div>
+            </div>
             <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
               {inviteUrl}
             </div>
@@ -788,6 +797,51 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         );
       })}
     </div>
+  );
+}
+
+// ─── Invite QR Code ───────────────────────────────────────────────────────────
+function InviteQR({ url }: { url: string }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  React.useEffect(() => {
+    if (!url || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const size = 160;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+    };
+    img.onerror = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('QR unavailable', size / 2, size / 2 - 6);
+      ctx.font = '9px monospace';
+      ctx.fillStyle = '#888888';
+      ctx.fillText('Use link below', size / 2, size / 2 + 10);
+    };
+    img.src = `https://chart.googleapis.com/chart?cht=qr&chs=160x160&chl=${encodeURIComponent(url)}&choe=UTF-8&chld=M|1`;
+  }, [url]);
+  return (
+    <canvas
+      ref={canvasRef}
+      width={160}
+      height={160}
+      style={{
+        borderRadius: 10,
+        border: '2px solid rgba(201,168,76,0.4)',
+        background: '#ffffff',
+        display: 'block',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+      }}
+    />
   );
 }
 
