@@ -231,16 +231,20 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
+  const { display_name, whatsapp, seat_number, buy_ins, user_id: bodyUserId } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
-  // Reuse existing user_id for this display_name in this event to avoid leaderboard duplicates
-  const existingPlayer = await c.env.DB.prepare(
-    `SELECT DISTINCT user_id FROM game_players gp
-     JOIN games g ON g.id=gp.game_id
-     WHERE g.event_id=? AND gp.display_name=? AND gp.user_id LIKE 'manual_%'
-     LIMIT 1`
-  ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
-  const userId = existingPlayer?.user_id || `manual_${generateId()}`;
+  let userId: string;
+  if (bodyUserId && !bodyUserId.startsWith('manual_')) {
+    userId = bodyUserId;
+  } else {
+    const existingPlayer = await c.env.DB.prepare(
+      `SELECT DISTINCT user_id FROM game_players gp
+       JOIN games g ON g.id=gp.game_id
+       WHERE g.event_id=? AND gp.display_name=? AND gp.user_id LIKE 'manual_%'
+       LIMIT 1`
+    ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
+    userId = existingPlayer?.user_id || `manual_${generateId()}`;
+  }
 
   // Save to known players for quick-select — do NOT increment games_played here (done at settle)
   await c.env.DB.prepare(`

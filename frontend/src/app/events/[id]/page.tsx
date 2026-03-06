@@ -25,6 +25,10 @@ export default function EventPage() {
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
+  const [eventPlayers, setEventPlayers] = useState([] as any[]);
+  const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
+  const [eventPlayers, setEventPlayers] = useState([] as any[]);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
@@ -310,13 +314,22 @@ export default function EventPage() {
                       </span>
                     </div>
                     {isHost && m.role !== 'host' && (
-                      <button
-                        onClick={()=>setConfirmRemoveMember(m)}
-                        style={{background:'none',border:'1px solid rgba(231,76,60,0.25)',color:'var(--red)',
-                          borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
-                          fontFamily:'var(--font-body),sans-serif',flexShrink:0,marginLeft:6}}>
-                        Remove
-                      </button>
+                      <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:6}}>
+                        <button
+                          onClick={()=>{ setLinkMemberTarget(m); if(eventPlayers.length===0) api.events.players(id).then(setEventPlayers).catch(()=>{}); }}
+                          style={{background:'none',border:'1px solid rgba(201,168,76,0.25)',color:'var(--gold)',
+                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
+                            fontFamily:'var(--font-body),sans-serif'}}>
+                          🔗 Link
+                        </button>
+                        <button
+                          onClick={()=>setConfirmRemoveMember(m)}
+                          style={{background:'none',border:'1px solid rgba(231,76,60,0.25)',color:'var(--red)',
+                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
+                            fontFamily:'var(--font-body),sans-serif'}}>
+                          Remove
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -364,6 +377,56 @@ export default function EventPage() {
           </div>
         )}
       </div>
+
+      {linkMemberTarget && (
+        <div className="modal-overlay" onClick={()=>setLinkMemberTarget(null)}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>
+                🔗 Link to Player Record
+              </div>
+              <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif',marginBottom:16}}>
+                Link <strong style={{color:'var(--ivory)'}}>{linkMemberTarget.name}</strong> to a known player so their game history merges under their account.
+              </div>
+              {eventPlayers.length === 0 ? (
+                <div style={{fontSize:12,color:'var(--faint)',padding:'12px 0'}}>No player records found yet.</div>
+              ) : (
+                <div style={{display:'grid',gap:6,maxHeight:260,overflowY:'auto'}}>
+                  {eventPlayers.map((p:any) => (
+                    <button key={p.display_name}
+                      onClick={async()=>{
+                        try {
+                          const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                          const token = typeof window!=='undefined' ? (localStorage.getItem('pkr_token')||document.cookie.match(/pkr_token=([^;]+)/)?.[1]||'') : '';
+                          const res = await fetch(`${apiUrl}/events/${id}/members/${linkMemberTarget.id}/link`, {
+                            method:'PUT',
+                            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+                            body:JSON.stringify({display_name:p.display_name}),
+                          });
+                          if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
+                          setLinkMemberTarget(null);
+                          alert(`✓ ${linkMemberTarget.name} linked to "${p.display_name}"`);
+                        } catch(e:any) { alert(e.message); }
+                      }}
+                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                        background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,
+                        padding:'10px 14px',cursor:'pointer',textAlign:'left'}}>
+                      <div>
+                        <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</div>
+                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2}}>{p.games_played||0} games played</div>
+                      </div>
+                      <span style={{fontSize:11,color:'var(--gold)'}}>Select →</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setLinkMemberTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Remove member confirm modal */}
       {confirmRemoveMember && (
@@ -456,7 +519,7 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {['6','7','8','9','10','11','12'].map(n=>(
+                  {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
                     <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',

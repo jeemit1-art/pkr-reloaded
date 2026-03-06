@@ -187,12 +187,8 @@ export default function PlayPage() {
       <div className="overlay" id="assignOverlay">
         <div className="modal">
           <h2>Seat Player</h2>
-          <div id="membersWrap" style={{display:'none',marginBottom:'14px'}}>
-            <div style={{fontSize:'0.9rem',textTransform:'uppercase',letterSpacing:'2px',color:'var(--gold)',marginBottom:'8px'}}>👥 Members</div>
-            <div id="membersList" style={{display:'flex',flexWrap:'wrap',gap:'6px'}}></div>
-          </div>
           <div id="knownWrap" style={{display:'none',marginBottom:'14px'}}>
-            <div style={{fontSize:'0.9rem',textTransform:'uppercase',letterSpacing:'2px',color:'var(--muted)',marginBottom:'8px'}}>Recent Players</div>
+            <div style={{fontSize:'0.9rem',textTransform:'uppercase',letterSpacing:'2px',color:'var(--muted)',marginBottom:'8px'}}>Quick Select</div>
             <div id="knownList" style={{display:'flex',flexWrap:'wrap',gap:'6px'}}></div>
           </div>
           <div className="field"><label>Name</label><input type="text" id="assignName" placeholder="Enter name..." autoComplete="off" /></div>
@@ -532,17 +528,15 @@ window.pkrApi = pkrApi;
 var _pkrSeatedPlayers = {};
 var _pkrLastSnapshot = {};
 
-async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
+async function pkrSeatPlayer(sid, name, phone) {
   var ctx = getPkrCtx();
   if (!ctx || !ctx.gameId) return null;
   if (_pkrSeatedPlayers[sid] && _pkrSeatedPlayers[sid].name === name) return _pkrSeatedPlayers[sid];
   try {
     var seatNum = parseInt((sid || '').replace('seat','')) || null;
-    var body = { display_name: name, whatsapp: phone||null, seat_number: seatNum, buy_ins: 0 };
-    if (linkedUserId) body.user_id = linkedUserId;
     var res = await pkrApi('/games/' + ctx.gameId + '/seat', {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ display_name: name, whatsapp: phone||null, seat_number: seatNum, buy_ins: 0 }),
     });
     if (res && res.players) {
       var pkrPlayer = res.players.find(function(p){ return p.display_name === name; });
@@ -837,8 +831,8 @@ function buildSeats(count, tW, tH, cx, cy) {
   var cont = document.getElementById('seatsContainer');
   if (!cont) return;
   cont.innerHTML = '';
-  var chipSize = Math.max(24, Math.min(tW * 0.22, 44, 44 - Math.max(0, count - 9) * 2));
-  var seatGap = chipSize + 6;
+  var chipSize = Math.max(30, Math.min(tW * 0.22, 44));
+  var seatGap = chipSize + 8;
   var sideCount = count - 2;
   var leftCount = Math.ceil(sideCount / 2);
   var rightCount = Math.floor(sideCount / 2);
@@ -1056,7 +1050,7 @@ function buildPanel(sid) {
   body.appendChild(csSec);
   var csGrid = document.createElement('div');
   csGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px';
-  var totalSeats = state.game ? state.game.seats : 15;
+  var totalSeats = state.game ? state.game.seats : 10;
   for (var si = 1; si <= totalSeats; si++) {
     var tSid = 'seat' + si;
     if (tSid === sid) continue;
@@ -1114,7 +1108,6 @@ function addTxFromInput(sid, type, inp) {
   if (inp) inp.value = '';
   buildPanel(sid);
   renderTable();
-  updateSaveResultsBtn();
   var gameName = state.game ? state.game.name : 'Poker Night';
   var pushTitle, pushBody;
   if (type === 'buyin') { pushTitle = '♠ Buy-in — $' + amt.toFixed(2); pushBody = p.name + ' is in at ' + gameName + '. Good luck!'; }
@@ -1159,36 +1152,10 @@ window.openAssign = function openAssign(sid) {
       if (wrap) wrap.style.display = 'none';
     }
   }
-  window._assignLinkedUserId = null;
-  var membersWrap = document.getElementById('membersWrap');
-  var membersList = document.getElementById('membersList');
-  function renderMembers(members) {
-    if (!membersList || !membersWrap) return;
-    var avail = (members||[]).filter(function(m){ return !seated.has((m.name||'').toLowerCase()) && m.id !== (ctx&&ctx.userId); });
-    if (!avail.length) { membersWrap.style.display='none'; return; }
-    membersWrap.style.display = 'block';
-    membersList.innerHTML = avail.map(function(m){
-      return '<button class="known-chip member-chip" data-name="'+esc(m.name)+'" data-uid="'+esc(m.id)+'">'+esc(m.name)+'</button>';
-    }).join('');
-    membersList.querySelectorAll('.member-chip').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        if (nameInp) nameInp.value = btn.dataset.name;
-        window._assignLinkedUserId = btn.dataset.uid || null;
-        var ph = getPhone(btn.dataset.name);
-        if (phoneInp) phoneInp.value = ph&&ph.startsWith('61')?'0'+ph.slice(2):ph;
-        membersList.querySelectorAll('.member-chip').forEach(function(b){ b.style.background=''; b.style.color=''; });
-        btn.style.background='rgba(201,168,76,0.15)'; btn.style.color='var(--gold)';
-      });
-    });
-  }
   if (ctx && ctx.eventId) {
-    Promise.all([
-      pkrApi('/events/'+ctx.eventId).catch(function(){ return null; }),
-      pkrApi('/events/'+ctx.eventId+'/players').catch(function(){ return []; })
-    ]).then(function(res){
-      renderMembers(res[0]&&res[0].members ? res[0].members : []);
-      renderKnownPlayers((res[1]||[]).map(function(p){ return p.display_name; }));
-    });
+    pkrApi('/events/' + ctx.eventId + '/players').then(function(players) {
+      renderKnownPlayers((players||[]).map(function(p){ return p.display_name; }));
+    }).catch(function(){ renderKnownPlayers([]); });
   } else {
     renderKnownPlayers(getHistory());
   }
@@ -1212,14 +1179,11 @@ window.confirmAssign = async function confirmAssign() {
   if (phone) setPhone(name, phone);
   var sid = assigningSid;
   var existing = state.players[sid] || {};
-  var linkedUserId = window._assignLinkedUserId || null;
-  state.players[sid] = Object.assign({}, existing, { name: name, transactions: existing.transactions || [], linkedUserId: linkedUserId });
+  state.players[sid] = Object.assign({}, existing, { name: name, transactions: existing.transactions || [] });
   saveState();
   updateSaveResultsBtn();
   window.closeAssign();
-  window._assignLinkedUserId = null;
   renderTable();
-  pkrSeatPlayer(sid, name, phone || null, linkedUserId).catch(function(){});
   setTimeout(function(){ window.openPanel(sid); }, 100);
 };
 
@@ -1307,7 +1271,7 @@ function renderSettlementsHTML(transfers) {
 window.openSettleUp = function() {
   var players = Object.values(state.players || {}).filter(function(p){ return p && p.name && pBuyin(p) > 0; }).map(function(p){ return { name: p.name, net: pNet(p) }; });
   if (players.length < 2) { toast('Need at least 2 players'); return; }
-  _doOpenSettleUp(players);
+  showConfirmModal('💸 Settle Up?', 'Calculate final settlements for all ' + players.length + ' players.', 'Show Settlements', function() { _doOpenSettleUp(players); });
 };
 
 function _doOpenSettleUp(players) {
@@ -1510,7 +1474,6 @@ window.endGame = function() {
     state.game = null; state.players = {};
     saveState();
     localStorage.removeItem('pkrCtx');
-    window._pkrResultsSaved = false;
     overlay2.remove();
     var eventId = ctx && ctx.eventId;
     if (eventId) window.location.href = '/events/' + eventId;
@@ -1583,7 +1546,7 @@ if (ctx && ctx.gameId) {
     if (!state.game) {
       state.game = {
         name: game.name || 'Poker Night',
-        seats: game.max_seats || 15,
+        seats: game.max_seats || 9,
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
       };

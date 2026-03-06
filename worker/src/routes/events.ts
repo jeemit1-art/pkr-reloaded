@@ -79,6 +79,22 @@ events.get('/:id', authMiddleware, async (c) => {
   return c.json({...event, members:members.results});
 });
 
+// Link a member's user_id to a known player display_name
+events.put('/:id/members/:userId/link', authMiddleware, async (c) => {
+  const eventId  = c.req.param('id');
+  const targetId = c.req.param('userId');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Only host can link members' }, 403);
+  const { display_name } = await c.req.json();
+  if (!display_name?.trim()) return c.json({ error: 'display_name required' }, 400);
+  await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?')
+    .bind(targetId, eventId, display_name.trim()).run();
+  await c.env.DB.prepare(`UPDATE game_players SET user_id=? WHERE user_id IN (
+    SELECT DISTINCT gp.user_id FROM game_players gp JOIN games g ON g.id=gp.game_id
+    WHERE g.event_id=? AND gp.display_name=? AND gp.user_id != ?)`)
+    .bind(targetId, eventId, display_name.trim(), targetId).run();
+  return c.json({ ok: true });
+});
+
 // Remove a member from an event (host only, cannot remove self)
 events.delete('/:id/members/:userId', authMiddleware, async (c) => {
   const eventId  = c.req.param('id');
