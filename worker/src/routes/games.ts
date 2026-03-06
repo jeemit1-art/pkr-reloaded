@@ -45,10 +45,12 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   }
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
-  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Sydney'});
+  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
     title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
     body:`${dt}${location?' · '+location:''}`,
+    data:{ scheduled_at, location: location||null, type:'game_scheduled' },
+    data:{ scheduled_at, location: location||null, type:'scheduled' },
     data:{ gameId:id, eventId, type:'game_scheduled', lobby_path:`/games/${id}/lobby` },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();

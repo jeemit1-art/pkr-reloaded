@@ -27,3 +27,25 @@ self.addEventListener('notificationclick', event => {
     })
   );
 });
+
+// PKR: reformat game_scheduled push notifications in receiver's local time
+self.addEventListener('push', function(pkrPushEvt) {
+  try {
+    const d = pkrPushEvt.data ? pkrPushEvt.data.json() : {};
+    if (d.data && d.data.type === 'game_scheduled' && d.data.scheduled_at) {
+      const dt = new Date(d.data.scheduled_at * 1000).toLocaleString(undefined, {
+        weekday:'short', month:'short', day:'numeric',
+        hour:'numeric', minute:'2-digit'
+      });
+      d.body = dt + (d.data.location ? ' · ' + d.data.location : '');
+      pkrPushEvt.waitUntil(
+        self.registration.showNotification(d.title || 'PKR', {
+          body: d.body,
+          icon: '/icon-192.png',
+          data: d.data,
+        })
+      );
+      return;
+    }
+  } catch(e) {}
+});
