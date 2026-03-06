@@ -1056,7 +1056,7 @@ function buildPanel(sid) {
   body.appendChild(csSec);
   var csGrid = document.createElement('div');
   csGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px';
-  var totalSeats = state.game ? state.game.seats : 15;
+  var totalSeats = state.game ? state.game.seats : 9;
   for (var si = 1; si <= totalSeats; si++) {
     var tSid = 'seat' + si;
     if (tSid === sid) continue;
@@ -1583,7 +1583,7 @@ if (ctx && ctx.gameId) {
     if (!state.game) {
       state.game = {
         name: game.name || 'Poker Night',
-        seats: game.max_seats || 15,
+        seats: game.max_seats || 9,
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
       };
