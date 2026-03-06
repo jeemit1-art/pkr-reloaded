@@ -27,8 +27,6 @@ export default function EventPage() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
   const [eventPlayers, setEventPlayers] = useState([] as any[]);
-  const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
-  const [eventPlayers, setEventPlayers] = useState([] as any[]);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
