@@ -159,13 +159,19 @@ export default function PlayPage() {
 
   // ── Table dimensions ──────────────────────
   useEffect(() => {
-    const obs = new ResizeObserver(() => {
+    function measure() {
       if (tableWrapRef.current) {
-        setTableDims({ W: tableWrapRef.current.offsetWidth, H: tableWrapRef.current.offsetHeight });
+        const W = tableWrapRef.current.offsetWidth;
+        const H = tableWrapRef.current.offsetHeight;
+        if (W > 0 && H > 0) setTableDims({ W, H });
       }
-    });
+    }
+    measure();
+    const obs = new ResizeObserver(measure);
     if (tableWrapRef.current) obs.observe(tableWrapRef.current);
-    return () => obs.disconnect();
+    window.addEventListener('resize', measure);
+    const t = setTimeout(measure, 100);
+    return () => { obs.disconnect(); window.removeEventListener('resize', measure); clearTimeout(t); };
   }, []);
 
   // ── Sync changes to PKR API ───────────────
