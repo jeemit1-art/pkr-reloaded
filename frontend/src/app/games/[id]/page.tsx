@@ -79,8 +79,7 @@ export default function GamePage() {
   const yesRsvps   = (game.rsvps||[]).filter((r:any)=>r.status==='yes');
   const maybeRsvps = (game.rsvps||[]).filter((r:any)=>r.status==='maybe');
   const seated     = (game.players||[]).filter((p:any)=>p.buy_ins>0);
-  const isSettled   = game.status === 'settled';
-  const cashedOut  = isSettled ? (game.players||[]) : (game.players||[]).filter((p:any)=>p.cashout!=null);
+  const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null);
 
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
@@ -295,7 +294,7 @@ export default function GamePage() {
                   </div>
                   <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:1}}>
                     x{p.buy_ins} buy-in{p.buy_ins!==1?'s':''}
-                    {(p.cashout!=null || game.status==='settled') ? (p.cashout!=null ? ' · cashed 
+                    {p.cashout!=null ? ' · cashed $'+(p.cashout/100).toFixed(0) : (game.status==='settled' ? ' · busted out' : ' · still in')}
                   </div>
                 </div>
                 {p.net!=null && (
