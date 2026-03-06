@@ -52,7 +52,7 @@ export default function InvitePage() {
               Sign in with Google to claim your co-host seat.<br/>
               You'll be redirected back automatically.
             </div>
-            <a href={`${apiUrl}/auth/google`} className="btn btn-primary" style={{width:'100%',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+            <a href={`${apiUrl}/auth/google?returnTo=${encodeURIComponent(`/invite/${token}`)}`} className="btn btn-primary" style={{width:'100%',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
               <svg width="16" height="16" viewBox="0 0 18 18" style={{flexShrink:0}}>
                 <path d="M17.64 9.2a10.34 10.34 0 0 0-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62z" fill="#4285F4"/>
                 <path d="M9 18a8.6 8.6 0 0 0 5.96-2.18l-2.91-2.26a5.4 5.4 0 0 1-8.07-2.85H.96v2.33A9 9 0 0 0 9 18z" fill="#34A853"/>

@@ -6,7 +6,10 @@ import { authMiddleware, generateId } from '../middleware';
 const auth = new Hono<{ Bindings: Env }>();
 
 auth.get('/google', async (c) => {
-  const state = generateId();
+  const returnTo = c.req.query('returnTo') || '';
+  const stateId = generateId();
+  // Encode returnTo inside state so we get it back after OAuth round-trip
+  const state = returnTo ? `${stateId}:${encodeURIComponent(returnTo)}` : stateId;
   const params = new URLSearchParams({
     client_id:    c.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${new URL(c.req.url).origin}/auth/callback`,
@@ -62,10 +65,19 @@ auth.get('/callback', async (c) => {
   await c.env.KV.put(`login_code:${loginCode}`, jwt, { expirationTtl: 60 });
 
   const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
-  // Pass a short-lived code — dashboard exchanges it for the real JWT
+
+  // Extract returnTo from state if present (format: "stateId:encodedReturnTo")
+  const colonIdx = (state || '').indexOf(':');
+  const returnTo = colonIdx !== -1 ? decodeURIComponent(state.slice(colonIdx + 1)) : '';
+  // Validate returnTo — only allow internal paths to prevent open redirect
+  const safePath = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/dashboard';
+  const destination = safePath === '/dashboard'
+    ? `${front}/dashboard?code=${loginCode}`
+    : `${front}${safePath}?code=${loginCode}`;
+
   return new Response(null, {
     status: 302,
-    headers: { Location:`${front}/dashboard?code=${loginCode}`, 'Set-Cookie': cookie },
+    headers: { Location: destination, 'Set-Cookie': cookie },
   });
 });
 
