@@ -374,7 +374,11 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   // buy_ins is a count, cashout is in cents. Get event buy_in amount for net calc.
   const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<{buy_in:number}>();
   const buyInAmount = eventData?.buy_in || 0;
-  const positions = results.map(p => ({...p, net: p.cashout - (p.buy_ins * buyInAmount)}));
+  const positions = results.map((p:any) => ({
+    ...p,
+    // Use buy_in_total if client sent it (cents), otherwise count × event price
+    net: p.cashout - (p.buy_in_total != null ? p.buy_in_total : p.buy_ins * buyInAmount)
+  }));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
   const now = Math.floor(Date.now()/1000);
