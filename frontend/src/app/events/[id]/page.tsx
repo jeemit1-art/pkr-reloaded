@@ -31,6 +31,9 @@ export default function EventPage() {
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('What time will you arrive?');
+  const [pollOptions, setPollOptions] = useState(['On time','15 min late','30 min late','Not sure']);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -62,6 +65,9 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
+        poll_enabled: pollEnabled,
+        poll_question: pollEnabled ? pollQuestion : undefined,
+        poll_options: pollEnabled ? pollOptions.filter(o=>o.trim()) : undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
@@ -568,6 +574,47 @@ export default function EventPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
+              {/* Poll toggle */}
+              <div style={{borderTop:'1px solid var(--border-sub)',paddingTop:14}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: pollEnabled ? 12 : 0}}>
+                  <div>
+                    <div className="lbl">RSVP Poll</div>
+                    <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Ask players a question when they RSVP</div>
+                  </div>
+                  <button onClick={()=>setPollEnabled(v=>!v)}
+                    style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',transition:'background 0.2s',
+                      background:pollEnabled?'var(--gold)':'var(--bg3)',position:'relative',flexShrink:0}}>
+                    <span style={{position:'absolute',top:3,width:16,height:16,borderRadius:'50%',background:'#fff',
+                      transition:'left 0.2s',left:pollEnabled?'calc(100% - 19px)':'3px'}}/>
+                  </button>
+                </div>
+                {pollEnabled && (
+                  <div style={{display:'grid',gap:8}}>
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Question</div>
+                      <input className="inp" value={pollQuestion} onChange={e=>setPollQuestion(e.target.value)} placeholder="e.g. What time will you arrive?"/>
+                    </div>
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Options</div>
+                      {pollOptions.map((opt,i)=>(
+                        <div key={i} style={{display:'flex',gap:6,marginBottom:6}}>
+                          <input className="inp" value={opt} onChange={e=>{const o=[...pollOptions];o[i]=e.target.value;setPollOptions(o);}} placeholder={`Option ${i+1}`} style={{flex:1}}/>
+                          {pollOptions.length>2 && (
+                            <button onClick={()=>setPollOptions(o=>o.filter((_,j)=>j!==i))}
+                              style={{background:'none',border:'1px solid rgba(231,76,60,0.3)',color:'var(--red)',borderRadius:2,padding:'0 10px',cursor:'pointer',fontSize:14}}>✕</button>
+                          )}
+                        </div>
+                      ))}
+                      {pollOptions.length < 6 && (
+                        <button onClick={()=>setPollOptions(o=>[...o,''])}
+                          style={{background:'none',border:'1px dashed var(--border)',color:'var(--muted)',borderRadius:2,padding:'6px 12px',cursor:'pointer',fontSize:11,width:'100%',fontFamily:'var(--font-body),sans-serif'}}>
+                          + Add option
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}
               </button>

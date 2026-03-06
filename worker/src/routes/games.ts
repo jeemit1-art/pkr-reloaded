@@ -24,14 +24,14 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
-  const { scheduled_at, location, notes, seats, game_password, repeat, format } = await c.req.json();
+  const { scheduled_at, location, notes, seats, game_password, repeat, format, poll_enabled, poll_question, poll_options } = await c.req.json();
   if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
   const id = generateId();
   const liveToken = generateId();
   const gameFormat = ['cash','tournament','rebuy','freezeout'].includes(format) ? format : 'cash';
   await c.env.DB.prepare(
-    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
-  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat).run();
+    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format,poll_enabled,poll_question,poll_options) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat,poll_enabled?1:0,poll_question||null,poll_options?JSON.stringify(poll_options):null).run();
 
   // ── Recurring: auto-schedule next game ──────────────────────────────────
   if (repeat === 'weekly' || repeat === 'fortnightly') {
@@ -40,8 +40,8 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     const nextId = generateId();
     const nextToken = generateId();
     await c.env.DB.prepare(
-      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
-    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat).run();
+      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format,poll_enabled,poll_question,poll_options) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat,poll_enabled?1:0,poll_question||null,poll_options?JSON.stringify(poll_options):null).run();
   }
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
@@ -168,12 +168,12 @@ games.post('/games/:id/rsvp', async (c) => {
   const game = await c.env.DB.prepare('SELECT id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);
   if (game.status==='settled'||game.status==='cancelled') return c.json({error:'Game already ended'},400);
-  const { display_name, whatsapp, status } = await c.req.json();
+  const { display_name, whatsapp, status, seat_preference, poll_answer } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
   await c.env.DB.prepare(`
-    INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status) VALUES(?,?,?,?,?)
-    ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp)
-  `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes').run();
+    INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status,seat_preference,poll_answer) VALUES(?,?,?,?,?,?,?)
+    ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp),seat_preference=COALESCE(excluded.seat_preference,seat_preference),poll_answer=COALESCE(excluded.poll_answer,poll_answer)
+  `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes',seat_preference||null,poll_answer||null).run();
   const rsvps = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   return c.json({ok:true, rsvps:rsvps.results});
 });
