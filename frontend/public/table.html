@@ -2216,9 +2216,8 @@ function openAssign(sid) {
   if (ctx && ctx.eventId) {
     pkrApi('/events/' + ctx.eventId + '/players').then(function(players) {
       var names = (players||[]).map(function(p){ return p.display_name; });
-      if (!names.length) names = getHistory(); // fallback to local if no cloud players yet
       renderKnownPlayers(names);
-    }).catch(function() { renderKnownPlayers(getHistory()); });
+    }).catch(function() { renderKnownPlayers([]); });
   } else {
   const hist = getHistory();
   renderKnownPlayers(hist);
