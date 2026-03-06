@@ -1584,7 +1584,7 @@ if (ctx && ctx.gameId) {
     if (!state.game) {
       state.game = {
         name: game.name || 'Poker Night',
-        seats: game.seats || 9,
+        seats: game.seats,
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
       };
