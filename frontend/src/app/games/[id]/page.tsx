@@ -79,7 +79,7 @@ export default function GamePage() {
   const yesRsvps   = (game.rsvps||[]).filter((r:any)=>r.status==='yes');
   const maybeRsvps = (game.rsvps||[]).filter((r:any)=>r.status==='maybe');
   const seated     = (game.players||[]).filter((p:any)=>p.buy_ins>0);
-  const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null||game.status==='settled');
+  const cashedOut  = game.status==='settled' ? (game.players||[]) : (game.players||[]).filter((p:any)=>p.cashout!=null);
 
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
