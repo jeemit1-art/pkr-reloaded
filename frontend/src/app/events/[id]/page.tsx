@@ -703,7 +703,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
 }) {
   const playerGames = history.filter((g:any)=>
     (g.top_players||[]).some((p:any)=>p.display_name===player) ||
-    (g.players||[]).some((p:any)=>p.display_name===player)
+    (g.all_players||[]).some((p:any)=>p.display_name===player)
   );
   return (
     <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
@@ -724,7 +724,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
       )}
       {playerGames.map((g:any)=>{
         const pp = (g.top_players||[]).find((p:any)=>p.display_name===player)
-                || (g.players||[]).find((p:any)=>p.display_name===player);
+                || (g.all_players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
           <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
