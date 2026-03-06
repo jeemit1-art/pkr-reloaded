@@ -1111,6 +1111,7 @@ function addTxFromInput(sid, type, inp) {
   p.transactions = p.transactions || [];
   p.transactions.push({ type: type, amount: amt, ts: Date.now() });
   saveState();
+  updateSaveResultsBtn();
   if (inp) inp.value = '';
   buildPanel(sid);
   renderTable();
