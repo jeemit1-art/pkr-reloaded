@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS settlement_transfers (
   game_id    TEXT NOT NULL REFERENCES games(id),
   from_user  TEXT NOT NULL,
   to_user    TEXT NOT NULL,
+  from_name  TEXT,
+  to_name    TEXT,
   amount     INTEGER NOT NULL,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
