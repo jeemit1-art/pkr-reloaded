@@ -450,7 +450,7 @@ export default function PlayPage() {
         {/* ── TOP BAR ── */}
         <div style={{flexShrink:0,display:'flex',alignItems:'center',height:52,background:'var(--bg)',borderBottom:'1px solid var(--border)'}}>
           <button onClick={()=>router.push(`/events/${game.event_id}`)}
-            style={{display:'flex',alignItems:'center',gap:4,padding:'0 16px',height:'100%',cursor:'pointer',color:'var(--gold)',fontSize:'0.9rem',fontWeight:500,borderRight:'1px solid var(--border)',background:'none',border:'none',borderRight:'1px solid var(--border)'}}>
+            style={{display:'flex',alignItems:'center',gap:4,padding:'0 16px',height:'100%',cursor:'pointer',color:'var(--gold)',fontSize:'0.9rem',fontWeight:500,background:'none',border:'none',borderRight:'1px solid var(--border)'}}>
             ‹ PKR
           </button>
           <div style={{flex:1,fontFamily:'Playfair Display,serif',fontSize:'1.05rem',fontWeight:700,color:'var(--gold)',padding:'0 14px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
