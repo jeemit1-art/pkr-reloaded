@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 
-type Tab = 'games' | 'leaderboard' | 'history';
+type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
@@ -104,7 +104,7 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+  const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
 
   const TABS_NAV = ['games','leaderboard','history'];
   return (
@@ -265,6 +265,55 @@ export default function EventPage() {
           </div>
         )}
 
+        {/* ── Members tab ── */}
+        {tab==='members' && (
+          <div>
+            {(!event.members || event.members.length === 0) && (
+              <div className="empty-state">
+                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-text">No members yet. Invite people using + Co-host or + Member.</div>
+              </div>
+            )}
+            {event.members && event.members.length > 0 && (
+              <div className="card">
+                {event.members.map((m: any, i: number) => (
+                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
+                    borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>
+                    <div style={{width:36,height:36,borderRadius:'50%',background:'var(--bg3)',
+                      border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
+                      justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
+                      {m.avatar_url
+                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',
+                        fontWeight:m.role==='host'?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {m.name}
+                      </div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
+                        {m.email}
+                      </div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
+                      <span style={{fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:600,
+                        padding:'2px 7px',borderRadius:2,fontFamily:'var(--font-body),sans-serif',
+                        background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.05)',
+                        color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
+                        border: `1px solid ${m.role==='host'?'rgba(201,168,76,0.3)':m.role==='cohost'?'rgba(76,175,125,0.2)':'var(--border-sub)'}`}}>
+                        {m.role}
+                      </span>
+                      <span style={{fontSize:9,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>
+                        {new Date(m.joined_at*1000).toLocaleDateString('en-AU',{month:'short',day:'numeric',year:'numeric'})}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── History tab ── */}
         {tab==='history' && (
           <div>
@@ -294,8 +343,6 @@ export default function EventPage() {
                   </div>
                   {isHost && (
                     <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
-                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
-                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
                       <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
                         onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
                     </div>
@@ -655,7 +702,8 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
   onClose: () => void;
 }) {
   const playerGames = history.filter((g:any)=>
-    (g.top_players||[]).some((p:any)=>p.display_name===player)
+    (g.top_players||[]).some((p:any)=>p.display_name===player) ||
+    (g.players||[]).some((p:any)=>p.display_name===player)
   );
   return (
     <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
@@ -675,7 +723,8 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
       )}
       {playerGames.map((g:any)=>{
-        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player)
+                || (g.players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
           <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
