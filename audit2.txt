@@ -1,0 +1,177 @@
+]633;E;echo "=== BRIDGE ===";96e0a059-6c90-40c2-9b1e-8f7814f592e9]633;C=== BRIDGE ===
+"use client";
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { api, getToken } from "@/lib/api";
+
+export default function GameBridgePage() {
+  const params = useParams();
+  const id = (Array.isArray(params.id) ? params.id[0] : params.id) as string;
+
+  useEffect(() => {
+    async function bridge() {
+      try {
+        const [game, me] = await Promise.all([api.games.get(id), api.auth.me()]);
+
+        let isHost = false;
+        const eventId = (game as any).event_id;
+        try {
+          const ev = await api.events.get(eventId);
+          const member = (ev.members || []).find((m: any) => m.id === me.id);
+          isHost = member?.role === "host" || member?.role === "cohost";
+        } catch {}
+
+        const buyInDollars = ((game as any).buy_in || 0) / 100;
+
+        // ── Check if we already have live state for this exact game ──
+        // If so, skip re-initialising localStorage so in-progress chips are preserved
+        let skipStateInit = false;
+        try {
+          const existingCtx = JSON.parse(localStorage.getItem("pkrCtx") || "null");
+          const existingState = JSON.parse(localStorage.getItem("pokerState_" + eventId + "_" + me.id) || "null");
+          if (existingCtx?.gameId === id && existingState?.game && !existingState.game.ended) {
+            skipStateInit = true;
+          }
+        } catch {}
+
+        if (!skipStateInit) {
+          const players: Record<string, any> = {};
+          ((game as any).players || []).forEach((p: any, i: number) => {
+            const sid = "seat" + (p.seat_number || (i + 1));
+            const count = p.buy_ins || 1;
+            const transactions: any[] = [];
+            for (let b = 0; b < count; b++) {
+              transactions.push({ type: "buyin", amount: buyInDollars, ts: Date.now() - (count - b) * 60000 });
+            }
+            if (p.cashout != null) transactions.push({ type: "cashout", amount: p.cashout / 100, ts: Date.now() });
+            players[sid] = { name: p.display_name, userId: p.user_id, phone: p.whatsapp || "", transactions };
+            if (p.whatsapp) {
+              try {
+                const phones = JSON.parse(localStorage.getItem("pokerPhones_" + eventId + "_" + me.id) || "{}");
+                phones[p.display_name.toLowerCase()] = { name: p.display_name, phone: p.whatsapp };
+                localStorage.setItem("pokerPhones_" + eventId + "_" + me.id, JSON.stringify(phones));
+              } catch {}
+            }
+          });
+
+          const state = {
+            game: {
+              name: (game as any).event_name || "Poker Night",
+              stakes: "",
+              seats: (game as any).seats || 9,
+              startedAt: Date.now(),
+              gameDate: new Date((game as any).scheduled_at * 1000).toISOString(),
+              location: (game as any).location || "",
+              code: (game as any).live_token || "LOCAL",
+              defaultBuyin: buyInDollars,
+              password: (game as any).game_password || null,
+              lobbyActive: false, // PKR lobby page handles pre-game RSVPs
+            },
+            players,
+          };
+
+          // Scope keys to eventId+userId to match table.html scoping
+          const lsScope = eventId + '_' + me.id;
+          localStorage.setItem("pokerState_" + lsScope, JSON.stringify(state));
+          // Clear old unscoped keys
+          localStorage.removeItem("pokerState");
+          localStorage.removeItem("pokerStats");
+          localStorage.removeItem("pokerHistory");
+          localStorage.removeItem("pokerPhones");
+          // Clear scoped stats keys — leaderboard comes from PKR API now
+          localStorage.removeItem("pokerStats_" + lsScope);
+          localStorage.removeItem("pokerHistory_" + lsScope);
+          localStorage.setItem("cloudRole", isHost ? "host" : "player");
+          localStorage.setItem("cloudGameCode", (game as any).live_token || "LOCAL");
+          localStorage.setItem("cloudMyName", me.name || (isHost ? "Host" : "Player"));
+        }
+
+        // Always refresh pkrCtx with latest token
+        localStorage.setItem("pkrCtx", JSON.stringify({
+          gameId: id,
+          eventId: eventId,
+          apiUrl: process.env.NEXT_PUBLIC_API_URL || "",
+          token: getToken(),
+          userId: me.id,
+          userName: me.name,
+          // Stable settle key — does NOT include Date.now() so retries are safe
+          settleKey: id + "_end",
+        }));
+
+        // Start the game if still scheduled
+        if ((game as any).status === 'scheduled') {
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/games/${id}/start`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+              body: JSON.stringify({ password: (game as any).game_password || '' }),
+            });
+          } catch(e) { console.warn('Start game failed:', e); }
+        }
+        // Always open the game screen — PKR lobby page handles pre-game RSVPs
+        window.location.href = "/table.html#game";
+      } catch (err) {
+        console.error("Bridge error:", err);
+        const fallbackCtx = (() => { try { return JSON.parse(localStorage.getItem("pkrCtx") || "null"); } catch { return null; } })();
+        window.location.href = fallbackCtx?.eventId ? `/events/${fallbackCtx.eventId}` : "/dashboard";
+      }
+    }
+    bridge();
+  }, [id]);
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"#060e07",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{color:"#c9a84c",fontFamily:"Playfair Display,serif",fontSize:48,opacity:0.6}}>&#9824;</div>
+      <div style={{color:"#6b8c6e",fontFamily:"DM Sans,sans-serif",fontSize:14,letterSpacing:2}}>LOADING</div>
+    </div>
+  );
+}=== WORKER GAMES SETTLE ===
+=== WORKER GAMES SEAT ===
+=== SYNC SETTLE ===
+551:      <div style="font-size:0.82rem;color:var(--muted)">Get notified for buy-ins, cashouts & settlements</div>
+1133:function pBuyin(p) { return (p.transactions || []).filter(t => t.type !== 'cashout').reduce((a, t) => a + t.amount, 0); }
+1134:function pCash(p) { return (p.transactions || []).filter(t => t.type === 'cashout').reduce((a, t) => a + t.amount, 0); }
+1916:  // Allow $0 cashout — player may have busted. Check cashout transaction exists, not just > 0
+1918:    return (p.transactions||[]).some(function(t){ return t.type === 'cashout'; });
+1930:    var ok = await window.syncSettleToPkr();
+2296:      const typeLabel = tx.type === 'cashout' ? 'Cash out' : 'Buy-in';
+2297:      const typeCls   = tx.type === 'cashout' ? 'co' : 'bi';
+2355:  coBtn.addEventListener('click', () => addTxFromInput(sid, 'cashout', coInp));
+2356:  coInp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTxFromInput(sid, 'cashout', coInp); } });
+2521:  const inpId = type === 'cashout' ? 'coInput' : 'biInput';
+2741:  // players: [{name, net}]  (net = cashout - buyin, positive = winner)
+3009:          await window.syncSettleToPkr();
+4453:            // Check if player already exists in state with same buy_ins and cashout
+4455:            var existingBuyins = existing ? (existing.transactions||[]).filter(function(t){return t.type!=='cashout';}).length : 0;
+4456:            var existingCashout = existing ? (existing.transactions||[]).filter(function(t){return t.type==='cashout';}).reduce(function(a,t){return a+t.amount;},0) : 0;
+4457:            var pkrBuyins = p.buy_ins || 1;
+4458:            var pkrCashout = p.cashout != null ? p.cashout / 100 : null;
+4468:            if (pkrCashout != null) txns.push({ type: 'cashout', amount: pkrCashout, ts: Date.now() });
+4543:  window.syncSettleToPkr = async function syncSettleToPkr() {
+4561:        var buyinCount = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
+4562:        var coDollars = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
+4565:        return { user_id: userId, display_name: p.name, buy_ins: buyinCount, cashout: Math.round(coDollars*100) };
+4692:          body: JSON.stringify({ display_name: name, whatsapp: phone||null, seat_number: seatNum, buy_ins: 0 }),
+4732:        var buyins = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
+4733:        var cashouts = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; });
+4734:        var cashoutAmt = cashouts.reduce(function(s,t){ return s + (t.amount||0); }, 0);
+4735:        snap[sid] = { name: p.name, phone: p.phone||'', buyins: buyins, cashout: cashoutAmt };
+4773:        if (Math.abs(cur.cashout - (prev.cashout||0)) > 0.005) {
+4774:          var cashoutCents = Math.round(cur.cashout * 100);
+=== SAVE RESULTS BTN ===
+1911:function updateSaveResultsBtn() {
+1916:  // Allow $0 cashout — player may have busted. Check cashout transaction exists, not just > 0
+1917:  var allCashedOut = players.length >= 2 && players.every(function(p){
+1920:  btn.style.display = allCashedOut ? '' : 'none';
+2250:  updateSaveResultsBtn(); // show/hide Save Results button
+=== PHONE KEY ===
+49:                const phones = JSON.parse(localStorage.getItem("pokerPhones_" + eventId + "_" + me.id) || "{}");
+51:                localStorage.setItem("pokerPhones_" + eventId + "_" + me.id, JSON.stringify(phones));
+79:          localStorage.removeItem("pokerPhones");
+=== SKIP STATE INIT ===
+27:        let skipStateInit = false;
+30:          const existingState = JSON.parse(localStorage.getItem("pokerState_" + eventId + "_" + me.id) || "null");
+32:            skipStateInit = true;
+36:        if (!skipStateInit) {
+74:          localStorage.setItem("pokerState_" + lsScope, JSON.stringify(state));
+76:          localStorage.removeItem("pokerState");

@@ -1,0 +1,17 @@
+]633;E;echo "=== SETTLE ENDPOINT ===";96e0a059-6c90-40c2-9b1e-8f7814f592e9]633;C=== SETTLE ENDPOINT ===
+=== SEAT ENDPOINT ===
+=== NET CALC ===
+370:  const buyInAmount = eventData?.buy_in || 0;
+371:  const positions = results.map(p => ({...p, net: p.cashout - (p.buy_ins * buyInAmount)}));
+=== GAMES_PLAYED FIX ===
+245:  // Save to known players for quick-select — do NOT increment games_played here (done at settle)
+247:    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,0)
+332:  const players = await c.env.DB.prepare('SELECT * FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+396:  // ── Update event_players games_played ──
+399:      INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
+400:      ON CONFLICT(event_id,display_name) DO UPDATE SET games_played=games_played+1
+460:    user_id:string; display_name:string; games_played:number; games_won:number;
+468:        games_played:0, games_won:0, total_net:0,
+473:    p.games_played++;
+484:      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
+486:        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
