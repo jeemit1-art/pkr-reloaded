@@ -79,6 +79,22 @@ events.get('/:id', authMiddleware, async (c) => {
   return c.json({...event, members:members.results});
 });
 
+// Remove a member from an event (host only, cannot remove self)
+events.delete('/:id/members/:userId', authMiddleware, async (c) => {
+  const eventId  = c.req.param('id');
+  const targetId = c.req.param('userId');
+  const requesterId = c.get('userId');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Only host can remove members' }, 403);
+  if (targetId === requesterId) return c.json({ error: 'You cannot remove yourself' }, 400);
+  const target = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId, targetId).first<{ role: string }>();
+  if (!target) return c.json({ error: 'Member not found' }, 404);
+  if (target.role === 'host') return c.json({ error: 'Cannot remove the host' }, 400);
+  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId, targetId).run();
+  return c.json({ ok: true });
+});
+
 events.put('/:id', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);

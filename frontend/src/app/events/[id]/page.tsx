@@ -23,6 +23,7 @@ export default function EventPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
+  const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
@@ -307,6 +308,15 @@ export default function EventPage() {
                         {new Date(m.joined_at*1000).toLocaleDateString('en-AU',{month:'short',day:'numeric',year:'numeric'})}
                       </span>
                     </div>
+                    {isHost && m.role !== 'host' && (
+                      <button
+                        onClick={()=>setConfirmRemoveMember(m)}
+                        style={{background:'none',border:'1px solid rgba(231,76,60,0.25)',color:'var(--red)',
+                          borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
+                          fontFamily:'var(--font-body),sans-serif',flexShrink:0,marginLeft:6}}>
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -353,6 +363,41 @@ export default function EventPage() {
           </div>
         )}
       </div>
+
+      {/* Remove member confirm modal */}
+      {confirmRemoveMember && (
+        <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                Remove Member?
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                Remove <strong style={{color:'var(--ivory)'}}>{confirmRemoveMember.name}</strong> from this event?
+                They will lose access and will need a new invite link to rejoin.
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}}
+                onClick={()=>setConfirmRemoveMember(null)}>Keep them</button>
+              <button className="btn btn-danger" style={{fontSize:12}}
+                onClick={async()=>{
+                  try {
+                    await api.events.removeMember(id, confirmRemoveMember.id);
+                    setEvent((ev:any) => ({
+                      ...ev,
+                      members: ev.members.filter((m:any) => m.id !== confirmRemoveMember.id),
+                      member_count: (ev.member_count || 1) - 1,
+                    }));
+                  } catch(e:any) { alert(e.message); }
+                  setConfirmRemoveMember(null);
+                }}>
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fix 6+10: Confirm delete/cancel modal */}
       {confirmDelete && (
