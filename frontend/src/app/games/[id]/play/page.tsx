@@ -1005,6 +1005,46 @@ function buildPanel(sid) {
     body.appendChild(noNum);
   }
 
+  // Player QR Code
+  var qrSec = document.createElement('div'); qrSec.className = 'psec'; qrSec.textContent = 'Player QR Code';
+  body.appendChild(qrSec);
+  var qrNote = document.createElement('div');
+  qrNote.style.cssText = 'font-size:0.82rem;color:var(--muted);margin-bottom:8px;line-height:1.5';
+  qrNote.textContent = p.name + ' can scan this to watch their live balance.';
+  body.appendChild(qrNote);
+  var qrWrap = document.createElement('div');
+  qrWrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:6px';
+  var qrCanvas = document.createElement('canvas');
+  qrCanvas.style.cssText = 'border-radius:6px;background:#fff;padding:6px';
+  qrWrap.appendChild(qrCanvas);
+  body.appendChild(qrWrap);
+  var _ctx2 = getPkrCtx();
+  var playerUrl = _ctx2 && _ctx2.gameId ? window.location.origin + '/games/live/' + _ctx2.gameId : window.location.href;
+  var qrUrlEl = document.createElement('div');
+  qrUrlEl.style.cssText = 'font-size:0.78rem;text-align:center;color:var(--muted);word-break:break-all;line-height:1.4;margin-bottom:4px';
+  qrUrlEl.textContent = playerUrl;
+  body.appendChild(qrUrlEl);
+  if (window.QRCode) {
+    requestAnimationFrame(function() {
+      qrCanvas.width = 130; qrCanvas.height = 130;
+      try {
+        var tmp = document.createElement('div');
+        tmp.style.cssText = 'position:absolute;left:-9999px';
+        document.body.appendChild(tmp);
+        new QRCode(tmp, { text: playerUrl, width: 130, height: 130, colorDark: '#000000', colorLight: '#ffffff' });
+        setTimeout(function() {
+          var img = tmp.querySelector('img') || tmp.querySelector('canvas');
+          if (img) {
+            var qrCtx = qrCanvas.getContext('2d');
+            qrCtx.fillStyle = '#fff'; qrCtx.fillRect(0,0,130,130);
+            var draw = function(){ qrCtx.drawImage(img, 0, 0, 130, 130); if (tmp.parentNode) tmp.parentNode.removeChild(tmp); };
+            if (img.tagName === 'CANVAS' || img.complete) draw(); else { img.onload = draw; }
+          }
+        }, 100);
+      } catch(e) {}
+    });
+  }
+
   // Change Seat
   var csSec = document.createElement('div'); csSec.className = 'psec'; csSec.textContent = 'Change Seat';
   body.appendChild(csSec);
