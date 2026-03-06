@@ -1,0 +1,1872 @@
+=== API LIB ===
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('pkr_token');
+}
+export function saveToken(token: string) {
+  if (typeof window !== 'undefined') localStorage.setItem('pkr_token', token);
+}
+export function clearToken() {
+  if (typeof window !== 'undefined') localStorage.removeItem('pkr_token');
+}
+
+async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API}${path}`, {
+    ...opts, credentials:'include',
+    headers:{
+      'Content-Type':'application/json',
+      ...(token ? {'Authorization':`Bearer ${token}`} : {}),
+      ...opts?.headers,
+    },
+  });
+  // Auto-refresh once on 401
+  if (res.status === 401 && !isRetry && getToken()) {
+    try {
+      const rr = await fetch(`${API}/auth/refresh`, { method:'POST', credentials:'include',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${getToken()}` } });
+      if (rr.ok) { const { token: newToken } = await rr.json(); saveToken(newToken); return req<T>(path, opts, true); }
+    } catch {}
+    clearToken();
+    if (typeof window !== 'undefined') window.location.href = '/';
+    throw new Error('Session expired');
+  }
+  if (!res.ok) { const e = await res.json().catch(()=>({error:'Request failed'})); throw new Error(e.error||`HTTP ${res.status}`); }
+  return res.json();
+}
+
+// Public fetch — no auth token
+async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers:{'Content-Type':'application/json',...opts?.headers},
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({error:'Request failed'})); throw new Error(e.error||`HTTP ${res.status}`); }
+  return res.json();
+}
+
+export const api = {
+  auth: {
+    me:       () => req<User>('/auth/me'),
+    logout:   () => req('/auth/logout',{method:'POST'}),
+    loginUrl: () => `${API}/auth/google`,
+    refresh:  () => req<{token:string}>('/auth/refresh',{method:'POST'}),
+  },
+  events: {
+    list:           ()               => req<Event[]>('/events'),
+    get:            (id:string)      => req<EventDetail>(`/events/${id}`),
+    create:         (d:any)          => req<Event>('/events',{method:'POST',body:JSON.stringify(d)}),
+    update:         (id:string,d:any)=> req(`/events/${id}`,{method:'PUT',body:JSON.stringify(d)}),
+    invite:         (id:string,role?:string) => req<{token:string;url:string;role:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role:role||'cohost'})}),
+    redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
+    subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
+      pub(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
+    unsubscribe:    (eventId:string,endpoint:string) =>
+      pub(`/events/${eventId}/unsubscribe`,{method:'POST',body:JSON.stringify({endpoint})}),
+    leaderboard:    (id:string)      => req<LeaderboardEntry[]>(`/events/${id}/leaderboard`),
+    history:        (id:string)      => req<Game[]>(`/events/${id}/history`),
+    deleteGame:     (gameId:string)  => req<{ok:boolean}>(`/games/${gameId}`,{method:'DELETE'}),
+    players:        (id:string)      => req<EventPlayer[]>(`/events/${id}/players`),
+    verifyPassword: (id:string,password:string) =>
+      req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
+  },
+  games: {
+    list:     (eventId:string,status?:string) => req<Game[]>(`/events/${eventId}/games${status?`?status=${status}`:''}`),
+    get:      (id:string)         => req<GameDetail>(`/games/${id}`),
+    lobby:    (id:string)         => pub<LobbyData>(`/games/${id}/lobby`),
+    live:     (token:string)      => pub<LiveData>(`/games/live/${token}`),
+    results:  (token:string)      => pub<ResultsData>(`/games/results/${token}`),
+    create:   (eventId:string,d:any) => req<Game>(`/events/${eventId}/games`,{method:'POST',body:JSON.stringify(d)}),
+    update:   (id:string,d:any)   => req(`/games/${id}`,{method:'PUT',body:JSON.stringify(d)}),
+    settle:   (id:string,d:any)   => req<SettlementResult>(`/games/${id}/settle`,{method:'POST',body:JSON.stringify(d)}),
+    start:    (id:string,password?:string) => req(`/games/${id}/start`,{method:'POST',body:JSON.stringify({password:password||''})}),
+    rsvp:     (id:string,d:any)   => pub<{ok:boolean;rsvps:Rsvp[]}>(`/games/${id}/rsvp`,{method:'POST',body:JSON.stringify(d)}),
+    seat:     (id:string,d:any)   => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat`,{method:'POST',body:JSON.stringify(d)}),
+    removeSeat:(id:string,userId:string) => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{method:'DELETE'}),
+    buyin:    (id:string,userId:string)  => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/buyin/${userId}`,{method:'POST'}),
+    cashout:  (id:string,userId:string,cashout:number) =>
+      req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/cashout/${userId}`,{method:'POST',body:JSON.stringify({cashout})}),
+    unsettle: (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/unsettle`,{method:'POST'}),
+    cancel:   (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/cancel`,{method:'POST'}),
+    delete:   (id:string) => req<{ok:boolean}>(`/games/${id}`,{method:'DELETE'}),
+  },
+  vapidKey: () => req<{key:string}>('/vapid-public-key'),
+};
+
+// ── Types ──
+export interface User { id:string; email:string; name:string; avatar_url:string|null; }
+export interface Event {
+  id:string; name:string; description:string|null; buy_in:number; master_password:string|null;
+  host_id:string; created_at:number; role?:string; member_count?:number; game_count?:number;
+}
+export interface EventMember { id:string; name:string; avatar_url:string|null; email:string; role:string; joined_at:number; }
+export interface EventDetail extends Event { members:EventMember[]; }
+export interface EventPlayer { id:string; event_id:string; display_name:string; whatsapp:string|null; games_played:number; }
+export interface Game {
+  id:string; event_id:string; scheduled_at:number; location:string|null; notes:string|null;
+  seats:number; game_password:string|null; status:string; live_token:string|null;
+  results_token:string|null; created_at:number; player_count?:number;
+}
+export interface Rsvp { id:string; game_id:string; display_name:string; whatsapp:string|null; status:string; created_at:number; }
+export interface GamePlayer {
+  game_id:string; user_id:string; display_name:string; whatsapp:string|null;
+  seat_number:number|null; buy_ins:number; cashout:number|null; net:number|null; settled_at:number|null;
+}
+export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; }
+export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsvp[]; players:GamePlayer[]; }
+export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
+export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
+export interface LeaderboardEntry { user_id:string; display_name:string; games_played:number; games_won:number; total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null; }
+export interface Transfer { from:string; from_name:string; to:string; to_name:string; amount:number; }
+export interface SettlementResult { settlement_id:string; game_id:string; results:any[]; transfers:Transfer[]; settled_at:number; results_token:string; cached?:boolean; }
+
+export function fmt(cents:number):string {
+  const abs=Math.abs(cents), s=`$${(abs/100).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')}`;
+  return cents<0?`-${s}`:s;
+}
+export function fmtSign(cents:number):string {
+  if(cents===0) return '$0';
+  return cents>0?`+${fmt(cents)}`:fmt(cents);
+}
+export function fmtDate(ts:number):string {
+  return new Date(ts*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+export function waLink(phone:string,msg:string):string {
+  const clean = phone.replace(/\D/g,'');
+  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+}=== GAME BRIDGE ===
+"use client";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+
+export default function GameBridgePage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = (Array.isArray(params.id) ? params.id[0] : params.id) as string;
+  useEffect(() => { router.replace(`/games/${id}/play`); }, [id]);
+  return (
+    <div style={{position:'fixed',inset:0,background:'#060e07',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{color:'#c9a84c',fontFamily:'serif',fontSize:48,opacity:0.6}}>♠</div>
+    </div>
+  );
+}
+=== EVENT PAGE ===
+'use client';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
+import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
+
+type Tab = 'games' | 'leaderboard' | 'history';
+type InviteRole = 'cohost' | 'member';
+
+export default function EventPage() {
+  const _p = useParams(); const id = (Array.isArray(_p.id) ? _p.id[0] : _p.id) as string;
+  const router  = useRouter();
+  const [event, setEvent]     = useState(null as any);
+  const [games, setGames]     = useState([] as any[]);
+  const [history, setHistory] = useState([] as any[]);
+  const [leaders, setLeaders] = useState([] as any[]);
+  const [tab, setTab]         = useState('games');
+  const [isHost, setIsHost]   = useState(false);
+  const [user, setUser]       = useState(null as any);
+  const [showCreate, setShowCreate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null as any);
+  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
+  const [showInvite, setShowInvite] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [showQuickSeat, setShowQuickSeat] = useState(false);
+  const [quickSeatGameId, setQuickSeatGameId] = useState('');
+  const [inviteUrl, setInviteUrl]   = useState('');
+  const [inviteRole, setInviteRole] = useState('cohost');
+  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+  const [saving, setSaving] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  useEffect(()=>{
+    Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
+      setEvent(e as any); setUser(u as any);
+      const me = e.members.find((m:any)=>m.id===u.id);
+      setIsHost(me?.role==='host'||me?.role==='cohost');
+    }).catch(()=>router.push('/dashboard'));
+    api.games.list(id).then(setGames);
+    api.events.leaderboard(id).then(setLeaders);
+    api.events.history(id).then(setHistory);
+  },[id]);
+
+  useEffect(()=>{
+    isPushSubscribedToEvent(id).then(setPushEnabled);
+  },[id]);
+
+  async function createGame() {
+    if (!form.scheduled_at) return;
+    setSaving(true);
+    try {
+      const ts = Math.floor(new Date(form.scheduled_at).getTime()/1000);
+      const g = await api.games.create(id,{
+        scheduled_at:ts, location:form.location||undefined,
+        notes:form.notes||undefined, seats:parseInt(form.seats)||9,
+        game_password:form.game_password||undefined,
+        repeat: form.repeat !== 'none' ? form.repeat : undefined,
+        format: form.format,
+      });
+      setGames(gs=>[g,...gs]);
+      setShowCreate(false);
+      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+    } catch(e:any){ alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function generateInvite(role='cohost') {
+    try {
+      const r = await api.events.invite(id, role);
+      setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
+    } catch(e:any){ alert(e.message); }
+  }
+
+  async function togglePush() {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        const result = await unsubscribePush(id);
+        setPushEnabled(result);
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          const result = await subscribePush(id, user?.id, user?.name);
+          setPushEnabled(result);
+        }
+      }
+    } finally { setPushLoading(false); }
+  }
+
+  const isPWA      = useMemo(()=>isPWAInstalled(),[]);
+  const iosDevice  = useMemo(()=>isIOS(),[]);
+  const safariOnly = useMemo(()=>isSafari(),[]);
+
+  if (!event) return null;
+
+  const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
+  const settled  = games.filter(g=>g.status==='settled');
+  const installLink = appUrl;
+
+  const statusColor:any = {
+    scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
+    settled:'var(--muted)', cancelled:'var(--red)',
+  };
+
+  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+
+  const TABS_NAV = ['games','leaderboard','history'];
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+
+      {/* Header */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
+        <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px',height:56,display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
+          </div>
+          {/* Push bell */}
+          {canUsePush() && (
+            <button onClick={togglePush} disabled={pushLoading} title={pushEnabled?'Notifications ON — tap to disable':'Enable push notifications'}
+              style={{background:pushEnabled?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.05)',
+                color:pushEnabled?'var(--green)':'var(--muted)',
+                border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
+                borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
+                display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
+              {pushEnabled ? '🔔' : '🔕'}
+            </button>
+          )}
+          {isHost && (
+            <div style={{display:'flex',gap:6}}>
+              <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
+              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats strip */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
+        <div style={{maxWidth:640,margin:'0 auto',display:'flex',gap:0}}>
+          {[
+            {l:'Buy-in', v:event.buy_in>0?fmt(event.buy_in):'—'},
+            {l:'Games',  v:`${event.game_count||0}`},
+            {l:'Members',v:`${event.member_count||1}`},
+          ].map((s,i)=>(
+            <div key={s.l} style={{padding:'14px 20px',borderRight:i<2?'1px solid var(--border-sub)':'none'}}>
+              <div className="display" style={{fontSize:18,color:'var(--white)',fontWeight:500}}>{s.v}</div>
+              <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.l}</div>
+            </div>
+          ))}
+          {/* Push status chip */}
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',padding:'0 16px'}}>
+            {pushEnabled
+              ? <span style={{fontSize:10,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>🔔 Notified</span>
+              : canUsePush() ? <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>🔕 No alerts</span> : null
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Tab nav */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
+        <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
+          {TABS.map((t)=>(
+            <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
+              {t.charAt(0).toUpperCase()+t.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{maxWidth:640,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
+
+        {/* ── Games tab ── */}
+        {tab==='games' && (
+          <div>
+            {isHost && (
+              <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
+              </div>
+            )}
+            {upcoming.length===0 && settled.length===0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">♠</div>
+                <div className="empty-state-text">No games scheduled yet.</div>
+                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
+              </div>
+            )}
+            {upcoming.map(g=>(
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}} onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
+            ))}
+            {settled.length>0 && (
+              <>
+                <div style={{fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--faint)',margin:'20px 0 10px',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+                  Recent Results
+                </div>
+                {settled.slice(0,3).map(g=>(
+                  <div key={g.id} className="card" style={{marginBottom:8,cursor:'pointer',opacity:0.7}} onClick={()=>router.push(`/games/${g.id}`)}>
+                    <div style={{padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,color:'var(--ivory)'}}>{fmtDate(g.scheduled_at)}</div>
+                        {g.location && <div style={{fontSize:11,color:'var(--muted)'}}>{g.location}</div>}
+                        {(g as any).format && (g as any).format !== 'cash' && (
+                          <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
+                            letterSpacing:'0.08em',textTransform:'uppercase'}}>
+                            {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="badge badge-settled">Settled</span>
+                      <span style={{color:'var(--faint)',fontSize:16}}>›</span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Leaderboard tab ── */}
+        {tab==='leaderboard' && (
+          <div>
+            {leaders.length===0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">🏆</div>
+                <div className="empty-state-text">No results yet. Settle a game to see the leaderboard.</div>
+              </div>
+            )}
+            {leaders.length>0 && (
+              <div className="card">
+                {leaders.map((l,i)=>(
+                  <div key={l.user_id} onClick={()=>setSelectedPlayer(l.display_name)}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<leaders.length-1?'1px solid var(--border-sub)':'none',
+                    cursor:'pointer',transition:'background 0.12s'}}
+                    onMouseEnter={e=>(e.currentTarget.style.background='rgba(201,168,76,0.04)')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='')}>
+                    <div style={{width:28,textAlign:'center',fontSize:i<3?18:13,color:i===0?'var(--gold)':i===1?'var(--ivory)':i===2?'var(--amber)':'var(--faint)'}}>
+                      {i===0?'♛':i===1?'♝':i===2?'♞':`${i+1}`}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:i===0?600:400}}>{l.display_name}</div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{l.games_played} game{l.games_played!==1?'s':''} · best {fmtSign(l.biggest_win)}</div>
+                    </div>
+                    <div className="display" style={{fontSize:20,color:l.total_net>0?'var(--green)':l.total_net<0?'var(--red)':'var(--muted)',fontWeight:500}}>
+                      {fmtSign(l.total_net)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Fix 8: Player drill-down — show their individual game history */}
+            {selectedPlayer && (
+              <PlayerHistoryCard
+                player={selectedPlayer}
+                history={history}
+                leader={leaders.find(l=>l.display_name===selectedPlayer)||null}
+                onClose={()=>setSelectedPlayer(null)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── History tab ── */}
+        {tab==='history' && (
+          <div>
+            {history.length===0 && <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">No settled games yet.</div></div>}
+            <div style={{display:'grid',gap:8}}>
+              {history.map(g=>(
+                <div key={g.id} className="card">
+                  <div style={{padding:'14px 16px',cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:4}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
+                      <span className="badge badge-settled">{(g as any).player_count||0} players</span>
+                    </div>
+                    {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
+                    {((g as any).top_players||[]).length>0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {((g as any).top_players||[]).map((p:any,i:number)=>(
+                          <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
+                            background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
+                            border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
+                            <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}>{i===0?'♛':i===1?'♝':'♞'}</span>
+                            <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
+                            <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {isHost && (
+                    <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
+                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
+                      <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
+                        onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Fix 6+10: Confirm delete/cancel modal */}
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
+          <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                {confirmDelete.endsWith(':delete') ? 'Delete Game?' : 'Cancel Game?'}
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                {confirmDelete.endsWith(':delete')
+                  ? 'This permanently removes the game record and all player data. The leaderboard will be recalculated. This cannot be undone.'
+                  : "This marks the game as cancelled. It will stay in history but won't affect the leaderboard."}
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmDelete(null)}>Keep it</button>
+              <button className="btn btn-danger" style={{fontSize:12}} onClick={async()=>{
+                const gameId = confirmDelete.replace(':delete','');
+                const isDelete = confirmDelete.endsWith(':delete');
+                try {
+                  if (isDelete) {
+                    await api.games.delete(gameId);
+                    setHistory(h=>h.filter(x=>x.id!==gameId));
+                    setGames(gs=>gs.filter(g=>g.id!==gameId));
+                    api.events.leaderboard(id).then(setLeaders);
+                  } else {
+                    await api.games.cancel(gameId);
+                    setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
+                  }
+                } catch(e:any){ alert(e.message); }
+                setConfirmDelete(null);
+              }}>
+                {confirmDelete.endsWith(':delete') ? 'Delete permanently' : 'Cancel game'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create game modal */}
+      {showCreate && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:20,fontWeight:500}}>Schedule Game</div>
+            <div style={{display:'grid',gap:14}}>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Date & Time *</div>
+                <input className="inp" type="datetime-local" value={form.scheduled_at} onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Location</div>
+                <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Seats</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {['6','7','8','9','10','11','12'].map(n=>(
+                    <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
+                        background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
+                        border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Game Password</div>
+                <input className="inp" placeholder="Optional" value={form.game_password} onChange={e=>setForm(f=>({...f,game_password:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:6}}>Notes</div>
+                <input className="inp" placeholder="Optional" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Repeat</div>
+                <div style={{display:'flex',gap:6}}>
+                  {(['none','weekly','fortnightly']).map(r=>(
+                    <button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
+                        border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
+                      {r==='none'?'Once':r==='weekly'?'Weekly':'Fortnightly'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Format</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {([
+                    {v:'cash',       l:'💰 Cash'},
+                    {v:'tournament', l:'🏆 Tournament'},
+                    {v:'rebuy',      l:'♻️ Rebuy'},
+                    {v:'freezeout',  l:'❄️ Freezeout'},
+                  ]).map(f=>(
+                    <button key={f.v} onClick={()=>setForm(fm=>({...fm,format:f.v}))}
+                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
+                        background:form.format===f.v?'var(--gold)':'var(--bg3)',
+                        color:form.format===f.v?'#0e0e0f':'var(--muted)',
+                        border:form.format===f.v?'1px solid var(--gold)':'1px solid var(--border-sub)',
+                        fontFamily:'var(--font-body),sans-serif'}}>
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:20}}>
+              <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
+                {saving?'Scheduling…':'Schedule & Notify'}
+              </button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
+              {inviteUrl}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}>Copy Link</button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Join me as co-host on PKR: ${inviteUrl}`)}`}
+                target="_blank" rel="noopener noreferrer" className="btn btn-outline"
+                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>WhatsApp</a>
+              <button className="btn btn-ghost" onClick={()=>setShowInvite(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Install / Share modal */}
+      {showInstall && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInstall(false);}}>
+          <div className="modal-sheet">
+            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>Share PKR</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>{event.name}</div>
+
+            {/* Install link */}
+            <div style={{marginBottom:16,padding:'14px',background:'rgba(0,255,136,0.04)',border:'1px solid rgba(0,255,136,0.15)',borderRadius:4}}>
+              <div style={{fontSize:9,letterSpacing:'0.18em',color:'var(--green)',marginBottom:6,fontFamily:'var(--font-body),sans-serif',fontWeight:600,textTransform:'uppercase'}}>📲 Player Install Link</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:10,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                Send to new players so they can install PKR and get push notifications for every game.
+              </div>
+              <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'10px 12px',fontSize:10,color:'var(--ivory)',wordBreak:'break-all',marginBottom:8,fontFamily:'monospace'}}>{installLink}</div>
+              <div style={{display:'flex',gap:6}}>
+                <button className="btn btn-outline" style={{flex:1,fontSize:11,borderColor:'rgba(0,255,136,0.3)',color:'var(--green)'}}
+                  onClick={()=>navigator.clipboard.writeText(installLink).then(()=>alert('Install link copied!'))}>Copy</button>
+                <a href={`https://wa.me/?text=${encodeURIComponent(`Install PKR and join ${event.name}: ${installLink}`)}`}
+                  target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
+                  style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>📱 WhatsApp</a>
+              </div>
+            </div>
+
+            {/* Push toggle */}
+            {canUsePush() && (
+              <div style={{padding:'12px 14px',background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,marginBottom:14}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+                  <div>
+                    <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>🔔 Your Notifications</div>
+                    <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
+                      {pushEnabled ? 'ON — get alerts for games, results & buy-ins.' : 'OFF — enable to stay in the loop.'}
+                    </div>
+                  </div>
+                  <button onClick={togglePush} disabled={pushLoading}
+                    style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:600,
+                      background:pushEnabled?'rgba(255,60,60,0.1)':'var(--gold)',color:pushEnabled?'var(--red)':'#000',
+                      border:`1px solid ${pushEnabled?'rgba(255,60,60,0.3)':'var(--gold)'}`,
+                      fontFamily:'var(--font-body),sans-serif',opacity:pushLoading?0.6:1,whiteSpace:'nowrap'}}>
+                    {pushLoading ? '…' : pushEnabled ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isPWA && iosDevice && safariOnly && (
+              <div style={{padding:'10px 14px',background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:4,marginBottom:14}}>
+                <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}>📱 iPhone: Add to Home Screen</div>
+                <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                  Tap <strong style={{color:'var(--ivory)'}}>Share ↑</strong> → <strong style={{color:'var(--ivory)'}}>Add to Home Screen</strong> to install PKR as a native app.
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-ghost" style={{width:'100%'}} onClick={()=>setShowInstall(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Seat Modal (#13) ── */}
+      {showQuickSeat && quickSeatGameId && (
+        <QuickSeatModal
+          gameId={quickSeatGameId}
+          onClose={()=>setShowQuickSeat(false)}
+          onSeated={()=>{ setShowQuickSeat(false); api.games.list(id).then(setGames); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Quick Seat Modal ────────────────────────────────────────────────────────
+function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:()=>void; onSeated:()=>void }) {
+  const [name, setName] = useState('');
+  const [wa, setWa]     = useState('');
+  const [saving, setSaving] = useState(false);
+  const [seated, setSeated] = useState([] as any[]);
+
+  async function seat() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await api.games.seat(gameId, { display_name: name.trim(), whatsapp: wa || undefined });
+      setSeated(s => [...s, name.trim()]);
+      setName(''); setWa('');
+    } catch(e:any) { alert(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-sheet">
+        <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>⚡ Quick Seat Players</div>
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Add players before launching the table</div>
+
+        {seated.length > 0 && (
+          <div style={{marginBottom:14,display:'flex',flexWrap:'wrap',gap:6}}>
+            {seated.map((n,i) => (
+              <span key={i} style={{padding:'4px 10px',background:'rgba(76,175,125,0.1)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+                ✓ {n}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div style={{display:'grid',gap:10,marginBottom:14}}>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>Name *</div>
+            <input className="inp" placeholder="Player name" value={name} onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&seat()} autoFocus/>
+          </div>
+          <div>
+            <div className="lbl" style={{marginBottom:5}}>WhatsApp (optional)</div>
+            <input className="inp" placeholder="+61 400 000 000" type="tel" value={wa} onChange={e=>setWa(e.target.value)}/>
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-primary" style={{flex:1}} disabled={!name.trim()||saving} onClick={seat}>
+            {saving ? 'Seating…' : '+ Seat Player'}
+          </button>
+          <button className="btn btn-ghost" onClick={()=>{ onSeated(); }}>
+            {seated.length > 0 ? 'Done' : 'Cancel'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Game Card with RSVP count + push + links ───
+function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onDelete}:any) {
+  const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
+  const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
+  const statusBg:Record<string,string> = {
+    scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
+    lobby:'rgba(201,168,76,0.12)', settled:'transparent',
+  };
+  const statusDot:Record<string,string> = {
+    scheduled:'var(--amber)', active:'var(--green)', lobby:'var(--gold)', settled:'var(--muted)',
+  };
+  return (
+    <div className="card" style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
+      <div style={{padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}} onClick={onClick}>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>
+            <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{fmtDate(game.scheduled_at)}</div>
+          </div>
+          {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>📍 {game.location}</div>}
+          {game.notes && <div style={{fontSize:11,color:'var(--faint)',fontStyle:'italic'}}>{game.notes}</div>}
+          {(game as any).format && (game as any).format !== 'cash' && (
+            <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
+              letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
+              background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
+              {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
+            </span>
+          )}
+          <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
+            <span className={`badge badge-${game.status}`}>{game.status}</span>
+            <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>{game.seats||9} seats</span>
+          </div>
+        </div>
+        <span style={{color:'var(--faint)',fontSize:16,marginTop:2}}>›</span>
+      </div>
+      {/* Quick share row */}
+      {(game.status==='scheduled'||game.status==='lobby'||game.status==='active') && (
+        <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
+          {isHost && (game.status==='scheduled'||game.status==='lobby') && (
+            <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
+              ⚡ Quick Seat
+            </button>
+          )}
+          {isHost && game.status==='scheduled' && (<>
+            <button onClick={(e)=>{e.stopPropagation();onCancel();}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}>
+              Cancel
+            </button>
+            <button onClick={(e)=>{e.stopPropagation();onDelete();}}
+              className="btn btn-danger" style={{fontSize:10,padding:'5px 10px'}}>
+              Delete
+            </button>
+          </>)}
+          <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'));}}
+            className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
+            📋 RSVP Link
+          </button>
+          <a onClick={e=>e.stopPropagation()} href={`https://wa.me/?text=${encodeURIComponent(`🃏 *${eventName}*\n${fmtDate(game.scheduled_at)}${game.location?'\n📍 '+game.location:''}\n\nRSVP: ${lobbyUrl}`)}`}
+            target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
+            style={{fontSize:10,padding:'5px 10px',textDecoration:'none',display:'flex',alignItems:'center'}}>
+            📱 WhatsApp
+          </a>
+          {liveUrl && game.status==='active' && (
+            <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--green)'}}>
+              📡 Live Link
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function PlayerHistoryCard({ player, history, leader, onClose }: {
+  player: string;
+  history: any[];
+  leader: any;
+  onClose: () => void;
+}) {
+  const playerGames = history.filter((g:any)=>
+    (g.top_players||[]).some((p:any)=>p.display_name===player)
+  );
+  return (
+    <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
+      <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
+          {leader && (
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
+              {leader.games_played} games · {leader.games_won} wins · best {leader.biggest_win>0?'+':''}{(leader.biggest_win/100).toFixed(0)} · worst -{(leader.biggest_loss/100).toFixed(0)}
+            </div>
+          )}
+        </div>
+        <button onClick={onClose}
+          style={{background:'none',border:'none',color:'var(--faint)',fontSize:18,cursor:'pointer',padding:'2px 6px'}}>✕</button>
+      </div>
+      {playerGames.length===0 && (
+        <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
+      )}
+      {playerGames.map((g:any)=>{
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
+        const net = pp?.net ?? null;
+        return (
+          <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
+            borderBottom:'1px solid var(--border-sub)'}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif'}}>{new Date(g.scheduled_at*1000).toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'})}</div>
+              {g.location && <div style={{fontSize:10,color:'var(--faint)',marginTop:1}}>{g.location}</div>}
+            </div>
+            {net!==null && (
+              <div style={{fontSize:15,fontWeight:600,fontFamily:'serif',
+                color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)'}}>
+                {net>0?'+':''}{(net/100).toFixed(0)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.5}}>PKR</div>
+    </div>
+  );
+}
+=== LOBBY PAGE ===
+'use client';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { api, LobbyData, fmtDate, waLink } from '@/lib/api';
+import {
+  isPWAInstalled, isIOS, isSafari, canUsePush,
+  getNotificationPermission, isPushSubscribedToEvent, subscribePush,
+} from '@/lib/push';
+
+type InstallState = 'checking' | 'not_installed' | 'installed_no_push' | 'push_denied' | 'subscribed';
+
+export default function LobbyPage() {
+  const { id } = useParams<{id:string}>();
+  const [data, setData]         = useState<LobbyData|null>(null);
+  const [error, setError]       = useState('');
+  const [name, setName]         = useState('');
+  const [wa, setWa]             = useState('');
+  const [sending, setSending]   = useState(false);
+  const [done, setDone]         = useState(false);
+  const [installState, setInstallState] = useState<InstallState>('checking');
+  const [subscribing, setSubscribing]   = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  // Load game data
+  useEffect(() => {
+    api.games.lobby(id).then(setData).catch(() => setError('Game not found'));
+    const t = setInterval(() => api.games.lobby(id).then(setData).catch(() => {}), 10000);
+    return () => clearInterval(t);
+  }, [id]);
+
+  // Determine install + push state
+  const checkState = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const installed = isPWAInstalled();
+    if (!installed) { setInstallState('not_installed'); return; }
+    if (!canUsePush()) { setInstallState('installed_no_push'); return; }
+    const perm = getNotificationPermission();
+    if (perm === 'denied') { setInstallState('push_denied'); return; }
+    const subscribed = await isPushSubscribedToEvent(id);
+    setInstallState(subscribed ? 'subscribed' : 'installed_no_push');
+  }, [id]);
+
+  useEffect(() => { checkState(); }, [checkState]);
+
+  // Handle push subscribe (called after RSVP when we have a name)
+  async function handleSubscribe(playerName: string) {
+    if (!canUsePush()) return;
+    setSubscribing(true);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setInstallState('push_denied'); return; }
+      // Pass displayName so targeted notifications (buyin/cashout) can reach this device
+      const ok = await subscribePush(data!.event.id, undefined, playerName);
+      if (ok) setInstallState('subscribed');
+    } catch(e) { console.error(e); }
+    finally { setSubscribing(false); }
+  }
+
+  async function handleRsvp(status: string) {
+    if (!name.trim()) return;
+    setSending(true);
+    try {
+      const res = await api.games.rsvp(id, { display_name: name.trim(), whatsapp: wa || undefined, status });
+      setData(d => d ? { ...d, rsvps: res.rsvps } : d);
+      setDone(true);
+      // After RSVP, try to subscribe for push if PWA is installed
+      if (isPWAInstalled() && canUsePush() && installState !== 'subscribed') {
+        await handleSubscribe(name.trim());
+      }
+    } catch(e: any) { alert(e.message); }
+    finally { setSending(false); }
+  }
+
+  if (error) return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="card" style={{padding:32,textAlign:'center'}}><p style={{color:'var(--red)',fontSize:14}}>{error}</p></div>
+    </div>
+  );
+  if (!data) return <Loader />;
+
+  const { game, event, rsvps, players } = data;
+  const gameWithToken = game as typeof game & { live_token?: string; lobby_views?: number; format?: string };
+  const yesCount = rsvps.filter(r => r.status === 'yes').length;
+  const maybeCount = rsvps.filter(r => r.status === 'maybe').length;
+  const isLive = game.status === 'active' || game.status === 'settled';
+  const ios = isIOS();
+  const safari = isSafari();
+
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+
+      {/* Header */}
+      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent)'}}/>
+        <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px'}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:6}}>
+                ♠ PKR — Pre-Game Lobby
+              </div>
+              <div className="display" style={{fontSize:22,color:'var(--white)',fontWeight:500,lineHeight:1.1}}>{event.name}</div>
+            </div>
+            <div style={{textAlign:'right',flexShrink:0}}>
+              <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>
+                {fmtDate(game.scheduled_at)}
+              </div>
+              {game.location && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{game.location}</div>}
+            </div>
+          </div>
+          {/* Stats */}
+          <div style={{display:'flex',gap:20,marginTop:14,paddingTop:12,borderTop:'1px solid var(--border-sub)'}}>
+            {[
+              {label:'Seats', value:game.seats, color:'var(--white)'},
+              {label:'Attending', value:yesCount, color:'var(--green)'},
+              {label:'Maybe', value:maybeCount, color:'var(--amber)'},
+              ...(gameWithToken.lobby_views ? [{label:'Link Opens', value:gameWithToken.lobby_views, color:'var(--faint)'}] : []),
+            ].map((s:any)=>(
+              <div key={s.label}>
+                <div className="display" style={{fontSize:20,color:s.color,fontWeight:500,lineHeight:1}}>{s.value}</div>
+                <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',marginTop:3,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{maxWidth:480,margin:'0 auto',padding:'18px 16px',position:'relative',zIndex:1}}>
+
+        {/* ── INSTALL + PUSH BANNER ── */}
+        {installState === 'not_installed' && (
+          <div style={{background:'var(--bg2)',border:'1px solid rgba(201,168,76,0.3)',borderRadius:3,
+            marginBottom:16,position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.5),transparent)'}}/>
+            <div style={{padding:'16px 16px 0'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <div style={{width:36,height:36,borderRadius:8,background:'var(--bg3)',border:'1px solid var(--border)',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>♠</div>
+                <div>
+                  <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
+                    Install PKR on your phone
+                  </div>
+                  <div style={{fontSize:11,color:'var(--muted)',marginTop:1,fontFamily:'var(--font-body),sans-serif'}}>
+                    Get notified when games start & when your chips move
+                  </div>
+                </div>
+              </div>
+              {/* Feature list */}
+              <div style={{display:'grid',gap:8,marginBottom:14}}>
+                {[
+                  {icon:'🃏', title:'New games', desc:'Instant alert when the host schedules a game'},
+                  {icon:'💰', title:'Your buy-ins', desc:'Notified when the host records your buy-in'},
+                  {icon:'💸', title:'Your cashout', desc:'Notified when your chips are cashed out'},
+                  {icon:'✅', title:'Results', desc:'Push when the game is settled — see your P&L'},
+                ].map(f=>(
+                  <div key={f.title} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'8px 10px',
+                    background:'var(--bg3)',borderRadius:2,border:'1px solid var(--border-sub)'}}>
+                    <span style={{fontSize:16,flexShrink:0,lineHeight:1.3}}>{f.icon}</span>
+                    <div>
+                      <div style={{fontSize:12,color:'var(--ivory)',fontWeight:500,fontFamily:'var(--font-body),sans-serif'}}>{f.title}</div>
+                      <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.4,fontFamily:'var(--font-body),sans-serif'}}>{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Install instructions */}
+            <div style={{borderTop:'1px solid var(--border-sub)',padding:'14px 16px'}}>
+              <div style={{fontSize:10,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--gold)',marginBottom:10,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+                How to install
+              </div>
+              {ios ? (
+                <div style={{display:'grid',gap:6}}>
+                  {[
+                    {step:'1', text: safari ? 'Tap the Share button at the bottom of Safari (the box with an arrow)' : 'Open this page in Safari (not Chrome) for the best experience'},
+                    {step:'2', text:'Scroll down and tap "Add to Home Screen"'},
+                    {step:'3', text:'Tap "Add" in the top-right corner'},
+                    {step:'4', text:'Open PKR from your home screen and allow notifications'},
+                  ].map(s=>(
+                    <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(201,168,76,0.15)',
+                        border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',
+                        justifyContent:'center',fontSize:9,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
+                      <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{display:'grid',gap:6}}>
+                  {[
+                    {step:'1', text:'Tap the ⋮ menu in the top-right of Chrome'},
+                    {step:'2', text:'Tap "Add to Home screen" or "Install app"'},
+                    {step:'3', text:'Open PKR from your home screen and allow notifications'},
+                  ].map(s=>(
+                    <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(201,168,76,0.15)',
+                        border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',
+                        justifyContent:'center',fontSize:9,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
+                      <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{marginTop:12,display:'flex',gap:8}}>
+                <button className="btn btn-ghost" style={{flex:1,fontSize:11,padding:'8px'}}
+                  onClick={() => {
+                    if (navigator.share) navigator.share({title:'PKR — Install', url:appUrl, text:`Install PKR to get notified about ${event.name} games`});
+                    else navigator.clipboard.writeText(appUrl).then(() => alert('Link copied!'));
+                  }}>
+                  Share install link
+                </button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'8px 12px',color:'var(--faint)'}}
+                  onClick={() => setShowInstallHelp(v => !v)}>
+                  {showInstallHelp ? 'Less' : 'Help'}
+                </button>
+              </div>
+              {showInstallHelp && (
+                <div style={{marginTop:10,padding:'10px 12px',background:'rgba(201,168,76,0.04)',
+                  border:'1px solid rgba(201,168,76,0.12)',borderRadius:2}}>
+                  <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                    PKR is a PWA (Progressive Web App) — it installs like a native app directly from your browser, no App Store needed.
+                    Once installed and notifications are allowed, you'll receive alerts on your lock screen whenever there's
+                    activity on this table: new games, your buy-ins, cashouts, and final results.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Installed but push not yet enabled */}
+        {(installState === 'installed_no_push') && (
+          <div style={{background:'var(--bg2)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:3,
+            padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:12,position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(76,175,125,0.4),transparent)'}}/>
+            <div style={{fontSize:22,flexShrink:0}}>🔔</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>Enable notifications</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif',lineHeight:1.4}}>
+                Get alerted for new games, buy-ins, cashouts & results.
+                {!name.trim() && ' Enter your name first.'}
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              style={{fontSize:11,padding:'8px 12px',flexShrink:0}}
+              disabled={!name.trim() || subscribing}
+              onClick={() => handleSubscribe(name.trim())}>
+              {subscribing ? '…' : 'Allow'}
+            </button>
+          </div>
+        )}
+
+        {installState === 'push_denied' && (
+          <div style={{background:'var(--bg2)',border:'1px solid rgba(212,137,26,0.25)',borderRadius:3,
+            padding:'12px 16px',marginBottom:16}}>
+            <div style={{fontSize:12,color:'var(--amber)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+              <strong>Notifications blocked.</strong> To re-enable: open your browser settings → find PKR → allow notifications.
+            </div>
+          </div>
+        )}
+
+        {installState === 'subscribed' && (
+          <div style={{background:'rgba(76,175,125,0.06)',border:'1px solid rgba(76,175,125,0.2)',borderRadius:3,
+            padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:14,color:'var(--green)'}}>✓</span>
+            <div style={{fontSize:12,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+              Notifications enabled — you'll be alerted for all activity on this table.
+            </div>
+          </div>
+        )}
+
+        {/* Fix #3: Live game — show scorecard inline for late arrivals */}
+        {game.status === 'active' && (
+          <LiveScoreboard gameId={id} liveToken={gameWithToken.live_token} />
+        )}
+        {game.status === 'settled' && (
+          <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:3,
+            padding:'12px 16px',marginBottom:16,textAlign:'center'}}>
+            <span style={{fontSize:13,color:'var(--green)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
+              ✅ Game Settled
+            </span>
+          </div>
+        )}
+
+        {/* RSVP form */}
+        {!done && !isLive && (
+          <div className="card-gold" style={{padding:'20px',marginBottom:14}}>
+            <div style={{fontSize:10,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--gold)',
+              fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:14}}>Your RSVP</div>
+            <div style={{display:'grid',gap:10,marginBottom:14}}>
+              <div>
+                <div style={{fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--muted)',
+                  fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:5}}>Name *</div>
+                <input className="inp" placeholder="Your name" value={name} onChange={e => setName(e.target.value)}
+                  onBlur={e => {
+                    // When name is filled and push is ready but not subscribed — nudge
+                    if (e.target.value.trim() && installState === 'installed_no_push') {
+                      // State already shows the "Allow" button — no extra action needed
+                    }
+                  }}/>
+              </div>
+              <div>
+                <div style={{fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--muted)',
+                  fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:5}}>WhatsApp (optional)</div>
+                <input className="inp" placeholder="+61 4xx xxx xxx" value={wa} onChange={e => setWa(e.target.value)}/>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:8}}>
+              <button className="btn btn-primary" style={{fontSize:12}} disabled={!name.trim() || sending}
+                onClick={() => handleRsvp('yes')}>✓ I'm In</button>
+              <button className="btn btn-ghost" style={{fontSize:11}} disabled={!name.trim() || sending}
+                onClick={() => handleRsvp('maybe')}>? Maybe</button>
+              <button className="btn btn-ghost" style={{fontSize:11,color:'var(--red)'}} disabled={!name.trim() || sending}
+                onClick={() => handleRsvp('no')}>✗ Can't</button>
+            </div>
+          </div>
+        )}
+
+        {done && (
+          <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:2,
+            padding:'14px 16px',marginBottom:14,textAlign:'center'}}>
+            <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>
+              RSVP saved — see you at the table. 🃏
+            </div>
+            {installState === 'installed_no_push' && (
+              <div style={{marginTop:10}}>
+                <button className="btn btn-outline" style={{fontSize:11,padding:'7px 14px'}}
+                  disabled={subscribing} onClick={() => handleSubscribe(name.trim())}>
+                  {subscribing ? 'Enabling…' : '🔔 Enable notifications for this table'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* RSVPs */}
+        {rsvps.length > 0 && (
+          <div className="card" style={{marginBottom:14}}>
+            <div className="section-header">RSVPs</div>
+            {rsvps.map(r => (
+              <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
+                borderBottom:'1px solid var(--border-sub)'}}>
+                <span style={{fontSize:13,
+                  color:r.status==='yes'?'var(--green)':r.status==='maybe'?'var(--amber)':'var(--red)',width:16}}>
+                  {r.status==='yes'?'✓':r.status==='maybe'?'~':'✗'}
+                </span>
+                <span style={{flex:1,fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>
+                  {r.display_name}
+                </span>
+                {r.whatsapp && (
+                  <a href={waLink(r.whatsapp, `Game on — ${fmtDate(game.scheduled_at)}`)}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{fontSize:11,color:'var(--gold)',textDecoration:'none',
+                      fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.06em'}}>WA</a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Seated players */}
+        {players.length > 0 && (
+          <div className="card">
+            <div className="section-header">At the Table</div>
+            {players.map((p, i) => (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
+                borderBottom:'1px solid var(--border-sub)'}}>
+                <span style={{fontSize:11,color:'var(--faint)',width:20,textAlign:'center'}}>
+                  {p.seat_number || i+1}
+                </span>
+                <span style={{flex:1,fontSize:14,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>
+                  {p.display_name}
+                </span>
+                <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
+                  ×{p.buy_ins}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.5}}>PKR</div>
+    </div>
+  );
+}
+
+// ── Fix #3: Inline live scoreboard shown to late arrivals on lobby page ──────
+function LiveScoreboard({ gameId, liveToken }: { gameId:string; liveToken?:string }) {
+  const [live, setLive] = useState<any>(null);
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  useEffect(()=>{
+    if (!liveToken) return;
+    api.games.live(liveToken).then(setLive).catch(()=>{});
+    const t = setInterval(()=>{ api.games.live(liveToken).then(setLive).catch(()=>{}); }, 8000);
+    return ()=>clearInterval(t);
+  },[liveToken]);
+
+  if (!liveToken) return null;
+
+  return (
+    <div style={{marginBottom:16}}>
+      <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:3,
+        padding:'10px 14px',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{width:7,height:7,borderRadius:'50%',background:'var(--green)',display:'inline-block',
+            boxShadow:'0 0 6px rgba(76,175,125,0.7)'}}/>
+          <span style={{fontSize:12,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+            Game is Live — Scores updating
+          </span>
+        </div>
+        <a href={`${appUrl}/games/live/${liveToken}`} style={{fontSize:10,color:'var(--muted)',textDecoration:'none',
+          fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.08em'}}>
+          Full view →
+        </a>
+      </div>
+
+      {live && (
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border-sub)',borderRadius:3,overflow:'hidden'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:0,
+            borderBottom:'1px solid var(--border-sub)'}}>
+            {[
+              {l:'Buy-ins', v:`$${(live.totalIn/100).toFixed(0)}`},
+              {l:'Cashouts', v:`$${(live.totalOut/100).toFixed(0)}`},
+              {l:'In Bank', v:`$${(live.bank/100).toFixed(0)}`},
+            ].map((s,i)=>(
+              <div key={s.l} style={{padding:'10px 8px',textAlign:'center',
+                borderRight:i<2?'1px solid var(--border-sub)':'none'}}>
+                <div style={{fontSize:15,color:'var(--white)',fontWeight:500,fontFamily:'var(--font-display),serif'}}>{s.v}</div>
+                <div style={{fontSize:9,color:'var(--faint)',textTransform:'uppercase',letterSpacing:'0.14em',
+                  fontFamily:'var(--font-body),sans-serif',marginTop:2}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          {[...live.players].sort((a:any,b:any)=>(b.buy_ins||0)-(a.buy_ins||0)).map((p:any,i:number)=>{
+            const net = p.cashout != null ? p.cashout - p.buy_ins : null;
+            return (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',
+                borderBottom:'1px solid var(--border-sub)'}}>
+                <span style={{fontSize:10,color:'var(--faint)',width:16,textAlign:'center'}}>{p.seat_number||i+1}</span>
+                <span style={{flex:1,fontSize:13,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
+                <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>×{p.buy_ins}</span>
+                {net!=null && (
+                  <span style={{fontSize:13,fontWeight:600,color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)',
+                    fontFamily:'var(--font-display),serif'}}>
+                    {net>0?'+':''}{(net/100).toFixed(0)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}=== WORKER INDEX ===
+import { Hono } from 'hono';
+import { Env } from './types';
+import { corsHeaders } from './middleware';
+import auth   from './routes/auth';
+import events from './routes/events';
+import games  from './routes/games';
+
+const app = new Hono<{ Bindings: Env }>();
+
+// CORS for every request — pass runtime FRONTEND_URL from env bindings
+app.use('*', async (c, next) => {
+  const origin = c.req.header('Origin') || '';
+  const headers = corsHeaders(origin, c.env.FRONTEND_URL);
+  if (c.req.method === 'OPTIONS') return new Response(null, { status:204, headers });
+  await next();
+  Object.entries(headers).forEach(([k,v]) => c.res.headers.set(k,v));
+});
+
+app.route('/auth',   auth);
+app.route('/events', events);
+app.route('/',       games);
+
+app.get('/health',         (c) => c.json({ ok:true, service:'pkr-reloaded-worker', ts:Date.now() }));
+app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
+app.notFound(              (c) => c.json({ error:'Not found' }, 404));
+
+export default app;
+=== TABLE HTML BUTTONS ===
+82:.continue-btn{margin:0 14px 20px;padding:15px;background:linear-gradient(135deg,#1a8a4a,#0f5a2e);color:#fff;border:none;border-radius:var(--r);font-size:1rem;font-weight:600;cursor:pointer;width:calc(100% - 28px)}
+104:.icon-btn{background:none;border:none;cursor:pointer;padding:6px;font-size:1rem;color:var(--muted)}
+111:.tbtn{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border-radius:6px;white-space:nowrap}
+112:.tbtn:active{border-color:var(--gold);color:var(--gold)}
+113:.tbtn.red:active{border-color:var(--red);color:var(--red)}
+114:.tbtn.gold{border-color:rgba(201,168,76,0.35);color:var(--gold)}
+115:.tbtn.gold:active{background:rgba(201,168,76,0.1)}
+132:.share-btn{flex-shrink:0;background:linear-gradient(135deg,var(--gold),#8a5c20);color:#000;border:none;padding:6px 12px;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;border-radius:6px}
+204:.add-btn{background:linear-gradient(135deg,var(--gold),#8a5c20);color:#000;border:none;padding:11px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;border-radius:var(--rs);white-space:nowrap;flex-shrink:0}
+205:.add-btn:active{opacity:0.8}
+206:.add-btn.g{background:linear-gradient(135deg,#1a8a4a,#0f5a2e);color:#a0ffcc}
+207:.add-btn.o{background:linear-gradient(135deg,#c06020,#8a4010);color:#ffaa60}
+210:.wa-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;border:none;padding:11px;border-radius:var(--rs);font-size:0.9rem;font-weight:700;cursor:pointer;text-decoration:none;width:100%}
+211:.wa-btn:active{opacity:0.8}
+213:/* remove btn */
+214:.remove-btn{width:100%;padding:11px;background:rgba(231,76,60,0.1);color:var(--red);border:1px solid rgba(231,76,60,0.2);border-radius:var(--rs);font-size:0.9rem;font-weight:600;cursor:pointer}
+215:.remove-btn:active{background:rgba(231,76,60,0.2)}
+233:.btn-primary{background:linear-gradient(135deg,var(--gold),#8a5c20);color:#000;border:none;padding:12px 22px;font-size:0.92rem;font-weight:700;cursor:pointer;border-radius:var(--rs)}
+234:.btn-primary:active{opacity:0.8}
+235:.btn-cancel{background:none;border:1px solid var(--border);color:var(--muted);padding:12px 18px;font-size:0.92rem;cursor:pointer;border-radius:var(--rs)}
+236:.btn-cancel:active{border-color:var(--gold);color:var(--gold)}
+356:    <button class="home-plus" id="homeAddBtn" onclick="window._pkrBack?window._pkrBack():openNewGame()">+</button>
+360:    <button class="home-tab active" id="tabGames" onclick="switchTab('games')"><span class="home-tab-icon">♠</span>Games</button>
+361:    <button class="home-tab" id="tabLeaderboard" onclick="switchTab('leaderboard')" style="display:none"><span class="home-tab-icon">🏆</span>All Time</button>
+362:    <button class="home-tab" id="tabHistory" onclick="switchTab('history')" style="display:none"><span class="home-tab-icon">📅</span>History</button>
+369:    <button class="tb-back" id="backBtn" onclick="window._pkrBack ? window._pkrBack() : renderHome()">‹ PKR</button>
+374:    <button class="share-btn" id="shareBtn" onclick="openShare()" style="margin-right:10px">⬡ Share</button>
+376:  <div class="bank-bar" id="bankBar" onclick="toggleBank()">
+407:        <button class="panel-close" id="panelCloseBtn" onclick="closePanel()">✕</button>
+413:    <button class="game-tab" id="publishBtn" onclick="openPublish()"><span class="game-tab-icon">📤</span>Publish</button>
+414:    <button class="game-tab" id="lbInGameBtn" onclick="openLeaderboard()"><span class="game-tab-icon">🏆</span>Leaderboard</button>
+415:    <button class="game-tab" id="settleBtn" onclick="openSettleUp()"><span class="game-tab-icon">💸</span>Settle Up</button>
+416:    <button class="game-tab" id="saveResultsBtn" onclick="saveResultsToPkr()" style="display:none"><span class="game-tab-icon">✅</span>Save Results</button>
+417:    <button class="game-tab red" id="endGameBtn" onclick="endGame()"><span class="game-tab-icon">🏁</span>End Game</button>
+462:      <button class="btn-cancel" id="ngCancelBtn" onclick="closeNewGame()">Cancel</button>
+463:      <button class="btn-primary" id="ngConfirmBtn" onclick="confirmNewGame()">Create Game</button>
+476:      <button class="btn-cancel" id="pwCancelBtn" onclick="document.getElementById('pwOverlay').classList.remove('show')">Cancel</button>
+477:      <button class="btn-primary" id="pwConfirmBtn" onclick="const e=(document.getElementById('pwInput').value||'').trim(),c=state.game&&state.game.password;if(e!==c){document.getElementById('pwError').textContent='Incorrect password';document.getElementById('pwInput').value='';document.getElementById('pwInput').focus();return;}document.getElementById('pwOverlay').classList.remove('show');const cb=window._pwCallback||openGame;window._pwCallback=null;cb()">Unlock &amp; Start</button>
+487:      <button id="lobbyMinimiseBtn" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:0.85rem;cursor:pointer" onclick="(function(){document.getElementById('lobbyOverlay').classList.remove('show');try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId&&!(window.state&&window.state.game&&!window.state.game.ended)){window.location.href='/events/'+c.eventId;return;}}catch(e){}renderHome();toast('Lobby saved');})()">Save &amp; Close</button>
+518:      <button class="btn-cancel" style="flex:1" id="lobbyCancelBtn" onclick="(function(){if(confirm('Cancel this game? All RSVP seats will be lost.')){closeLobby();state.game=null;state.players={};saveState();stopSyncPolling();try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}renderHome();}})()">Cancel Game</button>
+519:      <button class="btn-primary" style="flex:2" id="lobbyStartBtn" onclick="const pw=state.game&&state.game.password;if(pw){window._pwCallback=doStartGame;document.getElementById('pwInput').value='';document.getElementById('pwError').textContent='';document.getElementById('pwOverlay').classList.add('show')}else{doStartGame()}">▶ Start Game</button>
+538:      <button class="btn-cancel" id="assignCancelBtn" onclick="closeAssign()">Cancel</button>
+539:      <button class="btn-primary" id="assignConfirmBtn" onclick="confirmAssign()">Seat Player</button>
+553:    <button id="notifEnableBtn" style="background:var(--gold);color:#000;border:none;padding:8px 14px;border-radius:8px;font-family:DM Sans,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer" onclick="document.getElementById('notifBanner').style.display='none';registerServiceWorker().then(()=>Notification.requestPermission()).then(p=>{if(p==='granted'&&cloudGameCode&&cloudMyName){subscribePush(cloudMyName,cloudGameCode);toast('Notifications enabled!')}})">Enable</button>
+554:    <button id="notifDismissBtn" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px" onclick="document.getElementById('notifBanner').style.display='none';localStorage.setItem('notifDismissed','1')">✕</button>
+560:    <div class="sheet-hdr"><h2>🏆 Leaderboard</h2><button class="panel-close" id="lbCloseBtn" onclick="closeLbSheet()">✕</button></div>
+562:      <button class="sheet-tab" id="lbTabAll" onclick="switchLbTab('all')">All Time</button>
+563:      <button class="sheet-tab active" id="lbTabGame" onclick="switchLbTab('game')">This Game</button>
+572:    <div class="sheet-hdr"><h2>⬡ Share Live Table</h2><button class="panel-close" id="shareCloseBtn" onclick="closeShare()">✕</button></div>
+578:      <button class="btn-primary" style="width:100%;margin-bottom:8px" id="nativeShareBtn" onclick="shareLink(document.getElementById('shareUrl').textContent, 'Join The Table: ' + document.getElementById('shareUrl').textContent)">📤 Share Link</button>
+579:      <button class="btn-cancel" style="width:100%;margin-bottom:8px" id="copyShareBtn" onclick="copyText(document.getElementById('shareUrl').textContent)">Copy Link</button>
+580:      <button class="btn-cancel" style="width:100%" id="shareCloseBtn2" onclick="closeShare()">Close</button>
+588:    <div class="sheet-hdr"><h2>♠ Publish Results</h2><button class="panel-close" id="publishCloseBtn" onclick="closePublish()">✕</button></div>
+591:      <button id="waGroupShareBtn" onclick="sharePublishResults()" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;padding:13px;border-radius:10px;font-size:0.88rem;font-weight:700;border:none;cursor:pointer;width:100%;margin-bottom:10px">
+595:        <button class="btn-primary" style="flex:1" id="copyPublishBtn" onclick="copyText(document.getElementById('publishUrl').value)">Copy Link</button>
+596:        <button class="btn-primary" style="flex:1;background:linear-gradient(135deg,#1a8a4a,#0f5a2e)" id="previewPublishBtn" onclick="window.open(document.getElementById('publishUrl').value,'_blank')">Preview</button>
+598:      <div class="field"><label>Shareable Results Link</label><input type="text" id="publishUrl" readonly onclick="this.select()" style="font-size:0.9rem;color:var(--muted)"></div>
+613:    <button class="wa-toast-close" id="waToastClose" onclick="hideWaToast()">✕</button>
+618:    <button class="wa-toast-skip" id="waToastSkip" onclick="hideWaToast()">Skip</button>
+1007:      <button onclick="window._pkrBack?window._pkrBack():(currentTab='leaderboard',renderHome())" style="padding:13px 32px;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);
+1224:    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+1225:    if (btn) btn.classList.toggle('active', t === tab);
+1285:  document.getElementById('firstGameBtn').addEventListener('click', function(){try{var c=JSON.parse(localStorage.getItem('pkrCtx')||'null');if(c&&c.eventId){window.location.href='/events/'+c.eventId;return;}}catch(e){}openNewGame();});
+1290:    notifBanner.addEventListener('click', async () => {
+1379:      card.addEventListener('click', async () => {
+1535:function openNewGame() {
+1549:function closeNewGame() {
+1572:  const btn = document.getElementById('ngConfirmBtn');
+1573:  btn.textContent = 'Creating...'; btn.disabled = true;
+1613:          '<button onclick="document.getElementById(&apos;pkrUnlinkedBanner&apos;).remove()" ' +
+1673:  btn.textContent = 'Create Game'; btn.disabled = false;
+1683:    btn.textContent = 'Create Game'; btn.disabled = false;
+1699:function openLobby(name, stakes, gameDate, location, seats, inviteLink, code) {
+1713:  document.getElementById('lobbyInstallWaBtn').onclick = () => {
+1725:      document.getElementById('lobbyInstallCopyBtn').onclick = () => {
+1753:  document.getElementById('lobbyWaBtn').onclick = () => { shareLink(inviteLink, '♠ ' + name + ' — claim your seat:\n' + inviteLink); };
+1809:function closeLobby() {
+1853:function openGameWithPasswordCheck(onSuccess) {
+1865:function openGame() {
+1902:  yesBtn.addEventListener('click', () => { overlay.remove(); onConfirm(); });
+=== PKR BRIDGE SECTION ===
+<!-- PKR BRIDGE -->
+<script>
+(function() {
+
+  function getPkrCtx() {
+    try { return JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) { return null; }
+  }
+
+  // ── EARLY SYNC OVERRIDE — runs synchronously before DOMContentLoaded ───────
+  // Patches syncToCloud/syncFromCloud immediately so table init uses PKR not old worker
+  (function earlyPatch() {
+    var ctx = getPkrCtx();
+    if (!ctx || !ctx.gameId) return;
+
+    // Disable host sync to old worker — PKR syncs via saveState wrapper
+    window.syncToCloud = async function() { return; };
+
+    // Override player sync to poll PKR live endpoint
+    window.syncFromCloud = async function() {
+      var liveToken = (window.state && window.state.game && window.state.game.code);
+      if (!liveToken || liveToken === 'LOCAL') return;
+      try {
+        var res = await fetch(ctx.apiUrl + '/games/live/' + liveToken);
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data && data.players) {
+          var defaultBuyin = (window.state && window.state.game && window.state.game.defaultBuyin) || 25;
+          var newPlayers = {};
+          data.players.forEach(function(p, i) {
+            var sid = 'seat' + (p.seat_number || (i + 1));
+            // Check if player already exists in state with same buy_ins and cashout
+            var existing = window.state && window.state.players && window.state.players[sid];
+            var existingBuyins = existing ? (existing.transactions||[]).filter(function(t){return t.type!=='cashout';}).length : 0;
+            var existingCashout = existing ? (existing.transactions||[]).filter(function(t){return t.type==='cashout';}).reduce(function(a,t){return a+t.amount;},0) : 0;
+            var pkrBuyins = p.buy_ins || 1;
+            var pkrCashout = p.cashout != null ? p.cashout / 100 : null;
+            // Only rebuild transactions if data changed
+            if (existing && existingBuyins === pkrBuyins && (pkrCashout === null || Math.abs(existingCashout - pkrCashout) < 0.01)) {
+              newPlayers[sid] = existing;
+              return;
+            }
+            var txns = [];
+            for (var b = 0; b < pkrBuyins; b++) {
+              txns.push({ type: 'buyin', amount: defaultBuyin, ts: Date.now() - b * 60000 });
+            }
+            if (pkrCashout != null) txns.push({ type: 'cashout', amount: pkrCashout, ts: Date.now() });
+            newPlayers[sid] = { name: p.display_name, userId: p.user_id || p.display_name, phone: '', transactions: txns };
+          });
+          if (window.state) { window.state.players = newPlayers; localStorage.setItem('pokerState', JSON.stringify(window.state)); }
+          var gs = document.getElementById('gameScreen');
+          if (gs && !gs.hidden) { if (window.renderTable) window.renderTable(); if (window.updateBankBar) window.updateBankBar(); }
+        }
+        if (data && data.game && data.game.status === 'settled') {
+          if (window.handleGameEndedForPlayer) window.handleGameEndedForPlayer('Game settled — check your results!');
+        }
+      } catch(e) {}
+    };
+
+    // Patch startSyncPolling to use correct interval without old worker calls
+    var _origStartSync = window.startSyncPolling;
+    window.startSyncPolling = function() {
+      if (window.syncInterval) clearInterval(window.syncInterval);
+      var role = localStorage.getItem('cloudRole');
+      if (role === 'host') {
+        // Host: no background sync needed — PKR is source of truth via REST calls
+        window.syncInterval = setInterval(function() {}, 5000); // keep alive but noop
+      } else {
+        // Player: poll PKR live endpoint
+        window.syncInterval = setInterval(window.syncFromCloud, 3000);
+      }
+    };
+
+  })();
+
+  window.pkrApi = async function pkrApi(path, opts) {
+    var ctx = getPkrCtx();
+    if (!ctx) return null;
+    var res = await fetch(ctx.apiUrl + path, Object.assign({}, opts, {
+      credentials: 'include',
+      headers: Object.assign(
+        { 'Content-Type': 'application/json' },
+        ctx.token ? { 'Authorization': 'Bearer ' + ctx.token } : {},
+        (opts && opts.headers) ? opts.headers : {}
+      ),
+    }));
+    if (!res.ok) {
+      var e = await res.json().catch(function(){ return {}; });
+      throw new Error(e.error || String(res.status));
+    }
+    return res.json();
+  }
+
+  // ── #10: Live buy-in sync — called whenever a buyin is added in table ────
+  // Tracks which buyin counts we have already reported to PKR to avoid duplicates
+  var _pkrBuyinSynced = {};
+  async function syncBuyinToPkr(playerName, newCount) {
+    var ctx = getPkrCtx();
+    if (!ctx || !ctx.gameId) return;
+    var key = ctx.gameId + ':' + playerName;
+    var lastSynced = _pkrBuyinSynced[key] || 0;
+    if (newCount <= lastSynced) return;
+    try {
+      // Find PKR user_id for this player
+      var pkrGame = await pkrApi('/games/' + ctx.gameId);
+      if (!pkrGame || !pkrGame.players) return;
+      var pkrPlayer = pkrGame.players.find(function(p) {
+        return p.display_name.toLowerCase() === playerName.toLowerCase();
+      });
+      if (!pkrPlayer) return;
+      // Call buyin for each new buy-in (there may be more than one if offline)
+      for (var i = lastSynced; i < newCount; i++) {
+        await pkrApi('/games/' + ctx.gameId + '/buyin/' + pkrPlayer.user_id, { method: 'POST' });
+      }
+      _pkrBuyinSynced[key] = newCount;
+    } catch(e) {
+      console.warn('PKR buyin sync failed:', e.message);
+    }
+  }
+
+  // ── Settle ────────────────────────────────────────────────────────────────
+  window.syncSettleToPkr = async function syncSettleToPkr() {
+    var ctx = getPkrCtx();
+    if (!ctx || !ctx.gameId) return false;
+    if (!window.state || !window.state.players) return false;
+
+    var pkrGame = null;
+    try { pkrGame = await pkrApi('/games/' + ctx.gameId); } catch(e) {}
+
+    var pkrPlayerMap = {};
+    if (pkrGame && pkrGame.players) {
+      pkrGame.players.forEach(function(p) {
+        pkrPlayerMap[p.display_name.toLowerCase()] = { user_id: p.user_id };
+      });
+    }
+
+    var results = Object.values(window.state.players)
+      .filter(function(p) { return p && p.name; })
+      .map(function(p) {
+        var buyinCount = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
+        var coDollars = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
+        var entry = pkrPlayerMap[(p.name||'').toLowerCase()];
+        var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
+        return { user_id: userId, display_name: p.name, buy_ins: buyinCount, cashout: Math.round(coDollars*100) };
+      });
+
+    if (!results.length) return false;
+    var settleKey = ctx.settleKey || (ctx.gameId + '_end');
+    try {
+      await pkrApi('/games/' + ctx.gameId + '/settle', {
+        method: 'POST',
+        body: JSON.stringify({ idempotency_key: settleKey, results: results }),
+      });
+      return true;
+    } catch(e) {
+      if (e.message === '409' || (e.message && e.message.includes('already settled'))) return true;
+      throw e;
+    }
+  }
+
+  // ── Push ──────────────────────────────────────────────────────────────────
+  window.__pkrPushOverride = async function(playerName) {
+    var ctx = getPkrCtx();
+    if (!ctx || !ctx.eventId) return null;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+    try {
+      var reg = await navigator.serviceWorker.getRegistration('/');
+      if (!reg) reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      if (!reg) return null;
+      var vapidData = await (await fetch(ctx.apiUrl + '/vapid-public-key')).json();
+      function urlB64ToUint8(b64) {
+        var pad = '='.repeat((4 - b64.length % 4) % 4);
+        var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        return Uint8Array.from(raw, function(c){ return c.charCodeAt(0); });
+      }
+      var sub = await reg.pushManager.getSubscription()
+             || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(vapidData.key) });
+      var sj = sub.toJSON();
+      await pkrApi('/events/' + ctx.eventId + '/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: sj.endpoint, keys: sj.keys, userId: ctx.userId||null, display_name: playerName||ctx.userName||null }),
+      });
+      localStorage.setItem('pkr_push_' + ctx.eventId, sub.endpoint);
+      return sub;
+    } catch(e) { console.warn('PKR push failed:', e); return null; }
+  };
+
+  // ── Patch on load ─────────────────────────────────────────────────────────
+  window.addEventListener('load', function() {
+    var ctx = getPkrCtx();
+    if (!ctx || !ctx.gameId) return;
+
+    // Push overrides
+    window.subscribePush = function(n) { return window.__pkrPushOverride(n); };
+    window.subscribePushToGroup = function(n) { return window.__pkrPushOverride(n); };
+    window.registerServiceWorker = function() {
+      return navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){ return null; });
+    };
+
+    // Back button
+    var backBtn = document.getElementById('backBtn');
+    if (backBtn) backBtn.textContent = '\u2039 PKR';
+
+    // Relabel Publish → Share (local only) so End Game is clearly the PKR path
+    var publishBtn = document.getElementById('publishBtn');
+    if (publishBtn) {
+      publishBtn.innerHTML = '<span class="game-tab-icon">📤</span>Share';
+      publishBtn.title = 'Share results locally (use End Game to save to PKR)';
+    }
+
+    // Lobby RSVP + Install
+    var pkrLobbyUrl = window.location.origin + '/games/' + ctx.gameId + '/lobby';
+    var pkrAppUrl   = window.location.origin;
+    window.buildInstallLink = function() { return pkrAppUrl; };
+    window.buildGroupLink   = function() { return pkrLobbyUrl; };
+
+    var lobbyWaBtn = document.getElementById('lobbyWaBtn');
+    if (lobbyWaBtn) lobbyWaBtn.onclick = function() {
+      var name = (window.state&&window.state.game&&window.state.game.name)||'Poker Night';
+      var msg = '\u2660 *'+name+'* \u2014 Claim your seat:\n'+pkrLobbyUrl;
+      if (navigator.share) navigator.share({ title: name, url: pkrLobbyUrl }).catch(function(){});
+      else window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+    };
+    var lobbyInstallWaBtn = document.getElementById('lobbyInstallWaBtn');
+    if (lobbyInstallWaBtn) lobbyInstallWaBtn.onclick = function() {
+      var msg = '\u2660 Install PKR:\n' + pkrAppUrl;
+      if (navigator.share) navigator.share({ title: 'PKR', url: pkrAppUrl }).catch(function(){});
+      else window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+    };
+    var lobbyInstallRow = document.getElementById('lobbyInstallRow');
+    var lobbyInstallUrlEl = document.getElementById('lobbyInstallUrl');
+    var lobbyInstallCopyBtn = document.getElementById('lobbyInstallCopyBtn');
+    if (lobbyInstallRow && lobbyInstallUrlEl) {
+      lobbyInstallRow.style.display = 'block';
+      lobbyInstallUrlEl.textContent = pkrAppUrl;
+      if (lobbyInstallCopyBtn) lobbyInstallCopyBtn.onclick = function() {
+        navigator.clipboard.writeText(pkrAppUrl).then(function() {
+          lobbyInstallCopyBtn.textContent = 'Copied!';
+          setTimeout(function(){ lobbyInstallCopyBtn.textContent = 'Copy'; }, 1500);
+        });
+      };
+    }
+
+    // Notification banner
+    var notifEnableBtn = document.getElementById('notifEnableBtn');
+    if (notifEnableBtn) notifEnableBtn.onclick = async function() {
+      document.getElementById('notifBanner').style.display = 'none';
+      var perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        await window.__pkrPushOverride(ctx.userName || 'Host');
+        if (window.toast) window.toast('Notifications enabled!');
+      }
+    };
+
+    // ── Intercept all player actions and sync to PKR immediately ─────────────
+
+    // Track which players we've already created in PKR (by seat key)
+    var _pkrSeatedPlayers = {}; // sid → { user_id, name }
+
+    // Seat a player in PKR and cache their user_id
+    async function pkrSeatPlayer(sid, name, phone) {
+      var ctx = getPkrCtx();
+      if (!ctx || !ctx.gameId) return null;
+      if (_pkrSeatedPlayers[sid] && _pkrSeatedPlayers[sid].name === name) {
+        return _pkrSeatedPlayers[sid];
+      }
+      try {
+        var seatNum = parseInt((sid || '').replace('seat','')) || null;
+        var res = await pkrApi('/games/' + ctx.gameId + '/seat', {
+          method: 'POST',
+          body: JSON.stringify({ display_name: name, whatsapp: phone||null, seat_number: seatNum, buy_ins: 0 }),
+        });
+        if (res && res.players) {
+          var pkrPlayer = res.players.find(function(p){ return p.display_name === name; });
+          if (pkrPlayer) {
+            _pkrSeatedPlayers[sid] = { user_id: pkrPlayer.user_id, name: name };
+            return _pkrSeatedPlayers[sid];
+          }
+        }
+      } catch(e) { console.warn('PKR seat failed:', e.message); }
+      return null;
+    }
+
+    // Override confirmAssign to seat player in PKR
+    var _origConfirmAssign = window.confirmAssign;
+    window.confirmAssign = async function() {
+      if (_origConfirmAssign) _origConfirmAssign.apply(this, arguments);
+      // After seating, sync to PKR
+      setTimeout(async function() {
+        var ctx = getPkrCtx();
+        if (!ctx || !ctx.gameId || !window.state || !window.state.players) return;
+        // Find the player that was just assigned (newest entry without PKR record)
+        Object.keys(window.state.players).forEach(async function(sid) {
+          var p = window.state.players[sid];
+          if (!p || !p.name) return;
+          if (!_pkrSeatedPlayers[sid] || _pkrSeatedPlayers[sid].name !== p.name) {
+            await pkrSeatPlayer(sid, p.name, p.phone || '');
+          }
+        });
+      }, 150);
+    };
+
+    // Wrap saveState to detect and sync ALL player changes to PKR
+    var _pkrLastSnapshot = {};
+    function _pkrSnapshotPlayers() {
+      var snap = {};
+      if (!window.state || !window.state.players) return snap;
+      Object.keys(window.state.players).forEach(function(sid) {
+        var p = window.state.players[sid];
+        if (!p || !p.name) return;
+        var buyins = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
+        var cashouts = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; });
+        var cashoutAmt = cashouts.reduce(function(s,t){ return s + (t.amount||0); }, 0);
+        snap[sid] = { name: p.name, phone: p.phone||'', buyins: buyins, cashout: cashoutAmt };
+      });
+      return snap;
+    }
+
+    var _origSaveState = window.saveState;
+    window.saveState = function() {
+      var before = _pkrLastSnapshot;
+      if (_origSaveState) _origSaveState.apply(this, arguments);
+      var after = _pkrSnapshotPlayers();
+      _pkrLastSnapshot = after;
+      // Sync changes to PKR
+      Object.keys(after).forEach(async function(sid) {
+        var ctx = getPkrCtx();
+        if (!ctx || !ctx.gameId) return;
+        var cur = after[sid], prev = before[sid];
+        // New player seated
+        if (!prev && cur.name) {
+          await pkrSeatPlayer(sid, cur.name, cur.phone);
+          return;
+        }
+        if (!prev || !cur) return;
+        // Player renamed
+        if (prev.name !== cur.name) {
+          await pkrSeatPlayer(sid, cur.name, cur.phone);
+          return;
+        }
+        var seated = _pkrSeatedPlayers[sid];
+        if (!seated) { seated = await pkrSeatPlayer(sid, cur.name, cur.phone); }
+        if (!seated) return;
+        // New buy-ins
+        if (cur.buyins > prev.buyins) {
+          var newBuyins = cur.buyins - prev.buyins;
+          for (var i = 0; i < newBuyins; i++) {
+            try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'POST' }); } catch(e) {}
+          }
+        }
+        // Cashout changed
+        if (Math.abs(cur.cashout - (prev.cashout||0)) > 0.005) {
+          var cashoutCents = Math.round(cur.cashout * 100);
+          try {
+            await pkrApi('/games/' + ctx.gameId + '/cashout/' + seated.user_id, {
+              method: 'POST', body: JSON.stringify({ cashout: cashoutCents }),
+            });
+          } catch(e) {}
+        }
+      });
+    };
+    _pkrLastSnapshot = _pkrSnapshotPlayers();
+
+    // Backfill: seat any players already in state when bridge loads
+    setTimeout(async function() {
+      var ctx = getPkrCtx();
+      if (!ctx || !ctx.gameId || !window.state || !window.state.players) return;
+      // Get current PKR players to pre-populate cache
+      try {
+        var game = await pkrApi('/games/' + ctx.gameId);
+        if (game && game.players) {
+          game.players.forEach(function(p) {
+            // Match by name to any existing seats
+            Object.keys(window.state.players || {}).forEach(function(sid) {
+              var sp = window.state.players[sid];
+              if (sp && sp.name && sp.name.toLowerCase() === p.display_name.toLowerCase()) {
+                _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: sp.name };
+              }
+            });
+          });
+        }
+      } catch(e) {}
+    }, 500);
+
+    // ── End Game ──────────────────────────────────────────────────────────────
+    window._pkrResultsSaved = false;
+
+    window.endGame = function() {
+      if (!window._pkrResultsSaved) {
+        var saveBtn = document.getElementById('saveResultsBtn');
+        var saveVisible = saveBtn && saveBtn.style.display !== 'none';
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center';
+        box.innerHTML =
+          '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>'
+          + '<div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Save Results First</div>'
+          + '<div style="font-size:0.88rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">'
+          + (saveVisible ? 'Tap <strong style="color:#c9a84c">Save Results ✅</strong> before ending.' : 'Cash out all players first, then tap <strong style="color:#c9a84c">Save Results ✅</strong>.')
+          + '</div>'
+          + (saveVisible ? '<button id="pkrGoSave" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">✅ Save Results Now</button>' : '')
+          + '<button id="pkrEndBlockClose" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">OK</button>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        var closeBtn = document.getElementById('pkrEndBlockClose');
+        if (closeBtn) closeBtn.onclick = function() { overlay.remove(); };
+        var goSaveBtn = document.getElementById('pkrGoSave');
+        if (goSaveBtn) goSaveBtn.onclick = function() { overlay.remove(); saveResultsToPkr(); };
+        overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+        return;
+      }
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
+      var box = document.createElement('div');
+      box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(46,204,113,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px';
+      box.innerHTML =
+        '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">🏁 End Game?</div>'
+        + '<div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the game and return to the events page.</div>'
+        + '<button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button>'
+        + '<button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      document.getElementById('pkrEndNo').onclick = function() { overlay.remove(); };
+      document.getElementById('pkrEndYes').onclick = function() {
+        try { if (window.stopSyncPolling) window.stopSyncPolling(); } catch(e) {}
+        try { if (window.setCloudRole) window.setCloudRole(null, null, null); } catch(e) {}
+        try { if (window.state) { window.state.game = null; window.state.players = {}; } if (window.saveState) window.saveState(); localStorage.removeItem('pkrCtx'); } catch(e) {}
+        overlay.remove();
+        window.location.href = '/events/' + ctx.eventId;
+      };
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    };
+
+  }); // end load

@@ -1949,7 +1949,10 @@ function updateSaveResultsBtn() {
   var btn = document.getElementById('saveResultsBtn');
   if (!btn || !ctx || !ctx.gameId) return;
   var players = Object.values(state.players||{}).filter(function(p){ return p && p.name && pBuyin(p)>0; });
-  var allCashedOut = players.length >= 2 && players.every(function(p){ return pCash(p) > 0; });
+  // Allow $0 cashout — player may have busted. Check cashout transaction exists, not just > 0
+  var allCashedOut = players.length >= 2 && players.every(function(p){
+    return (p.transactions||[]).some(function(t){ return t.type === 'cashout'; });
+  });
   btn.style.display = allCashedOut ? '' : 'none';
 }
 
