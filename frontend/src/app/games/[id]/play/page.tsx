@@ -652,7 +652,9 @@ window.syncSettleToPkr = async function() {
     });
   var results = Object.values(merged).filter(function(p) { return p.buy_ins > 0; });
   if (results.length === 0) return false;
-  var settleKey = ctx.settleKey || (ctx.gameId + '_end');
+  console.log('[PKR settle] sending results:', JSON.stringify(results));
+  // Use timestamp-based key so unsettle+resettle always sends fresh data
+  var settleKey = ctx.gameId + '_end_' + Math.floor(Date.now()/60000); // changes every minute
   try {
     await pkrApi('/games/' + ctx.gameId + '/settle', {
       method: 'POST', body: JSON.stringify({ idempotency_key: settleKey, results: results }),
