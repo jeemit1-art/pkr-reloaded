@@ -946,7 +946,7 @@ function buildPanel(sid) {
       var capturedIdx = idx;
       var saveTxAmt = function() {
         var v = parseFloat(amt.value);
-        if (isNaN(v) || v <= 0) return;
+        if (isNaN(v) || v < 0) return;
         p.transactions[capturedIdx].amount = v; saveState(); refreshPanelSummary(sid); renderTable();
       };
       amt.addEventListener('blur', saveTxAmt);
@@ -1107,7 +1107,8 @@ function buildPanel(sid) {
 function addTxFromInput(sid, type, inp) {
   var p = state.players[sid]; if (!p) return;
   var amt = parseFloat(inp ? inp.value : 0);
-  if (isNaN(amt) || amt <= 0) { toast('Enter a valid amount'); return; }
+  if (isNaN(amt) || amt < 0) { toast('Enter a valid amount'); return; }
+  if (amt === 0 && type !== 'cashout') { toast('Buy-in must be greater than 0'); return; }
   p.transactions = p.transactions || [];
   p.transactions.push({ type: type, amount: amt, ts: Date.now() });
   saveState();
