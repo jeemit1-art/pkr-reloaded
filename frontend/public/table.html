@@ -1931,9 +1931,9 @@ async function saveResultsToPkr() {
     if (ok) {
       if (btn) btn.innerHTML = '<span class="game-tab-icon">✅</span>Saved!';
       toast('Results saved to PKR ✓');
-      // Update end game button to show it's ready
+      window._pkrResultsSaved = true;
       var endBtn = document.getElementById('endGameBtn');
-      if (endBtn) endBtn.style.color = 'var(--green)';
+      if (endBtn) { endBtn.style.color = 'var(--green)'; endBtn.title = 'Results saved — ready to end'; }
     } else {
       throw new Error('No player data to save');
     }
@@ -2502,6 +2502,7 @@ function addTxFromInput(sid, type, inp) {
   }
   notifyPlayer(p.name, pushTitle, pushBody);
   syncToCloud().catch(() => {});
+  updateSaveResultsBtn();
   const phone = getPhone(p.name);
   if (phone) {
     let msg;
@@ -4803,43 +4804,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
 
     // ── End Game ──────────────────────────────────────────────────────────────
+    window._pkrResultsSaved = false;
+
     window.endGame = function() {
+      if (!window._pkrResultsSaved) {
+        var saveBtn = document.getElementById('saveResultsBtn');
+        var saveVisible = saveBtn && saveBtn.style.display !== 'none';
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center';
+        box.innerHTML =
+          '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>'
+          + '<div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Save Results First</div>'
+          + '<div style="font-size:0.88rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">'
+          + (saveVisible ? 'Tap <strong style="color:#c9a84c">Save Results ✅</strong> before ending.' : 'Cash out all players first, then tap <strong style="color:#c9a84c">Save Results ✅</strong>.')
+          + '</div>'
+          + (saveVisible ? '<button id="pkrGoSave" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">✅ Save Results Now</button>' : '')
+          + '<button id="pkrEndBlockClose" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">OK</button>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        var closeBtn = document.getElementById('pkrEndBlockClose');
+        if (closeBtn) closeBtn.onclick = function() { overlay.remove(); };
+        var goSaveBtn = document.getElementById('pkrGoSave');
+        if (goSaveBtn) goSaveBtn.onclick = function() { overlay.remove(); saveResultsToPkr(); };
+        overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+        return;
+      }
       var overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
       var box = document.createElement('div');
-      box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px';
+      box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(46,204,113,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px';
       box.innerHTML =
-        '<div style="font-size:1.1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">End Game?</div>'
-        +'<div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results will be settled and saved to the PKR leaderboard.</div>'
-        +'<button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#c0392b,#8a2010);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End & Settle</button>'
-        +'<button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
+        '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">🏁 End Game?</div>'
+        + '<div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the game and return to the events page.</div>'
+        + '<button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button>'
+        + '<button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
       overlay.appendChild(box);
       document.body.appendChild(overlay);
-
       document.getElementById('pkrEndNo').onclick = function() { overlay.remove(); };
-      document.getElementById('pkrEndYes').onclick = async function() {
-        var btn = document.getElementById('pkrEndYes');
-        btn.textContent = 'Saving…'; btn.disabled = true;
-        try { if (window.recordStats) window.recordStats(); } catch(e) {}
-        try {
-          await window.syncSettleToPkr();
-        } catch(e) {
-          btn.textContent = 'Retry'; btn.disabled = false;
-          var old = box.querySelector('.pkr-err'); if (old) old.remove();
-          var errMsg = document.createElement('div');
-          errMsg.className = 'pkr-err';
-          errMsg.style.cssText = 'font-size:0.8rem;color:#ff6b5b;margin-top:8px;text-align:center';
-          errMsg.textContent = '\u26a0\ufe0f Could not save to PKR (' + (e.message||'network error') + '). Check connection and retry.';
-          box.appendChild(errMsg);
-          return;
-        }
+      document.getElementById('pkrEndYes').onclick = function() {
         try { if (window.stopSyncPolling) window.stopSyncPolling(); } catch(e) {}
-        try { if (window.setCloudRole) window.setCloudRole(null,null,null); } catch(e) {}
-        try { if(window.state){window.state.game=null;window.state.players={};} if(window.saveState)window.saveState(); localStorage.removeItem('pkrCtx'); } catch(e) {}
+        try { if (window.setCloudRole) window.setCloudRole(null, null, null); } catch(e) {}
+        try { if (window.state) { window.state.game = null; window.state.players = {}; } if (window.saveState) window.saveState(); localStorage.removeItem('pkrCtx'); } catch(e) {}
         overlay.remove();
         window.location.href = '/events/' + ctx.eventId;
       };
-      overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
     };
 
   }); // end load
