@@ -208,8 +208,13 @@ function renderTable(container: HTMLDivElement, data: any) {
 
 function Loader() {
   return (
-    <div style={{minHeight:'100vh',background:'#060e07',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{minHeight:'100vh',background:'#060e07',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:48,color:'#c9a84c',opacity:0.5}}>PKR</div>
+      <div style={{fontSize:'0.75rem',color:'rgba(107,140,110,0.6)',letterSpacing:'0.15em',textTransform:'uppercase'}}>Loading table...</div>
+      <div style={{width:120,height:2,background:'rgba(201,168,76,0.1)',borderRadius:1,overflow:'hidden'}}>
+        <div style={{width:'40%',height:'100%',background:'rgba(201,168,76,0.4)',borderRadius:1,animation:'slide 1.2s ease-in-out infinite'}}></div>
+      </div>
+      <style>{`@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}`}</style>
     </div>
   );
 }
