@@ -273,7 +273,9 @@ export default function EventPage() {
               </div>
             )}
 
-            {/* ── Members tab ── */}
+        )}
+
+        {/* ── Members tab ── */}
         {tab==='members' && (
           <div>
             {/* Confirm remove modal */}
