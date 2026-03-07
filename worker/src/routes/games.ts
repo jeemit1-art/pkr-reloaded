@@ -110,11 +110,13 @@ games.get('/games/live/:token', async (c) => {
   const token = c.req.param('token');
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status FROM games WHERE live_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  const event   = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,cashout FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
-  const totalIn  = players.results.reduce((s:number,p:any)=>s+(p.buy_ins||0),0);
+  const event    = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+  const players  = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,cashout FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
+  const buyInPrice = event?.buy_in || 0; // cents per buy-in
+  // totalIn = sum of (buy_ins count × price per buyin) in cents
+  const totalIn  = players.results.reduce((s:number,p:any)=>s+(p.buy_ins||0)*buyInPrice,0);
   const totalOut = players.results.reduce((s:number,p:any)=>s+(p.cashout||0),0);
-  return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut });
+  return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut, buy_in: buyInPrice });
 });
 
 games.get('/games/results/:token', async (c) => {
@@ -230,14 +232,17 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  // Parse optional amount_cents sent from frontend (actual buy-in value for this game)
+  let reqBody: {amount_cents?: number} = {};
+  try { reqBody = await c.req.json(); } catch {}
   await c.env.DB.prepare('UPDATE game_players SET buy_ins=buy_ins+1 WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   // Notify the specific player their buy-in was recorded
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player) {
     const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    // buy_in on the event is the per-buyin cost in cents
-    const perBuyin = evData?.buy_in || 0;
+    // Use amount sent from frontend, fallback to event buy_in, fallback to unknown
+    const perBuyin = reqBody.amount_cents || evData?.buy_in || 0;
     const totalSpentSoFar = player.buy_ins * perBuyin;
     const perBuyinStr = perBuyin ? `$${(perBuyin/100).toFixed(0)} added` : `Buy-in #${player.buy_ins} added`;
     const totalStr = perBuyin ? `Total buy-in this game: $${(totalSpentSoFar/100).toFixed(0)}` : `${player.buy_ins} buy-in${player.buy_ins !== 1 ? 's' : ''} this game`;
