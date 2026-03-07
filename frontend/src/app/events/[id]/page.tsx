@@ -70,7 +70,7 @@ export default function EventPage() {
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-    } catch(e:any){ alert(e.message); }
+    } catch(e){ alert(e.message); }
     finally { setSaving(false); }
   }
 
@@ -78,7 +78,7 @@ export default function EventPage() {
     try {
       const r = await api.events.invite(id, role);
       setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
-    } catch(e:any){ alert(e.message); }
+    } catch(e){ alert(e.message); }
   }
 
   async function togglePush() {
@@ -407,7 +407,7 @@ export default function EventPage() {
                           if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
                           setLinkMemberTarget(null);
                           alert(`✓ ${linkMemberTarget.name} linked to "${p.display_name}"`);
-                        } catch(e:any) { alert(e.message); }
+                        } catch(e) { alert(e.message); }
                       }}
                       style={{display:'flex',alignItems:'center',justifyContent:'space-between',
                         background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,
@@ -454,7 +454,7 @@ export default function EventPage() {
                       members: ev.members.filter((m:any) => m.id !== confirmRemoveMember.id),
                       member_count: (ev.member_count || 1) - 1,
                     }));
-                  } catch(e:any) { alert(e.message); }
+                  } catch(e) { alert(e.message); }
                   setConfirmRemoveMember(null);
                 }}>
                 Yes, Remove
@@ -493,7 +493,7 @@ export default function EventPage() {
                     await api.games.cancel(gameId);
                     setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
                   }
-                } catch(e:any){ alert(e.message); }
+                } catch(e){ alert(e.message); }
                 setConfirmDelete(null);
               }}>
                 {confirmDelete.endsWith(':delete') ? 'Delete permanently' : 'Cancel game'}
@@ -725,7 +725,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
       await api.games.seat(gameId, { display_name: name.trim(), whatsapp: wa || undefined });
       setSeated(s => [...s, name.trim()]);
       setName(''); setWa('');
-    } catch(e:any) { alert(e.message); }
+    } catch(e) { alert(e.message); }
     finally { setSaving(false); }
   }
 
