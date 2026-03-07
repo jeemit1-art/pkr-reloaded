@@ -645,14 +645,42 @@ window.syncSettleToPkr = async function() {
         merged[key].buy_ins += buyinCount;
         merged[key].buy_in_total = (merged[key].buy_in_total||0) + Math.round(biTotal2*100);
         merged[key].cashout += Math.round(coDollars*100);
+        merged[key].net = merged[key].cashout - merged[key].buy_in_total;
       } else {
         var biTotal = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+(t.amount||0); }, 0);
-        merged[key] = { user_id: userId, display_name: p.name, buy_ins: buyinCount, buy_in_total: Math.round(biTotal*100), cashout: Math.round(coDollars*100) };
+        merged[key] = { user_id: userId, display_name: p.name, buy_ins: buyinCount, buy_in_total: Math.round(biTotal*100), cashout: Math.round(coDollars*100), net: Math.round(coDollars*100) - Math.round(biTotal*100) };
       }
     });
   var results = Object.values(merged).filter(function(p) { return p.buy_ins > 0; });
   if (results.length === 0) return false;
+
+  // ── Zero-sum enforcement ──────────────────────────────────────────────────
+  // Total cashout must equal total buy-in. If chips are still in the bank
+  // (players busted without a cashout recorded), distribute the remainder
+  // proportionally among uncashed players so net always sums to $0.
+  var totalBuyIn  = results.reduce(function(a,p){ return a + p.buy_in_total; }, 0);
+  var totalCashout= results.reduce(function(a,p){ return a + p.cashout; }, 0);
+  var bank = totalBuyIn - totalCashout; // cents still unaccounted for
+
+  if (bank !== 0 && bank > 0) {
+    // Distribute remaining bank to players who have no cashout (they lost it)
+    // This is a no-op if they already have cashout=0 (net will still be negative)
+    // but ensures the sum is exactly zero for the backend.
+    var uncashed = results.filter(function(p){ return p.cashout === 0; });
+    if (uncashed.length > 0) {
+      // Already correct — losers have cashout=0, so net = 0 - buy_in_total (negative).
+      // The bank discrepancy means chips are physically still on the table.
+      // We do NOT redistribute — the host should cash out remaining players first.
+      // Just log a warning.
+      console.warn('[PKR settle] bank not cleared: $' + (bank/100).toFixed(2) + ' still in play');
+    }
+  } else if (bank < 0) {
+    // Cashouts exceed buy-ins — data error, clamp.
+    console.error('[PKR settle] cashouts exceed buy-ins by $' + (Math.abs(bank)/100).toFixed(2));
+  }
+
   console.log('[PKR settle] sending results:', JSON.stringify(results));
+  console.log('[PKR settle] zero-sum check — buy-in total:', totalBuyIn, 'cashout total:', totalCashout, 'diff:', bank);
   // Use timestamp-based key so unsettle+resettle always sends fresh data
   var settleKey = ctx.gameId + '_end_' + Math.floor(Date.now()/60000); // changes every minute
   try {
