@@ -27,6 +27,9 @@ export default function EventPage() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
   const [eventPlayers, setEventPlayers] = useState([] as any[]);
+  const [seatMemberTarget, setSeatMemberTarget] = useState(null as any);
+  const [activeGames, setActiveGames] = useState([] as any[]);
+  const [seatMemberSeating, setSeatMemberSeating] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
@@ -381,6 +384,82 @@ export default function EventPage() {
           </div>
         )}
       </div>
+
+      {seatMemberTarget && (
+        <div className="modal-overlay" onClick={()=>{ setSeatMemberTarget(null); setActiveGames([]); }}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>
+                🪑 Seat {seatMemberTarget.name}
+              </div>
+              <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>
+                Select a game to seat them in. Their account will be linked so buy-ins and cashouts are tracked under their profile.
+              </div>
+              {activeGames.length === 0 ? (
+                <div style={{fontSize:12,color:'var(--faint)',padding:'12px 0'}}>No active or scheduled games found.</div>
+              ) : (
+                <div style={{display:'grid',gap:8}}>
+                  {activeGames.map((g:any) => (
+                    <div key={g.id} style={{border:'1px solid var(--border-sub)',borderRadius:4,overflow:'hidden'}}>
+                      <div style={{padding:'10px 14px',background:'var(--bg3)'}}>
+                        <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{fmtDate(g.scheduled_at)}</div>
+                        {g.location && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>📍 {g.location}</div>}
+                        <span style={{fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
+                          color:g.status==='active'?'var(--green)':g.status==='lobby'?'var(--gold)':'var(--amber)',
+                          fontFamily:'var(--font-body),sans-serif',fontWeight:600}}>{g.status}</span>
+                      </div>
+                      <div style={{padding:'10px 14px',borderTop:'1px solid var(--border-sub)'}}>
+                        <div style={{fontSize:10,color:'var(--muted)',marginBottom:6,fontFamily:'var(--font-body),sans-serif'}}>Seat preference (optional)</div>
+                        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+                          {Array.from({length:g.seats||9},(_:any,i:number)=>i+1).map((n:number)=>(
+                            <button key={n} id={`seat-pick-${g.id}-${n}`}
+                              onClick={(e)=>{
+                                document.querySelectorAll(`[id^="seat-pick-${g.id}-"]`).forEach((b:any)=>{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.borderColor='var(--border-sub)';});
+                                const el = e.currentTarget; el.style.background='rgba(201,168,76,0.15)'; el.style.color='var(--gold)'; el.style.borderColor='rgba(201,168,76,0.5)';
+                                el.dataset.selected='1';
+                              }}
+                              style={{padding:'5px 10px',borderRadius:2,cursor:'pointer',fontSize:11,fontWeight:500,
+                                fontFamily:'var(--font-body),sans-serif',border:'1px solid var(--border-sub)',
+                                background:'var(--bg3)',color:'var(--muted)'}}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          disabled={seatMemberSeating}
+                          onClick={async()=>{
+                            setSeatMemberSeating(true);
+                            try {
+                              const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                              const token = typeof window!=='undefined' ? (localStorage.getItem('pkr_token')||document.cookie.match(/pkr_token=([^;]+)/)?.[1]||'') : '';
+                              const selectedBtn = document.querySelector(`[id^="seat-pick-${g.id}-"][data-selected="1"]`) as any;
+                              const seatNum = selectedBtn ? parseInt(selectedBtn.id.split('-').pop()) : null;
+                              const res = await fetch(`${apiUrl}/events/${id}/members/${seatMemberTarget.id}/seat`, {
+                                method:'POST',
+                                headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+                                body: JSON.stringify({ game_id: g.id, seat_number: seatNum }),
+                              });
+                              if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
+                              setSeatMemberTarget(null); setActiveGames([]);
+                              alert(`✓ ${seatMemberTarget.name} seated in game`);
+                            } catch(e:any) { alert(e.message); }
+                            finally { setSeatMemberSeating(false); }
+                          }}
+                          className="btn btn-primary" style={{width:'100%',fontSize:12}}>
+                          {seatMemberSeating ? 'Seating…' : `Seat ${seatMemberTarget.name} here`}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>{ setSeatMemberTarget(null); setActiveGames([]); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {linkMemberTarget && (
         <div className="modal-overlay" onClick={()=>setLinkMemberTarget(null)}>

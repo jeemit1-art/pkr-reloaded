@@ -92,7 +92,49 @@ events.put('/:id/members/:userId/link', authMiddleware, async (c) => {
     SELECT DISTINCT gp.user_id FROM game_players gp JOIN games g ON g.id=gp.game_id
     WHERE g.event_id=? AND gp.display_name=? AND gp.user_id != ?)`)
     .bind(targetId, eventId, display_name.trim(), targetId).run();
+  // Migrate push subscriptions from display_name to real user_id
+  await c.env.DB.prepare(
+    `UPDATE push_subscriptions SET user_id=? WHERE display_name=? AND event_id IN (SELECT id FROM events WHERE id=?)`
+  ).bind(targetId, display_name.trim(), eventId).run();
   return c.json({ ok: true });
+});
+
+// Get active/scheduled games for this event (for seat-from-members)
+events.get('/:id/active-games', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Forbidden' }, 403);
+  const rows = await c.env.DB.prepare(
+    `SELECT id, scheduled_at, location, seats, status FROM games
+     WHERE event_id=? AND status IN ('scheduled','active','lobby')
+     ORDER BY scheduled_at DESC LIMIT 10`
+  ).bind(eventId).all();
+  return c.json(rows.results);
+});
+
+// Seat a member directly into a game from the members tab
+events.post('/:id/members/:userId/seat', authMiddleware, async (c) => {
+  const eventId  = c.req.param('id');
+  const targetId = c.req.param('userId');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Forbidden' }, 403);
+  const { game_id, seat_number } = await c.req.json();
+  if (!game_id) return c.json({ error: 'game_id required' }, 400);
+  // Verify game belongs to this event
+  const game = await c.env.DB.prepare('SELECT id,event_id,status FROM games WHERE id=? AND event_id=?')
+    .bind(game_id, eventId).first<any>();
+  if (!game) return c.json({ error: 'Game not found in this event' }, 404);
+  if (game.status === 'settled' || game.status === 'cancelled') return c.json({ error: 'Game already ended' }, 400);
+  // Get member's display name
+  const member = await c.env.DB.prepare('SELECT u.name, u.id FROM users u JOIN event_members em ON em.user_id=u.id WHERE em.event_id=? AND em.user_id=?')
+    .bind(eventId, targetId).first<any>();
+  if (!member) return c.json({ error: 'Member not found' }, 404);
+  // Seat them
+  await c.env.DB.prepare(`
+    INSERT INTO game_players(game_id,user_id,display_name,seat_number,buy_ins,created_at)
+    VALUES(?,?,?,?,0,unixepoch())
+    ON CONFLICT(game_id,user_id) DO UPDATE SET seat_number=COALESCE(excluded.seat_number,seat_number)
+  `).bind(game_id, targetId, member.name, seat_number||null).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game_id).all();
+  return c.json({ ok: true, players: players.results });
 });
 
 // Remove a member from an event (host only, cannot remove self)
