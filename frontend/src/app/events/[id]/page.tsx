@@ -28,6 +28,8 @@ export default function EventPage() {
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
+  const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [removingMember, setRemovingMember] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -618,6 +620,8 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [name, setName] = useState('');
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [removingMember, setRemovingMember] = useState(false);
   const [seated, setSeated] = useState([] as any[]);
 
   async function seat() {
