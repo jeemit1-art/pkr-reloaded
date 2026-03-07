@@ -572,6 +572,7 @@ window.saveState = function() {
   _origSaveState();
   var after = _pkrSnapshotPlayers();
   _pkrLastSnapshot = after;
+  console.log('[PKR] saveState called, before:', JSON.stringify(before), 'after:', JSON.stringify(after));
   Object.keys(after).forEach(async function(sid) {
     var ctx = getPkrCtx();
     if (!ctx || !ctx.gameId) return;

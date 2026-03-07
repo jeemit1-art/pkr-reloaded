@@ -178,7 +178,7 @@ function renderTable(container: HTMLDivElement, data: any) {
     const seat = document.createElement('div');
     seat.style.cssText = `position:absolute;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:3px;left:${pos.x}px;top:${pos.y}px`;
     if (p && p.display_name) {
-      const biAmt = (p.buy_ins||0)*(buyInAmt||0);
+      const biAmt = (p.buy_in_total||0)>0 ? p.buy_in_total : (p.buy_ins||0)*(buyInAmt||0);
       const co = p.cashout||0;
       const net = p.net!=null ? p.net : (co>0 ? co-biAmt : null);
       const netColor = net==null?'':net>0?'#2ecc71':net<0?'#e74c3c':'#6b8c6e';
