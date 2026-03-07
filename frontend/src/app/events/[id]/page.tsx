@@ -14,7 +14,7 @@ export default function EventPage() {
   const [games, setGames]     = useState([] as any[]);
   const [history, setHistory] = useState([] as any[]);
   const [leaders, setLeaders] = useState([] as any[]);
-  const [tab, setTab]         = useState('games');
+  const [tab, setTab]         = useState<Tab>('games');
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
