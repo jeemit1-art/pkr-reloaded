@@ -346,18 +346,6 @@ export default function EventPage() {
           </div>
         )}
 
-        {/* Fix 8: Player drill-down — show their individual game history */}
-            {selectedPlayer && (
-              <PlayerHistoryCard
-                player={selectedPlayer}
-                history={history}
-                leader={leaders.find(l=>l.display_name===selectedPlayer)||null}
-                onClose={()=>setSelectedPlayer(null)}
-              />
-            )}
-          </div>
-        )}
-
         {/* ── History tab ── */}
         {tab==='history' && (
           <div>
