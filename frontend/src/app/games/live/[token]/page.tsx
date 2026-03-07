@@ -43,7 +43,7 @@ export default function LivePage() {
   );
   if (!data) return <Loader/>;
 
-  const { game, event, players, totalIn, totalOut, bank } = data;
+  const { game, event, players, totalIn, totalOut, bank, buyInAmt } = data as any;
   const sorted = [...players].sort((a,b)=>(b.buy_ins||0)-(a.buy_ins||0));
   const isSettled = game.status === 'settled';
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -114,7 +114,7 @@ export default function LivePage() {
         <div className="card">
           <div className="section-header">{players.length} Players</div>
           {sorted.map((p,i)=>{
-            const net = p.cashout!=null ? p.cashout-p.buy_ins : null;
+            const net = p.net != null ? p.net : (p.cashout!=null ? p.cashout-(p.buy_ins*(buyInAmt||0)) : null);
             return (
               <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',
                 borderBottom:'1px solid var(--border-sub)'}}>
@@ -124,7 +124,7 @@ export default function LivePage() {
                 </span>
                 <div style={{textAlign:'right'}}>
                   <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
-                    ×{p.buy_ins}
+                    ×{p.buy_ins}{buyInAmt ? ` · ${fmt(p.buy_ins*buyInAmt)}` : ''}
                   </div>
                   {net!=null && (
                     <div className="display" style={{fontSize:14,fontWeight:500,
