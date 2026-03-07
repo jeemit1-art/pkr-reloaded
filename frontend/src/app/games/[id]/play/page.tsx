@@ -1138,7 +1138,7 @@ function addTxFromInput(sid, type, inp) {
   var pushTitle, pushBody;
   if (type === 'buyin') { pushTitle = '♠ Buy-in — $' + amt.toFixed(2); pushBody = p.name + ' is in at ' + gameName + '. Good luck!'; }
   else { pushTitle = '♠ Cashed out — $' + amt.toFixed(2); pushBody = p.name + ' finishes ' + fmtNet(pNet(p)) + ' at ' + gameName; }
-  notifyPlayer(p.name, pushTitle, pushBody).catch(function(){});
+  notifyPlayer(p.name, pushTitle, pushBody).catch(function(e){ /* push not configured */ });
   var phone = getPhone(p.name);
   if (phone) {
     var msg = type === 'buyin'
