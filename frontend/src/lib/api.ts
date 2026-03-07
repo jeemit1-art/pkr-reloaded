@@ -77,6 +77,10 @@ export const api = {
     get:      (id:string)         => req<GameDetail>(`/games/${id}`),
     lobby:    (id:string)         => pub<LobbyData>(`/games/${id}/lobby`),
     live:     (token:string)      => pub<LiveData>(`/games/live/${token}`),
+    linkPlayer:   (gameId:string, userId:string, realUserId:string) =>
+      req<{ok:boolean,players:GamePlayer[]}>(`/games/${gameId}/players/${userId}/link`, {method:'PUT', body:JSON.stringify({real_user_id:realUserId})}),
+    unlinkPlayer: (gameId:string, userId:string) =>
+      req<{ok:boolean,players:GamePlayer[]}>(`/games/${gameId}/players/${userId}/unlink`, {method:'PUT'}),
     results:  (token:string)      => pub<ResultsData>(`/games/results/${token}`),
     create:   (eventId:string,d:any) => req<Game>(`/events/${eventId}/games`,{method:'POST',body:JSON.stringify(d)}),
     update:   (id:string,d:any)   => req(`/games/${id}`,{method:'PUT',body:JSON.stringify(d)}),
