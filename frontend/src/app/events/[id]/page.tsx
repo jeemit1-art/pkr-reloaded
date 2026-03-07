@@ -107,7 +107,7 @@ export default function EventPage() {
   const settled  = games.filter(g=>g.status==='settled');
   const installLink = appUrl;
 
-  const statusColor:any = {
+  const statusColor: Record<string,string> = {
     scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
     settled:'var(--muted)', cancelled:'var(--red)',
   };
