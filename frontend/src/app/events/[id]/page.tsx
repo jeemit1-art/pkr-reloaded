@@ -112,7 +112,7 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
+  const TABS = ['games', 'leaderboard', 'history', 'members'] as Tab[];
 
   const TABS_NAV = ['games','leaderboard','history'];
   return (
