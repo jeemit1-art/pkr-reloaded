@@ -1028,6 +1028,86 @@ function buildPanel(sid) {
     body.appendChild(noNum);
   }
 
+  // Link User Account
+  var linkSec = document.createElement('div'); linkSec.className = 'psec'; linkSec.textContent = 'Linked Account';
+  body.appendChild(linkSec);
+  var pkrCtxL = getPkrCtx();
+  var seatedInfo = pkrCtxL ? _pkrSeatedPlayers[sid] : null;
+  var currentUserId = seatedInfo ? seatedInfo.user_id : null;
+  var isLinked = currentUserId && !currentUserId.startsWith('manual_') && !currentUserId.startsWith('rsvp_');
+  var linkWrap = document.createElement('div');
+  linkWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+
+  if (isLinked) {
+    // Show linked status + unlink button (host only)
+    var linkedName = (window._eventMembers||[]).find(function(m){return m.id===currentUserId;});
+    var linkedLabel = document.createElement('div');
+    linkedLabel.style.cssText = 'font-size:0.85rem;color:var(--green);padding:4px 0';
+    linkedLabel.textContent = '✓ Linked to ' + (linkedName ? linkedName.name : currentUserId);
+    linkWrap.appendChild(linkedLabel);
+    if (pkrCtxL && pkrCtxL.isHost) {
+      var unlinkBtn = document.createElement('button');
+      unlinkBtn.className = 'add-btn'; unlinkBtn.textContent = 'Unlink Account';
+      unlinkBtn.style.cssText = 'background:rgba(231,76,60,0.15);border-color:rgba(231,76,60,0.4);color:#e74c3c;font-size:0.82rem';
+      unlinkBtn.addEventListener('click', async function() {
+        unlinkBtn.disabled = true; unlinkBtn.textContent = 'Unlinking…';
+        try {
+          var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + currentUserId + '/unlink', {method:'PUT'});
+          if (r.players) { updatePkrPlayers(r.players); }
+          closePanel();
+        } catch(e) { unlinkBtn.disabled=false; unlinkBtn.textContent='Unlink Account'; toast('Failed to unlink'); }
+      });
+      linkWrap.appendChild(unlinkBtn);
+    }
+  } else {
+    // Host: show member dropdown to link
+    if (pkrCtxL && pkrCtxL.isHost && (window._eventMembers||[]).length > 0) {
+      var sel = document.createElement('select');
+      sel.style.cssText = 'width:100%;padding:8px 10px;background:#0d1a0f;border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:0.88rem;margin-bottom:4px';
+      var defOpt = document.createElement('option'); defOpt.value=''; defOpt.textContent='— Select member to link —';
+      sel.appendChild(defOpt);
+      (window._eventMembers||[]).forEach(function(m) {
+        var opt = document.createElement('option'); opt.value=m.id; opt.textContent=m.name+(m.email?' ('+m.email+')':'');
+        sel.appendChild(opt);
+      });
+      linkWrap.appendChild(sel);
+      var doLinkBtn = document.createElement('button');
+      doLinkBtn.className = 'add-btn'; doLinkBtn.textContent = 'Link Account';
+      doLinkBtn.addEventListener('click', async function() {
+        if (!sel.value) { toast('Select a member first'); return; }
+        doLinkBtn.disabled=true; doLinkBtn.textContent='Linking…';
+        try {
+          var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + (currentUserId||sid) + '/link', {method:'PUT', body:JSON.stringify({real_user_id:sel.value})});
+          if (r.players) { updatePkrPlayers(r.players); }
+          closePanel();
+        } catch(e) { doLinkBtn.disabled=false; doLinkBtn.textContent='Link Account'; toast('Failed to link'); }
+      });
+      linkWrap.appendChild(doLinkBtn);
+    }
+    // Self-claim: logged-in user can claim their own seat
+    if (pkrCtxL && pkrCtxL.userId && !pkrCtxL.isHost) {
+      var claimBtn = document.createElement('button');
+      claimBtn.className = 'add-btn g'; claimBtn.textContent = '👤 This is me';
+      claimBtn.style.cssText = 'font-size:0.88rem';
+      claimBtn.addEventListener('click', async function() {
+        claimBtn.disabled=true; claimBtn.textContent='Claiming…';
+        try {
+          var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + (currentUserId||sid) + '/link', {method:'PUT', body:JSON.stringify({real_user_id:pkrCtxL.userId})});
+          if (r.players) { updatePkrPlayers(r.players); }
+          closePanel(); toast('Seat linked to your account!');
+        } catch(e) { claimBtn.disabled=false; claimBtn.textContent='👤 This is me'; toast('Failed to claim seat'); }
+      });
+      linkWrap.appendChild(claimBtn);
+    }
+    if (!(pkrCtxL && pkrCtxL.isHost) && !(pkrCtxL && pkrCtxL.userId && !pkrCtxL.isHost)) {
+      var noLinkMsg = document.createElement('div');
+      noLinkMsg.style.cssText = 'font-size:0.85rem;color:var(--muted);padding:4px 0';
+      noLinkMsg.textContent = 'Not linked to a user account.';
+      linkWrap.appendChild(noLinkMsg);
+    }
+  }
+  body.appendChild(linkWrap);
+
   // Player QR Code
   var qrSec = document.createElement('div'); qrSec.className = 'psec'; qrSec.textContent = 'Player QR Code';
   body.appendChild(qrSec);
@@ -1598,6 +1678,20 @@ if (ctx && ctx.gameId) {
   // Fetch live game from PKR to build/sync state
   pkrApi('/games/' + ctx.gameId).then(function(game) {
     if (!game) return;
+    // Load event members and determine isHost
+    if (game.event_id) {
+      pkrApi('/events/' + game.event_id).then(function(ev) {
+        if (!ev) return;
+        window._eventMembers = ev.members || [];
+        // Determine if current user is host/cohost
+        var me = ctx.userId;
+        var myRole = (ev.members||[]).find(function(m){ return m.id === me; });
+        var isHost = myRole && (myRole.role === 'host' || myRole.role === 'cohost');
+        // Update pkrCtx with isHost
+        var c = getPkrCtx();
+        if (c) { c.isHost = !!isHost; localStorage.setItem('pkrCtx', JSON.stringify(c)); }
+      }).catch(function(){});
+    }
     // Build state.game if we don't have one
     if (!state.game) {
       state.game = {
