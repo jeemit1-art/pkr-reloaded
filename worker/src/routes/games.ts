@@ -170,9 +170,11 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       const rsvps = await c.env.DB.prepare("SELECT * FROM game_rsvps WHERE game_id=? AND status='yes'").bind(gameId).all<any>();
       let seatNum = 1;
       inserts = rsvps.results.map((r:any) =>
+        const knownRsvp = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(eventId,r.display_name).first<any>();
+        const rsvpUserId = knownRsvp?.user_id || `rsvp_${r.id}`;
         c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
           VALUES(?,?,?,?,?,1,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
-          .bind(gameId,`rsvp_${r.id}`,r.display_name,r.whatsapp||null,seatNum++)
+          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++)
       );
     } catch(_) { /* game_rsvps may not exist yet */ }
 
@@ -195,7 +197,13 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
-  const userId = `manual_${generateId()}`;
+  // Check if this display_name has a known user_id from event_players
+  const game2 = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first<any>();
+  let userId = `manual_${generateId()}`;
+  if (game2?.event_id && display_name) {
+    const knownPlayer = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game2.event_id, display_name.trim()).first<any>();
+    if (knownPlayer?.user_id) userId = knownPlayer.user_id;
+  }
 
   // Save to known players for quick-select (cloud)
   await c.env.DB.prepare(`
