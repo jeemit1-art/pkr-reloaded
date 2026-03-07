@@ -593,7 +593,7 @@ window.saveState = function() {
       var biTotal3 = Math.round((cur.biTotal||0)*100);
       var retries = 0; var syncBuyin = async function() { try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal3}) }); } catch(e) { if (retries++ < 3) setTimeout(syncBuyin, 2000); } }; syncBuyin();
     }
-    if (Math.abs(cur.cashout - (prev.cashout||0)) > 0.005) {
+    if (cur.cashout != null && (prev.cashout == null || Math.abs(cur.cashout - (prev.cashout||0)) > 0.005)) {
       var cashoutCents = Math.round(cur.cashout * 100);
       try {
         await pkrApi('/games/' + ctx.gameId + '/cashout/' + seated.user_id, {
@@ -810,7 +810,7 @@ function updateBank() {
   var totalIn = players.reduce(function(a,p){ return a+pBuyin(p); }, 0);
   var totalOut = players.reduce(function(a,p){ return a+pCash(p); }, 0);
   var inBank = totalIn - totalOut;
-  var active = players.filter(function(p){ return pBuyin(p) > 0 && pCash(p) === 0; }).length;
+  var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   var cashed = players.filter(function(p){ return pCash(p) > 0; }).length;
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
   set('bbIn', fmt(totalIn) + ' in');
@@ -842,7 +842,7 @@ function renderTable() {
   var tsEl = document.getElementById('tableStats');
   if (tnEl) tnEl.textContent = state.game.name;
   var players = Object.values(state.players).filter(function(p){ return p && p.name; });
-  var active = players.filter(function(p){ return pBuyin(p) > 0 && pCash(p) === 0; }).length;
+  var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
   buildSeats(state.game.seats, tW, tH, cx, cy);
   updateBank();
@@ -885,7 +885,7 @@ function buildSeats(count, tW, tH, cx, cy) {
     if (p && p.name) {
       var bi = pBuyin(p), co = pCash(p), net = pNet(p);
       var isRsvp = p.rsvp && bi === 0;
-      var cls = co > 0 ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
+      var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
       var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
       seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml;
     } else {
@@ -1709,7 +1709,7 @@ if (ctx && ctx.gameId) {
           for (var b = 0; b < (p.buy_ins || 0); b++) {
             txns.push({ type: 'buyin', amount: state.game.defaultBuyin, ts: Date.now() - b * 60000 });
           }
-          if (p.cashout != null && p.cashout > 0) txns.push({ type: 'cashout', amount: p.cashout / 100, ts: Date.now() });
+          if (p.cashout != null && p.cashout >= 0) txns.push({ type: 'cashout', amount: p.cashout / 100, ts: Date.now() });
           state.players[sid] = { name: p.display_name, userId: p.user_id, transactions: txns };
         }
         // Cache user_id for PKR syncing
