@@ -79,38 +79,6 @@ events.get('/:id', authMiddleware, async (c) => {
   return c.json({...event, members:members.results});
 });
 
-// Link a member's user_id to a known player display_name
-events.put('/:id/members/:userId/link', authMiddleware, async (c) => {
-  const eventId  = c.req.param('id');
-  const targetId = c.req.param('userId');
-  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Only host can link members' }, 403);
-  const { display_name } = await c.req.json();
-  if (!display_name?.trim()) return c.json({ error: 'display_name required' }, 400);
-  await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?')
-    .bind(targetId, eventId, display_name.trim()).run();
-  await c.env.DB.prepare(`UPDATE game_players SET user_id=? WHERE user_id IN (
-    SELECT DISTINCT gp.user_id FROM game_players gp JOIN games g ON g.id=gp.game_id
-    WHERE g.event_id=? AND gp.display_name=? AND gp.user_id != ?)`)
-    .bind(targetId, eventId, display_name.trim(), targetId).run();
-  return c.json({ ok: true });
-});
-
-// Remove a member from an event (host only, cannot remove self)
-events.delete('/:id/members/:userId', authMiddleware, async (c) => {
-  const eventId  = c.req.param('id');
-  const targetId = c.req.param('userId');
-  const requesterId = c.get('userId');
-  if (!await requireEventRole(c, eventId, 'host')) return c.json({ error: 'Only host can remove members' }, 403);
-  if (targetId === requesterId) return c.json({ error: 'You cannot remove yourself' }, 400);
-  const target = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
-    .bind(eventId, targetId).first<{ role: string }>();
-  if (!target) return c.json({ error: 'Member not found' }, 404);
-  if (target.role === 'host') return c.json({ error: 'Cannot remove the host' }, 400);
-  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
-    .bind(eventId, targetId).run();
-  return c.json({ ok: true });
-});
-
 events.put('/:id', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
@@ -206,7 +174,7 @@ events.get('/:id/history', authMiddleware, async (c) => {
       WHERE game_id=? AND net IS NOT NULL
       ORDER BY net DESC
     `).bind(g.id).all<{display_name:string; net:number}>();
-    return { ...g, top_players: top.results, all_players: top.results };
+    return { ...g, top_players: top.results };
   }));
 
   return c.json(result);

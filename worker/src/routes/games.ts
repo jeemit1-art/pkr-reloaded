@@ -24,14 +24,14 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
-  const { scheduled_at, location, notes, seats, game_password, repeat, format, poll_enabled, poll_question, poll_options } = await c.req.json();
+  const { scheduled_at, location, notes, seats, game_password, repeat, format } = await c.req.json();
   if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
   const id = generateId();
   const liveToken = generateId();
   const gameFormat = ['cash','tournament','rebuy','freezeout'].includes(format) ? format : 'cash';
   await c.env.DB.prepare(
-    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format,poll_enabled,poll_question,poll_options) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)'
-  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat,poll_enabled?1:0,poll_question||null,poll_options?JSON.stringify(poll_options):null).run();
+    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled',gameFormat).run();
 
   // ── Recurring: auto-schedule next game ──────────────────────────────────
   if (repeat === 'weekly' || repeat === 'fortnightly') {
@@ -40,8 +40,8 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     const nextId = generateId();
     const nextToken = generateId();
     await c.env.DB.prepare(
-      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format,poll_enabled,poll_question,poll_options) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)'
-    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat,poll_enabled?1:0,poll_question||null,poll_options?JSON.stringify(poll_options):null).run();
+      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status,format) VALUES(?,?,?,?,?,?,?,?,?,?)'
+    ).bind(nextId,eventId,nextTs,location||null,notes||null,seats||9,game_password||null,nextToken,'scheduled',gameFormat).run();
   }
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
@@ -49,8 +49,6 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
     title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
     body:`${dt}${location?' · '+location:''}`,
-    data:{ scheduled_at, location: location||null, type:'game_scheduled' },
-    data:{ scheduled_at, location: location||null, type:'scheduled' },
     data:{ gameId:id, eventId, type:'game_scheduled', lobby_path:`/games/${id}/lobby` },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
@@ -168,12 +166,12 @@ games.post('/games/:id/rsvp', async (c) => {
   const game = await c.env.DB.prepare('SELECT id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);
   if (game.status==='settled'||game.status==='cancelled') return c.json({error:'Game already ended'},400);
-  const { display_name, whatsapp, status, seat_preference, poll_answer } = await c.req.json();
+  const { display_name, whatsapp, status } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
   await c.env.DB.prepare(`
-    INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status,seat_preference,poll_answer) VALUES(?,?,?,?,?,?,?)
-    ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp),seat_preference=COALESCE(excluded.seat_preference,seat_preference),poll_answer=COALESCE(excluded.poll_answer,poll_answer)
-  `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes',seat_preference||null,poll_answer||null).run();
+    INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status) VALUES(?,?,?,?,?)
+    ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp)
+  `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes').run();
   const rsvps = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   return c.json({ok:true, rsvps:rsvps.results});
 });
@@ -233,25 +231,14 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  const { display_name, whatsapp, seat_number, buy_ins, user_id: bodyUserId } = await c.req.json();
+  const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
-  let userId: string;
-  if (bodyUserId && !bodyUserId.startsWith('manual_')) {
-    userId = bodyUserId;
-  } else {
-    const existingPlayer = await c.env.DB.prepare(
-      `SELECT DISTINCT user_id FROM game_players gp
-       JOIN games g ON g.id=gp.game_id
-       WHERE g.event_id=? AND gp.display_name=? AND gp.user_id LIKE 'manual_%'
-       LIMIT 1`
-    ).bind(game.event_id, display_name.trim()).first<{user_id:string}>();
-    userId = existingPlayer?.user_id || `manual_${generateId()}`;
-  }
+  const userId = `manual_${generateId()}`;
 
-  // Save to known players for quick-select — do NOT increment games_played here (done at settle)
+  // Save to known players for quick-select (cloud)
   await c.env.DB.prepare(`
-    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,0)
-    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp)
+    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
+    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
   `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
 
   await c.env.DB.prepare(`
@@ -371,10 +358,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
 
   // ── Compute settlement ──
-  // buy_ins is a count, cashout is in cents. Get event buy_in amount for net calc.
-  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<{buy_in:number}>();
-  const buyInAmount = eventData?.buy_in || 0;
-  const positions = results.map(p => ({...p, net: p.cashout - (p.buy_ins * buyInAmount)}));
+  const positions = results.map(p => ({...p, net: p.cashout - p.buy_ins}));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
   const now = Math.floor(Date.now()/1000);
