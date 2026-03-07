@@ -33,11 +33,10 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled').run();
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
-  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
     title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
-    body:`${dt}${location?' · '+location:''}`,
-    data:{ gameId:id, eventId, type:'game_scheduled' },
+    body:`Game scheduled — tap to view details`,
+    data:{ gameId:id, eventId, type:'game_scheduled', scheduled_at, location:location||null },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
   return c.json(game,201);

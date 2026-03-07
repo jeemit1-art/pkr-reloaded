@@ -20,6 +20,8 @@ export default function InvitePage() {
   const [installed, setInstalled] = useState(false);
   const [notified,  setNotified]  = useState(false);
   const [subscribing, setSubscribing] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [userName, setUserName] = useState('');
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -64,7 +66,7 @@ export default function InvitePage() {
     try {
       const perm = await Notification.requestPermission();
       if (perm === 'granted') {
-        await subscribePush(eventId, undefined, undefined);
+        await subscribePush(eventId, userId || undefined, userName || undefined);
         setNotified(true); setStep('done');
         setTimeout(goToEvent, 2000);
       } else { goToEvent(); }
