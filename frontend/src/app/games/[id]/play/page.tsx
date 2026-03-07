@@ -560,7 +560,8 @@ function _pkrSnapshotPlayers() {
     if (!p || !p.name) return;
     var buyins = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
     var cashoutAmt = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(s,t){ return s+(t.amount||0); }, 0);
-    snap[sid] = { name: p.name, phone: p.phone||'', buyins: buyins, cashout: cashoutAmt };
+    var biTotal = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(s,t){ return s+(t.amount||0); }, 0);
+    snap[sid] = { name: p.name, phone: p.phone||'', buyins: buyins, cashout: cashoutAmt, biTotal: biTotal };
   });
   return snap;
 }
@@ -586,6 +587,11 @@ window.saveState = function() {
       for (var i = 0; i < newBuyins; i++) {
         try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'POST' }); } catch(e) {}
       }
+      var biTotal2 = Math.round((cur.biTotal||0)*100);
+      try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal2}) }); } catch(e) {}
+    } else if (cur.buyins < prev.buyins || Math.abs((cur.biTotal||0) - (prev.biTotal||0)) > 0.001) {
+      var biTotal3 = Math.round((cur.biTotal||0)*100);
+      try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal3}) }); } catch(e) {}
     }
     if (Math.abs(cur.cashout - (prev.cashout||0)) > 0.005) {
       var cashoutCents = Math.round(cur.cashout * 100);
@@ -958,7 +964,7 @@ function buildPanel(sid) {
       var saveTxAmt = function() {
         var v = parseFloat(amt.value);
         if (isNaN(v) || v < 0) return;
-        p.transactions[capturedIdx].amount = v; saveState(); refreshPanelSummary(sid); renderTable();
+        p.transactions[capturedIdx].amount = v; window.saveState(); refreshPanelSummary(sid); renderTable();
       };
       amt.addEventListener('blur', saveTxAmt);
       amt.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); amt.blur(); } });
@@ -968,7 +974,7 @@ function buildPanel(sid) {
         showConfirmModal('Delete Transaction?', typeLabel + ' of $' + tx.amount.toFixed(2) + ' for ' + p.name, 'Delete', function() {
           var p2 = state.players[sid]; if (!p2) return;
           p2.transactions.splice(capturedIdx, 1);
-          saveState(); buildPanel(sid); renderTable();
+          window.saveState(); buildPanel(sid); renderTable();
         });
       });
       row.append(badge, amt, timeEl, del);
