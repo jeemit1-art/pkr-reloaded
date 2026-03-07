@@ -979,80 +979,29 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
 
 // ─── Invite QR Code ──────────────────────────────────────────────────────────
 function InviteQR({ url }: { url: string }) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (!url || !canvasRef.current) return;
-    try { renderQRMatrix(canvasRef.current, buildQRCode(url), 160); }
-    catch(e) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (!ctx) return;
-      ctx.fillStyle="#fff"; ctx.fillRect(0,0,160,160);
-      ctx.fillStyle="#333"; ctx.font="10px monospace"; ctx.textAlign="center";
-      ctx.fillText("QR error",80,80);
+    if (!url || !containerRef.current) return;
+    containerRef.current.innerHTML = '';
+    function makeQR() {
+      if (!(window as any).QRCode) return;
+      new (window as any).QRCode(containerRef.current, {
+        text: url, width: 160, height: 160,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: (window as any).QRCode.CorrectLevel.M,
+      });
+    }
+    if ((window as any).QRCode) {
+      makeQR();
+    } else {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload = makeQR;
+      document.head.appendChild(s);
     }
   }, [url]);
-  return <canvas ref={canvasRef} width={160} height={160} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}/>;
+  return <div ref={containerRef} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"inline-block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",overflow:'hidden',lineHeight:0}}/>;
 }
-function renderQRMatrix(canvas: HTMLCanvasElement, matrix: boolean[][], size: number) {
-  const ctx=canvas.getContext("2d")!,n=matrix.length,cell=size/n;
-  ctx.fillStyle="#fff"; ctx.fillRect(0,0,size,size); ctx.fillStyle="#000";
-  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(matrix[r][c]) ctx.fillRect(Math.floor(c*cell),Math.floor(r*cell),Math.ceil(cell),Math.ceil(cell));
-}
-function buildQRCode(text: string): boolean[][] {
-  const bytes=textToBytes(text);
-  for(let v=1;v<=4;v++){const r=makeQR(bytes,v);if(r)return r;}
-  return makeQR(bytes,4)!;
-}
-function textToBytes(s: string): number[] {
-  const out:number[]=[];
-  for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c<128)out.push(c);else if(c<2048)out.push((c>>6)|192,(c&63)|128);else out.push((c>>12)|224,((c>>6)&63)|128,(c&63)|128);}
-  return out;
-}
-function makeQR(data: number[], ver: number): boolean[][]|null {
-  const caps=[0,17,32,53,78];
-  if(data.length>caps[ver]) return null;
-  const sz=ver*4+17;
-  const m:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
-  const r:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
-  function finder(row:number,col:number){
-    for(let a=-1;a<=7;a++)for(let b=-1;b<=7;b++){
-      const ra=row+a,cb=col+b;if(ra<0||ra>=sz||cb<0||cb>=sz)continue;
-      r[ra][cb]=true;
-      if(a<0||a>6||b<0||b>6){m[ra][cb]=false;continue;}
-      m[ra][cb]=(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4));
-    }
-  }
-  finder(0,0);finder(0,sz-7);finder(sz-7,0);
-  for(let i=8;i<sz-8;i++){m[6][i]=m[i][6]=i%2===0;r[6][i]=r[i][6]=true;}
-  m[sz-8][8]=true;r[sz-8][8]=true;
-  for(let i=0;i<=8;i++){r[i][8]=true;r[8][i]=true;}
-  for(let i=sz-7;i<sz;i++){r[i][8]=true;r[8][i]=true;}
-  if(ver>=2){const ar=sz-7,ac=sz-7;if(!r[ar][ac])for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){r[ar+a][ac+b]=true;m[ar+a][ac+b]=(Math.abs(a)===2||Math.abs(b)===2||(a===0&&b===0));}}
-  const bits:boolean[]=[];
-  bits.push(false,true,false,false);
-  for(let i=7;i>=0;i--)bits.push(!!(data.length&(1<<i)));
-  for(const byte of data)for(let i=7;i>=0;i--)bits.push(!!(byte&(1<<i)));
-  for(let i=0;i<4&&bits.length<caps[ver]*8;i++)bits.push(false);
-  while(bits.length%8!==0)bits.push(false);
-  const pads=[0xEC,0x11];let pi=0;
-  while(bits.length<caps[ver]*8){const pb=pads[pi++%2];for(let i=7;i>=0;i--)bits.push(!!(pb&(1<<i)));}
-  const rem=[0,7,7,7,7];for(let i=0;i<rem[ver];i++)bits.push(false);
-  let bi=0,up=true;
-  for(let col=sz-1;col>=1;col-=2){
-    if(col===6)col--;
-    for(let row=up?sz-1:0;up?row>=0:row<sz;up?row--:row++){
-      for(let dx=0;dx<2;dx++){const c=col-dx;if(!r[row][c]&&bi<bits.length)m[row][c]=bits[bi++];}
-    }
-    up=!up;
-  }
-  for(let a=0;a<sz;a++)for(let b=0;b<sz;b++)if(!r[a][b]&&(a+b)%2===0)m[a][b]=!m[a][b];
-  const fmt=[false,true,false,false,false,true,true,true,true,false,true,false,true,true,false];
-  const fp1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
-  const fp2=[[sz-1,8],[sz-2,8],[sz-3,8],[sz-4,8],[sz-5,8],[sz-6,8],[sz-7,8],[8,sz-8],[8,sz-7],[8,sz-6],[8,sz-5],[8,sz-4],[8,sz-3],[8,sz-2],[8,sz-1]];
-  for(let i=0;i<15;i++){m[fp1[i][0]][fp1[i][1]]=fmt[i];m[fp2[i][0]][fp2[i][1]]=fmt[i];}
-  return m;
-}
-
 function Loader() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
