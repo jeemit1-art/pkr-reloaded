@@ -112,7 +112,6 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS = ['games', 'leaderboard', 'history', 'members'] as Tab[];
 
   const TABS_NAV = ['games','leaderboard','history'];
   return (
@@ -172,7 +171,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {TABS.map((t)=>(
+          {(['games','leaderboard','history','members'] as Tab[]).map((t)=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
