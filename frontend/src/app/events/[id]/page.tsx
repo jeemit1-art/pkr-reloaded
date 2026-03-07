@@ -31,7 +31,7 @@ export default function EventPage() {
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-  const [activePolls, setActivePolls] = useState<string[]>([]);
+  const [activePolls, setActivePolls] = useState([] as string[]);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
