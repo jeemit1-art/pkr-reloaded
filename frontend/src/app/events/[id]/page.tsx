@@ -1,10 +1,11 @@
 'use client';
+import React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 
-type Tab = 'games' | 'leaderboard' | 'history';
+type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
@@ -23,10 +24,16 @@ export default function EventPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
+  const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
+  const [eventPlayers, setEventPlayers] = useState([] as any[]);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('What time will you arrive?');
+  const [pollOptions, setPollOptions] = useState(['On time','15 min late','30 min late','Not sure']);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -58,6 +65,9 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
+        poll_enabled: pollEnabled,
+        poll_question: pollEnabled ? pollQuestion : undefined,
+        poll_options: pollEnabled ? pollOptions.filter(o=>o.trim()) : undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
@@ -104,7 +114,7 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+  const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
 
   const TABS_NAV = ['games','leaderboard','history'];
   return (
@@ -265,6 +275,73 @@ export default function EventPage() {
           </div>
         )}
 
+        {/* ── Members tab ── */}
+        {tab==='members' && (
+          <div>
+            {(!event.members || event.members.length === 0) && (
+              <div className="empty-state">
+                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-text">No members yet. Invite people using + Co-host or + Member.</div>
+              </div>
+            )}
+            {event.members && event.members.length > 0 && (
+              <div className="card">
+                {event.members.map((m: any, i: number) => (
+                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
+                    borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>
+                    <div style={{width:36,height:36,borderRadius:'50%',background:'var(--bg3)',
+                      border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
+                      justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
+                      {m.avatar_url
+                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',
+                        fontWeight:m.role==='host'?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {m.name}
+                      </div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
+                        {m.email}
+                      </div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
+                      <span style={{fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:600,
+                        padding:'2px 7px',borderRadius:2,fontFamily:'var(--font-body),sans-serif',
+                        background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.05)',
+                        color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
+                        border: `1px solid ${m.role==='host'?'rgba(201,168,76,0.3)':m.role==='cohost'?'rgba(76,175,125,0.2)':'var(--border-sub)'}`}}>
+                        {m.role}
+                      </span>
+                      <span style={{fontSize:9,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>
+                        {new Date(m.joined_at*1000).toLocaleDateString('en-AU',{month:'short',day:'numeric',year:'numeric'})}
+                      </span>
+                    </div>
+                    {isHost && m.role !== 'host' && (
+                      <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:6}}>
+                        <button
+                          onClick={()=>{ setLinkMemberTarget(m); if(eventPlayers.length===0) api.events.players(id).then(setEventPlayers).catch(()=>{}); }}
+                          style={{background:'none',border:'1px solid rgba(201,168,76,0.25)',color:'var(--gold)',
+                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
+                            fontFamily:'var(--font-body),sans-serif'}}>
+                          🔗 Link
+                        </button>
+                        <button
+                          onClick={()=>setConfirmRemoveMember(m)}
+                          style={{background:'none',border:'1px solid rgba(231,76,60,0.25)',color:'var(--red)',
+                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
+                            fontFamily:'var(--font-body),sans-serif'}}>
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── History tab ── */}
         {tab==='history' && (
           <div>
@@ -294,8 +371,6 @@ export default function EventPage() {
                   </div>
                   {isHost && (
                     <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
-                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
-                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
                       <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
                         onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
                     </div>
@@ -306,6 +381,91 @@ export default function EventPage() {
           </div>
         )}
       </div>
+
+      {linkMemberTarget && (
+        <div className="modal-overlay" onClick={()=>setLinkMemberTarget(null)}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>
+                🔗 Link to Player Record
+              </div>
+              <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif',marginBottom:16}}>
+                Link <strong style={{color:'var(--ivory)'}}>{linkMemberTarget.name}</strong> to a known player so their game history merges under their account.
+              </div>
+              {eventPlayers.length === 0 ? (
+                <div style={{fontSize:12,color:'var(--faint)',padding:'12px 0'}}>No player records found yet.</div>
+              ) : (
+                <div style={{display:'grid',gap:6,maxHeight:260,overflowY:'auto'}}>
+                  {eventPlayers.map((p:any) => (
+                    <button key={p.display_name}
+                      onClick={async()=>{
+                        try {
+                          const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                          const token = typeof window!=='undefined' ? (localStorage.getItem('pkr_token')||document.cookie.match(/pkr_token=([^;]+)/)?.[1]||'') : '';
+                          const res = await fetch(`${apiUrl}/events/${id}/members/${linkMemberTarget.id}/link`, {
+                            method:'PUT',
+                            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+                            body:JSON.stringify({display_name:p.display_name}),
+                          });
+                          if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
+                          setLinkMemberTarget(null);
+                          alert(`✓ ${linkMemberTarget.name} linked to "${p.display_name}"`);
+                        } catch(e:any) { alert(e.message); }
+                      }}
+                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                        background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,
+                        padding:'10px 14px',cursor:'pointer',textAlign:'left'}}>
+                      <div>
+                        <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</div>
+                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2}}>{p.games_played||0} games played</div>
+                      </div>
+                      <span style={{fontSize:11,color:'var(--gold)'}}>Select →</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setLinkMemberTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove member confirm modal */}
+      {confirmRemoveMember && (
+        <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
+          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 0'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
+                Remove Member?
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
+                Remove <strong style={{color:'var(--ivory)'}}>{confirmRemoveMember.name}</strong> from this event?
+                They will lose access and will need a new invite link to rejoin.
+              </div>
+            </div>
+            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}}
+                onClick={()=>setConfirmRemoveMember(null)}>Keep them</button>
+              <button className="btn btn-danger" style={{fontSize:12}}
+                onClick={async()=>{
+                  try {
+                    await api.events.removeMember(id, confirmRemoveMember.id);
+                    setEvent((ev:any) => ({
+                      ...ev,
+                      members: ev.members.filter((m:any) => m.id !== confirmRemoveMember.id),
+                      member_count: (ev.member_count || 1) - 1,
+                    }));
+                  } catch(e:any) { alert(e.message); }
+                  setConfirmRemoveMember(null);
+                }}>
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fix 6+10: Confirm delete/cancel modal */}
       {confirmDelete && (
@@ -363,7 +523,7 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {['6','7','8','9','10','11','12'].map(n=>(
+                  {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
                     <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
@@ -414,6 +574,47 @@ export default function EventPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
+              {/* Poll toggle */}
+              <div style={{borderTop:'1px solid var(--border-sub)',paddingTop:14}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: pollEnabled ? 12 : 0}}>
+                  <div>
+                    <div className="lbl">RSVP Poll</div>
+                    <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Ask players a question when they RSVP</div>
+                  </div>
+                  <button onClick={()=>setPollEnabled(v=>!v)}
+                    style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',transition:'background 0.2s',
+                      background:pollEnabled?'var(--gold)':'var(--bg3)',position:'relative',flexShrink:0}}>
+                    <span style={{position:'absolute',top:3,width:16,height:16,borderRadius:'50%',background:'#fff',
+                      transition:'left 0.2s',left:pollEnabled?'calc(100% - 19px)':'3px'}}/>
+                  </button>
+                </div>
+                {pollEnabled && (
+                  <div style={{display:'grid',gap:8}}>
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Question</div>
+                      <input className="inp" value={pollQuestion} onChange={e=>setPollQuestion(e.target.value)} placeholder="e.g. What time will you arrive?"/>
+                    </div>
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Options</div>
+                      {pollOptions.map((opt,i)=>(
+                        <div key={i} style={{display:'flex',gap:6,marginBottom:6}}>
+                          <input className="inp" value={opt} onChange={e=>{const o=[...pollOptions];o[i]=e.target.value;setPollOptions(o);}} placeholder={`Option ${i+1}`} style={{flex:1}}/>
+                          {pollOptions.length>2 && (
+                            <button onClick={()=>setPollOptions(o=>o.filter((_,j)=>j!==i))}
+                              style={{background:'none',border:'1px solid rgba(231,76,60,0.3)',color:'var(--red)',borderRadius:2,padding:'0 10px',cursor:'pointer',fontSize:14}}>✕</button>
+                          )}
+                        </div>
+                      ))}
+                      {pollOptions.length < 6 && (
+                        <button onClick={()=>setPollOptions(o=>[...o,''])}
+                          style={{background:'none',border:'1px dashed var(--border)',color:'var(--muted)',borderRadius:2,padding:'6px 12px',cursor:'pointer',fontSize:11,width:'100%',fontFamily:'var(--font-body),sans-serif'}}>
+                          + Add option
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}
               </button>
@@ -429,6 +630,14 @@ export default function EventPage() {
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            {/* QR Code */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:16}}>
+              <InviteQR url={inviteUrl}/>
+              <div style={{fontSize:10,color:'var(--muted)',marginTop:8,letterSpacing:'0.12em',
+                textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif'}}>
+                Scan to join
+              </div>
+            </div>
             <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
               {inviteUrl}
             </div>
@@ -655,7 +864,8 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
   onClose: () => void;
 }) {
   const playerGames = history.filter((g:any)=>
-    (g.top_players||[]).some((p:any)=>p.display_name===player)
+    (g.top_players||[]).some((p:any)=>p.display_name===player) ||
+    (g.all_players||[]).some((p:any)=>p.display_name===player)
   );
   return (
     <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
@@ -675,7 +885,8 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
       )}
       {playerGames.map((g:any)=>{
-        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player)
+                || (g.all_players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
           <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
@@ -695,6 +906,82 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
       })}
     </div>
   );
+}
+
+// ─── Invite QR Code ──────────────────────────────────────────────────────────
+function InviteQR({ url }: { url: string }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  React.useEffect(() => {
+    if (!url || !canvasRef.current) return;
+    try { renderQRMatrix(canvasRef.current, buildQRCode(url), 160); }
+    catch(e) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle="#fff"; ctx.fillRect(0,0,160,160);
+      ctx.fillStyle="#333"; ctx.font="10px monospace"; ctx.textAlign="center";
+      ctx.fillText("QR error",80,80);
+    }
+  }, [url]);
+  return <canvas ref={canvasRef} width={160} height={160} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}/>;
+}
+function renderQRMatrix(canvas: HTMLCanvasElement, matrix: boolean[][], size: number) {
+  const ctx=canvas.getContext("2d")!,n=matrix.length,cell=size/n;
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,size,size); ctx.fillStyle="#000";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(matrix[r][c]) ctx.fillRect(Math.floor(c*cell),Math.floor(r*cell),Math.ceil(cell),Math.ceil(cell));
+}
+function buildQRCode(text: string): boolean[][] {
+  const bytes=textToBytes(text);
+  for(let v=1;v<=4;v++){const r=makeQR(bytes,v);if(r)return r;}
+  return makeQR(bytes,4)!;
+}
+function textToBytes(s: string): number[] {
+  const out:number[]=[];
+  for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c<128)out.push(c);else if(c<2048)out.push((c>>6)|192,(c&63)|128);else out.push((c>>12)|224,((c>>6)&63)|128,(c&63)|128);}
+  return out;
+}
+function makeQR(data: number[], ver: number): boolean[][]|null {
+  const caps=[0,17,32,53,78];
+  if(data.length>caps[ver]) return null;
+  const sz=ver*4+17;
+  const m:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
+  const r:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
+  function finder(row:number,col:number){
+    for(let a=-1;a<=7;a++)for(let b=-1;b<=7;b++){
+      const ra=row+a,cb=col+b;if(ra<0||ra>=sz||cb<0||cb>=sz)continue;
+      r[ra][cb]=true;
+      if(a<0||a>6||b<0||b>6){m[ra][cb]=false;continue;}
+      m[ra][cb]=(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4));
+    }
+  }
+  finder(0,0);finder(0,sz-7);finder(sz-7,0);
+  for(let i=8;i<sz-8;i++){m[6][i]=m[i][6]=i%2===0;r[6][i]=r[i][6]=true;}
+  m[sz-8][8]=true;r[sz-8][8]=true;
+  for(let i=0;i<=8;i++){r[i][8]=true;r[8][i]=true;}
+  for(let i=sz-7;i<sz;i++){r[i][8]=true;r[8][i]=true;}
+  if(ver>=2){const ar=sz-7,ac=sz-7;if(!r[ar][ac])for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){r[ar+a][ac+b]=true;m[ar+a][ac+b]=(Math.abs(a)===2||Math.abs(b)===2||(a===0&&b===0));}}
+  const bits:boolean[]=[];
+  bits.push(false,true,false,false);
+  for(let i=7;i>=0;i--)bits.push(!!(data.length&(1<<i)));
+  for(const byte of data)for(let i=7;i>=0;i--)bits.push(!!(byte&(1<<i)));
+  for(let i=0;i<4&&bits.length<caps[ver]*8;i++)bits.push(false);
+  while(bits.length%8!==0)bits.push(false);
+  const pads=[0xEC,0x11];let pi=0;
+  while(bits.length<caps[ver]*8){const pb=pads[pi++%2];for(let i=7;i>=0;i--)bits.push(!!(pb&(1<<i)));}
+  const rem=[0,7,7,7,7];for(let i=0;i<rem[ver];i++)bits.push(false);
+  let bi=0,up=true;
+  for(let col=sz-1;col>=1;col-=2){
+    if(col===6)col--;
+    for(let row=up?sz-1:0;up?row>=0:row<sz;up?row--:row++){
+      for(let dx=0;dx<2;dx++){const c=col-dx;if(!r[row][c]&&bi<bits.length)m[row][c]=bits[bi++];}
+    }
+    up=!up;
+  }
+  for(let a=0;a<sz;a++)for(let b=0;b<sz;b++)if(!r[a][b]&&(a+b)%2===0)m[a][b]=!m[a][b];
+  const fmt=[false,true,false,false,false,true,true,true,true,false,true,false,true,true,false];
+  const fp1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+  const fp2=[[sz-1,8],[sz-2,8],[sz-3,8],[sz-4,8],[sz-5,8],[sz-6,8],[sz-7,8],[8,sz-8],[8,sz-7],[8,sz-6],[8,sz-5],[8,sz-4],[8,sz-3],[8,sz-2],[8,sz-1]];
+  for(let i=0;i<15;i++){m[fp1[i][0]][fp1[i][1]]=fmt[i];m[fp2[i][0]][fp2[i][1]]=fmt[i];}
+  return m;
 }
 
 function Loader() {
