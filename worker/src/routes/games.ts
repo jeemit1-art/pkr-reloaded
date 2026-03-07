@@ -259,13 +259,14 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   // Notify the specific player their cashout was recorded
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player && cashout != null) {
-    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    const buyCost = (player.buy_ins||1) * (evData?.buy_in||0);
-    const net = cashout - buyCost;
-    const netStr = net > 0 ? `+$${(net/100).toFixed(0)}` : net < 0 ? `-$${Math.abs(net/100).toFixed(0)}` : 'even';
+    const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const buyInAmt2 = evData2?.buy_in || 0;
+    const totalBuyIn = (player.buy_ins||1) * buyInAmt2;
+    const net2 = cashout - totalBuyIn;
+    const netStr = net2 > 0 ? `+$${(net2/100).toFixed(0)}` : net2 < 0 ? `-$${Math.abs(net2/100).toFixed(0)}` : 'even';
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
-      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData?.name||'PKR'}`,
-      body: `Net result: ${netStr}. Check results when settled.`,
+      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
+      body: `Net: ${netStr} (${player.buy_ins}× buy-in of $${(buyInAmt2/100).toFixed(0)})`,
       data: { gameId, eventId: game.event_id, type: 'cashout' },
     }));
   }
