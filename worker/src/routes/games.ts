@@ -223,6 +223,30 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
   return c.json({ok:true, players:players.results});
 });
 
+/* ── Set exact buy-in count and total ── */
+games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { count, total } = await c.req.json<{count:number, total?:number}>();
+  if (typeof count !== 'number' || count < 0) return c.json({error:'Invalid count'},400);
+  await c.env.DB.prepare(
+    'UPDATE game_players SET buy_ins=?, buy_in_total=? WHERE game_id=? AND user_id=?'
+  ).bind(count, total ?? 0, gameId, userId).run();
+  return c.json({ok:true, buy_ins:count, buy_in_total: total ?? 0});
+});
+
+/* ── Set exact cashout amount ── */
+games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { cashout } = await c.req.json<{cashout:number}>();
+  if (typeof cashout !== 'number' || cashout < 0) return c.json({error:'Invalid cashout'},400);
+  await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?'
+  ).bind(cashout, gameId, userId).run();
+  return c.json({ok:true, cashout});
+});
+
 games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
