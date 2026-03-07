@@ -273,6 +273,8 @@ export default function EventPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
 
         {/* ── Members tab ── */}
         {tab==='members' && (
