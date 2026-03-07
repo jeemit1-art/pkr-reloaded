@@ -31,9 +31,7 @@ export default function EventPage() {
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-  const [pollEnabled, setPollEnabled] = useState(false);
-  const [pollQuestion, setPollQuestion] = useState('What time will you arrive?');
-  const [pollOptions, setPollOptions] = useState(['On time','15 min late','30 min late','Not sure']);
+  const [activePolls, setActivePolls] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -65,9 +63,9 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
-        poll_enabled: pollEnabled,
-        poll_question: pollEnabled ? pollQuestion : undefined,
-        poll_options: pollEnabled ? pollOptions.filter(o=>o.trim()) : undefined,
+        poll_enabled: activePolls.length > 0,
+        poll_question: activePolls.length > 0 ? JSON.stringify(activePolls) : undefined,
+        poll_options: undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
@@ -574,46 +572,38 @@ export default function EventPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
-              {/* Poll toggle */}
+              {/* Poll presets */}
               <div style={{borderTop:'1px solid var(--border-sub)',paddingTop:14}}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: pollEnabled ? 12 : 0}}>
-                  <div>
-                    <div className="lbl">RSVP Poll</div>
-                    <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Ask players a question when they RSVP</div>
-                  </div>
-                  <button onClick={()=>setPollEnabled(v=>!v)}
-                    style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',transition:'background 0.2s',
-                      background:pollEnabled?'var(--gold)':'var(--bg3)',position:'relative',flexShrink:0}}>
-                    <span style={{position:'absolute',top:3,width:16,height:16,borderRadius:'50%',background:'#fff',
-                      transition:'left 0.2s',left:pollEnabled?'calc(100% - 19px)':'3px'}}/>
-                  </button>
+                <div style={{marginBottom:10}}>
+                  <div className="lbl">RSVP Questions</div>
+                  <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Toggle any questions to include in the RSVP. Players tap their answer.</div>
                 </div>
-                {pollEnabled && (
-                  <div style={{display:'grid',gap:8}}>
-                    <div>
-                      <div className="lbl" style={{marginBottom:5}}>Question</div>
-                      <input className="inp" value={pollQuestion} onChange={e=>setPollQuestion(e.target.value)} placeholder="e.g. What time will you arrive?"/>
+                {([
+                  { id:'arrival', label:'⏰ Arrival time', q:'What time will you arrive?', opts:['On time','~15 min late','~30 min late','~1hr late','Not sure'] },
+                  { id:'dinner', label:'🍕 Dinner order', q:'Would you like us to order dinner?', opts:['Yes please','No thanks','Maybe'] },
+                  { id:'cricket', label:'🏏 Staying for cricket', q:'Staying after for the cricket?', opts:['Definitely','Probably','Unlikely','No'] },
+                  { id:'drinks', label:'🍺 Drinks run', q:'Want in on a drinks run?', opts:['Yes','No'] },
+                  { id:'lift', label:'🚗 Need a lift?', q:'Do you need a lift?', opts:['Yes please','No I'm right','Can offer lift'] },
+                ] as {id:string,label:string,q:string,opts:string[]}[]).map(preset=>{
+                  const on = activePolls.includes(preset.id);
+                  return (
+                    <div key={preset.id} onClick={()=>setActivePolls(p=>on?p.filter(x=>x!==preset.id):[...p,preset.id])}
+                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                        padding:'10px 12px',marginBottom:6,borderRadius:3,cursor:'pointer',
+                        border:`1px solid ${on?'rgba(201,168,76,0.4)':'var(--border-sub)'}`,
+                        background:on?'rgba(201,168,76,0.06)':'var(--bg3)',transition:'all 0.15s'}}>
+                      <div>
+                        <div style={{fontSize:12,color:on?'var(--gold)':'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{preset.label}</div>
+                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>{preset.opts.join(' · ')}</div>
+                      </div>
+                      <div style={{width:34,height:20,borderRadius:10,border:'none',cursor:'pointer',transition:'background 0.2s',
+                        background:on?'var(--gold)':'rgba(255,255,255,0.08)',position:'relative',flexShrink:0,marginLeft:12}}>
+                        <span style={{position:'absolute',top:2,width:16,height:16,borderRadius:'50%',background:'#fff',
+                          transition:'left 0.2s',left:on?'calc(100% - 18px)':'2px'}}/>
+                      </div>
                     </div>
-                    <div>
-                      <div className="lbl" style={{marginBottom:5}}>Options</div>
-                      {pollOptions.map((opt,i)=>(
-                        <div key={i} style={{display:'flex',gap:6,marginBottom:6}}>
-                          <input className="inp" value={opt} onChange={e=>{const o=[...pollOptions];o[i]=e.target.value;setPollOptions(o);}} placeholder={`Option ${i+1}`} style={{flex:1}}/>
-                          {pollOptions.length>2 && (
-                            <button onClick={()=>setPollOptions(o=>o.filter((_,j)=>j!==i))}
-                              style={{background:'none',border:'1px solid rgba(231,76,60,0.3)',color:'var(--red)',borderRadius:2,padding:'0 10px',cursor:'pointer',fontSize:14}}>✕</button>
-                          )}
-                        </div>
-                      ))}
-                      {pollOptions.length < 6 && (
-                        <button onClick={()=>setPollOptions(o=>[...o,''])}
-                          style={{background:'none',border:'1px dashed var(--border)',color:'var(--muted)',borderRadius:2,padding:'6px 12px',cursor:'pointer',fontSize:11,width:'100%',fontFamily:'var(--font-body),sans-serif'}}>
-                          + Add option
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}
