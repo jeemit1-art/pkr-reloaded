@@ -47,6 +47,14 @@ export default function EventPage() {
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
 
+  useEffect(()=>{
+    if(!(window as any).QRCode) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      document.head.appendChild(s);
+    }
+  },[]);
+
   async function createGame() {
     if (!form.scheduled_at) return;
     setSaving(true);
@@ -428,17 +436,29 @@ export default function EventPage() {
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
-            <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
-            <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            {/* QR Code */}
+            <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
+              <div style={{background:'#fff',padding:12,borderRadius:4,display:'inline-block'}}
+                ref={(el)=>{
+                  if(!el||!inviteUrl) return;
+                  el.innerHTML='';
+                  if((window as any).QRCode) {
+                    new (window as any).QRCode(el,{text:inviteUrl,width:160,height:160,colorDark:'#000',colorLight:'#fff',correctLevel:(window as any).QRCode.CorrectLevel.M});
+                  }
+                }}>
+              </div>
+            </div>
+            <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'10px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace',textAlign:'center'}}>
               {inviteUrl}
             </div>
-            <div style={{display:'flex',gap:8}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}>Copy Link</button>
-              <a href={`https://wa.me/?text=${encodeURIComponent(`Join me as co-host on PKR: ${inviteUrl}`)}`}
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}>📋 Copy Link</button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Join me on PKR: ${inviteUrl}`)}`}
                 target="_blank" rel="noopener noreferrer" className="btn btn-outline"
-                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>WhatsApp</a>
-              <button className="btn btn-ghost" onClick={()=>setShowInvite(false)}>Close</button>
+                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>📱 WhatsApp</a>
             </div>
+            <button className="btn btn-ghost" style={{width:'100%',marginTop:8}} onClick={()=>setShowInvite(false)}>Close</button>
           </div>
         </div>
       )}
