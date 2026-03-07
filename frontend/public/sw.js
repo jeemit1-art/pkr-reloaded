@@ -1,4 +1,3 @@
-// public/sw.js
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
@@ -6,11 +5,9 @@ self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { title:'PKR Reloaded', body: event.data?.text() }; }
 
-  // Reformat game_scheduled notifications in receiver's local timezone
   if (data.data && data.data.type === 'game_scheduled' && data.data.scheduled_at) {
     const dt = new Date(data.data.scheduled_at * 1000).toLocaleString(undefined, {
-      weekday:'short', month:'short', day:'numeric',
-      hour:'numeric', minute:'2-digit'
+      weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'
     });
     data.body = dt + (data.data.location ? ' · ' + data.data.location : '');
   }
