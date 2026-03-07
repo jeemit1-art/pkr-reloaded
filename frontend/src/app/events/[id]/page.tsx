@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 
-type Tab = 'games' | 'leaderboard' | 'history';
+type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
@@ -97,6 +97,16 @@ export default function EventPage() {
     } finally { setPushLoading(false); }
   }
 
+  async function removeMember(userId: string, name: string) {
+    setRemovingMember(true);
+    try {
+      await api.events.removeMember(id, userId);
+      setEvent((ev:any) => ({...ev, members: ev.members.filter((m:any) => m.id !== userId)}));
+      setConfirmRemoveMember(null);
+    } catch(e:any) { alert(e.message); }
+    finally { setRemovingMember(false); }
+  }
+
   const isPWA      = useMemo(()=>isPWAInstalled(),[]);
   const iosDevice  = useMemo(()=>isIOS(),[]);
   const safariOnly = useMemo(()=>isSafari(),[]);
@@ -112,9 +122,9 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
+  const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
 
-  const TABS_NAV = ['games','leaderboard','history'];
+  const TABS_NAV = ['games','leaderboard','history','members'];
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
@@ -261,7 +271,77 @@ export default function EventPage() {
               </div>
             )}
 
-            {/* Fix 8: Player drill-down — show their individual game history */}
+            {/* ── Members tab ── */}
+        {tab==='members' && (
+          <div>
+            {/* Confirm remove modal */}
+            {confirmRemoveMember && (
+              <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
+                <div className="modal animate-up" onClick={(e)=>e.stopPropagation()} style={{maxWidth:340}}>
+                  <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>Remove Member?</div>
+                  <div style={{fontSize:13,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>
+                    Remove <strong style={{color:'var(--ivory)'}}>{confirmRemoveMember.name}</strong> from this event? They will lose access.
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmRemoveMember(null)}>Cancel</button>
+                    <button className="btn btn-danger" style={{flex:1}} disabled={removingMember}
+                      onClick={()=>removeMember(confirmRemoveMember.id, confirmRemoveMember.name)}>
+                      {removingMember ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(!event.members || event.members.length === 0) ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-text">No members yet. Use the invite button to add co-hosts or members.</div>
+              </div>
+            ) : (
+              <div className="card" style={{marginBottom:14}}>
+                {event.members.map((m:any, i:number) => (
+                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
+                    borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>
+                    <div style={{width:38,height:38,borderRadius:'50%',background:'var(--bg3)',
+                      border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
+                      justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
+                      {m.avatar_url
+                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name}</div>
+                      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
+                        <span style={{
+                          padding:'1px 6px',borderRadius:2,fontSize:9,fontWeight:600,letterSpacing:'0.1em',
+                          textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
+                          background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.06)',
+                          color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
+                        }}>{m.role}</span>
+                        {m.email && <span style={{marginLeft:8}}>{m.email}</span>}
+                      </div>
+                    </div>
+                    {isHost && m.role !== 'host' && (
+                      <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}
+                        onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {isHost && (
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>generateInvite('member')}>+ Invite Member</button>
+                <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>generateInvite('cohost')}>+ Invite Co-host</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fix 8: Player drill-down — show their individual game history */}
             {selectedPlayer && (
               <PlayerHistoryCard
                 player={selectedPlayer}

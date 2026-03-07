@@ -200,3 +200,32 @@ events.get('/:id/players', authMiddleware, async (c) => {
 });
 
 export default events;
+
+/* ── Remove member from event ── */
+events.delete('/events/:id/members/:userId', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  const targetId = c.req.param('userId');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
+  // Cannot remove yourself (host)
+  const me = (c as any).get('userId');
+  if (targetId === me) return c.json({error:'Cannot remove yourself'},400);
+  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId, targetId).run();
+  return c.json({ok:true});
+});
+
+
+/* ── Remove member from event ── */
+events.delete('/events/:id/members/:userId', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  const targetId = c.req.param('userId');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
+  // Cannot remove yourself (host)
+  const me = (c as any).get('userId');
+  if (targetId === me) return c.json({error:'Cannot remove yourself'},400);
+  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId, targetId).run();
+  return c.json({ok:true});
+});
+
+export default events;
