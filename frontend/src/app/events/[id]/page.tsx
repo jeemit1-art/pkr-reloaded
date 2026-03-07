@@ -662,7 +662,7 @@ export default function EventPage() {
                   { id:'dinner', label:'🍕 Dinner order', q:'Would you like us to order dinner?', opts:['Yes please','No thanks','Maybe'] },
                   { id:'cricket', label:'🏏 Staying for cricket', q:'Staying after for the cricket?', opts:['Definitely','Probably','Unlikely','No'] },
                   { id:'drinks', label:'🍺 Drinks run', q:'Want in on a drinks run?', opts:['Yes','No'] },
-                  { id:'lift', label:'🚗 Need a lift?', q:'Do you need a lift?', opts:['Yes please','No I'm right','Can offer lift'] },
+                  { id:'lift', label:'🚗 Need a lift?', q:'Do you need a lift?', opts:['Yes please',"No I'm right",'Can offer lift'] },
                 ] as {id:string,label:string,q:string,opts:string[]}[]).map(preset=>{
                   const on = activePolls.includes(preset.id);
                   return (
