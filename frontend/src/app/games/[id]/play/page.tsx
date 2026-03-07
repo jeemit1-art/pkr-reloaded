@@ -630,17 +630,28 @@ window.syncSettleToPkr = async function() {
   if (pkrGame && pkrGame.players) {
     pkrGame.players.forEach(function(p) { pkrPlayerMap[p.display_name.toLowerCase()] = { user_id: p.user_id }; });
   }
-  var results = Object.values(state.players)
+  // Merge by display_name — same player may occupy multiple seats
+  var merged = {};
+  Object.values(state.players)
     .filter(function(p) { return p && p.name; })
-    .map(function(p) {
+    .forEach(function(p) {
+      var key = (p.name||'').toLowerCase();
       var buyinCount = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
-      var coDollars = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
-      var entry = pkrPlayerMap[(p.name||'').toLowerCase()];
-      var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\\s+/g,'_')));
-      return { user_id: userId, display_name: p.name, buy_ins: buyinCount, cashout: Math.round(coDollars*100) };
+      var biTotal    = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+(t.amount||0); }, 0);
+      var coDollars  = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
+      var entry = pkrPlayerMap[key];
+      var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
+      if (merged[key]) {
+        merged[key].buy_ins      += buyinCount;
+        merged[key].buy_in_total += Math.round(biTotal*100);
+        merged[key].cashout      += Math.round(coDollars*100);
+      } else {
+        merged[key] = { user_id: userId, display_name: p.name, buy_ins: buyinCount, buy_in_total: Math.round(biTotal*100), cashout: Math.round(coDollars*100) };
+      }
     });
-  if (!results.length) return false;
-  var settleKey = ctx.settleKey || (ctx.gameId + '_end');
+  var results = Object.values(merged).filter(function(p) { return p.buy_ins > 0; });
+  if (results.length === 0) return false;
+  var settleKey = ctx.gameId + '_end_' + Math.floor(Date.now()/60000);
   try {
     await pkrApi('/games/' + ctx.gameId + '/settle', {
       method: 'POST', body: JSON.stringify({ idempotency_key: settleKey, results: results }),

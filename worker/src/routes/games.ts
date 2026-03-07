@@ -239,7 +239,7 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
     const buyInAmt = evData?.buy_in ? `$${(evData.buy_in/100).toFixed(0)}` : 'Buy-in';
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
-      body: `Buy-in #${player.buy_ins} added to your seat.`,
+      body: `Buy-in recorded — you're in for $${((evData?.buy_in||0)/100).toFixed(0)} (×${player.buy_ins} total).`,
       data: { gameId, eventId: game.event_id, type: 'buyin' },
     }));
   }
@@ -316,7 +316,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   // buy_ins is a COUNT not an amount — never subtract it from cashout.
   const positions = results.map(p => ({
     ...p,
-    net: p.net != null ? p.net : (p.buy_in_total != null ? p.cashout - p.buy_in_total : p.cashout - p.buy_ins),
+    net: p.buy_in_total != null ? p.cashout - p.buy_in_total : (p.cashout - (p.buy_ins * (eventBuyIn||0))),
   }));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
@@ -351,11 +351,25 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   ));
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  c.executionCtx.waitUntil(sendPushToEvent(c.env, game.event_id, {
-    title:`✅ ${event?.name||'PKR'} — Game Settled`,
-    body:'Results are in. Check the leaderboard!',
-    data:{ gameId, eventId:game.event_id, type:'game_settled' },
-  }));
+  // Send individual result notifications to each player
+  c.executionCtx.waitUntil((async () => {
+    for (const p of positions) {
+      const netCents = p.net || 0;
+      const netStr = netCents > 0 ? `+$${(netCents/100).toFixed(0)}` : netCents < 0 ? `-$${(Math.abs(netCents)/100).toFixed(0)}` : '$0';
+      const emoji = netCents > 0 ? '🟢' : netCents < 0 ? '🔴' : '⚪';
+      await sendPushToPlayer(c.env, game.event_id, p.display_name, {
+        title: `${emoji} Game Settled — ${netStr}`,
+        body: `${p.display_name}: cashed $${(p.cashout/100).toFixed(0)}, net ${netStr}. Check results!`,
+        data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+      }).catch(() => {});
+    }
+    // Also send event-wide notification
+    await sendPushToEvent(c.env, game.event_id, {
+      title: `✅ ${event?.name||'PKR'} — Game Settled`,
+      body: 'Results are in. Check the leaderboard!',
+      data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+    });
+  })());
 
   return c.json(payload,201);
 });
