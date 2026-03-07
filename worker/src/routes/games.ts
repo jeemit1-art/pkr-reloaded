@@ -33,10 +33,11 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled').run();
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
+  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
     title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
-    body:`Game scheduled — tap to view details`,
-    data:{ gameId:id, eventId, type:'game_scheduled', scheduled_at, location:location||null },
+    body:`${dt}${location?' · '+location:''}`,
+    data:{ gameId:id, eventId, type:'game_scheduled' },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
   return c.json(game,201);
@@ -50,12 +51,11 @@ games.get('/games/:id', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
-  const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too
   const transfers = game.status==='settled'
     ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
     : [];
-  return c.json({...game, buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
+  return c.json({...game, players:players.results, rsvps:rsvps.results, transfers});
 });
 
 /* ── Update game ── */
@@ -236,10 +236,14 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player) {
     const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    const buyInAmt = evData?.buy_in ? `$${(evData.buy_in/100).toFixed(0)}` : 'Buy-in';
+    // buy_in on the event is the per-buyin cost in cents
+    const perBuyin = evData?.buy_in || 0;
+    const totalSpentSoFar = player.buy_ins * perBuyin;
+    const perBuyinStr = perBuyin ? `$${(perBuyin/100).toFixed(0)} added` : `Buy-in #${player.buy_ins} added`;
+    const totalStr = perBuyin ? `Total buy-in this game: $${(totalSpentSoFar/100).toFixed(0)}` : `${player.buy_ins} buy-in${player.buy_ins !== 1 ? 's' : ''} this game`;
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
-      title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
-      body: `Buy-in #${player.buy_ins} added to your seat.`,
+      title: `Buy-in — ${perBuyinStr} — ${evData?.name||'PKR'}`,
+      body: totalStr,
       data: { gameId, eventId: game.event_id, type: 'buyin' },
     }));
   }
@@ -253,19 +257,20 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  const { cashout } = await c.req.json();
+  const { cashout, buy_in_total } = await c.req.json();
   await c.env.DB.prepare('UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?').bind(cashout,gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   // Notify the specific player their cashout was recorded
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player && cashout != null) {
-    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    const buyCost = (player.buy_ins||1) * (evData?.buy_in||0);
-    const net = cashout - buyCost;
+    const evData = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+    // Use buy_in_total sent from frontend (actual dollars spent), fallback to cashout amount
+    const totalSpent = buy_in_total != null ? buy_in_total : 0;
+    const net = cashout - totalSpent;
     const netStr = net > 0 ? `+$${(net/100).toFixed(0)}` : net < 0 ? `-$${Math.abs(net/100).toFixed(0)}` : 'even';
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData?.name||'PKR'}`,
-      body: `Net result: ${netStr}. Check results when settled.`,
+      body: `Net result: ${netStr}`,
       data: { gameId, eventId: game.event_id, type: 'cashout' },
     }));
   }
@@ -333,7 +338,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       INSERT INTO game_players(game_id,user_id,display_name,buy_ins,cashout,net,settled_at,created_at)
       VALUES(?,?,?,?,?,?,?,unixepoch())
       ON CONFLICT(game_id,user_id) DO UPDATE SET
-        buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+        cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
     `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout,p.net,now)),
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
