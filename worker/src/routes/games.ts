@@ -165,23 +165,19 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     if (game.game_password && game.game_password !== password) return c.json({error:'Wrong password'},401);
 
     // Seat all yes-RSVPs — skip if table missing
-    let inserts: any[] = [];
     try {
       const rsvps = await c.env.DB.prepare("SELECT * FROM game_rsvps WHERE game_id=? AND status='yes'").bind(gameId).all<any>();
       let seatNum = 1;
-      inserts = rsvps.results.map((r:any) =>
-        const knownRsvp = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(eventId,r.display_name).first<any>();
+      for (const r of rsvps.results) {
+        const knownRsvp = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game.event_id,r.display_name).first<any>();
         const rsvpUserId = knownRsvp?.user_id || `rsvp_${r.id}`;
-        c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
+        await c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
           VALUES(?,?,?,?,?,1,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
-          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++)
-      );
+          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run();
+      }
     } catch(_) { /* game_rsvps may not exist yet */ }
 
-    await c.env.DB.batch([
-      ...inserts,
-      c.env.DB.prepare("UPDATE games SET status='active' WHERE id=?").bind(gameId),
-    ]);
+    await c.env.DB.prepare("UPDATE games SET status='active' WHERE id=?").bind(gameId).run();
     const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
     return c.json({ok:true, players:players.results});
   } catch(e:any) {
