@@ -110,11 +110,12 @@ games.get('/games/live/:token', async (c) => {
   const token = c.req.param('token');
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status FROM games WHERE live_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  const event   = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,cashout FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
-  const totalIn  = players.results.reduce((s:number,p:any)=>s+(p.buy_ins||0),0);
+  const event    = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string, buy_in:number}>();
+  const buyInAmt = event?.buy_in ?? 0;
+  const players  = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,buy_in_total,cashout,net FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
+  const totalIn  = players.results.reduce((s:number,p:any)=>s+(p.buy_in_total>0 ? p.buy_in_total : (p.buy_ins||0)*buyInAmt),0);
   const totalOut = players.results.reduce((s:number,p:any)=>s+(p.cashout||0),0);
-  return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut });
+  return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut, buyInAmt });
 });
 
 games.get('/games/results/:token', async (c) => {
