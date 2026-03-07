@@ -41,15 +41,39 @@ export default function InvitePage() {
   }, []);
 
   useEffect(() => {
-    api.events.redeemInvite(token as string)
-      .then(({ event, role: r }) => {
+    const run = async () => {
+      // If returning from Google OAuth, exchange the one-time code for a JWT first
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      if (code) {
+        try {
+          const res = await fetch(`${apiUrl}/auth/token?code=${code}`);
+          const data = await res.json() as any;
+          if (data.token) {
+            localStorage.setItem('pkr_token', data.token);
+            // Clean code from URL without reload
+            const clean = new URL(window.location.href);
+            clean.searchParams.delete('code');
+            window.history.replaceState({}, '', clean.toString());
+          }
+        } catch {}
+      }
+      // Now attempt to redeem the invite (token is set if we just exchanged it)
+      try {
+        const { event, role: r } = await api.events.redeemInvite(token as string);
         setEventName(event.name); setEventId(event.id); setRole(r);
+        try {
+          const me = await api.auth.me() as any;
+          setUserId(me.id || '');
+          setUserName(me.name || '');
+        } catch {}
         setStatus('onboarding'); setStep('welcome');
-      })
-      .catch(e => {
+      } catch(e: any) {
         if (e.message === 'Unauthorized' || e.message === 'Session expired') setStatus('auth');
         else { setErr(e.message); setStatus('error'); }
-      });
+      }
+    };
+    run();
   }, [token]);
 
   async function handleInstall() {
