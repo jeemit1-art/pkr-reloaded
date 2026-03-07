@@ -27,14 +27,13 @@ export default function EventPage() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
   const [eventPlayers, setEventPlayers] = useState([] as any[]);
-  const [seatMemberTarget, setSeatMemberTarget] = useState(null as any);
-  const [activeGames, setActiveGames] = useState([] as any[]);
-  const [seatMemberSeating, setSeatMemberSeating] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-  const [activePolls, setActivePolls] = useState<string[]>([]);
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('What time will you arrive?');
+  const [pollOptions, setPollOptions] = useState(['On time','15 min late','30 min late','Not sure']);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -66,9 +65,9 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
-        poll_enabled: activePolls.length > 0,
-        poll_question: activePolls.length > 0 ? JSON.stringify(activePolls) : undefined,
-        poll_options: undefined,
+        poll_enabled: pollEnabled,
+        poll_question: pollEnabled ? pollQuestion : undefined,
+        poll_options: pollEnabled ? pollOptions.filter(o=>o.trim()) : undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
@@ -383,82 +382,6 @@ export default function EventPage() {
         )}
       </div>
 
-      {seatMemberTarget && (
-        <div className="modal-overlay" onClick={()=>{ setSeatMemberTarget(null); setActiveGames([]); }}>
-          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
-            <div style={{padding:'24px 24px 0'}}>
-              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>
-                🪑 Seat {seatMemberTarget.name}
-              </div>
-              <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>
-                Select a game to seat them in. Their account will be linked so buy-ins and cashouts are tracked under their profile.
-              </div>
-              {activeGames.length === 0 ? (
-                <div style={{fontSize:12,color:'var(--faint)',padding:'12px 0'}}>No active or scheduled games found.</div>
-              ) : (
-                <div style={{display:'grid',gap:8}}>
-                  {activeGames.map((g:any) => (
-                    <div key={g.id} style={{border:'1px solid var(--border-sub)',borderRadius:4,overflow:'hidden'}}>
-                      <div style={{padding:'10px 14px',background:'var(--bg3)'}}>
-                        <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{fmtDate(g.scheduled_at)}</div>
-                        {g.location && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>📍 {g.location}</div>}
-                        <span style={{fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
-                          color:g.status==='active'?'var(--green)':g.status==='lobby'?'var(--gold)':'var(--amber)',
-                          fontFamily:'var(--font-body),sans-serif',fontWeight:600}}>{g.status}</span>
-                      </div>
-                      <div style={{padding:'10px 14px',borderTop:'1px solid var(--border-sub)'}}>
-                        <div style={{fontSize:10,color:'var(--muted)',marginBottom:6,fontFamily:'var(--font-body),sans-serif'}}>Seat preference (optional)</div>
-                        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
-                          {Array.from({length:g.seats||9},(_:any,i:number)=>i+1).map((n:number)=>(
-                            <button key={n} id={`seat-pick-${g.id}-${n}`}
-                              onClick={(e)=>{
-                                document.querySelectorAll(`[id^="seat-pick-${g.id}-"]`).forEach((b:any)=>{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.borderColor='var(--border-sub)';});
-                                const el = e.currentTarget; el.style.background='rgba(201,168,76,0.15)'; el.style.color='var(--gold)'; el.style.borderColor='rgba(201,168,76,0.5)';
-                                el.dataset.selected='1';
-                              }}
-                              style={{padding:'5px 10px',borderRadius:2,cursor:'pointer',fontSize:11,fontWeight:500,
-                                fontFamily:'var(--font-body),sans-serif',border:'1px solid var(--border-sub)',
-                                background:'var(--bg3)',color:'var(--muted)'}}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          disabled={seatMemberSeating}
-                          onClick={async()=>{
-                            setSeatMemberSeating(true);
-                            try {
-                              const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-                              const token = typeof window!=='undefined' ? (localStorage.getItem('pkr_token')||document.cookie.match(/pkr_token=([^;]+)/)?.[1]||'') : '';
-                              const selectedBtn = document.querySelector(`[id^="seat-pick-${g.id}-"][data-selected="1"]`) as any;
-                              const seatNum = selectedBtn ? parseInt(selectedBtn.id.split('-').pop()) : null;
-                              const res = await fetch(`${apiUrl}/events/${id}/members/${seatMemberTarget.id}/seat`, {
-                                method:'POST',
-                                headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-                                body: JSON.stringify({ game_id: g.id, seat_number: seatNum }),
-                              });
-                              if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
-                              setSeatMemberTarget(null); setActiveGames([]);
-                              alert(`✓ ${seatMemberTarget.name} seated in game`);
-                            } catch(e:any) { alert(e.message); }
-                            finally { setSeatMemberSeating(false); }
-                          }}
-                          className="btn btn-primary" style={{width:'100%',fontSize:12}}>
-                          {seatMemberSeating ? 'Seating…' : `Seat ${seatMemberTarget.name} here`}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{padding:'16px 24px',display:'flex',justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>{ setSeatMemberTarget(null); setActiveGames([]); }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {linkMemberTarget && (
         <div className="modal-overlay" onClick={()=>setLinkMemberTarget(null)}>
           <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
@@ -651,38 +574,46 @@ export default function EventPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
-              {/* Poll presets */}
+              {/* Poll toggle */}
               <div style={{borderTop:'1px solid var(--border-sub)',paddingTop:14}}>
-                <div style={{marginBottom:10}}>
-                  <div className="lbl">RSVP Questions</div>
-                  <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Toggle any questions to include in the RSVP. Players tap their answer.</div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: pollEnabled ? 12 : 0}}>
+                  <div>
+                    <div className="lbl">RSVP Poll</div>
+                    <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Ask players a question when they RSVP</div>
+                  </div>
+                  <button onClick={()=>setPollEnabled(v=>!v)}
+                    style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',transition:'background 0.2s',
+                      background:pollEnabled?'var(--gold)':'var(--bg3)',position:'relative',flexShrink:0}}>
+                    <span style={{position:'absolute',top:3,width:16,height:16,borderRadius:'50%',background:'#fff',
+                      transition:'left 0.2s',left:pollEnabled?'calc(100% - 19px)':'3px'}}/>
+                  </button>
                 </div>
-                {([
-                  { id:'arrival', label:'⏰ Arrival time', q:'What time will you arrive?', opts:['On time','~15 min late','~30 min late','~1hr late','Not sure'] },
-                  { id:'dinner', label:'🍕 Dinner order', q:'Would you like us to order dinner?', opts:['Yes please','No thanks','Maybe'] },
-                  { id:'cricket', label:'🏏 Staying for cricket', q:'Staying after for the cricket?', opts:['Definitely','Probably','Unlikely','No'] },
-                  { id:'drinks', label:'🍺 Drinks run', q:'Want in on a drinks run?', opts:['Yes','No'] },
-                  { id:'lift', label:'🚗 Need a lift?', q:'Do you need a lift?', opts:['Yes please',"No I'm right",'Can offer lift'] },
-                ] as {id:string,label:string,q:string,opts:string[]}[]).map(preset=>{
-                  const on = activePolls.includes(preset.id);
-                  return (
-                    <div key={preset.id} onClick={()=>setActivePolls(p=>on?p.filter(x=>x!==preset.id):[...p,preset.id])}
-                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-                        padding:'10px 12px',marginBottom:6,borderRadius:3,cursor:'pointer',
-                        border:`1px solid ${on?'rgba(201,168,76,0.4)':'var(--border-sub)'}`,
-                        background:on?'rgba(201,168,76,0.06)':'var(--bg3)',transition:'all 0.15s'}}>
-                      <div>
-                        <div style={{fontSize:12,color:on?'var(--gold)':'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{preset.label}</div>
-                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>{preset.opts.join(' · ')}</div>
-                      </div>
-                      <div style={{width:34,height:20,borderRadius:10,border:'none',cursor:'pointer',transition:'background 0.2s',
-                        background:on?'var(--gold)':'rgba(255,255,255,0.08)',position:'relative',flexShrink:0,marginLeft:12}}>
-                        <span style={{position:'absolute',top:2,width:16,height:16,borderRadius:'50%',background:'#fff',
-                          transition:'left 0.2s',left:on?'calc(100% - 18px)':'2px'}}/>
-                      </div>
+                {pollEnabled && (
+                  <div style={{display:'grid',gap:8}}>
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Question</div>
+                      <input className="inp" value={pollQuestion} onChange={e=>setPollQuestion(e.target.value)} placeholder="e.g. What time will you arrive?"/>
                     </div>
-                  );
-                })}
+                    <div>
+                      <div className="lbl" style={{marginBottom:5}}>Options</div>
+                      {pollOptions.map((opt,i)=>(
+                        <div key={i} style={{display:'flex',gap:6,marginBottom:6}}>
+                          <input className="inp" value={opt} onChange={e=>{const o=[...pollOptions];o[i]=e.target.value;setPollOptions(o);}} placeholder={`Option ${i+1}`} style={{flex:1}}/>
+                          {pollOptions.length>2 && (
+                            <button onClick={()=>setPollOptions(o=>o.filter((_,j)=>j!==i))}
+                              style={{background:'none',border:'1px solid rgba(231,76,60,0.3)',color:'var(--red)',borderRadius:2,padding:'0 10px',cursor:'pointer',fontSize:14}}>✕</button>
+                          )}
+                        </div>
+                      ))}
+                      {pollOptions.length < 6 && (
+                        <button onClick={()=>setPollOptions(o=>[...o,''])}
+                          style={{background:'none',border:'1px dashed var(--border)',color:'var(--muted)',borderRadius:2,padding:'6px 12px',cursor:'pointer',fontSize:11,width:'100%',fontFamily:'var(--font-body),sans-serif'}}>
+                          + Add option
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}
@@ -979,29 +910,80 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
 
 // ─── Invite QR Code ──────────────────────────────────────────────────────────
 function InviteQR({ url }: { url: string }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   React.useEffect(() => {
-    if (!url || !containerRef.current) return;
-    containerRef.current.innerHTML = '';
-    function makeQR() {
-      if (!(window as any).QRCode) return;
-      new (window as any).QRCode(containerRef.current, {
-        text: url, width: 160, height: 160,
-        colorDark: '#000000', colorLight: '#ffffff',
-        correctLevel: (window as any).QRCode.CorrectLevel.M,
-      });
-    }
-    if ((window as any).QRCode) {
-      makeQR();
-    } else {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-      s.onload = makeQR;
-      document.head.appendChild(s);
+    if (!url || !canvasRef.current) return;
+    try { renderQRMatrix(canvasRef.current, buildQRCode(url), 160); }
+    catch(e) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle="#fff"; ctx.fillRect(0,0,160,160);
+      ctx.fillStyle="#333"; ctx.font="10px monospace"; ctx.textAlign="center";
+      ctx.fillText("QR error",80,80);
     }
   }, [url]);
-  return <div ref={containerRef} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"inline-block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",overflow:'hidden',lineHeight:0}}/>;
+  return <canvas ref={canvasRef} width={160} height={160} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}/>;
 }
+function renderQRMatrix(canvas: HTMLCanvasElement, matrix: boolean[][], size: number) {
+  const ctx=canvas.getContext("2d")!,n=matrix.length,cell=size/n;
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,size,size); ctx.fillStyle="#000";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(matrix[r][c]) ctx.fillRect(Math.floor(c*cell),Math.floor(r*cell),Math.ceil(cell),Math.ceil(cell));
+}
+function buildQRCode(text: string): boolean[][] {
+  const bytes=textToBytes(text);
+  for(let v=1;v<=4;v++){const r=makeQR(bytes,v);if(r)return r;}
+  return makeQR(bytes,4)!;
+}
+function textToBytes(s: string): number[] {
+  const out:number[]=[];
+  for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c<128)out.push(c);else if(c<2048)out.push((c>>6)|192,(c&63)|128);else out.push((c>>12)|224,((c>>6)&63)|128,(c&63)|128);}
+  return out;
+}
+function makeQR(data: number[], ver: number): boolean[][]|null {
+  const caps=[0,17,32,53,78];
+  if(data.length>caps[ver]) return null;
+  const sz=ver*4+17;
+  const m:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
+  const r:boolean[][]=Array.from({length:sz},()=>new Array(sz).fill(false));
+  function finder(row:number,col:number){
+    for(let a=-1;a<=7;a++)for(let b=-1;b<=7;b++){
+      const ra=row+a,cb=col+b;if(ra<0||ra>=sz||cb<0||cb>=sz)continue;
+      r[ra][cb]=true;
+      if(a<0||a>6||b<0||b>6){m[ra][cb]=false;continue;}
+      m[ra][cb]=(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4));
+    }
+  }
+  finder(0,0);finder(0,sz-7);finder(sz-7,0);
+  for(let i=8;i<sz-8;i++){m[6][i]=m[i][6]=i%2===0;r[6][i]=r[i][6]=true;}
+  m[sz-8][8]=true;r[sz-8][8]=true;
+  for(let i=0;i<=8;i++){r[i][8]=true;r[8][i]=true;}
+  for(let i=sz-7;i<sz;i++){r[i][8]=true;r[8][i]=true;}
+  if(ver>=2){const ar=sz-7,ac=sz-7;if(!r[ar][ac])for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){r[ar+a][ac+b]=true;m[ar+a][ac+b]=(Math.abs(a)===2||Math.abs(b)===2||(a===0&&b===0));}}
+  const bits:boolean[]=[];
+  bits.push(false,true,false,false);
+  for(let i=7;i>=0;i--)bits.push(!!(data.length&(1<<i)));
+  for(const byte of data)for(let i=7;i>=0;i--)bits.push(!!(byte&(1<<i)));
+  for(let i=0;i<4&&bits.length<caps[ver]*8;i++)bits.push(false);
+  while(bits.length%8!==0)bits.push(false);
+  const pads=[0xEC,0x11];let pi=0;
+  while(bits.length<caps[ver]*8){const pb=pads[pi++%2];for(let i=7;i>=0;i--)bits.push(!!(pb&(1<<i)));}
+  const rem=[0,7,7,7,7];for(let i=0;i<rem[ver];i++)bits.push(false);
+  let bi=0,up=true;
+  for(let col=sz-1;col>=1;col-=2){
+    if(col===6)col--;
+    for(let row=up?sz-1:0;up?row>=0:row<sz;up?row--:row++){
+      for(let dx=0;dx<2;dx++){const c=col-dx;if(!r[row][c]&&bi<bits.length)m[row][c]=bits[bi++];}
+    }
+    up=!up;
+  }
+  for(let a=0;a<sz;a++)for(let b=0;b<sz;b++)if(!r[a][b]&&(a+b)%2===0)m[a][b]=!m[a][b];
+  const fmt=[false,true,false,false,false,true,true,true,true,false,true,false,true,true,false];
+  const fp1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+  const fp2=[[sz-1,8],[sz-2,8],[sz-3,8],[sz-4,8],[sz-5,8],[sz-6,8],[sz-7,8],[8,sz-8],[8,sz-7],[8,sz-6],[8,sz-5],[8,sz-4],[8,sz-3],[8,sz-2],[8,sz-1]];
+  for(let i=0;i<15;i++){m[fp1[i][0]][fp1[i][1]]=fmt[i];m[fp2[i][0]][fp2[i][1]]=fmt[i];}
+  return m;
+}
+
 function Loader() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>

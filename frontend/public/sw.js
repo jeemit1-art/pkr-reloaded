@@ -5,16 +5,6 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { title:'PKR Reloaded', body: event.data?.text() }; }
-
-  // Reformat game_scheduled notifications in receiver's local timezone
-  if (data.data && data.data.type === 'game_scheduled' && data.data.scheduled_at) {
-    const dt = new Date(data.data.scheduled_at * 1000).toLocaleString(undefined, {
-      weekday:'short', month:'short', day:'numeric',
-      hour:'numeric', minute:'2-digit'
-    });
-    data.body = dt + (data.data.location ? ' · ' + data.data.location : '');
-  }
-
   event.waitUntil(self.registration.showNotification(data.title || 'PKR Reloaded', {
     body: data.body,
     icon: '/icon-192.png',
@@ -36,4 +26,26 @@ self.addEventListener('notificationclick', event => {
       return clients.openWindow(url);
     })
   );
+});
+
+// PKR: reformat game_scheduled push notifications in receiver's local time
+self.addEventListener('push', function(pkrPushEvt) {
+  try {
+    const d = pkrPushEvt.data ? pkrPushEvt.data.json() : {};
+    if (d.data && d.data.type === 'game_scheduled' && d.data.scheduled_at) {
+      const dt = new Date(d.data.scheduled_at * 1000).toLocaleString(undefined, {
+        weekday:'short', month:'short', day:'numeric',
+        hour:'numeric', minute:'2-digit'
+      });
+      d.body = dt + (d.data.location ? ' · ' + d.data.location : '');
+      pkrPushEvt.waitUntil(
+        self.registration.showNotification(d.title || 'PKR', {
+          body: d.body,
+          icon: '/icon-192.png',
+          data: d.data,
+        })
+      );
+      return;
+    }
+  } catch(e) {}
 });

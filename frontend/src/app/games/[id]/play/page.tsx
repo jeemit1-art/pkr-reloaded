@@ -630,59 +630,17 @@ window.syncSettleToPkr = async function() {
   if (pkrGame && pkrGame.players) {
     pkrGame.players.forEach(function(p) { pkrPlayerMap[p.display_name.toLowerCase()] = { user_id: p.user_id }; });
   }
-  // Merge by display_name — same player may occupy multiple seats
-  var merged = {};
-  Object.values(state.players)
+  var results = Object.values(state.players)
     .filter(function(p) { return p && p.name; })
-    .forEach(function(p) {
-      var key = (p.name||'').toLowerCase();
+    .map(function(p) {
       var buyinCount = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
-      var coDollars  = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
-      var entry = pkrPlayerMap[key];
+      var coDollars = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
+      var entry = pkrPlayerMap[(p.name||'').toLowerCase()];
       var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\\s+/g,'_')));
-      if (merged[key]) {
-        var biTotal2 = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+(t.amount||0); }, 0);
-        merged[key].buy_ins += buyinCount;
-        merged[key].buy_in_total = (merged[key].buy_in_total||0) + Math.round(biTotal2*100);
-        merged[key].cashout += Math.round(coDollars*100);
-        merged[key].net = merged[key].cashout - merged[key].buy_in_total;
-      } else {
-        var biTotal = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+(t.amount||0); }, 0);
-        merged[key] = { user_id: userId, display_name: p.name, buy_ins: buyinCount, buy_in_total: Math.round(biTotal*100), cashout: Math.round(coDollars*100), net: Math.round(coDollars*100) - Math.round(biTotal*100) };
-      }
+      return { user_id: userId, display_name: p.name, buy_ins: buyinCount, cashout: Math.round(coDollars*100) };
     });
-  var results = Object.values(merged).filter(function(p) { return p.buy_ins > 0; });
-  if (results.length === 0) return false;
-
-  // ── Zero-sum enforcement ──────────────────────────────────────────────────
-  // Total cashout must equal total buy-in. If chips are still in the bank
-  // (players busted without a cashout recorded), distribute the remainder
-  // proportionally among uncashed players so net always sums to $0.
-  var totalBuyIn  = results.reduce(function(a,p){ return a + p.buy_in_total; }, 0);
-  var totalCashout= results.reduce(function(a,p){ return a + p.cashout; }, 0);
-  var bank = totalBuyIn - totalCashout; // cents still unaccounted for
-
-  if (bank !== 0 && bank > 0) {
-    // Distribute remaining bank to players who have no cashout (they lost it)
-    // This is a no-op if they already have cashout=0 (net will still be negative)
-    // but ensures the sum is exactly zero for the backend.
-    var uncashed = results.filter(function(p){ return p.cashout === 0; });
-    if (uncashed.length > 0) {
-      // Already correct — losers have cashout=0, so net = 0 - buy_in_total (negative).
-      // The bank discrepancy means chips are physically still on the table.
-      // We do NOT redistribute — the host should cash out remaining players first.
-      // Just log a warning.
-      console.warn('[PKR settle] bank not cleared: $' + (bank/100).toFixed(2) + ' still in play');
-    }
-  } else if (bank < 0) {
-    // Cashouts exceed buy-ins — data error, clamp.
-    console.error('[PKR settle] cashouts exceed buy-ins by $' + (Math.abs(bank)/100).toFixed(2));
-  }
-
-  console.log('[PKR settle] sending results:', JSON.stringify(results));
-  console.log('[PKR settle] zero-sum check — buy-in total:', totalBuyIn, 'cashout total:', totalCashout, 'diff:', bank);
-  // Use timestamp-based key so unsettle+resettle always sends fresh data
-  var settleKey = ctx.gameId + '_end_' + Math.floor(Date.now()/60000); // changes every minute
+  if (!results.length) return false;
+  var settleKey = ctx.settleKey || (ctx.gameId + '_end');
   try {
     await pkrApi('/games/' + ctx.gameId + '/settle', {
       method: 'POST', body: JSON.stringify({ idempotency_key: settleKey, results: results }),
@@ -988,7 +946,7 @@ function buildPanel(sid) {
       var capturedIdx = idx;
       var saveTxAmt = function() {
         var v = parseFloat(amt.value);
-        if (isNaN(v) || v < 0) return;
+        if (isNaN(v) || v <= 0) return;
         p.transactions[capturedIdx].amount = v; saveState(); refreshPanelSummary(sid); renderTable();
       };
       amt.addEventListener('blur', saveTxAmt);
@@ -1149,8 +1107,7 @@ function buildPanel(sid) {
 function addTxFromInput(sid, type, inp) {
   var p = state.players[sid]; if (!p) return;
   var amt = parseFloat(inp ? inp.value : 0);
-  if (isNaN(amt) || amt < 0) { toast('Enter a valid amount'); return; }
-  if (amt === 0 && type !== 'cashout') { toast('Buy-in must be greater than 0'); return; }
+  if (isNaN(amt) || amt <= 0) { toast('Enter a valid amount'); return; }
   p.transactions = p.transactions || [];
   p.transactions.push({ type: type, amount: amt, ts: Date.now() });
   saveState();
@@ -1627,7 +1584,7 @@ if (ctx && ctx.gameId) {
     if (!state.game) {
       state.game = {
         name: game.name || 'Poker Night',
-        seats: game.seats,
+        seats: game.seats || 9,
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
       };

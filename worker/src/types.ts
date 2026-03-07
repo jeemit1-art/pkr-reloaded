@@ -35,8 +35,6 @@ export interface SettleRequest {
     whatsapp?: string;
     buy_ins: number;
     cashout: number;
-    buy_in_total?: number;
-    net?: number;
   }>;
 }
 

@@ -20,8 +20,6 @@ export default function InvitePage() {
   const [installed, setInstalled] = useState(false);
   const [notified,  setNotified]  = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [userId, setUserId] = useState('');
-  const [userName, setUserName] = useState('');
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -41,39 +39,15 @@ export default function InvitePage() {
   }, []);
 
   useEffect(() => {
-    const run = async () => {
-      // If returning from Google OAuth, exchange the one-time code for a JWT first
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      if (code) {
-        try {
-          const res = await fetch(`${apiUrl}/auth/token?code=${code}`);
-          const data = await res.json() as any;
-          if (data.token) {
-            localStorage.setItem('pkr_token', data.token);
-            // Clean code from URL without reload
-            const clean = new URL(window.location.href);
-            clean.searchParams.delete('code');
-            window.history.replaceState({}, '', clean.toString());
-          }
-        } catch {}
-      }
-      // Now attempt to redeem the invite (token is set if we just exchanged it)
-      try {
-        const { event, role: r } = await api.events.redeemInvite(token as string);
+    api.events.redeemInvite(token as string)
+      .then(({ event, role: r }) => {
         setEventName(event.name); setEventId(event.id); setRole(r);
-        try {
-          const me = await api.auth.me() as any;
-          setUserId(me.id || '');
-          setUserName(me.name || '');
-        } catch {}
         setStatus('onboarding'); setStep('welcome');
-      } catch(e: any) {
+      })
+      .catch(e => {
         if (e.message === 'Unauthorized' || e.message === 'Session expired') setStatus('auth');
         else { setErr(e.message); setStatus('error'); }
-      }
-    };
-    run();
+      });
   }, [token]);
 
   async function handleInstall() {
@@ -90,7 +64,7 @@ export default function InvitePage() {
     try {
       const perm = await Notification.requestPermission();
       if (perm === 'granted') {
-        await subscribePush(eventId, userId || undefined, userName || undefined);
+        await subscribePush(eventId, undefined, undefined);
         setNotified(true); setStep('done');
         setTimeout(goToEvent, 2000);
       } else { goToEvent(); }

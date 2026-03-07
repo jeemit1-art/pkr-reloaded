@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { api, LobbyData, fmtDate, waLink, getToken } from '@/lib/api';
+import { useParams } from 'next/navigation';
+import { api, LobbyData, fmtDate, waLink } from '@/lib/api';
 import {
   isPWAInstalled, isIOS, isSafari, canUsePush,
   getNotificationPermission, isPushSubscribedToEvent, subscribePush,
@@ -20,24 +20,11 @@ export default function LobbyPage() {
   const [installState, setInstallState] = useState<InstallState>('checking');
   const [subscribing, setSubscribing]   = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const [isHost, setIsHost]     = useState(false);
-  const [starting, setStarting] = useState(false);
-  const router = useRouter();
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Load game data
   useEffect(() => {
-    api.games.lobby(id).then(d => {
-      setData(d);
-      // Check if logged-in user is host/cohost
-      if (getToken()) {
-        Promise.all([api.auth.me(), api.events.get(d.event.id)])
-          .then(([u, ev]: any) => {
-            const me = (ev.members||[]).find((m:any) => m.id === u.id);
-            setIsHost(me?.role === 'host' || me?.role === 'cohost');
-          }).catch(() => {});
-      }
-    }).catch(() => setError('Game not found'));
+    api.games.lobby(id).then(setData).catch(() => setError('Game not found'));
     const t = setInterval(() => api.games.lobby(id).then(setData).catch(() => {}), 10000);
     return () => clearInterval(t);
   }, [id]);
@@ -141,41 +128,6 @@ export default function LobbyPage() {
       </div>
 
       <div style={{maxWidth:480,margin:'0 auto',padding:'18px 16px',position:'relative',zIndex:1}}>
-
-        {/* ── HOST CONTROLS ── */}
-        {isHost && game.status === 'scheduled' && (
-          <div style={{marginBottom:16}}>
-            <button
-              className="btn btn-primary"
-              style={{width:'100%',fontSize:14,padding:'14px',marginBottom:8,
-                background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
-              disabled={starting}
-              onClick={async () => {
-                setStarting(true);
-                try {
-                  await api.games.start(id);
-                  router.push(`/games/${id}/play`);
-                } catch(e:any) { alert(e.message); setStarting(false); }
-              }}>
-              {starting ? 'Starting…' : '🃏 Start Game'}
-            </button>
-            <div style={{fontSize:11,color:'var(--faint)',textAlign:'center',
-              fontFamily:'var(--font-body),sans-serif'}}>
-              This opens the live table for seating and buy-ins
-            </div>
-          </div>
-        )}
-        {isHost && game.status === 'active' && (
-          <div style={{marginBottom:16}}>
-            <button
-              className="btn btn-primary"
-              style={{width:'100%',fontSize:14,padding:'14px',
-                background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
-              onClick={() => router.push(`/games/${id}/play`)}>
-              🃏 Open Table
-            </button>
-          </div>
-        )}
 
         {/* ── INSTALL + PUSH BANNER ── */}
         {installState === 'not_installed' && (

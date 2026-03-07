@@ -58,24 +58,6 @@ auth.get('/callback', async (c) => {
       .bind(userId,gu.id,gu.email,gu.name,gu.picture).run();
   }
 
-  // After login: migrate push subscriptions from display_name to user_id
-  // and auto-link event_players records that match this user's name
-  try {
-    const userName = gu.name;
-    // Link push subscriptions that were created with this display_name but no user_id
-    await c.env.DB.prepare(
-      `UPDATE push_subscriptions SET user_id=? WHERE user_id IS NULL AND display_name=?`
-    ).bind(userId, userName).run();
-    // Auto-link event_players records matching this Google name to this user_id
-    await c.env.DB.prepare(
-      `UPDATE event_players SET user_id=? WHERE display_name=? AND (user_id IS NULL OR user_id LIKE 'manual_%')`
-    ).bind(userId, userName).run();
-    // Backfill game_players so leaderboard uses real user_id
-    await c.env.DB.prepare(
-      `UPDATE game_players SET user_id=? WHERE display_name=? AND user_id LIKE 'manual_%'`
-    ).bind(userId, userName).run();
-  } catch(e) {}
-
   const jwt = await signJWT({ sub:userId, email:gu.email, name:gu.name }, c.env.JWT_SECRET);
 
   // ── Store JWT under a short-lived one-time code (30s) instead of passing it in URL ──
