@@ -1053,7 +1053,7 @@ function buildPanel(sid) {
         unlinkBtn.disabled = true; unlinkBtn.textContent = 'Unlinking…';
         try {
           var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + currentUserId + '/unlink', {method:'PUT'});
-          if (r.players) { updatePkrPlayers(r.players); }
+          if (r.players) { r.players.forEach(function(p){ if(p.seat_number) _pkrSeatedPlayers['seat'+p.seat_number]={user_id:p.user_id,name:p.display_name}; }); renderTable(); }
           closePanel();
         } catch(e) { unlinkBtn.disabled=false; unlinkBtn.textContent='Unlink Account'; toast('Failed to unlink'); }
       });
@@ -1078,7 +1078,7 @@ function buildPanel(sid) {
         doLinkBtn.disabled=true; doLinkBtn.textContent='Linking…';
         try {
           var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + (currentUserId||sid) + '/link', {method:'PUT', body:JSON.stringify({real_user_id:sel.value})});
-          if (r.players) { updatePkrPlayers(r.players); }
+          if (r.players) { r.players.forEach(function(p){ if(p.seat_number) _pkrSeatedPlayers['seat'+p.seat_number]={user_id:p.user_id,name:p.display_name}; }); renderTable(); }
           closePanel();
         } catch(e) { doLinkBtn.disabled=false; doLinkBtn.textContent='Link Account'; toast('Failed to link'); }
       });
@@ -1093,7 +1093,7 @@ function buildPanel(sid) {
         claimBtn.disabled=true; claimBtn.textContent='Claiming…';
         try {
           var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + (currentUserId||sid) + '/link', {method:'PUT', body:JSON.stringify({real_user_id:pkrCtxL.userId})});
-          if (r.players) { updatePkrPlayers(r.players); }
+          if (r.players) { r.players.forEach(function(p){ if(p.seat_number) _pkrSeatedPlayers['seat'+p.seat_number]={user_id:p.user_id,name:p.display_name}; }); renderTable(); }
           closePanel(); toast('Seat linked to your account!');
         } catch(e) { claimBtn.disabled=false; claimBtn.textContent='👤 This is me'; toast('Failed to claim seat'); }
       });
