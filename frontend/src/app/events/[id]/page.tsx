@@ -1,11 +1,10 @@
 'use client';
-import React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 
-type Tab = 'games' | 'leaderboard' | 'history' | 'members';
+type Tab = 'games' | 'leaderboard' | 'history';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
@@ -24,14 +23,10 @@ export default function EventPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
-  const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
-  const [linkMemberTarget, setLinkMemberTarget] = useState(null as any);
-  const [eventPlayers, setEventPlayers] = useState([] as any[]);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-  const [activePolls, setActivePolls] = useState([] as string[]);
   const [saving, setSaving] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -63,14 +58,11 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
-        poll_enabled: activePolls.length > 0,
-        poll_question: activePolls.length > 0 ? JSON.stringify(activePolls) : undefined,
-        poll_options: undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
-    } catch(e){ alert(e.message); }
+    } catch(e:any){ alert(e.message); }
     finally { setSaving(false); }
   }
 
@@ -78,7 +70,7 @@ export default function EventPage() {
     try {
       const r = await api.events.invite(id, role);
       setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
-    } catch(e){ alert(e.message); }
+    } catch(e:any){ alert(e.message); }
   }
 
   async function togglePush() {
@@ -107,11 +99,12 @@ export default function EventPage() {
   const settled  = games.filter(g=>g.status==='settled');
   const installLink = appUrl;
 
-  const statusColor: Record<string,string> = {
+  const statusColor:any = {
     scheduled:'var(--amber)', lobby:'var(--gold)', active:'var(--green)',
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
+  const TABS: Tab[] = ['games', 'leaderboard', 'history'];
 
   const TABS_NAV = ['games','leaderboard','history'];
   return (
@@ -171,7 +164,7 @@ export default function EventPage() {
       {/* Tab nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
         <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {(['games','leaderboard','history','members'] as Tab[]).map((t)=>(
+          {TABS.map((t)=>(
             <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
               {t.charAt(0).toUpperCase()+t.slice(1)}
             </button>
@@ -272,73 +265,6 @@ export default function EventPage() {
           </div>
         )}
 
-        {/* ── Members tab ── */}
-        {tab==='members' && (
-          <div>
-            {(!event.members || event.members.length === 0) && (
-              <div className="empty-state">
-                <div className="empty-state-icon">👥</div>
-                <div className="empty-state-text">No members yet. Invite people using + Co-host or + Member.</div>
-              </div>
-            )}
-            {event.members && event.members.length > 0 && (
-              <div className="card">
-                {event.members.map((m: any, i: number) => (
-                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
-                    borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>
-                    <div style={{width:36,height:36,borderRadius:'50%',background:'var(--bg3)',
-                      border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
-                      justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
-                      {m.avatar_url
-                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',
-                        fontWeight:m.role==='host'?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                        {m.name}
-                      </div>
-                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
-                        {m.email}
-                      </div>
-                    </div>
-                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
-                      <span style={{fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:600,
-                        padding:'2px 7px',borderRadius:2,fontFamily:'var(--font-body),sans-serif',
-                        background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.05)',
-                        color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
-                        border: `1px solid ${m.role==='host'?'rgba(201,168,76,0.3)':m.role==='cohost'?'rgba(76,175,125,0.2)':'var(--border-sub)'}`}}>
-                        {m.role}
-                      </span>
-                      <span style={{fontSize:9,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>
-                        {new Date(m.joined_at*1000).toLocaleDateString('en-AU',{month:'short',day:'numeric',year:'numeric'})}
-                      </span>
-                    </div>
-                    {isHost && m.role !== 'host' && (
-                      <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:6}}>
-                        <button
-                          onClick={()=>{ setLinkMemberTarget(m); if(eventPlayers.length===0) api.events.players(id).then(setEventPlayers).catch(()=>{}); }}
-                          style={{background:'none',border:'1px solid rgba(201,168,76,0.25)',color:'var(--gold)',
-                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
-                            fontFamily:'var(--font-body),sans-serif'}}>
-                          🔗 Link
-                        </button>
-                        <button
-                          onClick={()=>setConfirmRemoveMember(m)}
-                          style={{background:'none',border:'1px solid rgba(231,76,60,0.25)',color:'var(--red)',
-                            borderRadius:2,padding:'4px 10px',fontSize:10,cursor:'pointer',
-                            fontFamily:'var(--font-body),sans-serif'}}>
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── History tab ── */}
         {tab==='history' && (
           <div>
@@ -368,6 +294,8 @@ export default function EventPage() {
                   </div>
                   {isHost && (
                     <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
+                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                        onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
                       <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
                         onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
                     </div>
@@ -378,91 +306,6 @@ export default function EventPage() {
           </div>
         )}
       </div>
-
-      {linkMemberTarget && (
-        <div className="modal-overlay" onClick={()=>setLinkMemberTarget(null)}>
-          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:400}}>
-            <div style={{padding:'24px 24px 0'}}>
-              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>
-                🔗 Link to Player Record
-              </div>
-              <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif',marginBottom:16}}>
-                Link <strong style={{color:'var(--ivory)'}}>{linkMemberTarget.name}</strong> to a known player so their game history merges under their account.
-              </div>
-              {eventPlayers.length === 0 ? (
-                <div style={{fontSize:12,color:'var(--faint)',padding:'12px 0'}}>No player records found yet.</div>
-              ) : (
-                <div style={{display:'grid',gap:6,maxHeight:260,overflowY:'auto'}}>
-                  {eventPlayers.map((p:any) => (
-                    <button key={p.display_name}
-                      onClick={async()=>{
-                        try {
-                          const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-                          const token = typeof window!=='undefined' ? (localStorage.getItem('pkr_token')||document.cookie.match(/pkr_token=([^;]+)/)?.[1]||'') : '';
-                          const res = await fetch(`${apiUrl}/events/${id}/members/${linkMemberTarget.id}/link`, {
-                            method:'PUT',
-                            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-                            body:JSON.stringify({display_name:p.display_name}),
-                          });
-                          if (!res.ok) { const e = await res.json(); alert(e.error||'Failed'); return; }
-                          setLinkMemberTarget(null);
-                          alert(`✓ ${linkMemberTarget.name} linked to "${p.display_name}"`);
-                        } catch(e) { alert(e.message); }
-                      }}
-                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-                        background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,
-                        padding:'10px 14px',cursor:'pointer',textAlign:'left'}}>
-                      <div>
-                        <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</div>
-                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2}}>{p.games_played||0} games played</div>
-                      </div>
-                      <span style={{fontSize:11,color:'var(--gold)'}}>Select →</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{padding:'16px 24px',display:'flex',justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setLinkMemberTarget(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Remove member confirm modal */}
-      {confirmRemoveMember && (
-        <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
-          <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:360}}>
-            <div style={{padding:'24px 24px 0'}}>
-              <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
-                Remove Member?
-              </div>
-              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
-                Remove <strong style={{color:'var(--ivory)'}}>{confirmRemoveMember.name}</strong> from this event?
-                They will lose access and will need a new invite link to rejoin.
-              </div>
-            </div>
-            <div style={{padding:'20px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" style={{fontSize:12}}
-                onClick={()=>setConfirmRemoveMember(null)}>Keep them</button>
-              <button className="btn btn-danger" style={{fontSize:12}}
-                onClick={async()=>{
-                  try {
-                    await api.events.removeMember(id, confirmRemoveMember.id);
-                    setEvent((ev:any) => ({
-                      ...ev,
-                      members: ev.members.filter((m:any) => m.id !== confirmRemoveMember.id),
-                      member_count: (ev.member_count || 1) - 1,
-                    }));
-                  } catch(e) { alert(e.message); }
-                  setConfirmRemoveMember(null);
-                }}>
-                Yes, Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Fix 6+10: Confirm delete/cancel modal */}
       {confirmDelete && (
@@ -493,7 +336,7 @@ export default function EventPage() {
                     await api.games.cancel(gameId);
                     setGames(gs=>gs.map(g=>g.id===gameId?{...g,status:'cancelled'}:g));
                   }
-                } catch(e){ alert(e.message); }
+                } catch(e:any){ alert(e.message); }
                 setConfirmDelete(null);
               }}>
                 {confirmDelete.endsWith(':delete') ? 'Delete permanently' : 'Cancel game'}
@@ -520,7 +363,7 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
+                  {['6','7','8','9','10','11','12'].map(n=>(
                     <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
@@ -571,39 +414,6 @@ export default function EventPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
-              {/* Poll presets */}
-              <div style={{borderTop:'1px solid var(--border-sub)',paddingTop:14}}>
-                <div style={{marginBottom:10}}>
-                  <div className="lbl">RSVP Questions</div>
-                  <div style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>Toggle any questions to include in the RSVP. Players tap their answer.</div>
-                </div>
-                {([
-                  { id:'arrival', label:'⏰ Arrival time', q:'What time will you arrive?', opts:['On time','~15 min late','~30 min late','~1hr late','Not sure'] },
-                  { id:'dinner', label:'🍕 Dinner order', q:'Would you like us to order dinner?', opts:['Yes please','No thanks','Maybe'] },
-                  { id:'cricket', label:'🏏 Staying for cricket', q:'Staying after for the cricket?', opts:['Definitely','Probably','Unlikely','No'] },
-                  { id:'drinks', label:'🍺 Drinks run', q:'Want in on a drinks run?', opts:['Yes','No'] },
-                  { id:'lift', label:'🚗 Need a lift?', q:'Do you need a lift?', opts:['Yes please','No I'm right','Can offer lift'] },
-                ] as {id:string,label:string,q:string,opts:string[]}[]).map(preset=>{
-                  const on = activePolls.includes(preset.id);
-                  return (
-                    <div key={preset.id} onClick={()=>setActivePolls(p=>on?p.filter(x=>x!==preset.id):[...p,preset.id])}
-                      style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-                        padding:'10px 12px',marginBottom:6,borderRadius:3,cursor:'pointer',
-                        border:`1px solid ${on?'rgba(201,168,76,0.4)':'var(--border-sub)'}`,
-                        background:on?'rgba(201,168,76,0.06)':'var(--bg3)',transition:'all 0.15s'}}>
-                      <div>
-                        <div style={{fontSize:12,color:on?'var(--gold)':'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{preset.label}</div>
-                        <div style={{fontSize:10,color:'var(--faint)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>{preset.opts.join(' · ')}</div>
-                      </div>
-                      <div style={{width:34,height:20,borderRadius:10,border:'none',cursor:'pointer',transition:'background 0.2s',
-                        background:on?'var(--gold)':'rgba(255,255,255,0.08)',position:'relative',flexShrink:0,marginLeft:12}}>
-                        <span style={{position:'absolute',top:2,width:16,height:16,borderRadius:'50%',background:'#fff',
-                          transition:'left 0.2s',left:on?'calc(100% - 18px)':'2px'}}/>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}
               </button>
@@ -619,14 +429,6 @@ export default function EventPage() {
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
-            {/* QR Code */}
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:16}}>
-              <InviteQR url={inviteUrl}/>
-              <div style={{fontSize:10,color:'var(--muted)',marginTop:8,letterSpacing:'0.12em',
-                textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif'}}>
-                Scan to join
-              </div>
-            </div>
             <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'12px 14px',fontSize:11,color:'var(--ivory)',wordBreak:'break-all',marginBottom:16,fontFamily:'monospace'}}>
               {inviteUrl}
             </div>
@@ -725,7 +527,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
       await api.games.seat(gameId, { display_name: name.trim(), whatsapp: wa || undefined });
       setSeated(s => [...s, name.trim()]);
       setName(''); setWa('');
-    } catch(e) { alert(e.message); }
+    } catch(e:any) { alert(e.message); }
     finally { setSaving(false); }
   }
 
@@ -853,8 +655,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
   onClose: () => void;
 }) {
   const playerGames = history.filter((g:any)=>
-    (g.top_players||[]).some((p:any)=>p.display_name===player) ||
-    (g.all_players||[]).some((p:any)=>p.display_name===player)
+    (g.top_players||[]).some((p:any)=>p.display_name===player)
   );
   return (
     <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
@@ -874,8 +675,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
       )}
       {playerGames.map((g:any)=>{
-        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player)
-                || (g.all_players||[]).find((p:any)=>p.display_name===player);
+        const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
           <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
@@ -897,31 +697,6 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
   );
 }
 
-// ─── Invite QR Code ──────────────────────────────────────────────────────────
-function InviteQR({ url }: { url: string }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (!url || !containerRef.current) return;
-    containerRef.current.innerHTML = '';
-    function makeQR() {
-      if (!(window as any).QRCode) return;
-      new (window as any).QRCode(containerRef.current, {
-        text: url, width: 160, height: 160,
-        colorDark: '#000000', colorLight: '#ffffff',
-        correctLevel: (window as any).QRCode.CorrectLevel.M,
-      });
-    }
-    if ((window as any).QRCode) {
-      makeQR();
-    } else {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-      s.onload = makeQR;
-      document.head.appendChild(s);
-    }
-  }, [url]);
-  return <div ref={containerRef} style={{borderRadius:10,border:"2px solid rgba(201,168,76,0.4)",background:"#ffffff",display:"inline-block",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",overflow:'hidden',lineHeight:0}}/>;
-}
 function Loader() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -929,4 +704,3 @@ function Loader() {
     </div>
   );
 }
-
