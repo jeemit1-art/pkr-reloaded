@@ -479,14 +479,15 @@ async function rebuildLeaderboard(db: D1Database, eventId: string) {
   }> = {};
 
   for (const row of settled.results) {
-    if (!players[row.user_id]) {
-      players[row.user_id] = {
+    const key = row.display_name.trim().toLowerCase();
+    if (!players[key]) {
+      players[key] = {
         user_id:row.user_id, display_name:row.display_name,
         games_played:0, games_won:0, total_net:0,
         biggest_win:0, biggest_loss:0, last_played:0,
       };
     }
-    const p = players[row.user_id];
+    const p = players[key];
     p.games_played++;
     p.total_net += row.net;
     if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
