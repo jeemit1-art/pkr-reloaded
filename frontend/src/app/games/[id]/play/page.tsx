@@ -646,7 +646,9 @@ window.syncSettleToPkr = async function() {
       var biTotal    = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+(t.amount||0); }, 0);
       var coDollars  = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0);
       var entry = pkrPlayerMap[key];
-      var userId = (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
+      // Priority: seated cache > local state userId > pkrPlayerMap > fallback
+      var seatedEntry = Object.values(_pkrSeatedPlayers).find(function(s){ return s && s.name && s.name.toLowerCase()===key; });
+      var userId = (seatedEntry && seatedEntry.user_id) ? seatedEntry.user_id : (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
       if (merged[key]) {
         merged[key].buy_ins      += buyinCount;
         merged[key].buy_in_total += Math.round(biTotal*100);

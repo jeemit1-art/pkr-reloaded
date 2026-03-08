@@ -357,6 +357,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, settled_at:now, results_token:resultsToken };
 
   // ── Write everything in one atomic batch ──
+  try {
   await c.env.DB.batch([
     c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
       .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
@@ -371,6 +372,10 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
   ]);
 
+  } catch(batchErr:any) {
+    console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
+    return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
+  }
   // ── Rebuild leaderboard from ALL settled games (not additive) ──
   await rebuildLeaderboard(c.env.DB, game.event_id);
 
