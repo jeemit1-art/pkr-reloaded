@@ -697,21 +697,8 @@ async function pkrPushForPlayer(playerName) {
 }
 
 async function notifyPlayer(playerName, title, body) {
-  var ctx = getPkrCtx();
-  if (!ctx || !ctx.gameId) return;
-  try {
-    await pkrApi('/games/' + ctx.gameId + '/seat/' + encodeURIComponent(playerName) + '/notify', {
-      method: 'POST', body: JSON.stringify({ title, body }),
-    });
-  } catch(e) {}
-  // Also try event-level targeted push
-  try {
-    if (ctx.eventId) {
-      await pkrApi('/events/' + ctx.eventId + '/notify', {
-        method: 'POST', body: JSON.stringify({ title, body, player_name: playerName }),
-      });
-    }
-  } catch(e) {}
+  // Push notifications are handled server-side by buyin/cashout routes
+  // No client-side notify endpoint needed
 }
 
 // ── Utility functions ──
