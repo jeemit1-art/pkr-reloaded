@@ -70,11 +70,18 @@ function DashboardInner() {
     }
     const jsQR = (window as any).jsQR;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const video = document.getElementById('scanVideo') as HTMLVideoElement;
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return; }
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('autoplay', 'true');
+      video.setAttribute('muted', 'true');
       video.srcObject = stream;
-      await video.play();
+      // iOS requires explicit play() call after srcObject set
+      await new Promise<void>((res) => {
+        video.onloadedmetadata = () => { video.play().then(res).catch(res); };
+      });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
       let found = false;
@@ -206,7 +213,7 @@ function DashboardInner() {
               <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
             </div>
             <div style={{padding:20}}>
-              <video id="scanVideo" style={{width:'100%',borderRadius:8,background:'#000',display:'block'}} playsInline muted/>
+              <video id="scanVideo" style={{width:'100%',borderRadius:8,background:'#000',display:'block'}} playsInline autoPlay muted/>
               {scanStatus && (
                 <div style={{marginTop:12,textAlign:'center',fontSize:13,color:scanStatus.includes('Invalid')||scanStatus.includes('denied')||scanStatus.includes('Not a')?'var(--red)':'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
                   {scanStatus}
