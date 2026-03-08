@@ -348,7 +348,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   // buy_ins is a COUNT not an amount — never subtract it from cashout.
   const positions = results.map((p:any) => ({
     ...p,
-    net: p.buy_in_total != null ? p.cashout - p.buy_in_total : (p.cashout - (p.buy_ins * eventBuyIn)),
+    net: p.buy_in_total != null ? (p.cashout||0) - p.buy_in_total : ((p.cashout||0) - (p.buy_ins * eventBuyIn)),
   }));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
@@ -366,7 +366,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       VALUES(?,?,?,?,?,?,?,unixepoch())
       ON CONFLICT(game_id,user_id) DO UPDATE SET
         buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
-    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout,p.net,now)),
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout??0,p.net,now)),
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
   ]);
