@@ -380,11 +380,11 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
     c.env.DB.prepare("UPDATE games SET status='settled',results_token=? WHERE id=?").bind(resultsToken,gameId),
     ...positions.map((p:any) => c.env.DB.prepare(`
-      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,cashout,net,settled_at,created_at)
-      VALUES(?,?,?,?,?,?,?,unixepoch())
+      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net,settled_at,created_at)
+      VALUES(?,?,?,?,?,?,?,?,unixepoch())
       ON CONFLICT(game_id,display_name) DO UPDATE SET
-        user_id=excluded.user_id, buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
-    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout??0,p.net,now)),
+        user_id=excluded.user_id, buy_ins=excluded.buy_ins, buy_in_total=excluded.buy_in_total, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.buy_in_total??0,p.cashout??0,p.net,now)),
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
   ]);
