@@ -30,8 +30,6 @@ export default function EventPage() {
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
-  const [confirmEndEvent, setConfirmEndEvent] = useState(false);
-  const [endingEvent, setEndingEvent] = useState(false);
   const [removingMember, setRemovingMember] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -59,6 +57,23 @@ export default function EventPage() {
       document.head.appendChild(s);
     }
   },[]);
+
+  async function endEvent() {
+    setEndingEvent(true);
+    try {
+      await api.events.end(id);
+      setEvent((e:any) => ({...e, status:'ended'}));
+      setConfirmEndEvent(false);
+    } catch(e) { alert('Failed to end event'); }
+    finally { setEndingEvent(false); }
+  }
+
+  async function reopenEvent() {
+    try {
+      await api.events.reopen(id);
+      setEvent((e:any) => ({...e, status:'active'}));
+    } catch(e) { alert('Failed to reopen event'); }
+  }
 
   async function createGame() {
     if (!form.scheduled_at) return;
@@ -634,8 +649,6 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
-  const [confirmEndEvent, setConfirmEndEvent] = useState(false);
-  const [endingEvent, setEndingEvent] = useState(false);
   const [removingMember, setRemovingMember] = useState(false);
   const [seated, setSeated] = useState([] as any[]);
 
