@@ -242,9 +242,27 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const { count, total } = await c.req.json<{count:number, total?:number}>();
   if (typeof count !== 'number' || count < 0) return c.json({error:'Invalid count'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
   await c.env.DB.prepare(
     'UPDATE game_players SET buy_ins=?, buy_in_total=? WHERE game_id=? AND user_id=?'
   ).bind(count, total ?? 0, gameId, userId).run();
+  // Send push notification with actual amounts
+  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
+  if (player && count > 0) {
+    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string;buy_in:number}>();
+    const totalAmt = total ?? 0;
+    const perBuyin = count > 0 ? Math.round(totalAmt / count) : (evData?.buy_in||0);
+    const body = count > 1
+      ? `Buy-in recorded — $${(perBuyin/100).toFixed(0)} ($${(totalAmt/100).toFixed(0)} total)`
+      : `Buy-in recorded — you're in for $${(perBuyin/100).toFixed(0)}`;
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `${evData?.name||'PKR'}`,
+      body,
+      data: { gameId, eventId: game.event_id, type: 'buyin' },
+    }));
+  }
   return c.json({ok:true, buy_ins:count, buy_in_total: total ?? 0});
 });
 
@@ -269,17 +287,6 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare('UPDATE game_players SET buy_ins=buy_ins+1 WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
-  // Notify the specific player their buy-in was recorded
-  const player = players.results.find((p:any) => p.user_id===userId) as any;
-  if (player) {
-    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    const buyInAmt = evData?.buy_in ? `$${(evData.buy_in/100).toFixed(0)}` : 'Buy-in';
-    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
-      title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
-      body: `Buy-in recorded — you're in for $${((evData?.buy_in||0)/100).toFixed(0)}${player.buy_ins > 1 ? ` ($${((evData?.buy_in||0)*player.buy_ins/100).toFixed(0)} total)` : ''}.`,
-      data: { gameId, eventId: game.event_id, type: 'buyin' },
-    }));
-  }
   return c.json({ok:true, players:players.results});
 });
 
