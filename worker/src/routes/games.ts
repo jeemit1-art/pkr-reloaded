@@ -186,6 +186,7 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
 });
 
 games.post('/games/:id/seat', authMiddleware, async (c) => {
+  try {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
@@ -212,11 +213,15 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (existing) { userId = existing.user_id; }
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
-    ON CONFLICT(game_id,user_id) DO UPDATE SET buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
+    ON CONFLICT(game_id,display_name) DO UPDATE SET user_id=excluded.user_id,buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
   `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||1).run();
 
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   return c.json({ok:true, players:players.results});
+  } catch(err:any) {
+    console.error('Seat route error:', err?.message, err?.stack);
+    return c.json({error:'Seat error: '+(err?.message||'unknown')}, 500);
+  }
 });
 
 games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
