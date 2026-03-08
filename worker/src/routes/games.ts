@@ -207,6 +207,9 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
   `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
 
+  // Check if player with same display_name already exists - if so update instead
+  const existing = await c.env.DB.prepare('SELECT user_id FROM game_players WHERE game_id=? AND display_name=?').bind(gameId,display_name.trim()).first<any>();
+  if (existing) { userId = existing.user_id; }
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
     ON CONFLICT(game_id,user_id) DO UPDATE SET buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
@@ -362,11 +365,11 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
     c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
       .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
     c.env.DB.prepare("UPDATE games SET status='settled',results_token=? WHERE id=?").bind(resultsToken,gameId),
-    ...positions.map(p => c.env.DB.prepare(`
+    ...positions.map((p:any) => c.env.DB.prepare(`
       INSERT INTO game_players(game_id,user_id,display_name,buy_ins,cashout,net,settled_at,created_at)
       VALUES(?,?,?,?,?,?,?,unixepoch())
-      ON CONFLICT(game_id,user_id) DO UPDATE SET
-        buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+      ON CONFLICT(game_id,display_name) DO UPDATE SET
+        user_id=excluded.user_id, buy_ins=excluded.buy_ins, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
     `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.cashout??0,p.net,now)),
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
