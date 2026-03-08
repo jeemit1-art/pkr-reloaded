@@ -172,8 +172,8 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
         const knownRsvp = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game.event_id,r.display_name).first<any>();
         const rsvpUserId = knownRsvp?.user_id || `rsvp_${r.id}`;
         await c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
-          VALUES(?,?,?,?,?,1,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
-          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run();
+          VALUES(?,?,?,?,?,0,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
+          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run(); // buy_ins starts at 0
       }
     } catch(_) { /* game_rsvps may not exist yet */ }
 
@@ -214,7 +214,7 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
     ON CONFLICT(game_id,display_name) DO UPDATE SET user_id=excluded.user_id,buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
-  `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||1).run();
+  `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||0).run();
 
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   return c.json({ok:true, players:players.results});
