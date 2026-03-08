@@ -307,13 +307,12 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player && cashout != null) {
     const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
-    const buyInAmt2 = evData2?.buy_in || 0;
-    const totalBuyIn = (player.buy_ins||1) * buyInAmt2;
+    const totalBuyIn = player.buy_in_total || ((player.buy_ins||1) * (evData2?.buy_in||0));
     const net2 = cashout - totalBuyIn;
     const netStr = net2 > 0 ? `+$${(net2/100).toFixed(0)}` : net2 < 0 ? `-$${Math.abs(net2/100).toFixed(0)}` : 'even';
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
-      body: `Net: ${netStr} (${player.buy_ins}× buy-in of $${(buyInAmt2/100).toFixed(0)})`,
+      body: `Net: ${netStr} (bought in $${(totalBuyIn/100).toFixed(0)})`,
       data: { gameId, eventId: game.event_id, type: 'cashout' },
     }));
   }
