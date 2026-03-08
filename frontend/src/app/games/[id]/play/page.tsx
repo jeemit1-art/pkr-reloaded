@@ -1023,13 +1023,15 @@ function buildPanel(sid) {
   var pkrCtxL = getPkrCtx();
   var seatedInfo = pkrCtxL ? _pkrSeatedPlayers[sid] : null;
   var currentUserId = seatedInfo ? seatedInfo.user_id : null;
-  // Fallback: find user_id from loaded game players by seat number
-  if (!currentUserId && state && state.players && state.players[sid]) {
+  // Fallback: find user_id from dbPlayers by seat number
+  if (!currentUserId) {
     var seatNum = parseInt(sid.replace('seat',''));
     var ctx2 = getPkrCtx();
-    if (ctx2 && ctx2.dbPlayers) {
-      var dbP = ctx2.dbPlayers.find(function(p){ return p.seat_number===seatNum; });
-      if (dbP && dbP.user_id) { currentUserId = dbP.user_id; _pkrSeatedPlayers[sid] = {user_id:dbP.user_id, name:dbP.display_name}; }
+    var dbPlayers = (ctx2 && ctx2.dbPlayers) || [];
+    var dbP = dbPlayers.find(function(p){ return p.seat_number===seatNum; });
+    if (dbP && dbP.user_id) {
+      currentUserId = dbP.user_id;
+      _pkrSeatedPlayers[sid] = {user_id:dbP.user_id, name:dbP.display_name};
     }
   }
   var isLinked = currentUserId && !currentUserId.startsWith('manual_') && !currentUserId.startsWith('rsvp_');

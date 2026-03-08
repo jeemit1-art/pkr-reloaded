@@ -331,6 +331,37 @@ games.get('/events/:eventId/players', authMiddleware, async (c) => {
    SETTLEMENT — strict single-settle with unsettle
 ═══════════════════════════════════════════ */
 
+games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { real_user_id } = await c.req.json<{real_user_id:string}>();
+  if (!real_user_id) return c.json({error:'real_user_id required'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  // Find the player row - userId might be a user_id or we need to find by seat
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
+  // Also persist to event_players for future auto-link
+  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
+  if (player?.display_name) {
+    await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const newUserId = 'manual_' + crypto.randomUUID();
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(newUserId,gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
 games.post('/games/:id/settle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const body: SettleRequest = await c.req.json();
