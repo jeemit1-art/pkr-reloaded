@@ -59,6 +59,9 @@ function DashboardInner() {
     setShowScanner(true);
     setScanStatus('');
     setScanning(true);
+  }
+
+  async function initCamera() {
     // Load jsQR if not already loaded
     if (!(window as any).jsQR) {
       await new Promise<void>((res,rej) => {
