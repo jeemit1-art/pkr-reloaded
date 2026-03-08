@@ -59,6 +59,8 @@ export const api = {
     create:         (d:any)          => req<Event>('/events',{method:'POST',body:JSON.stringify(d)}),
     update:         (id:string,d:any)=> req(`/events/${id}`,{method:'PUT',body:JSON.stringify(d)}),
     invite:         (id:string,role?:string) => req<{token:string;url:string;role:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role:role||'cohost'})}),
+    end:            (id:string) => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
+    reopen:         (id:string) => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
     subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
       pub(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),

@@ -48,7 +48,7 @@ function DashboardInner() {
       }
       try {
         const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);
-        setUser(u); setEvents(e);
+        setUser(u); setEvents(e.sort((a:any,b:any) => (a.status==='ended'?1:-1) - (b.status==='ended'?1:-1)));
       } catch { router.push('/'); }
       finally { setLoading(false); }
     }

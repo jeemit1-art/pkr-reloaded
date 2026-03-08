@@ -200,6 +200,20 @@ events.get('/:id/players', authMiddleware, async (c) => {
 });
 
 /* ── Remove member from event ── */
+events.post('/:id/end', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Only host can end event'},403);
+  await c.env.DB.prepare("UPDATE events SET status='ended' WHERE id=?").bind(eventId).run();
+  return c.json({ok:true});
+});
+
+events.post('/:id/reopen', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Only host can reopen event'},403);
+  await c.env.DB.prepare("UPDATE events SET status='active' WHERE id=?").bind(eventId).run();
+  return c.json({ok:true});
+});
+
 events.delete('/:id/members/:userId', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   const targetId = c.req.param('userId');

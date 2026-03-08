@@ -30,6 +30,8 @@ export default function EventPage() {
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [confirmEndEvent, setConfirmEndEvent] = useState(false);
+  const [endingEvent, setEndingEvent] = useState(false);
   const [removingMember, setRemovingMember] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -388,6 +390,26 @@ export default function EventPage() {
         )}
       </div>
 
+      {/* End event confirm modal */}
+      {confirmEndEvent && (
+        <div className="modal-overlay" onClick={()=>setConfirmEndEvent(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
+            <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
+              <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.5}}>
+                This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
+              </div>
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmEndEvent(false)}>Cancel</button>
+              <button className="btn btn-danger" style={{fontSize:12}} disabled={endingEvent} onClick={endEvent}>
+                {endingEvent ? 'Ending...' : 'End Event'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fix 6+10: Confirm delete/cancel modal */}
       {confirmDelete && (
         <div className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
@@ -612,6 +634,8 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   const [wa, setWa]     = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
+  const [confirmEndEvent, setConfirmEndEvent] = useState(false);
+  const [endingEvent, setEndingEvent] = useState(false);
   const [removingMember, setRemovingMember] = useState(false);
   const [seated, setSeated] = useState([] as any[]);
 

@@ -1695,8 +1695,13 @@ if (ctx && ctx.gameId) {
         // Don't overwrite existing local state
         if (!state.players[sid] || !state.players[sid].name) {
           var txns = [];
-          for (var b = 0; b < (p.buy_ins || 0); b++) {
-            txns.push({ type: 'buyin', amount: state.game.defaultBuyin, ts: Date.now() - b * 60000 });
+          if (p.buy_ins > 0) {
+            // Use buy_in_total from DB if available, else fall back to count * default
+            var totalBuyInDollars = p.buy_in_total ? p.buy_in_total / 100 : (p.buy_ins * state.game.defaultBuyin);
+            var perBuyin = totalBuyInDollars / p.buy_ins;
+            for (var b = 0; b < p.buy_ins; b++) {
+              txns.push({ type: 'buyin', amount: perBuyin, ts: Date.now() - b * 60000 });
+            }
           }
           if (p.cashout != null && p.cashout >= 0) txns.push({ type: 'cashout', amount: p.cashout / 100, ts: Date.now() });
           state.players[sid] = { name: p.display_name, userId: p.user_id, transactions: txns };
