@@ -70,8 +70,14 @@ function DashboardInner() {
     }
     const jsQR = (window as any).jsQR;
     try {
-      const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // iOS PWA: try environment camera first, fall back to any camera
+      let constraints: any = { video: { facingMode: 'environment' } };
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
       const video = document.getElementById('scanVideo') as HTMLVideoElement;
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return; }
       video.setAttribute('playsinline', 'true');
@@ -115,8 +121,14 @@ function DashboardInner() {
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
-    } catch(e) { setScanStatus('Camera access denied.'); setScanning(false); }
+    } catch(e:any) { setScanStatus('Camera access denied: ' + (e?.message||e)); setScanning(false); }
   }
+
+  useEffect(() => {
+    if (!showScanner) return;
+    const timer = setTimeout(() => { initCamera(); }, 300);
+    return () => clearTimeout(timer);
+  }, [showScanner]);
 
   async function create() {
     if (!form.name.trim()) return;
@@ -223,6 +235,11 @@ function DashboardInner() {
                 <div style={{marginTop:12,textAlign:'center',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
                   Point camera at the invite QR code
                 </div>
+              )}
+              {(scanStatus.includes('denied')||scanStatus.includes('dark')) && (
+                <button className="btn btn-ghost" style={{width:'100%',marginTop:8,fontSize:12}} onClick={()=>{setScanStatus('');initCamera();}}>
+                  Try Again
+                </button>
               )}
             </div>
           </div>
