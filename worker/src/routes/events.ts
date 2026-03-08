@@ -200,7 +200,7 @@ events.get('/:id/players', authMiddleware, async (c) => {
 });
 
 /* ── Remove member from event ── */
-events.delete('/events/:id/members/:userId', authMiddleware, async (c) => {
+events.delete('/:id/members/:userId', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   const targetId = c.req.param('userId');
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
