@@ -15,6 +15,8 @@ function DashboardInner() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [confirmEndEventId, setConfirmEndEventId] = useState<string|null>(null);
+  const [endingEvent, setEndingEvent] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
   const [scanning, setScanning] = useState(false);
 
@@ -59,6 +61,16 @@ function DashboardInner() {
     setShowScanner(true);
     setScanStatus('');
     setScanning(true);
+  }
+
+  async function doEndEvent(eventId: string) {
+    setEndingEvent(true);
+    try {
+      await api.events.end(eventId);
+      setEvents(es => es.map(e => e.id===eventId ? {...e, status:'ended'} as any : e));
+      setConfirmEndEventId(null);
+    } catch(e) { alert('Failed to end event'); }
+    finally { setEndingEvent(false); }
   }
 
   async function initCamera() {
@@ -327,8 +339,18 @@ function DashboardInner() {
                   </div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  {(evt as any).status==='ended' && (
+                    <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(120,120,120,0.15)',color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.1em',textTransform:'uppercase'}}>Ended</span>
+                  )}
                   {evt.role && (
                     <span className={`badge badge-${evt.role}`}>{evt.role}</span>
+                  )}
+                  {(evt.role==='host') && (evt as any).status!=='ended' && (
+                    <button onClick={e=>{e.stopPropagation();setConfirmEndEventId(evt.id);}}
+                      className="btn btn-ghost"
+                      style={{fontSize:10,padding:'3px 8px',color:'var(--muted)',borderColor:'rgba(120,120,120,0.3)'}}>
+                      End
+                    </button>
                   )}
                   <span style={{color:'var(--faint)',fontSize:16}}>›</span>
                 </div>
@@ -336,6 +358,26 @@ function DashboardInner() {
             </div>
           ))}
         </div>
+      {/* End event confirm modal */}
+      {confirmEndEventId && (
+        <div className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
+          <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
+            <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
+              <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
+              </div>
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmEndEventId(null)}>Cancel</button>
+              <button className="btn btn-danger" style={{fontSize:12}} disabled={endingEvent}
+                onClick={()=>doEndEvent(confirmEndEventId)}>
+                {endingEvent ? 'Ending...' : 'End Event'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
