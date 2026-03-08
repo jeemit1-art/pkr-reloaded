@@ -1023,6 +1023,15 @@ function buildPanel(sid) {
   var pkrCtxL = getPkrCtx();
   var seatedInfo = pkrCtxL ? _pkrSeatedPlayers[sid] : null;
   var currentUserId = seatedInfo ? seatedInfo.user_id : null;
+  // Fallback: find user_id from loaded game players by seat number
+  if (!currentUserId && state && state.players && state.players[sid]) {
+    var seatNum = parseInt(sid.replace('seat',''));
+    var ctx2 = getPkrCtx();
+    if (ctx2 && ctx2.dbPlayers) {
+      var dbP = ctx2.dbPlayers.find(function(p){ return p.seat_number===seatNum; });
+      if (dbP && dbP.user_id) { currentUserId = dbP.user_id; _pkrSeatedPlayers[sid] = {user_id:dbP.user_id, name:dbP.display_name}; }
+    }
+  }
   var isLinked = currentUserId && !currentUserId.startsWith('manual_') && !currentUserId.startsWith('rsvp_');
   var linkWrap = document.createElement('div');
   linkWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px';
@@ -1689,6 +1698,9 @@ if (ctx && ctx.gameId) {
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
       };
+      // Store db players in ctx for link lookups
+      var ctx2 = getPkrCtx();
+      if (ctx2) { ctx2.dbPlayers = game.players||[]; localStorage.setItem('pkrCtx', JSON.stringify(ctx2)); }
       // Seed players from PKR
       (game.players || []).forEach(function(p) {
         var sid = 'seat' + (p.seat_number || 1);
