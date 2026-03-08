@@ -276,7 +276,7 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
     const buyInAmt = evData?.buy_in ? `$${(evData.buy_in/100).toFixed(0)}` : 'Buy-in';
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `${buyInAmt} recorded — ${evData?.name||'PKR'}`,
-      body: `Buy-in recorded — you're in for $${((evData?.buy_in||0)/100).toFixed(0)}${player.buy_ins > 1 ? ` (×${player.buy_ins} total)` : ''}.`,
+      body: `Buy-in recorded — you're in for $${((evData?.buy_in||0)/100).toFixed(0)}${player.buy_ins > 1 ? ` ($${((evData?.buy_in||0)*player.buy_ins/100).toFixed(0)} total)` : ''}.`,
       data: { gameId, eventId: game.event_id, type: 'buyin' },
     }));
   }
