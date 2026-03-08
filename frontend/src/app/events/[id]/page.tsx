@@ -31,6 +31,8 @@ export default function EventPage() {
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [removingMember, setRemovingMember] = useState(false);
+  const [confirmEndEvent, setConfirmEndEvent] = useState(false);
+  const [endingEvent, setEndingEvent] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
