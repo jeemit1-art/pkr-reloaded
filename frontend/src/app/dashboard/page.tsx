@@ -113,8 +113,8 @@ function DashboardInner() {
               try {
                 const result = await api.events.redeemInvite(match[1]);
                 if (result?.event?.id) {
-                  setScanStatus('Joined! Redirecting...');
-                  setTimeout(() => { setShowScanner(false); router.push('/events/' + result.event.id); }, 800);
+                  setScanStatus('✅ Joined ' + (result.event.name||'event') + '! Taking you there...');
+                  setTimeout(() => { setShowScanner(false); router.push('/events/' + result.event.id); }, 2000);
                 }
               } catch(e) { setScanStatus('Invalid or expired invite.'); setScanning(false); }
             } else { setScanStatus('Not a valid PKR invite QR code.'); setScanning(false); }
