@@ -14,6 +14,9 @@ function DashboardInner() {
   const [saving, setSaving] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanStatus, setScanStatus] = useState('');
+  const [scanning, setScanning] = useState(false);
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -51,6 +54,62 @@ function DashboardInner() {
     }
     init();
   },[]);
+
+  async function startScan() {
+    setShowScanner(true);
+    setScanStatus('');
+    setScanning(true);
+    // Load jsQR if not already loaded
+    if (!(window as any).jsQR) {
+      await new Promise<void>((res,rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+        s.onload = () => res(); s.onerror = () => rej();
+        document.head.appendChild(s);
+      });
+    }
+    const jsQR = (window as any).jsQR;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.getElementById('scanVideo') as HTMLVideoElement;
+      if (!video) { stream.getTracks().forEach(t=>t.stop()); return; }
+      video.srcObject = stream;
+      await video.play();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      let found = false;
+      const tick = async () => {
+        if (!scanning || found) { stream.getTracks().forEach(t=>t.stop()); return; }
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code?.data) {
+            found = true;
+            stream.getTracks().forEach(t=>t.stop());
+            const url = code.data;
+            // Extract invite token from URL
+            const match = url.match(/\/invite\/([a-zA-Z0-9_-]+)/);
+            if (match) {
+              setScanStatus('Joining event...');
+              try {
+                const result = await api.events.redeemInvite(match[1]);
+                if (result?.event?.id) {
+                  setScanStatus('Joined! Redirecting...');
+                  setTimeout(() => { setShowScanner(false); router.push('/events/' + result.event.id); }, 800);
+                }
+              } catch(e) { setScanStatus('Invalid or expired invite.'); setScanning(false); }
+            } else { setScanStatus('Not a valid PKR invite QR code.'); setScanning(false); }
+            return;
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    } catch(e) { setScanStatus('Camera access denied.'); setScanning(false); }
+  }
 
   async function create() {
     if (!form.name.trim()) return;
@@ -128,12 +187,42 @@ function DashboardInner() {
               Dashboard
             </h2>
           </div>
-          <button className="btn btn-primary" onClick={()=>setShowCreate(true)}>
-            + New Table
-          </button>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-ghost" onClick={startScan} style={{fontSize:12,padding:'8px 14px'}}>
+              📷 Scan QR
+            </button>
+            <button className="btn btn-primary" onClick={()=>setShowCreate(true)}>
+              + New Table
+            </button>
+          </div>
         </div>
 
-        {/* Create form */}
+        {/* QR Scanner Modal */}
+      {showScanner && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
+              <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
+            </div>
+            <div style={{padding:20}}>
+              <video id="scanVideo" style={{width:'100%',borderRadius:8,background:'#000',display:'block'}} playsInline muted/>
+              {scanStatus && (
+                <div style={{marginTop:12,textAlign:'center',fontSize:13,color:scanStatus.includes('Invalid')||scanStatus.includes('denied')||scanStatus.includes('Not a')?'var(--red)':'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+                  {scanStatus}
+                </div>
+              )}
+              {!scanStatus && (
+                <div style={{marginTop:12,textAlign:'center',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
+                  Point camera at the invite QR code
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create form */}
         {showCreate && (
           <div className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
             <div style={{fontSize:16,color:'var(--white)',marginBottom:20,
