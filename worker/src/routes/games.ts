@@ -245,18 +245,21 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  // Fetch previous total before updating to calculate this buyin's amount
+  const prev = await c.env.DB.prepare('SELECT display_name, buy_in_total FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
+  const prevTotal = prev?.buy_in_total ?? 0;
   await c.env.DB.prepare(
     'UPDATE game_players SET buy_ins=?, buy_in_total=? WHERE game_id=? AND user_id=?'
   ).bind(count, total ?? 0, gameId, userId).run();
   // Send push notification with actual amounts
-  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
+  const player = prev;
   if (player && count > 0) {
     const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string;buy_in:number}>();
     const totalAmt = total ?? 0;
-    const perBuyin = count > 0 ? Math.round(totalAmt / count) : (evData?.buy_in||0);
+    const thisAmt = totalAmt - prevTotal; // actual amount of this buyin
     const body = count > 1
-      ? `Buy-in recorded — $${(perBuyin/100).toFixed(0)} ($${(totalAmt/100).toFixed(0)} total)`
-      : `Buy-in recorded — you're in for $${(perBuyin/100).toFixed(0)}`;
+      ? `Buy-in recorded — $${(thisAmt/100).toFixed(0)} ($${(totalAmt/100).toFixed(0)} total)`
+      : `Buy-in recorded — you're in for $${(thisAmt/100).toFixed(0)}`;
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `${evData?.name||'PKR'}`,
       body,
