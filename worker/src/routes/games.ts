@@ -342,11 +342,13 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
 
   // ── Compute settlement ──
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
+  const eventBuyIn = eventData?.buy_in || 0;
   // net = cashout - buy_in_total (cents). Frontend sends buy_in_total and net directly.
   // buy_ins is a COUNT not an amount — never subtract it from cashout.
-  const positions = results.map(p => ({
+  const positions = results.map((p:any) => ({
     ...p,
-    net: p.buy_in_total != null ? p.cashout - p.buy_in_total : (p.cashout - (p.buy_ins * (eventBuyIn||0))),
+    net: p.buy_in_total != null ? p.cashout - p.buy_in_total : (p.cashout - (p.buy_ins * eventBuyIn)),
   }));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
