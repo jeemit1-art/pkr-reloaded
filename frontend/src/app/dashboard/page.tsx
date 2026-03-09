@@ -335,23 +335,25 @@ function DashboardInner() {
 
       <div style={{maxWidth:640,margin:'0 auto',padding:'40px 20px',position:'relative',zIndex:1}}>
         {/* Page header */}
-        <div style={{marginBottom:36,display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
-          <div>
-            <div style={{fontSize:10,letterSpacing:'0.22em',textTransform:'uppercase',
-              color:'var(--muted)',marginBottom:8,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
-              Your Tables
+        <div style={{marginBottom:24}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap' as const}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',
+                color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
+                Your Tables
+              </div>
+              <h2 className="display" style={{fontSize:28,color:'var(--white)',fontWeight:600,lineHeight:1}}>
+                Dashboard
+              </h2>
             </div>
-            <h2 className="display" style={{fontSize:42,color:'var(--white)',fontWeight:600,lineHeight:1}}>
-              Dashboard
-            </h2>
-          </div>
-          <div style={{display:'flex',gap:8}}>
-            <button className="btn btn-ghost" onClick={startScan} style={{fontSize:12,padding:'8px 14px'}}>
-              📷 Scan QR
-            </button>
-            <button className="btn btn-primary" onClick={()=>setShowCreate(true)}>
-              + New Table
-            </button>
+            <div style={{display:'flex',gap:6,flexShrink:0}}>
+              <button className="btn btn-ghost" onClick={startScan} style={{fontSize:11,padding:'7px 10px'}}>
+                📷 Scan QR
+              </button>
+              <button className="btn btn-primary" onClick={()=>setShowCreate(true)} style={{fontSize:11,padding:'7px 12px'}}>
+                + New Table
+              </button>
+            </div>
           </div>
         </div>
 
