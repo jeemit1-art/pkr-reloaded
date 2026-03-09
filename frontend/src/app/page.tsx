@@ -2,18 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession, signIn } from 'next-auth/react'
 
 export default function HomePage() {
-  const { data: session, status } = useSession()
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
   const [navStuck, setNavStuck] = useState(false)
 
-  // Redirect logged-in users straight to dashboard
+  // Redirect logged-in users straight to dashboard (JWT-based)
   useEffect(() => {
-    if (status === 'authenticated') router.push('/dashboard')
-  }, [status, router])
+    const token = typeof window !== 'undefined' ? localStorage.getItem('pkr_token') : null
+    if (token) router.push('/dashboard')
+  }, [router])
 
   // Sticky nav
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', fn)
   }, [])
 
-  if (status === 'loading' || status === 'authenticated') return null
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
 
   const GoogleIcon = () => (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-label="Google logo" role="img" style={{ flexShrink: 0 }}>
@@ -660,7 +659,7 @@ export default function HomePage() {
         <p className="login-p rv">Set up your home poker group in five minutes. No credit card. No installs for your players. Just a better game night, starting now.</p>
         <div className="login-card rv">
           <div className="lc-label">Host Sign In</div>
-          <button className="g-btn" onClick={() => signIn('google', { callbackUrl: '/dashboard' })}>
+          <button className="g-btn" onClick={() => { window.location.href = `${apiUrl}/auth/google` }}>
             <GoogleIcon />
             Continue with Google
           </button>
@@ -696,7 +695,7 @@ export default function HomePage() {
             <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#22c55e" /></svg>
             5-day free trial · No credit card needed
           </div>
-          <button className="g-btn" onClick={() => signIn('google', { callbackUrl: '/dashboard' })}>
+          <button className="g-btn" onClick={() => { window.location.href = `${apiUrl}/auth/google` }}>
             <GoogleIcon />
             Continue with Google
           </button>
