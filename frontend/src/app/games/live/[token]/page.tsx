@@ -204,7 +204,7 @@ function renderTable(container: HTMLDivElement, data: any) {
         <div style="width:${cs};height:${cs};border-radius:50%;border:2.5px solid ${chipBorder};background:${chipBg};display:flex;align-items:center;justify-content:center">
           <span style="font-size:${initFs};font-weight:700;color:#f0e6c8">${esc(initials)}</span>
         </div>
-        <div style="font-size:clamp(0.75rem,2vw,0.9rem);font-weight:600;color:#fff;max-width:clamp(68px,16vw,96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(0,0,0,0.6);padding:2px 7px;border-radius:5px;text-shadow:0 1px 3px rgba(0,0,0,0.9)">${esc(p.display_name)}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:clamp(0.75rem,2vw,0.9rem);font-weight:700;color:#fff;max-width:clamp(68px,16vw,96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(0,0,0,0.6);padding:2px 7px;border-radius:5px;text-shadow:0 1px 3px rgba(0,0,0,0.9)">${esc(p.display_name)}</div>
         ${p.buy_ins>0?`<div style="font-size:clamp(0.6rem,1.5vw,0.72rem);color:rgba(201,168,76,0.7)">×${p.buy_ins}${buyInAmt?` · ${fmt(biAmt)}`:''}</div>`:''}
         ${net!=null?`<div style="font-size:clamp(0.62rem,1.6vw,0.78rem);font-weight:700;color:${netColor};text-shadow:0 1px 2px rgba(0,0,0,0.8)">${netStr}</div>`:''}
       `;
