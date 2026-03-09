@@ -291,17 +291,18 @@ function DashboardInner() {
       )}
 
       {/* Nav */}
-      <nav className="nav">
-        <div style={{maxWidth:640,margin:'0 auto',padding:'0 20px',height:56,
-          display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div className="display" style={{fontSize:22,color:'var(--white)',letterSpacing:'0.02em'}}>PKR</div>
-          <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' as const}}>
+      <nav className="nav" style={{paddingTop:'env(safe-area-inset-top)'}}>
+        <div style={{maxWidth:640,margin:'0 auto',padding:'0 12px',display:'flex',flexDirection:'column'}}>
+          <div style={{height:52,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+          <div className="display" style={{fontSize:22,color:'var(--white)',letterSpacing:'0.02em',flexShrink:0}}>PKR</div>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
             {user?.avatar_url && (
               <img src={user.avatar_url} alt={user.name}
                 style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
             )}
-            <span style={{fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
-              {user?.name}
+            <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',
+              maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const,display:'block'}}>
+              {user?.name?.split(' ')[0]}
             </span>
             <PlanBadge />
             {isPaid && (
@@ -327,6 +328,7 @@ function DashboardInner() {
               onClick={()=>{ clearToken(); api.auth.logout().then(()=>router.push('/')) }}>
               Sign Out
             </button>
+          </div>
           </div>
         </div>
       </nav>
