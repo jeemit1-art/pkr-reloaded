@@ -532,6 +532,96 @@ window.pkrApi = pkrApi;
 var _pkrSeatedPlayers = {};
 var _pkrLastSnapshot = {};
 
+// ── Offline action queue ──
+var _offlineQueue = [];
+var _isOnline = navigator.onLine;
+var _flushingQueue = false;
+
+window.addEventListener('online', function() {
+  _isOnline = true;
+  showConnBanner(false);
+  flushOfflineQueue();
+});
+window.addEventListener('offline', function() {
+  _isOnline = false;
+  showConnBanner(true);
+});
+
+function showConnBanner(offline) {
+  var existing = document.getElementById('conn-banner');
+  if (offline) {
+    if (existing) return;
+    var b = document.createElement('div');
+    b.id = 'conn-banner';
+    b.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#b45309;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
+    b.textContent = '⚠ You are offline — actions will sync when reconnected';
+    document.body.appendChild(b);
+  } else {
+    if (existing) existing.remove();
+    var b2 = document.createElement('div');
+    b2.id = 'conn-banner';
+    b2.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#166534;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
+    b2.textContent = '✓ Back online — syncing...';
+    document.body.appendChild(b2);
+    setTimeout(function(){ var el=document.getElementById('conn-banner'); if(el)el.remove(); }, 3000);
+  }
+}
+
+async function flushOfflineQueue() {
+  if (_flushingQueue || _offlineQueue.length === 0) return;
+  _flushingQueue = true;
+  var queue = _offlineQueue.slice();
+  _offlineQueue = [];
+  for (var i = 0; i < queue.length; i++) {
+    var action = queue[i];
+    try {
+      await pkrApi(action.url, action.options);
+    } catch(e) {
+      console.warn('Failed to flush queued action:', action.url, e);
+      _offlineQueue.unshift(action); // re-queue failed action
+      break;
+    }
+  }
+  _flushingQueue = false;
+  if (_offlineQueue.length === 0) {
+    // Reload game state to get latest from server
+    loadGameFromPkr();
+  }
+}
+
+async function pkrApiQueued(url, options) {
+  if (!_isOnline) {
+    _offlineQueue.push({ url: url, options: options });
+    toast('Offline — action queued');
+    return null;
+  }
+  try {
+    return await pkrApi(url, options);
+  } catch(e) {
+    if (!navigator.onLine) {
+      _offlineQueue.push({ url: url, options: options });
+      toast('Offline — action queued');
+      showConnBanner(true);
+      return null;
+    }
+    throw e;
+  }
+}
+
+async function loadGameFromPkr() {
+  var ctx = getPkrCtx();
+  if (!ctx || !ctx.gameId) return;
+  try {
+    var game = await pkrApi('/games/' + ctx.gameId);
+    if (game && game.players) {
+      game.players.forEach(function(p) {
+        var sid = 'seat' + p.seat_number;
+        if (p.user_id) _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: p.display_name };
+      });
+    }
+  } catch(e) { console.warn('Could not reload game:', e); }
+}
+
 async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
   var ctx = getPkrCtx();
   if (!ctx || !ctx.gameId) return null;
@@ -585,13 +675,13 @@ window.saveState = function() {
     if (cur.buyins > prev.buyins) {
       var newBuyins = cur.buyins - prev.buyins;
       for (var i = 0; i < newBuyins; i++) {
-        try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'POST' }); } catch(e) {}
+        try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'POST' }); } catch(e) {}
       }
       var biTotal2 = Math.round((cur.biTotal||0)*100);
-      try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal2}) }); } catch(e) {}
+      try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal2}) }); } catch(e) {}
     } else if (cur.buyins < prev.buyins || Math.abs((cur.biTotal||0) - (prev.biTotal||0)) > 0.001) {
       var biTotal3 = Math.round((cur.biTotal||0)*100);
-      var retries = 0; var syncBuyin = async function() { try { await pkrApi('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal3}) }); } catch(e) { if (retries++ < 3) setTimeout(syncBuyin, 2000); } }; syncBuyin();
+      var retries = 0; var syncBuyin = async function() { try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal3}) }); } catch(e) { if (retries++ < 3) setTimeout(syncBuyin, 2000); } }; syncBuyin();
     }
     if (cur.cashout != null && (prev.cashout == null || Math.abs(cur.cashout - (prev.cashout||0)) > 0.005)) {
       var cashoutCents = Math.round(cur.cashout * 100);

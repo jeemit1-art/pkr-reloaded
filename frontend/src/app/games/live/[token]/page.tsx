@@ -9,13 +9,27 @@ export default function LivePage() {
   const [error, setError]     = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date|null>(null);
   const [secsAgo, setSecsAgo] = useState(0);
+  const [connStatus, setConnStatus] = useState<'ok'|'reconnecting'|'offline'>('ok');
+  const failCount = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
+  const failCountRef = useRef(0);
+  const [connStatus, setConnStatus] = useState<'ok'|'reconnecting'|'offline'>('ok');
+  const failCount = useRef(0);
   const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     async function load() {
       try {
-        const d = await api.games.live(token);
+        let d: any;
+        try {
+          d = await api.games.live(token);
+          failCount.current = 0;
+          setConnStatus('ok');
+        } catch(err) {
+          failCount.current++;
+          setConnStatus(failCount.current >= 3 ? 'offline' : 'reconnecting');
+          return;
+        }
         setData(d);
         setLastUpdated(new Date());
         if (d.game.status === 'settled' && intervalRef.current) {
@@ -60,7 +74,7 @@ export default function LivePage() {
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:'1.05rem',fontWeight:700,color:'#c9a84c',
             overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60vw'}}>{event.name}</div>
           <div style={{fontSize:'0.7rem',color:'#6b8c6e',marginTop:1}}>
-            {isSettled ? 'Game settled' : `Live · Read Only · Updated ${secsAgo}s ago`}
+            {isSettled ? 'Game settled' : connStatus==='offline' ? '⚠ Connection lost — retrying...' : connStatus==='reconnecting' ? '⟳ Reconnecting...' : `Live · Updated ${secsAgo}s ago`}
           </div>
         </div>
         <span style={{fontSize:'0.7rem',padding:'3px 9px',borderRadius:2,fontWeight:500,letterSpacing:'0.16em',
