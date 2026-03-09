@@ -88,6 +88,7 @@ export const api = {
     players:        (id:string)      => req<EventPlayer[]>(`/events/${id}/players`),
     verifyPassword: (id:string,password:string) =>
       req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
+    removeMember: (id:string, userId:string) => req(`/events/${id}/members/${userId}`,{method:'DELETE'}),
   },
   games: {
     list:     (eventId:string,status?:string) => req<Game[]>(`/events/${eventId}/games${status?`?status=${status}`:''}`),
