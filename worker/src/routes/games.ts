@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Env, SettleRequest, Transfer } from '../types';
-import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { sendPushToEvent, sendPushToPlayer } from '../push';
 
 const games = new Hono<{ Bindings: Env }>();
@@ -26,11 +26,38 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
   const { scheduled_at, location, notes, seats, game_password } = await c.req.json();
   if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
+
+  // ── Plan gate: check seat limit ──────────────────────────────────────────
+  const userId = c.get('userId');
+  const planStatus = await getPlanStatus(c.env.DB, userId);
+
+  if (!planStatus.is_active) {
+    return c.json({
+      error: 'Your free trial has ended. Upgrade to create new games.',
+      code: 'UPGRADE_REQUIRED',
+      plan: planStatus.plan,
+      feature: 'create_game',
+    }, 402);
+  }
+
+  const requestedSeats = seats || 9;
+  if (requestedSeats > planStatus.max_seats) {
+    return c.json({
+      error: `Your plan supports up to ${planStatus.max_seats} seats. Upgrade to Pro for up to 15 seats.`,
+      code: 'UPGRADE_REQUIRED',
+      plan: planStatus.plan,
+      feature: 'seat_limit',
+      requested: requestedSeats,
+      limit: planStatus.max_seats,
+    }, 402);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const id = generateId();
   const liveToken = generateId();
   await c.env.DB.prepare(
     'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
-  ).bind(id,eventId,scheduled_at,location||null,notes||null,seats||9,game_password||null,liveToken,'scheduled').run();
+  ).bind(id,eventId,scheduled_at,location||null,notes||null,requestedSeats,game_password||null,liveToken,'scheduled').run();
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
   c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
@@ -82,7 +109,6 @@ games.delete('/games/:id', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can delete games'},403);
-  // Clean leaderboard if settled
   if (game.status==='settled') {
     await rebuildLeaderboard(c.env.DB, game.event_id);
   }
@@ -149,8 +175,6 @@ games.post('/games/:id/rsvp', async (c) => {
 
 /* ═══════════════════════════════════════════
    GAME STATE — start, seat, buy-in, cashout
-   All writes go to D1 (cloud). Auto-save handled
-   by frontend polling PUT /games/:id every 60s.
 ═══════════════════════════════════════════ */
 
 games.post('/games/:id/start', authMiddleware, async (c) => {
@@ -164,7 +188,6 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     const { password } = await c.req.json().catch(()=>({password:''}));
     if (game.game_password && game.game_password !== password) return c.json({error:'Wrong password'},401);
 
-    // Seat all yes-RSVPs — skip if table missing
     try {
       const rsvps = await c.env.DB.prepare("SELECT * FROM game_rsvps WHERE game_id=? AND status='yes'").bind(gameId).all<any>();
       let seatNum = 1;
@@ -173,7 +196,7 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
         const rsvpUserId = knownRsvp?.user_id || `rsvp_${r.id}`;
         await c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
           VALUES(?,?,?,?,?,0,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
-          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run(); // buy_ins starts at 0
+          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run();
       }
     } catch(_) { /* game_rsvps may not exist yet */ }
 
@@ -194,28 +217,22 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
-  // Check if this display_name has a known user_id from event_players
   const game2 = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first<any>();
   let userId = `manual_${generateId()}`;
   if (game2?.event_id && display_name) {
     const knownPlayer = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game2.event_id, display_name.trim()).first<any>();
     if (knownPlayer?.user_id) userId = knownPlayer.user_id;
   }
-
-  // Save to known players for quick-select (cloud)
   await c.env.DB.prepare(`
     INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
     ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
   `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
-
-  // Check if player with same display_name already exists - if so update instead
   const existing = await c.env.DB.prepare('SELECT user_id FROM game_players WHERE game_id=? AND display_name=?').bind(gameId,display_name.trim()).first<any>();
   if (existing) { userId = existing.user_id; }
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
     ON CONFLICT(game_id,display_name) DO UPDATE SET user_id=excluded.user_id,buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
   `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||0).run();
-
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   return c.json({ok:true, players:players.results});
   } catch(err:any) {
@@ -245,18 +262,16 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
-  // Fetch previous total before updating to calculate this buyin's amount
   const prev = await c.env.DB.prepare('SELECT display_name, buy_in_total FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
   const prevTotal = prev?.buy_in_total ?? 0;
   await c.env.DB.prepare(
     'UPDATE game_players SET buy_ins=?, buy_in_total=? WHERE game_id=? AND user_id=?'
   ).bind(count, total ?? 0, gameId, userId).run();
-  // Send push notification with actual amounts
   const player = prev;
   if (player && count > 0) {
     const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string;buy_in:number}>();
     const totalAmt = total ?? 0;
-    const thisAmt = totalAmt - prevTotal; // actual amount of this buyin
+    const thisAmt = totalAmt - prevTotal;
     const body = count > 1
       ? `Buy-in recorded — $${(thisAmt/100).toFixed(0)} ($${(totalAmt/100).toFixed(0)} total)`
       : `Buy-in recorded — you're in for $${(thisAmt/100).toFixed(0)}`;
@@ -303,7 +318,6 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const { cashout } = await c.req.json();
   await c.env.DB.prepare('UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?').bind(cashout,gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
-  // Notify the specific player their cashout was recorded
   const player = players.results.find((p:any) => p.user_id===userId) as any;
   if (player && cashout != null) {
     const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
@@ -328,7 +342,7 @@ games.get('/events/:eventId/players', authMiddleware, async (c) => {
 });
 
 /* ═══════════════════════════════════════════
-   SETTLEMENT — strict single-settle with unsettle
+   PLAYER LINK / UNLINK
 ═══════════════════════════════════════════ */
 
 games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
@@ -339,9 +353,7 @@ games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  // Find the player row - userId might be a user_id or we need to find by seat
   await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
-  // Also persist to event_players for future auto-link
   const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
   if (player?.display_name) {
     await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
@@ -362,6 +374,10 @@ games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
   return c.json({ok:true, players:players.results});
 });
 
+/* ═══════════════════════════════════════════
+   SETTLEMENT
+═══════════════════════════════════════════ */
+
 games.post('/games/:id/settle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const body: SettleRequest = await c.req.json();
@@ -373,7 +389,6 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   if (!game) return c.json({error:'Game not found'},404);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
 
-  // ── STRICT: already settled = hard block ──
   if (game.status === 'settled') {
     const existing = await c.env.DB.prepare('SELECT * FROM settlements WHERE game_id=?').bind(gameId).first<any>();
     return c.json({
@@ -384,16 +399,12 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
     }, 409);
   }
 
-  // ── Idempotency check on key (safe retry) ──
   const cached = await c.env.DB.prepare('SELECT payload_json FROM settlements WHERE idempotency_key=?')
     .bind(idempotency_key).first<{payload_json:string}>();
   if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
 
-  // ── Compute settlement ──
   const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   const eventBuyIn = eventData?.buy_in || 0;
-  // net = cashout - buy_in_total (cents). Frontend sends buy_in_total and net directly.
-  // buy_ins is a COUNT not an amount — never subtract it from cashout.
   const positions = results.map((p:any) => ({
     ...p,
     net: p.buy_in_total != null ? (p.cashout||0) - p.buy_in_total : ((p.cashout||0) - (p.buy_ins * eventBuyIn)),
@@ -404,7 +415,6 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   const resultsToken = generateId();
   const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, settled_at:now, results_token:resultsToken };
 
-  // ── Write everything in one atomic batch ──
   try {
   await c.env.DB.batch([
     c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
@@ -419,15 +429,13 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
     ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount) VALUES(?,?,?,?,?)')
       .bind(generateId(),gameId,t.from,t.to,t.amount)),
   ]);
-
   } catch(batchErr:any) {
     console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
     return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
   }
-  // ── Rebuild leaderboard from ALL settled games (not additive) ──
+
   await rebuildLeaderboard(c.env.DB, game.event_id);
 
-  // ── Update event_players games_played ──
   await c.env.DB.batch(positions.map(p =>
     c.env.DB.prepare(`
       INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
@@ -436,7 +444,6 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   ));
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  // Send individual result notifications to each player
   c.executionCtx.waitUntil((async () => {
     for (const p of positions) {
       const netCents = p.net || 0;
@@ -448,7 +455,6 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
         data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
       }).catch(() => {});
     }
-    // Also send event-wide notification
     await sendPushToEvent(c.env, game.event_id, {
       title: `✅ ${event?.name||'PKR'} — Game Settled`,
       body: 'Results are in. Check the leaderboard!',
@@ -459,7 +465,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   return c.json(payload,201);
 });
 
-/* ── UNSETTLE — cleanly reverses a settlement ── */
+/* ── UNSETTLE ── */
 games.post('/games/:id/unsettle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
@@ -467,16 +473,13 @@ games.post('/games/:id/unsettle', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);
   if (game.status !== 'settled') return c.json({error:'Game is not settled'},400);
 
-  // ── Remove settlement records ──
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
     c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
-    // Clear settlement fields on players but keep them seated
     c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
     c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
   ]);
 
-  // ── Rebuild leaderboard WITHOUT this game ──
   await rebuildLeaderboard(c.env.DB, game.event_id);
 
   return c.json({ok:true, message:'Game unsettled. You can now modify players and re-settle.'});
@@ -484,11 +487,9 @@ games.post('/games/:id/unsettle', authMiddleware, async (c) => {
 
 /* ═══════════════════════════════════════════
    LEADERBOARD — always rebuilt from source data
-   Never additive. No double-counting possible.
 ═══════════════════════════════════════════ */
 
 async function rebuildLeaderboard(db: D1Database, eventId: string) {
-  // Get all settled games for this event
   const settled = await db.prepare(`
     SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
     FROM game_players gp
@@ -498,12 +499,10 @@ async function rebuildLeaderboard(db: D1Database, eventId: string) {
   `).bind(eventId).all<any>();
 
   if (!settled.results.length) {
-    // No settled games — wipe leaderboard for this event
     await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
     return;
   }
 
-  // Aggregate per player from raw results
   const players: Record<string, {
     user_id:string; display_name:string; games_played:number; games_won:number;
     total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
@@ -526,7 +525,6 @@ async function rebuildLeaderboard(db: D1Database, eventId: string) {
     p.last_played = Math.max(p.last_played, row.settled_at||0);
   }
 
-  // Wipe and rewrite leaderboard atomically
   await db.batch([
     db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
     ...Object.values(players).map(p =>

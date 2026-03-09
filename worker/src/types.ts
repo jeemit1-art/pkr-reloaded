@@ -1,3 +1,4 @@
+// worker/src/types.ts
 export interface Env {
   KV: KVNamespace;
   DB: D1Database;
@@ -8,6 +9,8 @@ export interface Env {
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
   VAPID_EMAIL: string;
+  STRIPE_SECRET_KEY: string;       // sk_live_... or sk_test_...
+  STRIPE_WEBHOOK_SECRET: string;   // whsec_...
 }
 
 export interface User {
@@ -17,6 +20,12 @@ export interface User {
   name: string;
   avatar_url: string | null;
   created_at: number;
+  // Subscription fields (added by migration)
+  plan: 'trial' | 'starter' | 'pro' | 'lifetime';
+  trial_started_at: number | null;
+  plan_expires_at: number | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 }
 
 export interface JWTPayload {

@@ -1,3 +1,8 @@
+// frontend/src/lib/api.ts — FULL REPLACEMENT
+// Key changes:
+//  - User type has plan fields
+//  - req() fires 'pkr:upgrade_required' CustomEvent on 402 (catches all gated actions)
+//  - api.billing added for checkout/portal/plan
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 export function getToken(): string | null {
@@ -21,6 +26,7 @@ async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<
       ...opts?.headers,
     },
   });
+
   // Auto-refresh once on 401
   if (res.status === 401 && !isRetry && getToken()) {
     try {
@@ -32,6 +38,16 @@ async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<
     if (typeof window !== 'undefined') window.location.href = '/';
     throw new Error('Session expired');
   }
+
+  // 402 Payment Required — fire global upgrade event so any component can show the modal
+  if (res.status === 402) {
+    const data = await res.json().catch(() => ({ error: 'Upgrade required', code: 'UPGRADE_REQUIRED' }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('pkr:upgrade_required', { detail: data }));
+    }
+    throw new Error(data.error || 'Upgrade required');
+  }
+
   if (!res.ok) { const e = await res.json().catch(()=>({error:'Request failed'})); throw new Error(e.error||`HTTP ${res.status}`); }
   return res.json();
 }
@@ -58,9 +74,9 @@ export const api = {
     get:            (id:string)      => req<EventDetail>(`/events/${id}`),
     create:         (d:any)          => req<Event>('/events',{method:'POST',body:JSON.stringify(d)}),
     update:         (id:string,d:any)=> req(`/events/${id}`,{method:'PUT',body:JSON.stringify(d)}),
+    end:            (id:string)      => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
+    reopen:         (id:string)      => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     invite:         (id:string,role?:string) => req<{token:string;url:string;role:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role:role||'cohost'})}),
-    end:            (id:string) => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
-    reopen:         (id:string) => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
     subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
       pub(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
@@ -72,17 +88,12 @@ export const api = {
     players:        (id:string)      => req<EventPlayer[]>(`/events/${id}/players`),
     verifyPassword: (id:string,password:string) =>
       req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
-    removeMember: (id:string, userId:string) => req(`/events/${id}/members/${userId}`,{method:'DELETE'}),
   },
   games: {
     list:     (eventId:string,status?:string) => req<Game[]>(`/events/${eventId}/games${status?`?status=${status}`:''}`),
     get:      (id:string)         => req<GameDetail>(`/games/${id}`),
     lobby:    (id:string)         => pub<LobbyData>(`/games/${id}/lobby`),
     live:     (token:string)      => pub<LiveData>(`/games/live/${token}`),
-    linkPlayer:   (gameId:string, userId:string, realUserId:string) =>
-      req<{ok:boolean,players:GamePlayer[]}>(`/games/${gameId}/players/${userId}/link`, {method:'PUT', body:JSON.stringify({real_user_id:realUserId})}),
-    unlinkPlayer: (gameId:string, userId:string) =>
-      req<{ok:boolean,players:GamePlayer[]}>(`/games/${gameId}/players/${userId}/unlink`, {method:'PUT'}),
     results:  (token:string)      => pub<ResultsData>(`/games/results/${token}`),
     create:   (eventId:string,d:any) => req<Game>(`/events/${eventId}/games`,{method:'POST',body:JSON.stringify(d)}),
     update:   (id:string,d:any)   => req(`/games/${id}`,{method:'PUT',body:JSON.stringify(d)}),
@@ -98,14 +109,44 @@ export const api = {
     cancel:   (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/cancel`,{method:'POST'}),
     delete:   (id:string) => req<{ok:boolean}>(`/games/${id}`,{method:'DELETE'}),
   },
+  billing: {
+    plan:     () => req<PlanStatus>('/billing/plan'),
+    checkout: (plan: 'starter' | 'pro') =>
+      req<{url:string}>('/billing/checkout',{method:'POST',body:JSON.stringify({plan})}),
+    portal:   () => req<{url:string}>('/billing/portal',{method:'POST'}),
+  },
   vapidKey: () => req<{key:string}>('/vapid-public-key'),
 };
 
 // ── Types ──
-export interface User { id:string; email:string; name:string; avatar_url:string|null; }
+export interface PlanStatus {
+  plan: 'trial' | 'starter' | 'pro' | 'lifetime';
+  trial_active: boolean;
+  trial_days_left: number;
+  trial_end: number;
+  plan_expires_at: number | null;
+  is_active: boolean;
+  has_payment: boolean;
+  max_groups: number | null;
+  max_seats: number;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  // Plan fields (from updated /auth/me)
+  plan: 'trial' | 'starter' | 'pro' | 'lifetime';
+  trial_active: boolean;
+  trial_days_left: number;
+  is_active: boolean;
+}
+
 export interface Event {
   id:string; name:string; description:string|null; buy_in:number; master_password:string|null;
   host_id:string; created_at:number; role?:string; member_count?:number; game_count?:number;
+  status?: string;
 }
 export interface EventMember { id:string; name:string; avatar_url:string|null; email:string; role:string; joined_at:number; }
 export interface EventDetail extends Event { members:EventMember[]; }

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -25,6 +25,37 @@ events.post('/', authMiddleware, async (c) => {
   const userId = c.get('userId');
   const { name, description, buy_in, master_password } = await c.req.json();
   if (!name?.trim()) return c.json({error:'Name required'},400);
+
+  // ── Plan gate: check group limit ──────────────────────────────────────────
+  const planStatus = await getPlanStatus(c.env.DB, userId);
+
+  if (!planStatus.is_active) {
+    return c.json({
+      error: 'Your free trial has ended. Upgrade to create groups.',
+      code: 'UPGRADE_REQUIRED',
+      plan: planStatus.plan,
+      feature: 'create_group',
+    }, 402);
+  }
+
+  if (planStatus.max_groups !== null) {
+    const { count } = await c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM events WHERE host_id=? AND (status IS NULL OR status != 'ended')"
+    ).bind(userId).first<{count:number}>() ?? { count: 0 };
+
+    if (count >= planStatus.max_groups) {
+      return c.json({
+        error: `Your plan allows ${planStatus.max_groups} active group${planStatus.max_groups===1?'':'s'}. Upgrade to Pro for unlimited groups.`,
+        code: 'UPGRADE_REQUIRED',
+        plan: planStatus.plan,
+        feature: 'create_group',
+        current_count: count,
+        limit: planStatus.max_groups,
+      }, 402);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const id = generateId();
   const hashedPw = master_password ? await hashPassword(master_password) : null;
   await c.env.DB.batch([
@@ -167,7 +198,6 @@ events.get('/:id/history', authMiddleware, async (c) => {
     ORDER BY g.scheduled_at DESC
   `).bind(eventId).all<any>();
 
-  // Attach top 3 players (by net) to each game
   const result = await Promise.all(games.results.map(async (g: any) => {
     const top = await c.env.DB.prepare(`
       SELECT display_name, net FROM game_players
@@ -199,7 +229,6 @@ events.get('/:id/players', authMiddleware, async (c) => {
   return c.json(rows.results);
 });
 
-/* ── Remove member from event ── */
 events.post('/:id/end', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Only host can end event'},403);

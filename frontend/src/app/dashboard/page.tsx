@@ -1,7 +1,15 @@
 'use client';
+// frontend/src/app/dashboard/page.tsx — FULL REPLACEMENT
+// Changes vs original:
+//  - Imports UpgradeModal
+//  - Shows plan badge in nav (Trial X days / Starter / Pro)
+//  - "Upgrade" button in nav when on trial/expired
+//  - <UpgradeModal /> renders at bottom (catches all 402s globally on this page)
+//  - create() error handling now distinguishes 402 (modal handles it) vs other errors
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
+import UpgradeModal from '@/components/UpgradeModal';
 
 function DashboardInner() {
   const router = useRouter();
@@ -19,6 +27,7 @@ function DashboardInner() {
   const [endingEvent, setEndingEvent] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [manageLoading, setManageLoading] = useState(false);
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -33,11 +42,22 @@ function DashboardInner() {
     if (outcome==='accepted') setShowInstallBanner(false);
   }
 
+  // Handle ?upgraded=1 and ?upgrade_cancelled=1 query params
+  useEffect(() => {
+    if (searchParams.get('upgraded') === '1') {
+      window.history.replaceState({}, '', '/dashboard');
+      // Refresh user to get updated plan
+      api.auth.me().then(u => setUser(u)).catch(() => {});
+    }
+    if (searchParams.get('upgrade_cancelled') === '1') {
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams]);
+
   useEffect(()=>{
     async function init() {
       const code = searchParams.get('code');
       if (code) {
-        // Exchange one-time code for JWT (never stored full JWT in URL)
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
           const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
@@ -74,7 +94,6 @@ function DashboardInner() {
   }
 
   async function initCamera() {
-    // Load jsQR if not already loaded
     if (!(window as any).jsQR) {
       await new Promise<void>((res,rej) => {
         const s = document.createElement('script');
@@ -85,21 +104,16 @@ function DashboardInner() {
     }
     const jsQR = (window as any).jsQR;
     try {
-      // iOS PWA: try environment camera first, fall back to any camera
       let constraints: any = { video: { facingMode: 'environment' } };
       let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      }
+      try { stream = await navigator.mediaDevices.getUserMedia(constraints); }
+      catch { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
       const video = document.getElementById('scanVideo') as HTMLVideoElement;
       if (!video) { stream.getTracks().forEach(t=>t.stop()); return; }
       video.setAttribute('playsinline', 'true');
       video.setAttribute('autoplay', 'true');
       video.setAttribute('muted', 'true');
       video.srcObject = stream;
-      // iOS requires explicit play() call after srcObject set
       await new Promise<void>((res) => {
         video.onloadedmetadata = () => { video.play().then(res).catch(res); };
       });
@@ -118,7 +132,6 @@ function DashboardInner() {
             found = true;
             stream.getTracks().forEach(t=>t.stop());
             const url = code.data;
-            // Extract invite token from URL
             const match = url.match(/\/invite\/([a-zA-Z0-9_-]+)/);
             if (match) {
               setScanStatus('Joining event...');
@@ -158,9 +171,64 @@ function DashboardInner() {
       setEvents(e=>[evt,...e]);
       setShowCreate(false);
       setForm({name:'',description:'',buy_in:'',master_password:''});
-    } catch(e:any){ alert(e.message); }
+    } catch(e:any) {
+      // 402 errors are handled by the global UpgradeModal — don't show an alert
+      if (!e.message?.toLowerCase().includes('upgrade') && !e.message?.toLowerCase().includes('plan')) {
+        alert(e.message);
+      }
+      setShowCreate(false);
+    }
     finally { setSaving(false); }
   }
+
+  async function openBillingPortal() {
+    setManageLoading(true);
+    try {
+      const { url } = await api.billing.portal();
+      window.location.href = url;
+    } catch(e:any) {
+      alert(e.message || 'Could not open billing portal.');
+    } finally { setManageLoading(false); }
+  }
+
+  // Plan badge helper
+  function PlanBadge() {
+    if (!user) return null;
+    const plan = user.plan;
+    if (plan === 'lifetime') return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
+        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
+        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>⚡ Lifetime</span>
+    );
+    if (plan === 'pro') return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
+        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
+        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>✦ Pro</span>
+    );
+    if (plan === 'starter') return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(100,180,100,0.12)',
+        color:'rgba(100,200,100,0.8)',fontFamily:'var(--font-body),sans-serif',
+        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>Starter</span>
+    );
+    // Trial
+    if (user.trial_active) return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(255,160,30,0.12)',
+        color:'rgba(255,170,50,0.85)',fontFamily:'var(--font-body),sans-serif',
+        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>
+        Trial · {user.trial_days_left}d left
+      </span>
+    );
+    // Expired trial
+    return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(220,60,60,0.12)',
+        color:'rgba(220,80,80,0.85)',fontFamily:'var(--font-body),sans-serif',
+        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>Trial Ended</span>
+    );
+  }
+
+  const needsUpgrade = user && user.plan === 'trial' && !user.trial_active;
+  const onTrial = user && user.plan === 'trial' && user.trial_active;
+  const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
 
   if (loading) return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -188,12 +256,46 @@ function DashboardInner() {
         </div>
       )}
 
+      {/* Trial expiry banner */}
+      {onTrial && user.trial_days_left <= 2 && (
+        <div style={{background:'rgba(255,160,30,0.08)',borderBottom:'1px solid rgba(255,160,30,0.2)',
+          padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+          <div style={{fontSize:12,color:'rgba(255,170,50,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
+            ⏱ Your free trial ends in <strong>{user.trial_days_left} day{user.trial_days_left!==1?'s':''}</strong>
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{fontSize:11,padding:'5px 14px'}}
+            onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Choose a plan before your trial ends.'}}))}
+          >
+            Upgrade
+          </button>
+        </div>
+      )}
+
+      {/* Expired trial banner */}
+      {needsUpgrade && (
+        <div style={{background:'rgba(220,60,60,0.08)',borderBottom:'1px solid rgba(220,60,60,0.2)',
+          padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+          <div style={{fontSize:12,color:'rgba(220,90,90,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
+            ⚠️ Your free trial has ended. Upgrade to keep creating groups and games.
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{fontSize:11,padding:'5px 14px'}}
+            onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Choose a plan to continue.'}}))}
+          >
+            Upgrade Now
+          </button>
+        </div>
+      )}
+
       {/* Nav */}
       <nav className="nav">
         <div style={{maxWidth:640,margin:'0 auto',padding:'0 20px',height:56,
           display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div className="display" style={{fontSize:22,color:'var(--white)',letterSpacing:'0.02em'}}>PKR</div>
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' as const}}>
             {user?.avatar_url && (
               <img src={user.avatar_url} alt={user.name}
                 style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
@@ -201,6 +303,26 @@ function DashboardInner() {
             <span style={{fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
               {user?.name}
             </span>
+            <PlanBadge />
+            {isPaid && (
+              <button
+                className="btn btn-ghost"
+                style={{fontSize:10,padding:'3px 8px'}}
+                onClick={openBillingPortal}
+                disabled={manageLoading}
+              >
+                {manageLoading ? '…' : 'Manage Plan'}
+              </button>
+            )}
+            {(onTrial || needsUpgrade) && (
+              <button
+                className="btn btn-primary"
+                style={{fontSize:11,padding:'4px 12px',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,120,40,0.85))',color:'#000'}}
+                onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Start your subscription to keep the game going.'}}))}
+              >
+                Upgrade
+              </button>
+            )}
             <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 12px'}}
               onClick={()=>{ clearToken(); api.auth.logout().then(()=>router.push('/')) }}>
               Sign Out
@@ -232,36 +354,31 @@ function DashboardInner() {
         </div>
 
         {/* QR Scanner Modal */}
-      {showScanner && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
-              <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
-            </div>
-            <div style={{padding:20}}>
-              <video id="scanVideo" style={{width:'100%',borderRadius:8,background:'#000',display:'block'}} playsInline autoPlay muted/>
-              {scanStatus && (
-                <div style={{marginTop:12,textAlign:'center',fontSize:13,color:scanStatus.includes('Invalid')||scanStatus.includes('denied')||scanStatus.includes('Not a')?'var(--red)':'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
-                  {scanStatus}
-                </div>
-              )}
-              {!scanStatus && (
-                <div style={{marginTop:12,textAlign:'center',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
-                  Point camera at the invite QR code
-                </div>
-              )}
-              {(scanStatus.includes('denied')||scanStatus.includes('dark')) && (
-                <button className="btn btn-ghost" style={{width:'100%',marginTop:8,fontSize:12}} onClick={()=>{setScanStatus('');initCamera();}}>
-                  Try Again
-                </button>
-              )}
+        {showScanner && (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+            <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
+                <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
+              </div>
+              <div style={{padding:20}}>
+                <video id="scanVideo" style={{width:'100%',borderRadius:8,background:'#000',display:'block'}} playsInline autoPlay muted/>
+                {scanStatus && (
+                  <div style={{marginTop:12,textAlign:'center',fontSize:13,color:scanStatus.includes('Invalid')||scanStatus.includes('denied')||scanStatus.includes('Not a')?'var(--red)':'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+                    {scanStatus}
+                  </div>
+                )}
+                {!scanStatus && (
+                  <div style={{marginTop:12,textAlign:'center',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>
+                    Point camera at the invite QR code
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Create form */}
+        {/* Create form */}
         {showCreate && (
           <div className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
             <div style={{fontSize:16,color:'var(--white)',marginBottom:20,
@@ -358,27 +475,31 @@ function DashboardInner() {
             </div>
           ))}
         </div>
-      {/* End event confirm modal */}
-      {confirmEndEventId && (
-        <div className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
-          <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
-            <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
-              <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
-              <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
-                This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
+
+        {/* End event confirm modal */}
+        {confirmEndEventId && (
+          <div className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
+            <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
+              <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
+                <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
+                <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
+                  This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
+                </div>
+              </div>
+              <div style={{padding:'16px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
+                <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmEndEventId(null)}>Cancel</button>
+                <button className="btn btn-danger" style={{fontSize:12}} disabled={endingEvent}
+                  onClick={()=>doEndEvent(confirmEndEventId)}>
+                  {endingEvent ? 'Ending...' : 'End Event'}
+                </button>
               </div>
             </div>
-            <div style={{padding:'16px 24px',display:'flex',gap:8,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setConfirmEndEventId(null)}>Cancel</button>
-              <button className="btn btn-danger" style={{fontSize:12}} disabled={endingEvent}
-                onClick={()=>doEndEvent(confirmEndEventId)}>
-                {endingEvent ? 'Ending...' : 'End Event'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
+
+      {/* Global upgrade modal — catches all 402s from this page */}
+      <UpgradeModal />
     </div>
   );
 }
