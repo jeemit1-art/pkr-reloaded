@@ -10,10 +10,8 @@ export default function LivePage() {
   const [lastUpdated, setLastUpdated] = useState<Date|null>(null);
   const [secsAgo, setSecsAgo] = useState(0);
   const [connStatus, setConnStatus] = useState<'ok'|'reconnecting'|'offline'>('ok');
-  const failCount = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
   const failCountRef = useRef(0);
-  const [connStatus, setConnStatus] = useState<'ok'|'reconnecting'|'offline'>('ok');
   const failCount = useRef(0);
   const tableRef = useRef<HTMLDivElement>(null);
 
