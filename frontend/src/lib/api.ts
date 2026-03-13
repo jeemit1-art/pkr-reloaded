@@ -179,7 +179,7 @@ export function fmtSign(cents:number):string {
   return cents>0?`+${fmt(cents)}`:fmt(cents);
 }
 export function fmtDate(ts:number):string {
-  return new Date(ts*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  return new Date(ts*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'});
 }
 export function waLink(phone:string,msg:string):string {
   const clean = phone.replace(/\D/g,'');

@@ -1468,8 +1468,8 @@ function renderLbSheet() {
 
 // ── Settlement ──
 function calcSettlements(players) {
-  var debtors = players.filter(function(p){ return p.net < -0.005; }).map(function(p){ return { name: p.name, amount: -p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
-  var creditors = players.filter(function(p){ return p.net > 0.005; }).map(function(p){ return { name: p.name, amount: p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
+  var debtors = players.filter(function(p){ return p.net < -0.005; }).map(function(p){ return { name: p.display_name, amount: -p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
+  var creditors = players.filter(function(p){ return p.net > 0.005; }).map(function(p){ return { name: p.display_name, amount: p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
   var transfers = [];
   var i = 0, j = 0;
   while (i < debtors.length && j < creditors.length) {
