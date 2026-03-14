@@ -1017,9 +1017,10 @@ function buildSeats(count, tW, tH, cx, cy) {
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
       var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
       var chipHtml = '';
-      if (bi > 0 && game && game.chip_value > 0 && game.starting_chips > 0) {
+      var _g = state && state.game;
+      if (bi > 0 && _g && _g.chip_value > 0 && _g.starting_chips > 0) {
         var buyCt = p.transactions ? p.transactions.filter(function(t){return t.type!=='cashout';}).length : (p.buy_ins||1);
-        var chips = game.starting_chips * Math.max(1, buyCt);
+        var chips = _g.starting_chips * Math.max(1, buyCt);
         chipHtml = '<div style="font-size:clamp(0.55rem,1.3vw,0.68rem);color:var(--gold);background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);border-radius:3px;padding:1px 5px;margin-top:1px;font-family:DM Sans,sans-serif;line-height:1.4;">' + chips + ' chips</div>';
       }
       seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml + chipHtml;
