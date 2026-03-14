@@ -1,6 +1,5 @@
 // @refresh
 'use client';
-import TawkChat from '@/components/TawkChat';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
@@ -836,7 +835,6 @@ function Loader() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.5}}>PKR</div>
-          <TawkChat />
     </div>
   );
 }
