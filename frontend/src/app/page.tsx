@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import TawkChat from '@/components/TawkChat';
 import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
