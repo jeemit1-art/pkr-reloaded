@@ -6,6 +6,7 @@ import auth    from './routes/auth';
 import events  from './routes/events';
 import games   from './routes/games';
 import billing from './routes/billing';
+import hands   from './routes/hands';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,6 +22,7 @@ app.use('*', async (c, next) => {
 app.route('/auth',    auth);
 app.route('/events',  events);
 app.route('/billing', billing);
+app.route('/',        hands);
 app.route('/',        games);
 
 app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worker', ts:Date.now() }));
