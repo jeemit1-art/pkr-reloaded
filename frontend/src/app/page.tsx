@@ -57,7 +57,7 @@ export default function HomePage() {
   )
 
   return (
-    <>
+    <div className="landing-page">
 
       {/* ── NAV ── */}
       <nav className={navStuck ? 'stuck' : ''}>
@@ -442,6 +442,6 @@ export default function HomePage() {
           <p className="modal-note">For game hosts only. Players join via invite link<br />— no account or install needed.</p>
         </div>
       </div>
-    </>
+    </div>
   )
 }// force rebuild Sat Mar 14 13:17:35 UTC 2026
