@@ -94,24 +94,6 @@ export default function PlayPage() {
       } else {
         injectTableScript();
       }
-      // Load hand tracker as separate static file (no string escaping issues)
-      if (!document.getElementById('pkr-hand-tracker')) {
-        const htScript = document.createElement('script');
-        htScript.id  = 'pkr-hand-tracker';
-        htScript.src = '/hand-tracker.js';
-        document.body.appendChild(htScript);
-      }
-      // Inject hand tracker DOM sheets via JS (avoids React hydration mismatch)
-      if (!document.getElementById('handTrackerSheet')) {
-        const htDiv = document.createElement('div');
-        htDiv.id = 'htSheets';
-        htDiv.innerHTML = [
-          '<div class="sheet" id="handTrackerSheet"><div class="sheet-box" style="max-height:85vh;overflow:hidden;display:flex;flex-direction:column"><div class="sheet-hdr"><h2>🃏 Hand Tracker</h2><div style="display:flex;gap:6px;align-items:center"><button id="undoActionBtn" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.htUndoAction?.()">↩ Undo</button><button style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.toggleHandHistory?.()">History</button><button class="panel-close" onclick="window.closeHandTracker?.()">✕</button></div></div><div class="sheet-body" id="handTrackerBody" style="overflow-y:auto;flex:1;padding:12px 16px"></div></div></div>',
-          '<div class="overlay" id="winnerOverlay"><div class="modal"><h2>🏆 Who won?</h2><div id="winnerPotLabel" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></div><div id="winnerPlayerList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div><div class="modal-actions"><button class="btn-cancel" onclick="window.closeWinnerOverlay?.()">Cancel</button></div></div></div>',
-          '<div class="sheet" id="cardPickerSheet"><div class="sheet-box"><div class="sheet-hdr"><h2 id="cardPickerTitle">Pick card</h2><button class="panel-close" onclick="window.closeCardPicker?.()">✕</button></div><div class="sheet-body" id="cardPickerBody" style="padding:12px 16px"></div></div></div>',
-        ].join('');
-        document.body.appendChild(htDiv);
-      }
     }
 
     function injectTableScript() {
@@ -148,7 +130,6 @@ export default function PlayPage() {
             <div className="tb-title" id="topbarTitle">The Table</div>
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
-          <button id="trackHandsBtn" suppressHydrationWarning onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
           <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
         </div>
 
@@ -198,7 +179,6 @@ export default function PlayPage() {
           <button className="game-tab" id="lbInGameBtn" onClick={() => (window as any).openLeaderboard?.()}><span className="game-tab-icon">🏆</span>Leaderboard</button>
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
           <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
-          <button suppressHydrationWarning className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
         </div>
       </div>
@@ -297,8 +277,7 @@ export default function PlayPage() {
         </div>
       </div>
 
-
-            {/* ── WA TOAST ── */}
+      {/* ── WA TOAST ── */}
       <div id="waToast">
         <div className="wa-toast-hdr">
           <span style={{fontSize:'1rem'}}>💬</span>
@@ -532,7 +511,6 @@ window.saveState = saveState;
 
 // ── PKR API helper ──
 function getPkrCtx() { try { return JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) { return null; } }
-window.getPkrCtx = getPkrCtx;
 
 async function pkrApi(path, opts) {
   var ctx = getPkrCtx();
@@ -818,16 +796,8 @@ function fmt(n) { return '$' + (n || 0).toFixed(2); }
 function fmtNet(n) { return n > 0 ? '+$' + n.toFixed(2) : n < 0 ? '-$' + Math.abs(n).toFixed(2) : '$0.00'; }
 function nc(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero'; }
 function inits(n) { return (n || '').split(' ').map(function(w){ return w[0] || ''; }).join('').slice(0,2).toUpperCase() || '?'; }
-window.inits = inits;
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-window.pBuyin = function pBuyin(p) { return (p.transactions || []).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0); }
-window.showToast = function(msg) {
-  var t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2500);
-};
+function pBuyin(p) { return (p.transactions || []).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0); }
 function pCash(p) { return (p.transactions || []).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0); }
 function pNet(p) { return pCash(p) - pBuyin(p); }
 function waUrl(phone, msg) { return 'https://wa.me/' + phone.replace(/\\D/g,'') + '?text=' + encodeURIComponent(msg); }
@@ -996,14 +966,7 @@ function buildSeats(count, tW, tH, cx, cy) {
       var isRsvp = p.rsvp && bi === 0;
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
       var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
-      var chipHtml = '';
-      var _g = state && state.game;
-      if (bi > 0 && _g && _g.chip_value > 0 && _g.starting_chips > 0) {
-        var buyCt = p.transactions ? p.transactions.filter(function(t){return t.type!=='cashout';}).length : (p.buy_ins||1);
-        var chips = _g.starting_chips * Math.max(1, buyCt);
-        chipHtml = '<div style="font-size:clamp(0.55rem,1.3vw,0.68rem);color:var(--gold);background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);border-radius:3px;padding:1px 5px;margin-top:1px;font-family:DM Sans,sans-serif;line-height:1.4;">' + chips + ' chips</div>';
-      }
-      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml + chipHtml;
+      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml;
     } else {
       seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
     }
@@ -1826,11 +1789,6 @@ if (ctx && ctx.gameId) {
         seats: game.seats,
         defaultBuyin: game.buy_in ? game.buy_in / 100 : 25,
         code: game.live_token || ctx.gameId,
-        chip_value: game.chip_value || 0,
-        starting_chips: game.starting_chips || 0,
-        small_blind: game.small_blind || 0,
-        big_blind: game.big_blind || 0,
-        hand_tracking: game.hand_tracking || 0,
       };
       // Store db players in ctx for link lookups
       var ctx2 = getPkrCtx();
@@ -1860,11 +1818,6 @@ if (ctx && ctx.gameId) {
     // Update topbar title
     var titleEl = document.getElementById('topbarTitle');
     if (titleEl && state.game) titleEl.textContent = state.game.name;
-    var htBtn2  = document.getElementById('handTrackerBtn');
-    var trkBtn2 = document.getElementById('trackHandsBtn');
-    if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
-    if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
-    if (trkBtn2) trkBtn2.title = (state.game && state.game.hand_tracking) ? 'Hand tracking ON' : 'Hand tracking OFF';
     renderTable();
     updateSaveResultsBtn();
     maybeShowNotifBanner();

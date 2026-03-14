@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import TawkChat from '@/components/TawkChat';
 import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
@@ -442,6 +443,7 @@ export default function HomePage() {
           <p className="modal-note">For game hosts only. Players join via invite link<br />— no account or install needed.</p>
         </div>
       </div>
+      <TawkChat />
     </>
   )
 }// force rebuild Sat Mar 14 13:17:35 UTC 2026
