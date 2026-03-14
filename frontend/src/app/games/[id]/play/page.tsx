@@ -821,6 +821,13 @@ function inits(n) { return (n || '').split(' ').map(function(w){ return w[0] || 
 window.inits = inits;
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 window.pBuyin = function pBuyin(p) { return (p.transactions || []).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0); }
+window.showToast = function(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+};
 function pCash(p) { return (p.transactions || []).filter(function(t){ return t.type === 'cashout'; }).reduce(function(a,t){ return a+t.amount; }, 0); }
 function pNet(p) { return pCash(p) - pBuyin(p); }
 function waUrl(phone, msg) { return 'https://wa.me/' + phone.replace(/\\D/g,'') + '?text=' + encodeURIComponent(msg); }
