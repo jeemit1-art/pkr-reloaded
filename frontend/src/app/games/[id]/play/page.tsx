@@ -148,7 +148,7 @@ export default function PlayPage() {
             <div className="tb-title" id="topbarTitle">The Table</div>
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
-          <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
+          <button id="trackHandsBtn" suppressHydrationWarning onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
           <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
         </div>
 
@@ -198,7 +198,7 @@ export default function PlayPage() {
           <button className="game-tab" id="lbInGameBtn" onClick={() => (window as any).openLeaderboard?.()}><span className="game-tab-icon">🏆</span>Leaderboard</button>
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
           <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
-          <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
+          <button suppressHydrationWarning className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
         </div>
       </div>
