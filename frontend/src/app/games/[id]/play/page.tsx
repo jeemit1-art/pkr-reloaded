@@ -1864,6 +1864,7 @@ if (ctx && ctx.gameId) {
     var trkBtn2 = document.getElementById('trackHandsBtn');
     if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
     if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
+    if (trkBtn2) trkBtn2.title = (state.game && state.game.hand_tracking) ? 'Hand tracking ON' : 'Hand tracking OFF';
     renderTable();
     updateSaveResultsBtn();
     maybeShowNotifBanner();

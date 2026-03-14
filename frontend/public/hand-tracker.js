@@ -79,7 +79,10 @@ function loadCurrentHand() {
 // ── Toggle tracking on/off ───────────────────────────────────────────────────
 window.toggleHandTracking = function() {
   htApi('/games/' + getGameId() + '/tracking/toggle', {method: 'POST'}).then(function(r) {
-    if (window.state && window.state.game) window.state.game.hand_tracking = r.hand_tracking;
+    if (window.state && window.state.game) {
+      window.state.game.hand_tracking = r.hand_tracking;
+      if (window.saveState) window.saveState();
+    }
     var btn  = document.getElementById('handTrackerBtn');
     var tBtn = document.getElementById('trackHandsBtn');
     if (btn)  btn.style.display  = r.hand_tracking ? '' : 'none';
