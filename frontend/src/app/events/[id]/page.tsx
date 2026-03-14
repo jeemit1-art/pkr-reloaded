@@ -28,7 +28,7 @@ export default function EventPage() {
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
-  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+  const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [removingMember, setRemovingMember] = useState(false);
@@ -89,10 +89,13 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
+        small_blind: form.small_blind ? Math.round(parseFloat(form.small_blind)*100) : undefined,
+        big_blind: form.big_blind ? Math.round(parseFloat(form.big_blind)*100) : undefined,
+        starting_chips: form.starting_chips ? parseInt(form.starting_chips) : undefined,
       });
       setGames(gs=>[g,...gs]);
       setShowCreate(false);
-      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash'});
+      setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
     } catch(e:any){ alert(e.message); }
     finally { setSaving(false); }
   }
@@ -534,6 +537,40 @@ export default function EventPage() {
                 </div>
               </div>
             </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Stakes (optional)</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  <div>
+                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Small blind ($)</div>
+                    <input className="inp" placeholder="e.g. 0.50" type="number" step="0.25" min="0"
+                      value={form.small_blind}
+                      onChange={e=>{
+                        const sb = e.target.value;
+                        const bb = sb && !isNaN(parseFloat(sb)) ? String(parseFloat(sb)*2) : form.big_blind;
+                        setForm(f=>({...f,small_blind:sb,big_blind:bb}));
+                      }}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Big blind ($)</div>
+                    <input className="inp" placeholder="e.g. 1.00" type="number" step="0.25" min="0"
+                      value={form.big_blind}
+                      onChange={e=>setForm(f=>({...f,big_blind:e.target.value}))}/>
+                  </div>
+                </div>
+                {form.small_blind && !isNaN(parseFloat(form.small_blind)) && (
+                  <div style={{marginTop:8}}>
+                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Starting chips per player</div>
+                    <input className="inp" placeholder="e.g. 50" type="number" min="1"
+                      value={form.starting_chips}
+                      onChange={e=>setForm(f=>({...f,starting_chips:e.target.value}))}/>
+                    {form.starting_chips && !isNaN(parseInt(form.starting_chips)) && (
+                      <div style={{fontSize:11,color:'var(--gold)',marginTop:4,fontFamily:'var(--font-body),sans-serif'}}>
+                        Each chip = ${parseFloat(form.small_blind||'0').toFixed(2)} · buy-in ≈ ${(parseInt(form.starting_chips)*parseFloat(form.small_blind||'0')).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
                 {saving?'Scheduling…':'Schedule & Notify'}

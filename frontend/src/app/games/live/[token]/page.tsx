@@ -60,6 +60,9 @@ export default function LivePage() {
   if (!data) return <Loader/>;
 
   const { game, event, players, totalIn, totalOut, bank } = data as any;
+  const chipValue  = (game.chip_value    || 0) as number;
+  const startChips = (game.starting_chips || 0) as number;
+  const hasChips   = chipValue > 0 && startChips > 0;
   const isSettled = game.status === 'settled';
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const resultsUrl = game.results_token ? `${appUrl}/games/results/${game.results_token}` : '';
@@ -204,6 +207,7 @@ function renderTable(container: HTMLDivElement, data: any) {
         </div>
         <div style="font-family:'Playfair Display',serif;font-size:clamp(0.75rem,2vw,0.9rem);font-weight:700;color:#fff;max-width:clamp(68px,16vw,96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(0,0,0,0.6);padding:2px 7px;border-radius:5px;text-shadow:0 1px 3px rgba(0,0,0,0.9)">${esc(p.display_name)}</div>
         ${p.buy_ins>0?`<div style="font-size:clamp(0.6rem,1.5vw,0.72rem);color:rgba(201,168,76,0.7)">×${p.buy_ins}${buyInAmt?` · ${fmt(biAmt)}`:''}</div>`:''}
+        ${(game.chip_value>0&&game.starting_chips>0&&p.buy_ins>0)?`<div style="font-size:clamp(0.55rem,1.3vw,0.65rem);color:rgba(201,168,76,0.85);background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);border-radius:3px;padding:1px 4px;margin-top:1px">${game.starting_chips*p.buy_ins} chips</div>`:''}
         ${net!=null?`<div style="font-size:clamp(0.62rem,1.6vw,0.78rem);font-weight:700;color:${netColor};text-shadow:0 1px 2px rgba(0,0,0,0.8)">${netStr}</div>`:''}
       `;
     } else {
