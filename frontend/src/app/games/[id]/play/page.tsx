@@ -492,6 +492,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060e07;color:#f0e6c
 /* game tabs */
 .game-tabs{flex-shrink:0;display:flex;border-top:1px solid var(--border);background:var(--bg);z-index:10}
 .game-tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 14px;gap:3px;cursor:pointer;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);border:none;background:none;white-space:nowrap}
+.sheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);display:none;align-items:flex-end;justify-content:center;padding:0 0 0 0}
+.sheet.open{display:flex}
+.sheet-box{width:100%;max-width:520px;background:#09180a;border:1px solid rgba(201,168,76,0.25);border-radius:16px 16px 0 0;max-height:85vh;overflow:hidden;display:flex;flex-direction:column}
+.sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(201,168,76,0.15);flex-shrink:0}
+.sheet-hdr h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:700;margin:0}
+.sheet-body{flex:1;overflow-y:auto}
+.overlay{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
 .game-tab:active{color:var(--gold);background:rgba(201,168,76,0.04)}
 .game-tab.red:active{color:var(--red)}
 .game-tab-icon{font-size:1.3rem;line-height:1}
