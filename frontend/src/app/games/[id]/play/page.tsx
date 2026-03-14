@@ -101,6 +101,12 @@ export default function PlayPage() {
         htScript.src = '/hand-tracker.js';
         document.body.appendChild(htScript);
       }
+      if (!document.getElementById('handTrackerSheet')) {
+        const d = document.createElement('div');
+        d.id = 'htSheets';
+        d.innerHTML = '<div class="sheet" id="handTrackerSheet"><div class="sheet-box" style="max-height:85vh;overflow:hidden;display:flex;flex-direction:column"><div class="sheet-hdr"><h2>🃏 Hand Tracker</h2><div style="display:flex;gap:6px;align-items:center"><button id="undoActionBtn" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.htUndoAction&&window.htUndoAction()">↩ Undo</button><button style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.toggleHandHistory&&window.toggleHandHistory()">History</button><button class="panel-close" onclick="window.closeHandTracker&&window.closeHandTracker()">✕</button></div></div><div class="sheet-body" id="handTrackerBody" style="overflow-y:auto;flex:1;padding:12px 16px"></div></div></div><div class="overlay" id="winnerOverlay"><div class="modal"><h2>🏆 Who won?</h2><div id="winnerPotLabel" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></div><div id="winnerPlayerList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div><div class="modal-actions"><button class="btn-cancel" onclick="window.closeWinnerOverlay&&window.closeWinnerOverlay()">Cancel</button></div></div></div><div class="sheet" id="cardPickerSheet"><div class="sheet-box"><div class="sheet-hdr"><h2 id="cardPickerTitle">Pick card</h2><button class="panel-close" onclick="window.closeCardPicker&&window.closeCardPicker()">✕</button></div><div class="sheet-body" id="cardPickerBody" style="padding:12px 16px"></div></div></div>';
+        document.body.appendChild(d);
+      }
     }
 
     function injectTableScript() {
@@ -287,45 +293,7 @@ export default function PlayPage() {
       </div>
 
 
-      {/* ── HAND TRACKER SHEET ── */}
-      <div className="sheet" id="handTrackerSheet">
-        <div className="sheet-box" style={{maxHeight:'85vh',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          <div className="sheet-hdr">
-            <h2>🃏 Hand Tracker</h2>
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <button id="undoActionBtn" style={{display:'none',background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.75rem'}} onClick={() => (window as any).htUndoAction?.()}>↩ Undo</button>
-              <button style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.75rem'}} onClick={() => (window as any).toggleHandHistory?.()}>History</button>
-              <button className="panel-close" onClick={() => (window as any).closeHandTracker?.()}>✕</button>
-            </div>
-          </div>
-          <div className="sheet-body" id="handTrackerBody" style={{overflowY:'auto',flex:1,padding:'12px 16px'}}></div>
-        </div>
-      </div>
-
-      {/* ── DECLARE WINNER OVERLAY ── */}
-      <div className="overlay" id="winnerOverlay">
-        <div className="modal">
-          <h2>🏆 Who won?</h2>
-          <div id="winnerPotLabel" style={{fontSize:'0.85rem',color:'var(--muted)',marginBottom:'14px'}}></div>
-          <div id="winnerPlayerList" style={{display:'flex',flexDirection:'column',gap:'8px',marginBottom:'14px'}}></div>
-          <div className="modal-actions">
-            <button className="btn-cancel" onClick={() => (window as any).closeWinnerOverlay?.()}>Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── CARD PICKER SHEET ── */}
-      <div className="sheet" id="cardPickerSheet">
-        <div className="sheet-box">
-          <div className="sheet-hdr">
-            <h2 id="cardPickerTitle">Pick card</h2>
-            <button className="panel-close" onClick={() => (window as any).closeCardPicker?.()}>✕</button>
-          </div>
-          <div className="sheet-body" id="cardPickerBody" style={{padding:'12px 16px'}}></div>
-        </div>
-      </div>
-
-      {/* ── WA TOAST ── */}
+            {/* ── WA TOAST ── */}
       <div id="waToast">
         <div className="wa-toast-hdr">
           <span style={{fontSize:'1rem'}}>💬</span>
