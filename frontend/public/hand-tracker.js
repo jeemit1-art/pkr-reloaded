@@ -31,7 +31,7 @@ var hs = {
   hand: null, history: [], actions: [], pot: 0,
   street: 'pre', board: [], holes: {}, chipInput: '',
   view: 'main', cardTarget: null,
-  straddleSeat: null, liveCardsEnabled: false,
+  straddleSeat: null, liveCardsEnabled: false, _autoCardMode: null,
   _pendingHand: null,
 };
 
@@ -291,6 +291,8 @@ window.htAct = function(action,playerName) {
           if(cardSlot!==undefined){
             hs.cardTarget=cardSlot;
             hs.view='cards';
+            // Mark flop mode so picker stays open for 3 cards
+            hs._autoCardMode=(nextStreet==='flop'?'flop':null);
           }
           renderBody();
           // Ensure sheet is open
@@ -312,16 +314,34 @@ window.htOpenCards = function(target){hs.cardTarget=target;hs.view='cards';rende
 window.htPickCard  = function(card){
   if(typeof hs.cardTarget==='number'){
     var b=hs.board.slice(),ex=b.indexOf(card);
-    if(ex!==-1)b.splice(ex,1);else b[hs.cardTarget]=card;
+    if(ex!==-1){ b.splice(ex,1); }
+    else { b[hs.cardTarget]=card; }
     hs.board=b.filter(Boolean);
     if(hs.hand)htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/board',{method:'PUT',body:JSON.stringify({board:hs.board})}).catch(function(){});
     renderBoardOnFelt();
+    // For flop: keep picker open, auto-advance slot until all 3 flop cards picked
+    // Flop slots are 0,1,2. Turn=3, River=4
+    if(hs._autoCardMode==='flop'){
+      // Find next empty flop slot (0,1,2)
+      var nextSlot=null;
+      for(var si=0;si<3;si++){ if(!hs.board[si]){nextSlot=si;break;} }
+      if(nextSlot!==null){
+        hs.cardTarget=nextSlot; // stay in picker for next flop card
+        renderBody(); return;
+      } else {
+        // All 3 flop cards picked
+        hs._autoCardMode=null; hs.view='main'; renderBody(); return;
+      }
+    }
+    // Turn or River: single card, close picker
+    hs._autoCardMode=null; hs.view='main'; renderBody();
   } else {
+    // Hole cards
     var hc=(hs.holes[hs.cardTarget]||[]).slice(),ix=hc.indexOf(card);
     if(ix!==-1)hc.splice(ix,1);else if(hc.length<2)hc.push(card);
     hs.holes[hs.cardTarget]=hc;
+    hs.view='main';renderBody();
   }
-  hs.view='main';renderBody();
 };
 
 window.htDeclareWinner = function(name){
