@@ -279,7 +279,7 @@ export default function PlayPage() {
       <div className="sheet" id="tournamentSheet">
         <div className="sheet-box">
           <div className="sheet-hdr"><h2>🏆 Tournament</h2><button className="panel-close" onClick={() => (window as any).closeTournament?.()}>✕</button></div>
-          <div className="sheet-body" id="tournamentBody" style={{padding:'16px'}}></div>
+          <div className="sheet-body" id="tournamentBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
 
@@ -287,7 +287,7 @@ export default function PlayPage() {
       <div className="sheet" id="rabbitSheet">
         <div className="sheet-box">
           <div className="sheet-hdr"><h2>🐰 Rabbit Hunt</h2><button className="panel-close" onClick={() => (window as any).closeRabbitHunt?.()}>✕</button></div>
-          <div className="sheet-body" id="rabbitBody" style={{padding:'16px'}}></div>
+          <div className="sheet-body" id="rabbitBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
 
@@ -295,7 +295,7 @@ export default function PlayPage() {
       <div className="sheet" id="seatSheet">
         <div className="sheet-box">
           <div className="sheet-hdr"><h2>🎲 Seat Draw</h2><button className="panel-close" onClick={() => (window as any).closeSeatRandomiser?.()}>✕</button></div>
-          <div className="sheet-body" id="seatBody" style={{padding:'16px'}}></div>
+          <div className="sheet-body" id="seatBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
       <div className="sheet" id="publishSheet">
