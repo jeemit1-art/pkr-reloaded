@@ -113,7 +113,6 @@ export default function PlayPage() {
         eScript.id  = 'pkr-extras';
         eScript.src = '/extras.js';
         document.head.appendChild(eScript);
-        document.body.appendChild(htScript);
       }
       if (!document.getElementById('handTrackerSheet')) {
         const d = document.createElement('div');
