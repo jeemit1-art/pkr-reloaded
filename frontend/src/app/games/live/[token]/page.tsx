@@ -1,10 +1,9 @@
-import { useState } from 'react';
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, LiveData, fmt, fmtDate } from '@/lib/api';
 
-function LiveCardSubmit({ gameId, handId, apiUrl }: { gameId: string; handId: string; apiUrl: string }) {
+function LiveCardSubmit({ gameId, handId, apiUrl = '' }: { gameId: string; handId: string; apiUrl?: string }) {
   const [cards, setCards] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [picking, setPicking] = useState(false);
