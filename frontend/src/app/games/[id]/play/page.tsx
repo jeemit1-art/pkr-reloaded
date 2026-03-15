@@ -99,6 +99,7 @@ export default function PlayPage() {
         const htScript = document.createElement('script');
         htScript.id  = 'pkr-hand-tracker';
         htScript.src = '/hand-tracker.js';
+        document.head.appendChild(htScript);
       }
       // Load tournament.js
       if (!document.getElementById('pkr-tournament')) {
