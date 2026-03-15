@@ -167,6 +167,52 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   return c.json({ ok: true, result });
 });
 
+// ── Update D/SB/BB assignments ──────────────────────────────────────────────────
+hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const handId = c.req.param('handId');
+  const game = await getGameAndVerify(c, gameId);
+  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+
+  const { dealer_seat, sb_seat, bb_seat } = await c.req.json();
+  await c.env.DB.prepare(
+    'UPDATE hands SET dealer_seat=COALESCE(?,dealer_seat), sb_seat=COALESCE(?,sb_seat), bb_seat=COALESCE(?,bb_seat) WHERE id=? AND game_id=?'
+  ).bind(dealer_seat||null, sb_seat||null, bb_seat||null, handId, gameId).run();
+
+  const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(handId).first() as any;
+  return c.json({ ...hand, board: JSON.parse(hand.board || '[]') });
+});
+
+// ── Void hand ────────────────────────────────────────────────────────────────
+hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const handId = c.req.param('handId');
+  const game = await getGameAndVerify(c, gameId);
+  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM hand_actions WHERE hand_id=?').bind(handId),
+    c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId),
+    c.env.DB.prepare('DELETE FROM hands WHERE id=? AND game_id=?').bind(handId, gameId),
+    c.env.DB.prepare('UPDATE games SET current_hand_no=MAX(0,current_hand_no-1) WHERE id=?').bind(gameId),
+  ]);
+  return c.json({ ok: true });
+});
+
+// ── Undo winner ───────────────────────────────────────────────────────────────
+hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const handId = c.req.param('handId');
+  const game = await getGameAndVerify(c, gameId);
+  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+
+  await c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId).run();
+  const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(handId).first() as any;
+  if (!hand) return c.json({ error: 'Hand not found' }, 404);
+  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(handId).all();
+  return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result: null });
+});
+
 // ── Get live hand state (for player view polling) ────────────────────────────
 hands.get('/games/live/:token/hand', async (c) => {
   const token = c.req.param('token');
