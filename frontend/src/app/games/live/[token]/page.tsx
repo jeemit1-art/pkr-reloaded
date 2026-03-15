@@ -3,6 +3,79 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, LiveData, fmt, fmtDate } from '@/lib/api';
 
+function LiveCardSubmit({ gameId, handId, apiUrl }: { gameId: string; handId: string; apiUrl: string }) {
+  const [cards, setCards] = (require('react') as any).useState<string[]>([]);
+  const [submitted, setSubmitted] = (require('react') as any).useState(false);
+  const [picking, setPicking] = (require('react') as any).useState(false);
+
+  const suits = ['♠','♥','♦','♣'];
+  const ranks = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+
+  async function submitCards() {
+    if (cards.length !== 2) return;
+    const ctx = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('pkrCtx')||'{}') : {};
+    try {
+      await fetch(`${ctx.apiUrl || apiUrl}/games/${gameId}/hands/${handId}/player-cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(ctx.token ? {'Authorization': 'Bearer '+ctx.token} : {}) },
+        body: JSON.stringify({ cards }),
+        credentials: 'include',
+      });
+      setSubmitted(true);
+    } catch(e) {}
+  }
+
+  if (submitted) return (
+    <div style={{background:'rgba(46,204,113,0.08)',border:'1px solid rgba(46,204,113,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16}}>
+      <div style={{fontSize:13,color:'var(--green)',fontWeight:700}}>✓ Cards submitted</div>
+      <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>Your cards will be revealed after the hand</div>
+    </div>
+  );
+
+  return (
+    <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16}}>
+      <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:8}}>🃏 Submit your hole cards</div>
+      <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:10}}>
+        {[0,1].map(i => (
+          <div key={i} onClick={() => setPicking(true)} style={{width:36,height:50,background:cards[i]?'#fff':'rgba(255,255,255,0.06)',border:'1px solid '+(cards[i]?'transparent':'rgba(201,168,76,0.3)'),borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontWeight:700,fontSize:14,color:cards[i]&&(cards[i].includes('♥')||cards[i].includes('♦'))?'#d63031':'#1a1a1a'}}>
+            {cards[i] || '?'}
+          </div>
+        ))}
+        {cards.length === 2 && (
+          <button onClick={submitCards} style={{flex:1,padding:'10px 14px',background:'var(--gold)',color:'#000',border:'none',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+            Submit
+          </button>
+        )}
+      </div>
+      {picking && (
+        <div style={{background:'rgba(0,0,0,0.5)',borderRadius:8,padding:'10px 12px'}}>
+          {suits.map(suit => {
+            const isRed = suit === '♥' || suit === '♦';
+            return (
+              <div key={suit} style={{display:'flex',gap:2,marginBottom:4,alignItems:'center'}}>
+                <span style={{width:16,textAlign:'center',color:isRed?'#e74c3c':'#f0e6c8'}}>{suit}</span>
+                {ranks.map(rank => {
+                  const card = rank + suit;
+                  const isSel = cards.includes(card);
+                  return (
+                    <button key={rank} onClick={() => {
+                      if (isSel) { setCards(cards.filter(c => c !== card)); }
+                      else if (cards.length < 2) { const nc = [...cards, card]; setCards(nc); if (nc.length === 2) setPicking(false); }
+                    }} style={{flex:1,padding:'5px 1px',background:isSel?'var(--gold)':'rgba(255,255,255,0.05)',color:isSel?'#000':isRed?'#e74c3c':'#f0e6c8',border:'1px solid '+(isSel?'var(--gold)':'rgba(255,255,255,0.08)'),borderRadius:3,cursor:'pointer',fontSize:'clamp(0.6rem,2vw,0.75rem)',fontWeight:700}}>
+                      {rank}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+          <button onClick={() => setPicking(false)} style={{width:'100%',marginTop:8,padding:8,background:'none',border:'1px solid var(--border)',color:'var(--muted)',borderRadius:6,cursor:'pointer',fontSize:12}}>Done</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LivePage() {
   const { token } = useParams<{token:string}>();
   const [data, setData]       = useState<LiveData|null>(null);
@@ -60,9 +133,10 @@ export default function LivePage() {
   if (!data) return <Loader/>;
 
   const { game, event, players, totalIn, totalOut, bank } = data as any;
-  const chipValue  = (game.chip_value    || 0) as number;
-  const startChips = (game.starting_chips || 0) as number;
-  const hasChips   = chipValue > 0 && startChips > 0;
+  const chipValue       = (game.chip_value     || 0) as number;
+  const startChips      = (game.starting_chips || 0) as number;
+  const hasChips        = chipValue > 0 && startChips > 0;
+  const liveCardsEnabled = !!(game.live_cards_enabled);
   const isSettled = game.status === 'settled';
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const resultsUrl = game.results_token ? `${appUrl}/games/results/${game.results_token}` : '';
@@ -127,6 +201,16 @@ export default function LivePage() {
           <div id="liveSeatsContainer" style={{position:'absolute',inset:0}}></div>
         </div>
       </div>
+
+      {/* ── Live card submission ── */}
+      {liveCardsEnabled && (data as any).handData && !(data as any).handData?.result && (
+        <div style={{flexShrink:0,padding:'10px 16px',borderTop:'1px solid rgba(201,168,76,0.15)'}}>
+          <LiveCardSubmit
+            gameId={game.id || ''}
+            handId={(data as any).handData.id || ''}
+          />
+        </div>
+      )}
 
       <div style={{flexShrink:0,padding:'10px 16px',textAlign:'center',
         fontSize:11,color:'rgba(107,140,110,0.6)',borderTop:'1px solid rgba(201,168,76,0.08)'}}>

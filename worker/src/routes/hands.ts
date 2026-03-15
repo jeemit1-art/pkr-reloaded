@@ -220,6 +220,16 @@ hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result: null });
 });
 
+// ── Toggle live card submission ──────────────────────────────────────────────
+hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await getGameAndVerify(c, gameId);
+  if (!game) return c.json({ error: 'Forbidden' }, 403);
+  const { enabled } = await c.req.json() as any;
+  await c.env.DB.prepare('UPDATE games SET live_cards_enabled=? WHERE id=?').bind(enabled ? 1 : 0, gameId).run();
+  return c.json({ live_cards_enabled: enabled ? 1 : 0 });
+});
+
 // ── Get live hand state (for player view polling) ────────────────────────────
 hands.get('/games/live/:token/hand', async (c) => {
   const token = c.req.param('token');
