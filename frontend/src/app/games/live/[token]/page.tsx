@@ -1,12 +1,13 @@
+import { useState } from 'react';
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, LiveData, fmt, fmtDate } from '@/lib/api';
 
 function LiveCardSubmit({ gameId, handId, apiUrl }: { gameId: string; handId: string; apiUrl: string }) {
-  const [cards, setCards] = (require('react') as any).useState<string[]>([]);
-  const [submitted, setSubmitted] = (require('react') as any).useState(false);
-  const [picking, setPicking] = (require('react') as any).useState(false);
+  const [cards, setCards] = useState<string[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const suits = ['♠','♥','♦','♣'];
   const ranks = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
