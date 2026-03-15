@@ -278,17 +278,25 @@ window.htAct = function(action,playerName) {
     var next=computeNextPlayer(hs.street,hs.actions,hs.hand);
     if(!next && hs.hand && !hs.hand.result) {
       var streetOrder=['pre','flop','turn','river'];
-      var idx=streetOrder.indexOf(hs.street);
-      if(idx<3) {
-        var nextStreet=streetOrder[idx+1];
-        // Show toast and auto-advance
-        var streetNames={pre:'Flop',flop:'Turn',turn:'River',river:'Showdown'};
-        toast('Betting done — '+streetNames[hs.street]+' time!');
+      var sidx=streetOrder.indexOf(hs.street);
+      if(sidx<3) {
+        var nextStreet=streetOrder[sidx+1];
+        var cardSlot={pre:0,flop:3,turn:4}[hs.street]; // which board slot to open next
+        var streetNames={pre:'Flop',flop:'Turn',turn:'River'};
+        toast('Betting done — deal the '+streetNames[hs.street]+'!');
         setTimeout(function(){
           hs.street=nextStreet;
           hs.chipInput='';
+          // Auto-open card picker for the next community card
+          if(cardSlot!==undefined){
+            hs.cardTarget=cardSlot;
+            hs.view='cards';
+          }
           renderBody();
-        }, 800);
+          // Ensure sheet is open
+          var sheet=document.getElementById('handTrackerSheet');
+          if(sheet) sheet.classList.add('open');
+        }, 600);
       }
     }
     renderBody();renderBoardOnFelt();
