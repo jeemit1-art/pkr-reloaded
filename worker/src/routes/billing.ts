@@ -14,8 +14,8 @@ const billing = new Hono<{ Bindings: Env }>();
 //   npx wrangler secret put STRIPE_PRICE_STARTER
 //   npx wrangler secret put STRIPE_PRICE_PRO
 const PLANS = {
-  starter: { label: 'Starter', price_usd: 999,  features: ['1 group', 'Up to 9 seats', 'All core features'] },
-  pro:     { label: 'Pro',     price_usd: 1999, features: ['Unlimited groups', 'Up to 15 seats', 'All features'] },
+  starter: { label: 'Starter', price_usd: 999,  features: ['1 group', 'Up to 9 seats', 'Buy-ins, live view, leaderboard, hand tracking'] },
+  pro:     { label: 'Pro',     price_usd: 1999, features: ['Unlimited groups', 'Up to 15 seats', 'AI analysis', 'Tournament mode', 'Player stats', 'Rabbit hunt'] },
 };
 
 // ── Helper: call Stripe REST API directly (no SDK needed in Workers) ──────────

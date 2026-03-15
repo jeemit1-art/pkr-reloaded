@@ -99,6 +99,20 @@ export default function PlayPage() {
         const htScript = document.createElement('script');
         htScript.id  = 'pkr-hand-tracker';
         htScript.src = '/hand-tracker.js';
+      }
+      // Load tournament.js
+      if (!document.getElementById('pkr-tournament')) {
+        const tScript = document.createElement('script');
+        tScript.id  = 'pkr-tournament';
+        tScript.src = '/tournament.js';
+        document.head.appendChild(tScript);
+      }
+      // Load extras.js (rabbit hunt + seat randomiser)
+      if (!document.getElementById('pkr-extras')) {
+        const eScript = document.createElement('script');
+        eScript.id  = 'pkr-extras';
+        eScript.src = '/extras.js';
+        document.head.appendChild(eScript);
         document.body.appendChild(htScript);
       }
       if (!document.getElementById('handTrackerSheet')) {
@@ -144,6 +158,9 @@ export default function PlayPage() {
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
           <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
+          <button onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
+          <button onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
+          <button onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
           <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
         </div>
 
@@ -194,6 +211,7 @@ export default function PlayPage() {
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
           <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
           <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
+          <button className="game-tab" id="analyseBtn" onClick={() => { const ctx = (window as any).getPkrCtx?.(); if(ctx?.gameId) window.location.href=`/games/${ctx.gameId}/analysis`; }} style={{display:'none'}}><span className="game-tab-icon">🤖</span>Analyse</button>
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
         </div>
       </div>
@@ -257,6 +275,30 @@ export default function PlayPage() {
       </div>
 
       {/* ── PUBLISH SHEET ── */}
+
+      {/* ── TOURNAMENT SHEET ── */}
+      <div className="sheet" id="tournamentSheet">
+        <div className="sheet-box">
+          <div className="sheet-hdr"><h2>🏆 Tournament</h2><button className="panel-close" onClick={() => (window as any).closeTournament?.()}>✕</button></div>
+          <div className="sheet-body" id="tournamentBody" style={{padding:'16px'}}></div>
+        </div>
+      </div>
+
+      {/* ── RABBIT HUNT SHEET ── */}
+      <div className="sheet" id="rabbitSheet">
+        <div className="sheet-box">
+          <div className="sheet-hdr"><h2>🐰 Rabbit Hunt</h2><button className="panel-close" onClick={() => (window as any).closeRabbitHunt?.()}>✕</button></div>
+          <div className="sheet-body" id="rabbitBody" style={{padding:'16px'}}></div>
+        </div>
+      </div>
+
+      {/* ── SEAT RANDOMISER SHEET ── */}
+      <div className="sheet" id="seatSheet">
+        <div className="sheet-box">
+          <div className="sheet-hdr"><h2>🎲 Seat Draw</h2><button className="panel-close" onClick={() => (window as any).closeSeatRandomiser?.()}>✕</button></div>
+          <div className="sheet-body" id="seatBody" style={{padding:'16px'}}></div>
+        </div>
+      </div>
       <div className="sheet" id="publishSheet">
         <div className="sheet-box">
           <div className="sheet-hdr"><h2>♠ Results</h2><button className="panel-close" onClick={() => (window as any).closePublish?.()}>✕</button></div>
@@ -1782,6 +1824,12 @@ document.addEventListener('click', function(e) {
   if (e.target === shareSheet) window.closeShare();
   var publishSheet = document.getElementById('publishSheet');
   if (e.target === publishSheet) window.closePublish();
+  var tournamentSheet = document.getElementById('tournamentSheet');
+  if (e.target === tournamentSheet) { (window as any).closeTournament?.(); }
+  var rabbitSheet = document.getElementById('rabbitSheet');
+  if (e.target === rabbitSheet) { (window as any).closeRabbitHunt?.(); }
+  var seatSheet = document.getElementById('seatSheet');
+  if (e.target === seatSheet) { (window as any).closeSeatRandomiser?.(); }
 });
 
 // ── Assign name input: auto-fill phone ──
@@ -1864,8 +1912,10 @@ if (ctx && ctx.gameId) {
     var titleEl = document.getElementById('topbarTitle');
     if (titleEl && state.game) titleEl.textContent = state.game.name;
     var htBtn2  = document.getElementById('handTrackerBtn');
+    var anlBtn  = document.getElementById('analyseBtn');
     var trkBtn2 = document.getElementById('trackHandsBtn');
     if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
+    if (anlBtn)  anlBtn.style.display   = (state.game && state.game.hand_tracking) ? '' : 'none';
     if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
     renderTable();
     updateSaveResultsBtn();

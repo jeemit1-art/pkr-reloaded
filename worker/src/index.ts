@@ -6,7 +6,9 @@ import auth    from './routes/auth';
 import events  from './routes/events';
 import games   from './routes/games';
 import billing from './routes/billing';
-import hands   from './routes/hands';
+import hands      from './routes/hands';
+import tournament from './routes/tournament';
+import analysis   from './routes/analysis';
 
 const app = new Hono<{ Bindings: Env }>();
 

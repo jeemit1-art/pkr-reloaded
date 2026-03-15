@@ -230,6 +230,19 @@ hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
   return c.json({ live_cards_enabled: enabled ? 1 : 0 });
 });
 
+
+// ── Seat draw ────────────────────────────────────────────────────────────────
+hands.post('/games/:id/seat-draw', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({ error: 'Not found' }, 404);
+  if (!await requireEventRole(c, game.event_id, 'cohost')) return c.json({ error: 'Forbidden' }, 403);
+  const { result } = await c.req.json() as any;
+  await c.env.DB.prepare('UPDATE games SET seat_draw_result=? WHERE id=?')
+    .bind(JSON.stringify(result || []), gameId).run();
+  return c.json({ ok: true });
+});
+
 // ── Get live hand state (for player view polling) ────────────────────────────
 hands.get('/games/live/:token/hand', async (c) => {
   const token = c.req.param('token');

@@ -89,7 +89,7 @@ export default function HomePage() {
           </h1>
           <p className="hero-sub">The home poker game management app your crew actually needs. Track every buy-in, settle every debt, and finally prove who the best player is — all from one screen.</p>
           <div className="hero-actions">
-            <button className="btn-main" onClick={() => setModalOpen(true)}>Start Free — 5 Days</button>
+            <button className="btn-main" onClick={() => setModalOpen(true)}>Start Free Trial</button>
             <a href="#features" className="btn-ghost">See how it works</a>
           </div>
 
@@ -368,11 +368,12 @@ export default function HomePage() {
               <div className="plan-tier">Starter</div>
               <div className="plan-price"><span className="cur">$</span><span className="amt">9</span><span className="dec">.99</span></div>
               <div className="plan-per">per month · cancel anytime</div>
-              <div className="plan-tagline">For casual groups who play occasionally. Every core feature included.</div>
+              <div className="plan-tagline">Track buy-ins, run live games, settle up instantly. Everything you need for a great home game.</div>
               <ul className="plan-feats">
-                {['1 active group', 'Up to 9 seats per game', 'Full leaderboard & history', 'Push notifications', 'Spectator view & QR invites', 'WhatsApp share & offline mode'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
+                {['Buy-in & cashout tracking', 'Real-time live view for players', 'Full leaderboard & history', 'Hand tracking (basic)', 'Push notifications', 'WhatsApp settlement sharing', 'Seat randomiser', '🎲 1 active group · Up to 9 seats'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
+                <li className="dim"><span className="ck">○</span>AI hand analysis</li>
+                <li className="dim"><span className="ck">○</span>Tournament mode & blind timer</li>
                 <li className="dim"><span className="ck">○</span>Multiple groups</li>
-                <li className="dim"><span className="ck">○</span>10–15 seat games</li>
               </ul>
               <button className="pbtn outline" onClick={() => setModalOpen(true)}>Start Free Trial</button>
             </div>
@@ -381,9 +382,9 @@ export default function HomePage() {
               <div className="plan-tier">Pro</div>
               <div className="plan-price"><span className="cur">$</span><span className="amt">19</span><span className="dec">.99</span></div>
               <div className="plan-per">per month · cancel anytime</div>
-              <div className="plan-tagline">For groups who play weekly or run multiple tables. Bigger games, unlimited groups.</div>
+              <div className="plan-tagline">Unlock AI coaching, tournament mode, and advanced stats. The complete poker night platform.</div>
               <ul className="plan-feats">
-                {['Unlimited groups', 'Up to 15 seats per game', 'Full leaderboard & history', 'Push notifications', 'Spectator view & QR invites', 'WhatsApp share & offline mode', 'Priority support', 'Early access to new features'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
+                {['Everything in Starter', 'Unlimited groups · Up to 15 seats', '🤖 AI hand analysis (Claude)', '⏱ Tournament mode + blind timer', '📊 Player stats dashboard (VPIP, win rate)', '🐰 Rabbit hunt', '👁 Live hole card submission', '🃏 Side pot calculator', '📤 Hand history export', 'Priority support'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
               </ul>
               <button className="pbtn gold" onClick={() => setModalOpen(true)}>Start Free Trial</button>
             </div>

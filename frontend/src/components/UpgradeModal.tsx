@@ -158,7 +158,7 @@ export default function UpgradeModal() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div>
                     <div style={s.planName}>Starter</div>
-                    <div style={s.planFeature}>1 group · Up to 9 seats · All features</div>
+                    <div style={s.planFeature}>1 group · Up to 9 seats · Buy-ins, live view, leaderboard</div>
                   </div>
                   <div style={{textAlign:'right' as const}}>
                     <div style={s.planPrice}>$9.99</div>
@@ -181,7 +181,7 @@ export default function UpgradeModal() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div>
                     <div style={s.planName}>Pro</div>
-                    <div style={s.planFeature}>Unlimited groups · Up to 15 seats · All features</div>
+                    <div style={s.planFeature}>Unlimited groups · 15 seats · AI analysis · Tournament mode · Stats</div>
                   </div>
                   <div style={{textAlign:'right' as const}}>
                     <div style={s.planPrice}>$19.99</div>
