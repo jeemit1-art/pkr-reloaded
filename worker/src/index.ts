@@ -26,6 +26,8 @@ app.route('/events',  events);
 app.route('/billing', billing);
 app.route('/',        hands);
 app.route('/',        games);
+app.route('/',        tournament);
+app.route('/',        analysis);
 
 app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worker', ts:Date.now() }));
 app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
