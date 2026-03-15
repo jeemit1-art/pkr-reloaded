@@ -211,7 +211,7 @@ export default function PlayPage() {
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
           <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
           <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
-          <button className="game-tab" id="analyseBtn" onClick={() => { const ctx = (window as any).getPkrCtx?.(); if(ctx?.gameId) window.location.href=`/games/${ctx.gameId}/analysis`; }} style={{display:'none'}}><span className="game-tab-icon">🤖</span>Analyse</button>
+
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
         </div>
       </div>
@@ -1912,10 +1912,8 @@ if (ctx && ctx.gameId) {
     var titleEl = document.getElementById('topbarTitle');
     if (titleEl && state.game) titleEl.textContent = state.game.name;
     var htBtn2  = document.getElementById('handTrackerBtn');
-    var anlBtn  = document.getElementById('analyseBtn');
     var trkBtn2 = document.getElementById('trackHandsBtn');
     if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
-    if (anlBtn)  anlBtn.style.display   = (state.game && state.game.hand_tracking) ? '' : 'none';
     if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
     renderTable();
     updateSaveResultsBtn();
