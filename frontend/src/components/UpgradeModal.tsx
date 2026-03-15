@@ -181,7 +181,7 @@ export default function UpgradeModal() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div>
                     <div style={s.planName}>Pro</div>
-                    <div style={s.planFeature}>Unlimited groups · 15 seats · AI analysis · Tournament mode · Stats</div>
+                    <div style={s.planFeature}>Unlimited groups · 15 seats · Tournament mode · Player stats · Rabbit hunt</div>
                   </div>
                   <div style={{textAlign:'right' as const}}>
                     <div style={s.planPrice}>$19.99</div>

@@ -371,7 +371,6 @@ export default function HomePage() {
               <div className="plan-tagline">Track buy-ins, run live games, settle up instantly. Everything you need for a great home game.</div>
               <ul className="plan-feats">
                 {['Buy-in & cashout tracking', 'Real-time live view for players', 'Full leaderboard & history', 'Hand tracking (basic)', 'Push notifications', 'WhatsApp settlement sharing', 'Seat randomiser', '🎲 1 active group · Up to 9 seats'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
-                <li className="dim"><span className="ck">○</span>AI hand analysis</li>
                 <li className="dim"><span className="ck">○</span>Tournament mode & blind timer</li>
                 <li className="dim"><span className="ck">○</span>Multiple groups</li>
               </ul>
@@ -384,7 +383,7 @@ export default function HomePage() {
               <div className="plan-per">per month · cancel anytime</div>
               <div className="plan-tagline">Unlock AI coaching, tournament mode, and advanced stats. The complete poker night platform.</div>
               <ul className="plan-feats">
-                {['Everything in Starter', 'Unlimited groups · Up to 15 seats', '🤖 AI hand analysis (Claude)', '⏱ Tournament mode + blind timer', '📊 Player stats dashboard (VPIP, win rate)', '🐰 Rabbit hunt', '👁 Live hole card submission', '🃏 Side pot calculator', '📤 Hand history export', 'Priority support'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
+                {['Everything in Starter', 'Unlimited groups · Up to 15 seats', '⏱ Tournament mode + blind timer', '📊 Player stats dashboard (VPIP, win rate)', '🐰 Rabbit hunt', '👁 Live hole card submission', '🃏 Side pot calculator', '📤 Hand history export', 'Priority support'].map(f => <li key={f}><span className="ck">✓</span>{f}</li>)}
               </ul>
               <button className="pbtn gold" onClick={() => setModalOpen(true)}>Start Free Trial</button>
             </div>
