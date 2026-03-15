@@ -1824,11 +1824,11 @@ document.addEventListener('click', function(e) {
   var publishSheet = document.getElementById('publishSheet');
   if (e.target === publishSheet) window.closePublish();
   var tournamentSheet = document.getElementById('tournamentSheet');
-  if (e.target === tournamentSheet) { (window as any).closeTournament?.(); }
+  if (e.target === tournamentSheet) { window.closeTournament && window.closeTournament(); }
   var rabbitSheet = document.getElementById('rabbitSheet');
-  if (e.target === rabbitSheet) { (window as any).closeRabbitHunt?.(); }
+  if (e.target === rabbitSheet) { window.closeRabbitHunt && window.closeRabbitHunt(); }
   var seatSheet = document.getElementById('seatSheet');
-  if (e.target === seatSheet) { (window as any).closeSeatRandomiser?.(); }
+  if (e.target === seatSheet) { window.closeSeatRandomiser && window.closeSeatRandomiser(); }
 });
 
 // ── Assign name input: auto-fill phone ──
