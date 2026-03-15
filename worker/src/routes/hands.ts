@@ -6,10 +6,16 @@ const hands = new Hono<{ Bindings: Env }>();
 
 // ── Helper: get game and verify cohost ──────────────────────────────────────
 async function getGameAndVerify(c: any, gameId: string) {
-  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first() as any;
-  if (!game) return null;
-  if (!await requireEventRole(c, game.event_id, 'cohost')) return null;
-  return game;
+  try {
+    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first() as any;
+    if (!game) return null;
+    const ok = await requireEventRole(c, game.event_id, 'cohost');
+    if (!ok) return null;
+    return game;
+  } catch(e: any) {
+    console.error('getGameAndVerify error:', e?.message);
+    return null;
+  }
 }
 
 // ── Toggle hand tracking on/off ─────────────────────────────────────────────
@@ -96,7 +102,8 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
 
-  const { user_id, display_name, street, action, chips } = await c.req.json();
+  const { user_id, display_name, street, action: actionType, chips } = await c.req.json();
+  const action = actionType;
   if (!display_name || !street || !action) return c.json({ error: 'display_name, street, action required' }, 400);
 
   const id = generateId();
