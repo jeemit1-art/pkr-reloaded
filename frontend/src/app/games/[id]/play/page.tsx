@@ -210,7 +210,7 @@ export default function PlayPage() {
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
           <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
           <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
-          <button className="game-tab" id="analyseBtn" onClick={() => { const ctx = window.getPkrCtx?.(); if(ctx?.gameId) window.location.href=`/games/${ctx.gameId}/analysis`; }} style={{display:'none'}}><span className="game-tab-icon">🤖</span>Analyse</button>
+          <button className="game-tab" id="analyseBtn" onClick={() => { const ctx = (window as any).getPkrCtx?.(); if(ctx?.gameId) window.location.href=`/games/${ctx.gameId}/analysis`; }} style={{display:'none'}}><span className="game-tab-icon">🤖</span>Analyse</button>
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
         </div>
       </div>
