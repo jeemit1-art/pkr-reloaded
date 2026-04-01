@@ -145,7 +145,8 @@ export default function LivePage() {
     <div style={{minHeight:'100vh',background:'#060e07',display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div style={{flexShrink:0,background:'#060e07',borderBottom:'1px solid rgba(201,168,76,0.15)',
         display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',height:52}}>
-        <div>
+        <button onClick={()=>{ if(window.history.length>1){window.history.back();}else{window.close();} }} style={{background:'none',border:'none',color:'#6b8c6e',cursor:'pointer',fontSize:22,padding:'4px 8px',marginRight:4,lineHeight:1}}>‹</button>
+        <div style={{flex:1}}>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:'1.05rem',fontWeight:700,color:'#c9a84c',
             overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60vw'}}>{event.name}</div>
           <div style={{fontSize:'0.7rem',color:'#6b8c6e',marginTop:1}}>
