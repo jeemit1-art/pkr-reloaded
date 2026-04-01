@@ -1,5 +1,5 @@
-// hand-tracker.js — PKR Reloaded Hand Tracker v6
-// Dealer picker (first hand only), hand summary, dealer chip on felt, better history, auto-street advance, smart action buttons, heads-up mode
+// hand-tracker.js — PKR Reloaded Hand Tracker v7
+// v6 features + mid-session player changes (add/remove, blind re-entry, HU auto-switch, queue during live hand)
 
 (function() {
 'use strict';
@@ -35,15 +35,121 @@ var hs = {
   _pendingHand: null, _suggestedDealer: null,
   potWinners: [], currentPotIndex: 0, _autoCardMode: null,
   _lastHandSummary: null,
+  // v7: mid-session player management
+  _pendingJoins: [],    // [{sid,name,seat,postBB}] queued during live hand
+  _pendingLeaves: [],   // [sid] queued during live hand
+  _wasHU: false,        // track HU state for auto-switch toasts
 };
 
 function getSeated() {
   if (!window.state || !window.state.players) return [];
   return Object.keys(window.state.players).map(function(sid) {
     var p = window.state.players[sid];
-    return p && p.name && (window.pBuyin ? window.pBuyin(p) > 0 : true)
-      ? { sid:sid, seat:parseInt(sid.replace('seat',''),10), name:p.name, p:p } : null;
+    if (!p || !p.name) return null;
+    if (window.pBuyin && window.pBuyin(p) <= 0) return null;
+    if (hs._pendingLeaves && hs._pendingLeaves.indexOf(sid) >= 0) return null;
+    return { sid:sid, seat:parseInt(sid.replace('seat',''),10), name:p.name, p:p,
+             pendingPost: !!(p._pendingPost) };
   }).filter(Boolean).sort(function(a,b){return a.seat-b.seat;});
+}
+
+// v7: add a player mid-session (queues if hand in progress, applies immediately otherwise)
+window.htAddPlayerMidSession = function(sid, name, postBB) {
+  if (!sid || !name) return;
+  var seat = parseInt(sid.replace('seat',''), 10);
+  if (hs.hand) {
+    // hand in progress — queue it
+    var already = hs._pendingJoins.find(function(p){return p.sid===sid;});
+    if (!already) {
+      hs._pendingJoins.push({sid:sid, name:name, seat:seat, postBB:!!postBB});
+      toast(name + ' will join after this hand');
+    }
+    renderBody();
+    return;
+  }
+  // no hand in progress — apply immediately
+  if (window.state && window.state.players && window.state.players[sid]) {
+    window.state.players[sid]._pendingPost = !!postBB;
+  }
+  var prevCount = getSeated().length;
+  toast(name + ' joined' + (postBB ? ' — must post BB' : ''));
+  // auto-exit HU mode if going from 2 to 3+
+  var newCount = getSeated().length;
+  if (hs._wasHU && newCount >= 3) {
+    hs._wasHU = false;
+    toast('Heads-up mode off — back to full ring rules');
+  }
+  renderBody();
+};
+
+// v7: remove a player mid-session
+window.htRemovePlayerMidSession = function(sid) {
+  if (!sid) return;
+  var seated = getSeated();
+  var player = seated.find(function(p){return p.sid===sid;});
+  if (!player) return;
+  if (hs.hand) {
+    // hand in progress — queue removal
+    if (hs._pendingLeaves.indexOf(sid) < 0) {
+      hs._pendingLeaves.push(sid);
+      toast(player.name + ' will leave after this hand');
+    }
+    renderBody();
+    return;
+  }
+  // no hand — apply immediately
+  // if they were about to be dealer/blind, advance past them
+  _applyLeave(sid, player, seated);
+};
+
+function _applyLeave(sid, player, seated) {
+  if (window.state && window.state.players && window.state.players[sid]) {
+    // zero out buyin so getSeated() filters them
+    if (window.state.players[sid].buyin !== undefined) window.state.players[sid].buyin = 0;
+    if (window.state.players[sid].stack !== undefined) window.state.players[sid].stack = 0;
+  }
+  var remaining = getSeated();
+  toast(player.name + ' left the game');
+  // auto-trigger HU mode if dropping to 2
+  if (remaining.length === 2 && !hs._wasHU) {
+    hs._wasHU = true;
+    toast('Heads-up mode on — dealer posts SB and acts first pre-flop');
+  }
+  // auto-end HU if somehow dropping to 1 (edge case)
+  if (remaining.length < 2) {
+    toast('Not enough players — game paused');
+  }
+  renderBody();
+}
+
+// v7: flush queued changes after a hand ends
+function flushPendingPlayerChanges() {
+  if (!hs._pendingLeaves.length && !hs._pendingJoins.length) return;
+  var seated = getSeated();
+  // process leaves first
+  hs._pendingLeaves.forEach(function(sid) {
+    var player = seated.find(function(p){return p.sid===sid;});
+    if (player) _applyLeave(sid, player, seated);
+  });
+  hs._pendingLeaves = [];
+  // then joins
+  hs._pendingJoins.forEach(function(j) {
+    if (window.state && window.state.players && window.state.players[j.sid]) {
+      window.state.players[j.sid]._pendingPost = !!j.postBB;
+    }
+    toast(j.name + ' joined' + (j.postBB ? ' — must post BB' : ''));
+  });
+  hs._pendingJoins = [];
+  // re-check HU state after all changes
+  var finalCount = getSeated().length;
+  if (finalCount === 2 && !hs._wasHU) {
+    hs._wasHU = true;
+    toast('Heads-up mode on');
+  } else if (finalCount >= 3 && hs._wasHU) {
+    hs._wasHU = false;
+    toast('Heads-up mode off — back to full ring rules');
+  }
+  renderBody();
 }
 
 function isHeadsUp() { return getSeated().filter(function(p){ var f={}; hs.actions.forEach(function(a){if(a.action==='fold')f[a.display_name]=true;}); return !f[p.name]; }).length === 2; }
@@ -172,6 +278,7 @@ function closeSheet(id){var s=document.getElementById(id);if(s)s.classList.remov
 
 // ─── START HAND: first hand shows dealer picker, subsequent hands auto-rotate ─
 window.htStartHand = function() {
+  flushPendingPlayerChanges();
   var seated=getSeated();
   if(seated.length<2){toast('Need at least 2 players');return;}
   var seats=seated.map(function(p){return p.seat;});
