@@ -158,6 +158,7 @@ export default function PlayPage() {
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
           <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
+          <button onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
           <button onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
           <button onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
           <button onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
@@ -1952,6 +1953,28 @@ var _pollInterval = setInterval(function() {
 }, 15000);
 
 window._pkrTableCleanup = function() { clearInterval(_pollInterval); };
+
+window.addSeat = function() {
+  var ctx=getPkrCtx(); if(!ctx||!ctx.gameId) return;
+  if(!state.game) return;
+  var current=state.game.seats||9;
+  if(current>=15){toast('Maximum 15 seats');return;}
+  var newSeats=current+1;
+  pkrApi('/games/'+ctx.gameId,{method:'PUT',body:JSON.stringify({seats:newSeats})}).then(function(){
+    state.game.seats=newSeats; saveState(); renderTable(); toast('Seat '+newSeats+' added ✓');
+  }).catch(function(e){toast('Error: '+e.message);});
+};
+
+window.addSeat = function() {
+  var ctx = getPkrCtx(); if(!ctx||!ctx.gameId) return;
+  if(!state.game) return;
+  var current = state.game.seats||9;
+  if(current>=15){toast('Maximum 15 seats');return;}
+  var newSeats = current+1;
+  pkrApi('/games/'+ctx.gameId,{method:'PUT',body:JSON.stringify({seats:newSeats})}).then(function(){
+    state.game.seats=newSeats; saveState(); renderTable(); toast('Seat '+newSeats+' added ✓');
+  }).catch(function(e){toast('Error: '+e.message);});
+};
 
 })();
 `;
