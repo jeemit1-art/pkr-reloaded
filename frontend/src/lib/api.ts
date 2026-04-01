@@ -89,7 +89,7 @@ export const api = {
     verifyPassword: (id:string,password:string) =>
       req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
     mergePlayers: (id:string, from_name:string, to_name:string) =>
-      post(`/events/${id}/players/merge`, {from_name, to_name}),
+      req(`/events/${id}/players/merge`, {method:'POST', body:JSON.stringify({from_name, to_name})}),
   removeMember: (id:string, userId:string) => req(`/events/${id}/members/${userId}`,{method:'DELETE'}),
   },
   games: {
