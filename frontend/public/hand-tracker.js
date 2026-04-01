@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes + pause/resume session (localStorage persistence)
+// v6 features + mid-session player changes + pause/resume session + saved player roster
 
 (function() {
 'use strict';
@@ -280,6 +280,7 @@ function closeSheet(id){var s=document.getElementById(id);if(s)s.classList.remov
 window.htStartHand = function() {
   flushPendingPlayerChanges();
   var seated=getSeated();
+  seated.forEach(function(p){ saveToRoster(p.name); });
   if(seated.length<2){toast('Need at least 2 players');return;}
   var seats=seated.map(function(p){return p.seat;});
   var last=gameInfo().currentDealerSeat||0;
@@ -635,6 +636,7 @@ function renderBody(){
   if(hs.view==='straddle'){renderStraddleView(body);return;}
   if(hs.view==='dealer'){renderDealerView(body);return;}
   if(hs.view==='summary'){renderSummary(body);return;}
+  if(hs.view==='add_player'){renderAddPlayerPanel(body);return;}
   renderMain(body);
 }
 
@@ -958,6 +960,7 @@ function renderMain(body){
   }
 
   var btm=document.createElement('div');btm.style.cssText='display:flex;gap:6px;margin-top:6px';
+  btm.appendChild(mkB('+ Player','padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',function(){hs.view='add_player';renderBody();}));
   btm.appendChild(mkB('✕ Void','padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',window.htVoidHand));
   btm.appendChild(mkB('🏆 Declare Winner','flex:1;padding:10px;background:rgba(46,204,113,0.08);color:var(--green);border:1px solid rgba(46,204,113,0.25);border-radius:7px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:DM Sans,sans-serif',function(){hs.view='winner';renderBody();}));
   body.appendChild(btm);
@@ -1093,6 +1096,131 @@ function renderCards(body){
     });
     body.appendChild(row);
   });
+}
+
+// ─── PLAYER ROSTER (v7) ──────────────────────────────────────────────────────
+var ROSTER_KEY = 'pkr_ht_roster';
+
+function getRoster() {
+  try { return JSON.parse(localStorage.getItem(ROSTER_KEY)) || []; } catch(e) { return []; }
+}
+
+function saveToRoster(name) {
+  if (!name || name.length < 1) return;
+  var roster = getRoster();
+  // move to front if already exists, otherwise prepend
+  roster = roster.filter(function(n){ return n !== name; });
+  roster.unshift(name);
+  // keep max 20 names
+  if (roster.length > 20) roster = roster.slice(0, 20);
+  try { localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); } catch(e) {}
+}
+
+function removeFromRoster(name) {
+  var roster = getRoster().filter(function(n){ return n !== name; });
+  try { localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); } catch(e) {}
+}
+
+// Render the add-player panel (roster quick-pick + manual entry)
+function renderAddPlayerPanel(body) {
+  var seated = getSeated();
+  var seatedNames = seated.map(function(p){ return p.name; });
+  var roster = getRoster();
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px';
+  title.textContent = 'Add player';
+  body.appendChild(title);
+
+  // Roster quick-pick chips (only names not already seated)
+  var available = roster.filter(function(n){ return seatedNames.indexOf(n) < 0; });
+  if (available.length > 0) {
+    var chipRow = document.createElement('div');
+    chipRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px';
+    available.forEach(function(name) {
+      var chip = document.createElement('button');
+      chip.style.cssText = 'padding:5px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;color:var(--cream);font-size:0.78rem;cursor:pointer;font-family:DM Sans,sans-serif';
+      chip.textContent = name;
+      chip.addEventListener('click', function() {
+        _promptPostAndAdd(name, body);
+      });
+      chipRow.appendChild(chip);
+    });
+    body.appendChild(chipRow);
+  }
+
+  // Manual name entry
+  var inputRow = document.createElement('div');
+  inputRow.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.placeholder = 'New player name...';
+  inp.style.cssText = 'flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--cream);font-size:0.85rem;font-family:DM Sans,sans-serif;outline:none';
+  var addBtn = document.createElement('button');
+  addBtn.style.cssText = 'padding:9px 16px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);color:var(--gold);border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:700;font-family:DM Sans,sans-serif';
+  addBtn.textContent = 'Add';
+  addBtn.addEventListener('click', function() {
+    var name = inp.value.trim();
+    if (!name) return;
+    _promptPostAndAdd(name, body);
+  });
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { var name = inp.value.trim(); if (name) _promptPostAndAdd(name, body); }
+  });
+  inputRow.appendChild(inp);
+  inputRow.appendChild(addBtn);
+  body.appendChild(inputRow);
+
+  body.appendChild(mkB('← Cancel', 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;font-family:DM Sans,sans-serif', function(){
+    hs.view = 'main'; renderBody();
+  }));
+}
+
+function _promptPostAndAdd(name, body) {
+  // Find first empty seat slot
+  var seated = getSeated();
+  var usedSeats = seated.map(function(p){ return p.seat; });
+  var newSeat = 1;
+  while (usedSeats.indexOf(newSeat) >= 0) newSeat++;
+  var sid = 'seat' + newSeat;
+
+  // Ensure slot exists in state
+  if (window.state && window.state.players) {
+    if (!window.state.players[sid]) window.state.players[sid] = {};
+    window.state.players[sid].name = name;
+    if (window.state.players[sid].buyin === undefined) window.state.players[sid].buyin = 1;
+  }
+
+  saveToRoster(name);
+
+  // If hand in progress — skip post prompt, just queue
+  if (hs.hand) {
+    window.htAddPlayerMidSession(sid, name, true);
+    hs.view = 'main';
+    renderBody();
+    return;
+  }
+
+  // No hand — ask post or wait
+  body.innerHTML = '';
+  var msg = document.createElement('div');
+  msg.style.cssText = 'font-size:0.88rem;color:var(--cream);margin-bottom:14px;line-height:1.5';
+  msg.textContent = name + ' is joining. Do they post a dead big blind now, or wait for their natural blind?';
+  body.appendChild(msg);
+
+  body.appendChild(mkB('Post dead BB now', 'width:100%;padding:12px;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);color:var(--green);border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:DM Sans,sans-serif;margin-bottom:8px', function(){
+    window.htAddPlayerMidSession(sid, name, true);
+    hs.view = 'main'; renderBody();
+  }));
+
+  body.appendChild(mkB('Wait for natural BB', 'width:100%;padding:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--cream);border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:DM Sans,sans-serif;margin-bottom:8px', function(){
+    window.htAddPlayerMidSession(sid, name, false);
+    hs.view = 'main'; renderBody();
+  }));
+
+  body.appendChild(mkB('← Back', 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;font-family:DM Sans,sans-serif', function(){
+    hs.view = 'add_player'; renderBody();
+  }));
 }
 
 // ─── SESSION PERSISTENCE (v7) ────────────────────────────────────────────────
