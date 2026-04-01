@@ -1161,7 +1161,7 @@ function renderCards(body){
 }
 
 // ─── PLAYER ROSTER (v7) ──────────────────────────────────────────────────────
-var ROSTER_KEY = 'pkr_ht_roster';
+var ROSTER_KEY = 'pkr_ht_roster_' + getGameId();
 
 function getRoster() {
   try { return JSON.parse(localStorage.getItem(ROSTER_KEY)) || []; } catch(e) { return []; }
