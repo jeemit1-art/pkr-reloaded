@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot
+// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot + action log
 
 (function() {
 'use strict';
@@ -850,6 +850,10 @@ function renderMain(body){
   }
 
   // Street chip totals
+  // v7: street action log — shows collapsed strip of actions for current street
+  if (hs.actions.filter(function(a){return a.street===hs.street&&a.action!=='post'&&a.action!=='straddle';}).length > 0) {
+    renderStreetLog(body, hs.actions, hs.street);
+  }
   var scm={};seated.forEach(function(p){scm[p.name]=0;});
   hs.actions.filter(function(a){return a.street===hs.street;}).forEach(function(a){if(a.chips>0)scm[a.display_name]=(scm[a.display_name]||0)+a.chips;});
   var maxBet=Math.max.apply(null,[0].concat(Object.values(scm)));
@@ -1238,6 +1242,85 @@ function _promptPostAndAdd(name, body) {
   }));
 }
 
+
+
+// ─── STREET ACTION LOG (v7) ──────────────────────────────────────────────────
+function renderStreetLog(body, actions, street) {
+  var streetActs = actions.filter(function(a){
+    return a.street === street && a.action !== 'post' && a.action !== 'straddle';
+  });
+  if (!streetActs.length) return;
+
+  var cv = gameInfo().chip_value||0;
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'margin:0 0 8px;padding:0';
+
+  // collapsible toggle
+  var isOpen = true;
+  var toggle = document.createElement('button');
+  toggle.style.cssText = 'background:none;border:none;color:var(--muted);font-size:0.68rem;cursor:pointer;padding:0 0 4px;font-family:DM Sans,sans-serif;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:4px';
+
+  var arrow = document.createElement('span');
+  arrow.textContent = '▾';
+  arrow.style.cssText = 'font-size:0.75rem;transition:transform .15s';
+  var toggleLabel = document.createElement('span');
+  toggleLabel.textContent = street.charAt(0).toUpperCase() + street.slice(1) + ' action';
+  toggle.appendChild(arrow);
+  toggle.appendChild(toggleLabel);
+
+  var logBody = document.createElement('div');
+  logBody.style.cssText = 'display:flex;flex-direction:column;gap:2px;padding:4px 0 2px';
+
+  toggle.addEventListener('click', function(){
+    isOpen = !isOpen;
+    logBody.style.display = isOpen ? 'flex' : 'none';
+    arrow.style.transform = isOpen ? '' : 'rotate(-90deg)';
+  });
+
+  // build action text tokens
+  var tokens = [];
+  streetActs.forEach(function(a){
+    var name = a.display_name || '?';
+    var short = name.split(' ')[0]; // first name only
+    var chip = a.chips > 0 ? ' ' + a.chips + (cv ? ' ($'+(a.chips*cv/100).toFixed(2)+')' : '') : '';
+    var actionColors = {
+      fold:  '#e74c3c',
+      check: 'var(--muted)',
+      call:  '#6aaaee',
+      bet:   'var(--gold)',
+      raise: 'var(--gold)',
+      allin: 'var(--green)',
+    };
+    tokens.push({
+      text: short + ' ' + a.action + chip,
+      color: actionColors[a.action] || 'var(--cream)',
+      action: a.action,
+    });
+  });
+
+  // render as a flowing strip
+  var strip = document.createElement('div');
+  strip.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;align-items:center';
+
+  tokens.forEach(function(tok, i){
+    var span = document.createElement('span');
+    span.style.cssText = 'font-size:0.72rem;color:'+tok.color+';font-family:DM Sans,sans-serif;white-space:nowrap';
+    span.textContent = tok.text;
+    strip.appendChild(span);
+    if (i < tokens.length - 1) {
+      var sep = document.createElement('span');
+      sep.style.cssText = 'font-size:0.65rem;color:var(--border);user-select:none';
+      sep.textContent = '›';
+      strip.appendChild(sep);
+    }
+  });
+
+  logBody.appendChild(strip);
+  wrap.appendChild(toggle);
+  wrap.appendChild(logBody);
+  body.appendChild(wrap);
+}
 
 // ─── SIDE POT DISPLAY (v7) ───────────────────────────────────────────────────
 function computeSidePots(actions, seated) {
