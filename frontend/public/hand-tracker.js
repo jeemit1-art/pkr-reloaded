@@ -190,11 +190,17 @@ window.htStartHand = function() {
   if(seated.length<2){toast('Need at least 2 players');return;}
   var seats=seated.map(function(p){return p.seat;});
   var last=gameInfo().currentDealerSeat||0;
-  var next=seats.find(function(s){return s>last;})||seats[0];
-  var di=seats.indexOf(next);
+  hs._suggestedDealer=seats.find(function(s){return s>last;})||seats[0];
+  hs.view='dealer'; renderBody();
+};
+
+window.htPickDealer = function(dealerSeat) {
+  var seated=getSeated();
+  var seats=seated.map(function(p){return p.seat;});
+  var di=seats.indexOf(dealerSeat);
   var sb=seats[(di+1)%seats.length], bb=seats[(di+2)%seats.length], utg=seats[(di+3)%seats.length];
   hs.straddleSeat=null;
-  hs._pendingHand={dealer:next,sb:sb,bb:bb,utg:utg};
+  hs._pendingHand={dealer:dealerSeat,sb:sb,bb:bb,utg:utg};
   hs.view='straddle'; renderBody();
 };
 
@@ -441,7 +447,34 @@ function renderBody(){
   if(hs.view==='winner'){renderWinner(body);return;}
   if(hs.view==='history'){renderHistory(body);return;}
   if(hs.view==='straddle'){renderStraddleView(body);return;}
+  if(hs.view==='dealer'){renderDealerView(body);return;}
   renderMain(body);
+}
+
+function renderDealerView(body){
+  var seated=getSeated();
+  var suggested=hs._suggestedDealer;
+  var ti=document.createElement('div');
+  ti.style.cssText='font-size:0.9rem;font-weight:700;color:var(--cream);margin-bottom:4px';
+  ti.textContent='Hand #'+((hs.hand?hs.hand.hand_no:0)+1)+' — Choose Dealer';
+  body.appendChild(ti);
+  var sub=document.createElement('div');
+  sub.style.cssText='font-size:0.75rem;color:var(--muted);margin-bottom:16px';
+  sub.textContent='Tap the player with the dealer button';
+  body.appendChild(sub);
+  seated.forEach(function(pl){
+    var isSug=pl.seat===suggested;
+    var btn=document.createElement('button');
+    btn.style.cssText='width:100%;padding:13px 16px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-family:DM Sans,sans-serif;font-weight:600;display:flex;align-items:center;gap:10px;text-align:left;'+(isSug?'background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.4);color:var(--gold);':'background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--cream);');
+    btn.innerHTML='<span>🎯</span><span>'+pl.name+'</span><span style="margin-left:auto;font-size:0.7rem;opacity:0.6">Seat '+pl.seat+(isSug?' · next':'')+'</span>';
+    btn.onclick=function(){window.htPickDealer(pl.seat);};
+    body.appendChild(btn);
+  });
+  var cancel=document.createElement('button');
+  cancel.style.cssText='width:100%;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;cursor:pointer;font-size:0.82rem;font-family:DM Sans,sans-serif;margin-top:4px';
+  cancel.textContent='Cancel';
+  cancel.onclick=function(){hs.view='main';renderBody();};
+  body.appendChild(cancel);
 }
 
 function renderStraddleView(body){
