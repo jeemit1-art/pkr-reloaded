@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot + action log + custom chip denoms
+// v6 features + mid-session player changes + pause/resume + roster + all-in/side pot + action log + chip denoms + player stats
 
 (function() {
 'use strict';
@@ -661,6 +661,7 @@ function renderBody(){
   if(hs.view==='summary'){renderSummary(body);return;}
   if(hs.view==='add_player'){renderAddPlayerPanel(body);return;}
   if(hs.view==='chip_settings'){renderChipSettings(body);return;}
+  if(hs.view==='player_stats'){renderPlayerStatsCard(body,hs._statsPlayer);return;}
   renderMain(body);
 }
 
@@ -1103,6 +1104,21 @@ function renderHistory(body){
     row.appendChild(meta);
 
     if(h.board&&h.board.length){var br=document.createElement('div');br.style.cssText='display:flex;gap:3px;margin-top:4px';h.board.forEach(function(c){br.appendChild(cDiv(c,true));});row.appendChild(br);}
+    // v7: player name chips — tap to open stats card
+    var playerNames=[];
+    (h.actions||[]).forEach(function(a){if(a.display_name&&playerNames.indexOf(a.display_name)<0)playerNames.push(a.display_name);});
+    if(playerNames.length>0){
+      var prow2=document.createElement('div');prow2.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-top:6px';
+      playerNames.forEach(function(pn){
+        var pc=document.createElement('button');
+        var isWinner=h.result&&(h.result.winner_name===pn||(h.result.winner_name||'').indexOf(pn)>=0);
+        pc.style.cssText='padding:3px 8px;background:'+(isWinner?'rgba(46,204,113,0.1)':'rgba(255,255,255,0.03)')+';border:1px solid '+(isWinner?'rgba(46,204,113,0.25)':'var(--border)')+';border-radius:20px;color:'+(isWinner?'var(--green)':'var(--muted)')+';font-size:0.68rem;cursor:pointer;font-family:DM Sans,sans-serif';
+        pc.textContent=(isWinner?'🏆 ':'')+pn;
+        pc.addEventListener('click',function(e){e.stopPropagation();hs._statsPlayer=pn;hs.view='player_stats';renderBody();});
+        prow2.appendChild(pc);
+      });
+      row.appendChild(prow2);
+    }
     body.appendChild(row);
   });
 }
@@ -1256,6 +1272,126 @@ function _promptPostAndAdd(name, body) {
 
 
 
+
+
+// ─── PER-PLAYER STATS (v7) ────────────────────────────────────────────────────
+function buildPlayerStats(name) {
+  var settled = hs.history.filter(function(h){ return h.result; });
+  var handsDealt = settled.filter(function(h){
+    // hand involves player if they appear in actions or dealer/blind seats
+    return (h.actions||[]).some(function(a){ return a.display_name===name; }) ||
+           h.dealer_name===name || h.sb_name===name || h.bb_name===name;
+  });
+  var handsWon = settled.filter(function(h){
+    var w = h.result.winner_name||'';
+    return w===name || w.indexOf(name)>=0;
+  });
+  var totalWon = handsWon.reduce(function(s,h){ return s+(h.result.pot_chips||0); }, 0);
+  var biggestPot = handsWon.reduce(function(m,h){ return Math.max(m, h.result.pot_chips||0); }, 0);
+  // VPIP: voluntarily put chips in pre-flop (call/bet/raise, not post/straddle)
+  var vpipHands = 0, totalHandsSeen = handsDealt.length;
+  handsDealt.forEach(function(h){
+    var preActs = (h.actions||[]).filter(function(a){
+      return a.display_name===name && a.street==='pre' &&
+             (a.action==='call'||a.action==='bet'||a.action==='raise'||a.action==='allin');
+    });
+    if (preActs.length > 0) vpipHands++;
+  });
+  var vpip = totalHandsSeen > 0 ? Math.round(vpipHands/totalHandsSeen*100) : 0;
+  var winRate = totalHandsSeen > 0 ? Math.round(handsWon.length/totalHandsSeen*100) : 0;
+  return {
+    name: name,
+    handsDealt: handsDealt.length,
+    handsWon: handsWon.length,
+    winRate: winRate,
+    totalWon: totalWon,
+    biggestPot: biggestPot,
+    vpip: vpip,
+  };
+}
+
+function renderPlayerStatsCard(body, name) {
+  var cv = getChipValue();
+  var stats = buildPlayerStats(name);
+
+  body.appendChild(mkB('← History','background:none;border:none;color:var(--gold);cursor:pointer;font-size:0.85rem;margin-bottom:14px;padding:0;font-family:DM Sans,sans-serif',function(){
+    hs.view='history'; hs._statsPlayer=null; renderBody();
+  }));
+
+  // Avatar + name header
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px';
+  var av = document.createElement('div');
+  av.style.cssText = 'width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,rgba(201,168,76,0.3),rgba(201,168,76,0.1));display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:var(--gold);flex-shrink:0';
+  av.textContent = name.slice(0,2).toUpperCase();
+  var nameDiv = document.createElement('div');
+  var nd1 = document.createElement('div');
+  nd1.style.cssText = 'font-size:1rem;font-weight:700;color:var(--cream)';
+  nd1.textContent = name;
+  var nd2 = document.createElement('div');
+  nd2.style.cssText = 'font-size:0.72rem;color:var(--muted)';
+  nd2.textContent = 'This session';
+  nameDiv.appendChild(nd1); nameDiv.appendChild(nd2);
+  header.appendChild(av); header.appendChild(nameDiv);
+  body.appendChild(header);
+
+  // Stat grid
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px';
+
+  function statBox(label, value, sub, color) {
+    var box = document.createElement('div');
+    box.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px';
+    var v = document.createElement('div');
+    v.style.cssText = 'font-size:1.1rem;font-weight:700;color:'+(color||'var(--cream)');
+    v.textContent = value;
+    var l = document.createElement('div');
+    l.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:2px';
+    l.textContent = label;
+    box.appendChild(v); box.appendChild(l);
+    if (sub) {
+      var s = document.createElement('div');
+      s.style.cssText = 'font-size:0.68rem;color:var(--muted);margin-top:3px';
+      s.textContent = sub;
+      box.appendChild(s);
+    }
+    return box;
+  }
+
+  grid.appendChild(statBox('Hands played', stats.handsDealt, null, 'var(--cream)'));
+  grid.appendChild(statBox('Hands won', stats.handsWon, stats.winRate+'% win rate', 'var(--green)'));
+  grid.appendChild(statBox('Total chips won', stats.totalWon, cv&&stats.totalWon?'$'+(stats.totalWon*cv/100).toFixed(2):null, 'var(--gold)'));
+  grid.appendChild(statBox('Biggest pot', stats.biggestPot, cv&&stats.biggestPot?'$'+(stats.biggestPot*cv/100).toFixed(2):null, 'var(--gold)'));
+
+  body.appendChild(grid);
+
+  // VPIP full-width bar
+  var vpipWrap = document.createElement('div');
+  vpipWrap.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px';
+  var vpipTop = document.createElement('div');
+  vpipTop.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:6px';
+  var vpipLabel = document.createElement('span');
+  vpipLabel.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted)';
+  vpipLabel.textContent = 'VPIP (voluntary pre-flop)';
+  var vpipVal = document.createElement('span');
+  vpipVal.style.cssText = 'font-size:0.8rem;font-weight:700;color:'+(stats.vpip>50?'var(--red)':stats.vpip>30?'var(--gold)':'var(--green)');
+  vpipVal.textContent = stats.vpip+'%';
+  vpipTop.appendChild(vpipLabel); vpipTop.appendChild(vpipVal);
+  var bar = document.createElement('div');
+  bar.style.cssText = 'height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden';
+  var fill = document.createElement('div');
+  fill.style.cssText = 'height:100%;width:'+stats.vpip+'%;background:'+(stats.vpip>50?'var(--red)':stats.vpip>30?'var(--gold)':'var(--green)')+';border-radius:2px;transition:width .4s';
+  bar.appendChild(fill);
+  vpipWrap.appendChild(vpipTop); vpipWrap.appendChild(bar);
+  body.appendChild(vpipWrap);
+
+  if (stats.handsDealt === 0) {
+    var em = document.createElement('div');
+    em.style.cssText = 'text-align:center;color:var(--muted);font-size:0.82rem;padding:10px 0';
+    em.textContent = 'No completed hands yet for ' + name;
+    body.appendChild(em);
+  }
+}
 
 // ─── CHIP DENOMINATION SETTINGS (v7) ─────────────────────────────────────────
 function renderChipSettings(body) {
