@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot + action log
+// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot + action log + custom chip denoms
 
 (function() {
 'use strict';
@@ -155,6 +155,11 @@ function flushPendingPlayerChanges() {
 function isHeadsUp() { return getSeated().filter(function(p){ var f={}; hs.actions.forEach(function(a){if(a.action==='fold')f[a.display_name]=true;}); return !f[p.name]; }).length === 2; }
 
 function blindsInChips() {
+  // v7: honour custom chip config if set
+  if (hs._chipConfig) {
+    var sb=hs._chipConfig.sb||1, bb=hs._chipConfig.bb||2;
+    return {sb:sb, bb:bb, straddle:bb*2};
+  }
   var g = gameInfo();
   var sb=1, bb=2, str=4;
   if (g.small_blind && g.chip_value && g.chip_value>0) {
@@ -163,6 +168,11 @@ function blindsInChips() {
     sb=g.small_blind; bb=g.big_blind; str=bb*2;
   }
   return {sb:sb, bb:bb, straddle:str};
+}
+
+function getChipValue() {
+  if (hs._chipConfig && hs._chipConfig.chipValue > 0) return hs._chipConfig.chipValue;
+  return gameInfo().chip_value || 0;
 }
 
 // ─── POKER LOGIC ─────────────────────────────────────────────────────────────
@@ -650,6 +660,7 @@ function renderBody(){
   if(hs.view==='dealer'){renderDealerView(body);return;}
   if(hs.view==='summary'){renderSummary(body);return;}
   if(hs.view==='add_player'){renderAddPlayerPanel(body);return;}
+  if(hs.view==='chip_settings'){renderChipSettings(body);return;}
   renderMain(body);
 }
 
@@ -758,7 +769,7 @@ function renderStraddleView(body){
 
 // ─── MAIN VIEW ───────────────────────────────────────────────────────────────
 function renderMain(body){
-  var cv=gameInfo().chip_value||0,seated=getSeated();
+  var cv=getChipValue(),seated=getSeated();
 
   if(!hs.hand||hs.hand.result){
     if(hs.hand&&hs.hand.result){
@@ -980,6 +991,7 @@ function renderMain(body){
 
   var btm=document.createElement('div');btm.style.cssText='display:flex;gap:6px;margin-top:6px';
   btm.appendChild(mkB('+ Player','padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',function(){hs.view='add_player';renderBody();}));
+  btm.appendChild(mkB('Chips'+(hs._chipConfig?' ●':''),'padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:'+(hs._chipConfig?'var(--gold)':'var(--muted)')+';border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',function(){hs.view='chip_settings';renderBody();}));
   btm.appendChild(mkB('✕ Void','padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',window.htVoidHand));
   btm.appendChild(mkB('🏆 Declare Winner','flex:1;padding:10px;background:rgba(46,204,113,0.08);color:var(--green);border:1px solid rgba(46,204,113,0.25);border-radius:7px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:DM Sans,sans-serif',function(){hs.view='winner';renderBody();}));
   body.appendChild(btm);
@@ -1244,6 +1256,105 @@ function _promptPostAndAdd(name, body) {
 
 
 
+
+// ─── CHIP DENOMINATION SETTINGS (v7) ─────────────────────────────────────────
+function renderChipSettings(body) {
+  var cfg = hs._chipConfig || {};
+  var g = gameInfo();
+  var defCV = g.chip_value || 0;
+  var defSB = g.small_blind && defCV ? Math.round(g.small_blind/defCV) : (g.small_blind||1);
+  var defBB = defSB * 2;
+
+  body.appendChild(mkB('← Back','background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;margin-bottom:14px;padding:0;font-family:DM Sans,sans-serif',function(){hs.view='main';renderBody();}));
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px';
+  title.textContent = 'Chip denominations';
+  body.appendChild(title);
+
+  function field(label, key, placeholder, defaultVal) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:12px';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:0.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px';
+    lbl.textContent = label;
+    var inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = '1';
+    inp.placeholder = 'Default: ' + defaultVal;
+    inp.value = cfg[key] != null ? cfg[key] : '';
+    inp.style.cssText = 'width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--cream);font-size:0.88rem;font-family:DM Sans,sans-serif;outline:none;box-sizing:border-box';
+    inp.dataset.key = key;
+    wrap.appendChild(lbl);
+    wrap.appendChild(inp);
+    body.appendChild(wrap);
+    return inp;
+  }
+
+  var cvInp = field('Chip value (cents per chip)', 'chipValue', '', defCV||5);
+  var sbInp = field('Small blind (chips)', 'sb', '', defSB);
+  var bbInp = field('Big blind (chips)', 'bb', '', defBB);
+
+  // auto-fill BB when SB changes
+  sbInp.addEventListener('input', function(){
+    var sv = parseInt(sbInp.value)||0;
+    if (sv > 0 && !bbInp.value) bbInp.value = sv * 2;
+  });
+
+  // preset buttons
+  var presetLabel = document.createElement('div');
+  presetLabel.style.cssText = 'font-size:0.72rem;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:1px';
+  presetLabel.textContent = 'Quick presets';
+  body.appendChild(presetLabel);
+
+  var presets = [
+    {label:'1¢/2¢',  cv:1,  sb:1,  bb:2},
+    {label:'5¢/10¢', cv:5,  sb:1,  bb:2},
+    {label:'25¢/50¢',cv:25, sb:1,  bb:2},
+    {label:'$1/$2',  cv:100,sb:1,  bb:2},
+    {label:'$2/$5',  cv:100,sb:2,  bb:5},
+    {label:'$5/$10', cv:100,sb:5,  bb:10},
+  ];
+  var prow = document.createElement('div');
+  prow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px';
+  presets.forEach(function(pr){
+    var pb = document.createElement('button');
+    pb.style.cssText = 'padding:5px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;color:var(--cream);font-size:0.75rem;cursor:pointer;font-family:DM Sans,sans-serif';
+    pb.textContent = pr.label;
+    pb.addEventListener('click', function(){
+      cvInp.value = pr.cv;
+      sbInp.value = pr.sb;
+      bbInp.value = pr.bb;
+    });
+    prow.appendChild(pb);
+  });
+  body.appendChild(prow);
+
+  // Save button
+  body.appendChild(mkB('Save chip settings','width:100%;padding:12px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);color:var(--gold);border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;font-family:DM Sans,sans-serif;margin-bottom:8px',function(){
+    var cv2 = parseInt(cvInp.value)||0;
+    var sb2 = parseInt(sbInp.value)||0;
+    var bb2 = parseInt(bbInp.value)||0;
+    if (!sb2 || !bb2) { toast('Enter SB and BB values'); return; }
+    hs._chipConfig = {chipValue: cv2, sb: sb2, bb: bb2};
+    saveSession();
+    toast('Chip settings saved — SB ' + sb2 + ' / BB ' + bb2 + (cv2?' · '+cv2+'¢/chip':''));
+    hs.view = 'main';
+    renderBody();
+  }));
+
+  // Reset to game defaults
+  if (hs._chipConfig) {
+    body.appendChild(mkB('Reset to game defaults','width:100%;padding:10px;background:none;border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:8px;cursor:pointer;font-size:0.8rem;font-family:DM Sans,sans-serif',function(){
+      hs._chipConfig = null;
+      saveSession();
+      toast('Chip settings reset to game defaults');
+      hs.view = 'main';
+      renderBody();
+    }));
+  }
+}
+
 // ─── STREET ACTION LOG (v7) ──────────────────────────────────────────────────
 function renderStreetLog(body, actions, street) {
   var streetActs = actions.filter(function(a){
@@ -1412,6 +1523,7 @@ function saveSession() {
       _lastHandSummary: hs._lastHandSummary,
       _suggestedDealer: hs._suggestedDealer,
       _wasHU:      hs._wasHU,
+      _chipConfig:  hs._chipConfig,
       _pendingJoins:  hs._pendingJoins,
       _pendingLeaves: hs._pendingLeaves,
       savedAt:     Date.now(),
@@ -1445,6 +1557,7 @@ function restoreSession() {
     hs._lastHandSummary = snap._lastHandSummary || null;
     hs._suggestedDealer = snap._suggestedDealer || null;
     hs._wasHU           = snap._wasHU      || false;
+    hs._chipConfig      = snap._chipConfig  || null;
     hs._pendingJoins    = snap._pendingJoins  || [];
     hs._pendingLeaves   = snap._pendingLeaves || [];
     return true;
@@ -1459,7 +1572,7 @@ window.htClearSession = function() {
   hs.street='pre'; hs.board=[]; hs.holes={}; hs.straddleSeat=null;
   hs.potWinners=[]; hs.currentPotIndex=0; hs._lastHandSummary=null;
   hs._suggestedDealer=null; hs._wasHU=false;
-  hs._pendingJoins=[]; hs._pendingLeaves=[];
+  hs._pendingJoins=[]; hs._pendingLeaves=[]; hs._chipConfig=null;
   toast('Session cleared');
   renderBody();
 };
