@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes + pause/resume session + saved player roster
+// v6 features + mid-session player changes + pause/resume session + saved player roster + all-in/side pot
 
 (function() {
 'use strict';
@@ -374,6 +374,19 @@ window.htAct = function(action,playerName) {
   if(!hs.hand)return;
   var cv=gameInfo().chip_value||0;
   var chips=parseInt(hs.chipInput)||0;
+  if(action==='allin'){
+    // for all-in, if no chip amount entered use 0 — server/API handles stack resolution
+    htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions',{
+      method:'POST',
+      body:JSON.stringify({action:'allin',chips:chips,display_name:displayName,street:hs.street}),
+    }).then(function(r){
+      hs.actions=r.actions;hs.pot=r.pot_chips;hs.chipInput='';
+      saveSession();
+      renderBody();
+      _checkAutoAdvance(r);
+    }).catch(function(e){toast('Error: '+e.message);});
+    return;
+  }
   if(action==='call'){
     var sm={};
     hs.actions.filter(function(a){return a.street===hs.street;}).forEach(function(a){if(a.chips>0)sm[a.display_name]=(sm[a.display_name]||0)+a.chips;});
@@ -382,7 +395,7 @@ window.htAct = function(action,playerName) {
     if(chips<=0){toast('Nothing to call');return;}
   }
   if((action==='bet'||action==='raise')&&chips===0){toast('Enter chip amount');return;}
-  if(action==='allin'&&chips===0){toast('Enter chip amount for all-in');return;}
+  // allin: chips can be 0 if not manually entered — computed from stack server-side
   var pE=null; Object.values(window.state.players).forEach(function(p){if(p&&p.name===playerName)pE=p;});
   htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions',{method:'POST',
     body:JSON.stringify({user_id:pE?pE.userId:null,display_name:playerName,street:hs.street,action:action,chips:chips}),
@@ -907,12 +920,12 @@ function renderMain(body){
         {a:'fold', l:'Fold',  bg:'rgba(231,76,60,0.12)', col:'#e74c3c',    br:'rgba(231,76,60,0.3)'},
         {a:'check',l:'Check', bg:'rgba(107,140,110,0.1)',col:'var(--muted)',br:'var(--border)'},
         {a:'bet',  l:'Bet',   bg:'rgba(201,168,76,0.1)', col:'var(--gold)', br:'rgba(201,168,76,0.3)'},
-        {a:'allin',l:'All-in',bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)'},
+        {a:'allin',l:'All-in',bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)', noChips:true},
       ]:[
         {a:'fold', l:'Fold',           bg:'rgba(231,76,60,0.12)', col:'#e74c3c',    br:'rgba(231,76,60,0.3)'},
         {a:'call', l:'Call '+callAmt,  bg:'rgba(58,106,170,0.12)',col:'#6aaaee',    br:'rgba(58,106,170,0.3)'},
         {a:'raise',l:'Raise',          bg:'rgba(201,168,76,0.1)', col:'var(--gold)', br:'rgba(201,168,76,0.3)'},
-        {a:'allin',l:'All-in',         bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)'},
+        {a:'allin',l:'All-in',         bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)', noChips:true},
       ];
       var cn=pl.name;
       acts.forEach(function(cfg){
@@ -955,6 +968,8 @@ function renderMain(body){
 
   if(!nextPlayer){
     var activePl3=seated.filter(function(p){return !allFolded[p.name];});
+    var _allinCount=hs.actions.filter(function(a){return a.action==='allin';}).length;
+    if(_allinCount>0) renderSidePots(body,hs.actions,getSeated());
     if(activePl3.length<=1) body.appendChild(infoBox('All others folded — declare the winner','rgba(201,168,76,0.07)','rgba(201,168,76,0.2)','var(--gold)'));
     // Street advance button already shown above
   }
@@ -1221,6 +1236,78 @@ function _promptPostAndAdd(name, body) {
   body.appendChild(mkB('← Back', 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;font-family:DM Sans,sans-serif', function(){
     hs.view = 'add_player'; renderBody();
   }));
+}
+
+
+// ─── SIDE POT DISPLAY (v7) ───────────────────────────────────────────────────
+function computeSidePots(actions, seated) {
+  var folded = {}, contrib = {};
+  seated.forEach(function(p){ contrib[p.name] = 0; });
+  actions.forEach(function(a){
+    if (a.action === 'fold') folded[a.display_name] = true;
+    if (a.chips > 0) contrib[a.display_name] = (contrib[a.display_name]||0) + a.chips;
+  });
+  var allinPlayers = [];
+  actions.forEach(function(a){
+    if (a.action === 'allin' && allinPlayers.indexOf(a.display_name) < 0)
+      allinPlayers.push(a.display_name);
+  });
+  if (!allinPlayers.length) return [];
+  // get unique allin levels sorted ascending
+  var levels = allinPlayers
+    .map(function(n){ return contrib[n]||0; })
+    .filter(function(v,i,arr){ return arr.indexOf(v)===i; })
+    .sort(function(a,b){ return a-b; });
+  var pots = [];
+  var prev = 0;
+  levels.forEach(function(level){
+    var pot = 0;
+    var eligible = [];
+    seated.forEach(function(p){
+      if (folded[p.name]) return;
+      var c = contrib[p.name]||0;
+      pot += Math.min(c, level) - Math.min(c, prev);
+      if (c >= level) eligible.push(p.name);
+    });
+    if (pot > 0) pots.push({ chips: pot, eligible: eligible, label: 'Side pot '+(pots.length+1) });
+    prev = level;
+  });
+  // main pot remainder
+  var mainPot = 0;
+  seated.forEach(function(p){
+    mainPot += Math.max(0, (contrib[p.name]||0) - prev);
+  });
+  if (mainPot > 0) {
+    var mainElig = seated.filter(function(p){ return !folded[p.name]; }).map(function(p){ return p.name; });
+    pots.push({ chips: mainPot, eligible: mainElig, label: 'Main pot' });
+  }
+  return pots;
+}
+
+function renderSidePots(body, actions, seated) {
+  var pots = computeSidePots(actions, seated);
+  if (!pots.length) return;
+  var cv = gameInfo().chip_value||0;
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'margin:6px 0;padding:6px 10px;background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-radius:7px';
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px';
+  lbl.textContent = 'Side pots';
+  wrap.appendChild(lbl);
+  pots.forEach(function(pot){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;font-size:0.75rem;padding:2px 0';
+    var left = document.createElement('span');
+    left.style.color = 'var(--muted)';
+    left.textContent = pot.label + ' — ' + pot.eligible.join(', ');
+    var right = document.createElement('span');
+    right.style.color = 'var(--green)';
+    right.textContent = pot.chips + ' chips' + (cv ? ' ($'+(pot.chips*cv/100).toFixed(2)+')' : '');
+    row.appendChild(left);
+    row.appendChild(right);
+    wrap.appendChild(row);
+  });
+  body.appendChild(wrap);
 }
 
 // ─── SESSION PERSISTENCE (v7) ────────────────────────────────────────────────
