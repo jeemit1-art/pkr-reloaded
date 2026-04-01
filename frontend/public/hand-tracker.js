@@ -1,5 +1,5 @@
 // hand-tracker.js — PKR Reloaded Hand Tracker v7
-// v6 features + mid-session player changes (add/remove, blind re-entry, HU auto-switch, queue during live hand)
+// v6 features + mid-session player changes + pause/resume session (localStorage persistence)
 
 (function() {
 'use strict';
@@ -324,7 +324,7 @@ window.htConfirmStart = function(straddleSeat) {
     if(window.state.game) window.state.game.currentDealerSeat=p.dealer;
     hs.hand=h; hs.actions=[]; hs.pot=0; hs.board=[]; hs.holes={}; hs.street='pre'; hs.chipInput='';
     hs.potWinners=[]; hs.currentPotIndex=0; hs._autoCardMode=null; hs._lastHandSummary=null;
-    hs.view='main'; hs.straddleSeat=straddleSeat||null; hs._pendingHand=null;
+    hs.view='main'; hs.straddleSeat=straddleSeat||null; hs._pendingHand=null; saveSession();
     hs.history.unshift(h);
     autoPost(h,getSeated(),straddleSeat,function(){renderBody();renderBoardOnFelt();});
     toast('Hand #'+h.hand_no+' started');
@@ -354,7 +354,7 @@ window.htVoidHand = function(){
   if(!hs.hand)return;
   if(!confirm('Void hand #'+hs.hand.hand_no+'?'))return;
   htApi('/games/'+getGameId()+'/hands/'+hs.hand.id,{method:'DELETE'}).then(function(){
-    hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};hs.straddleSeat=null;hs._lastHandSummary=null;
+    hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};hs.straddleSeat=null;hs._lastHandSummary=null;saveSession();
     return htApi('/games/'+getGameId()+'/hands');
   }).then(function(hands){
     hs.history=hands||[]; if(hands&&hands.length>0)hs.hand=hands[0];
@@ -496,7 +496,7 @@ window.htDeclareWinner = function(name){
     hs.view='summary';
     renderBody(); renderBoardOnFelt();
     return htApi('/games/'+getGameId()+'/hands');
-  }).then(function(h){hs.history=h||[];toast('🏆 '+name+' wins '+hs.pot+' chips!');})
+  }).then(function(h){hs.history=h||[];saveSession();toast('🏆 '+name+' wins '+hs.pot+' chips!');})
   .catch(function(e){toast('⚠ '+e.message);});
 };
 
@@ -1095,11 +1095,91 @@ function renderCards(body){
   });
 }
 
+// ─── SESSION PERSISTENCE (v7) ────────────────────────────────────────────────
+var SESSION_KEY = 'pkr_ht_session';
+
+function saveSession() {
+  try {
+    var snap = {
+      hand:        hs.hand,
+      history:     hs.history,
+      actions:     hs.actions,
+      pot:         hs.pot,
+      street:      hs.street,
+      board:       hs.board,
+      holes:       hs.holes,
+      straddleSeat:hs.straddleSeat,
+      potWinners:  hs.potWinners,
+      currentPotIndex: hs.currentPotIndex,
+      _lastHandSummary: hs._lastHandSummary,
+      _suggestedDealer: hs._suggestedDealer,
+      _wasHU:      hs._wasHU,
+      _pendingJoins:  hs._pendingJoins,
+      _pendingLeaves: hs._pendingLeaves,
+      savedAt:     Date.now(),
+      gameId:      getGameId(),
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(snap));
+  } catch(e) {}
+}
+
+function restoreSession() {
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    var snap = JSON.parse(raw);
+    if (!snap || snap.gameId !== getGameId()) return false;
+    // reject snapshots older than 12 hours
+    if (Date.now() - (snap.savedAt||0) > 12*60*60*1000) {
+      localStorage.removeItem(SESSION_KEY);
+      return false;
+    }
+    hs.hand             = snap.hand        || null;
+    hs.history          = snap.history     || [];
+    hs.actions          = snap.actions     || [];
+    hs.pot              = snap.pot         || 0;
+    hs.street           = snap.street      || 'pre';
+    hs.board            = snap.board       || [];
+    hs.holes            = snap.holes       || {};
+    hs.straddleSeat     = snap.straddleSeat|| null;
+    hs.potWinners       = snap.potWinners  || [];
+    hs.currentPotIndex  = snap.currentPotIndex || 0;
+    hs._lastHandSummary = snap._lastHandSummary || null;
+    hs._suggestedDealer = snap._suggestedDealer || null;
+    hs._wasHU           = snap._wasHU      || false;
+    hs._pendingJoins    = snap._pendingJoins  || [];
+    hs._pendingLeaves   = snap._pendingLeaves || [];
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+window.htClearSession = function() {
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+  hs.hand=null; hs.history=[]; hs.actions=[]; hs.pot=0;
+  hs.street='pre'; hs.board=[]; hs.holes={}; hs.straddleSeat=null;
+  hs.potWinners=[]; hs.currentPotIndex=0; hs._lastHandSummary=null;
+  hs._suggestedDealer=null; hs._wasHU=false;
+  hs._pendingJoins=[]; hs._pendingLeaves=[];
+  toast('Session cleared');
+  renderBody();
+};
+
 waitForState(function(){
   var g=gameInfo();
   updateUI(g&&g.hand_tracking);
   hs.liveCardsEnabled=!!(g&&g.live_cards_enabled);
-  if(g&&g.hand_tracking) loadCurrentHand();
+  if(g&&g.hand_tracking){
+    var restored = restoreSession();
+    if(restored){
+      toast('Session restored');
+      renderBody();
+      renderBoardOnFelt && renderBoardOnFelt();
+    } else {
+      loadCurrentHand();
+    }
+  }
 });
 
 })();
