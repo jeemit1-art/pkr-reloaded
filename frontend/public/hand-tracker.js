@@ -388,12 +388,11 @@ window.htAct = function(action,playerName) {
     // for all-in, if no chip amount entered use 0 — server/API handles stack resolution
     htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions',{
       method:'POST',
-      body:JSON.stringify({action:'allin',chips:chips,display_name:displayName,street:hs.street}),
+      body:JSON.stringify({action:'allin',chips:chips,display_name:playerName,street:hs.street}),
     }).then(function(r){
       hs.actions=r.actions;hs.pot=r.pot_chips;hs.chipInput='';
       saveSession();
       renderBody();
-      _checkAutoAdvance(r);
     }).catch(function(e){toast('Error: '+e.message);});
     return;
   }
