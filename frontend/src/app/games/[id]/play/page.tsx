@@ -98,7 +98,7 @@ export default function PlayPage() {
       if (!document.getElementById('pkr-hand-tracker')) {
         const htScript = document.createElement('script');
         htScript.id  = 'pkr-hand-tracker';
-        htScript.src = '/hand-tracker.js';
+        htScript.src = '/hand-tracker.js?v=' + Date.now();
         document.head.appendChild(htScript);
       }
       // Load tournament.js
