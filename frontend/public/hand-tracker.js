@@ -309,17 +309,20 @@ window.htPickDealer = function(dealerSeat) {
   var seated=getSeated();
   var seats=seated.map(function(p){return p.seat;});
   var di=seats.indexOf(dealerSeat);
-  var huMode=seated.length===2;
+  if(di===-1){ toast('Dealer not found'); return; }
+  var n=seats.length;
+  // next(i) steps i positions clockwise through OCCUPIED seats only
+  function next(i){ return seats[(di+i)%n]; }
+  var huMode=n===2;
   var sb, bb, utg;
   if(huMode){
-    // Heads-up: dealer=SB, other=BB
     sb=dealerSeat;
-    bb=seats[(di+1)%seats.length];
-    utg=bb; // BB acts first post-flop in HU
+    bb=next(1);
+    utg=bb;
   } else {
-    sb=seats[(di+1)%seats.length];
-    bb=seats[(di+2)%seats.length];
-    utg=seats[(di+3)%seats.length];
+    sb=next(1);
+    bb=next(2);
+    utg=next(3);
   }
   hs.straddleSeat=null;
   hs._pendingHand={dealer:dealerSeat,sb:sb,bb:bb,utg:utg};
