@@ -163,59 +163,105 @@ function computeNextPlayer(street, actions, hand) {
   if (!hand) return null;
   var seated = getSeated();
   if (!seated.length) return null;
-  var seats = seated.map(function(p){return p.seat;});
+
   var folded={}, allin={};
   actions.forEach(function(a){
     if (a.action==='fold')  folded[a.display_name]=true;
     if (a.action==='allin') allin[a.display_name]=true;
   });
+
   var active  = seated.filter(function(p){return !folded[p.name];});
   var canAct  = active.filter(function(p){return !allin[p.name];});
+
+  // Round is over if only 1 active player, or all remaining can't act
   if (active.length<=1 || canAct.length===0) return null;
+
+  // Street chip totals (posts count on pre)
   var streetActs = actions.filter(function(a){return a.street===street;});
   var chips={};
   seated.forEach(function(p){chips[p.name]=0;});
   streetActs.forEach(function(a){if(a.chips>0) chips[a.display_name]=(chips[a.display_name]||0)+a.chips;});
+
   var maxBet = Math.max.apply(null, [0].concat(canAct.map(function(p){return chips[p.name]||0;})));
+
+  // Voluntary actions this street (not posts/straddles)
   var voluntary={};
   streetActs.forEach(function(a){
     if (a.action!=='post' && a.action!=='straddle') voluntary[a.display_name]=a;
   });
-  var sbSeat=hand.sb_seat, bbSeat=hand.bb_seat, dSeat=hand.dealer_seat, strSeat=hs.straddleSeat;
+
   var huMode = seated.length===2;
-  function nextCanActAfter(targetSeat) {
-    var idx=seats.indexOf(targetSeat);
-    for (var j=1;j<=seats.length;j++){
-      var ns=seats[(idx+j)%seats.length];
-      var f=canAct.find(function(p){return p.seat===ns;});
-      if(f) return f;
+  var sbSeat=hand.sb_seat, bbSeat=hand.bb_seat, dSeat=hand.dealer_seat, strSeat=hs.straddleSeat;
+
+  // Build clockwise-ordered seat list starting from first-to-act
+  var cwOrder = buildClockwiseOrder(gameInfo().seats || Math.max.apply(null, seated.map(function(p){return p.seat;}).concat([9])));
+  var cwSeats = cwOrder.filter(function(s){ return seated.some(function(p){return p.seat===s;}); });
+
+  function nextCwSeatAfter(targetSeat) {
+    var idx = cwSeats.indexOf(targetSeat);
+    if (idx === -1) idx = 0;
+    for (var j=1; j<=cwSeats.length; j++) {
+      var ns = cwSeats[(idx+j) % cwSeats.length];
+      var f = canAct.find(function(p){return p.seat===ns;});
+      if (f) return f;
     }
-    return canAct[0];
+    return null;
   }
+
+  // First to act this street
   var firstActor;
   if (street==='pre') {
+    // Pre-flop: action starts left of straddle, or left of BB
     if (huMode) firstActor = canAct.find(function(p){return p.seat===dSeat;}) || canAct[0];
-    else firstActor = nextCanActAfter(strSeat||bbSeat);
+    else firstActor = nextCwSeatAfter(strSeat||bbSeat);
   } else {
+    // Post-flop: SB acts first (or first active left of dealer)
     if (huMode) firstActor = canAct.find(function(p){return p.seat!==dSeat;}) || canAct[0];
-    else firstActor = canAct.find(function(p){return p.seat===sbSeat;}) || nextCanActAfter(dSeat);
+    else firstActor = canAct.find(function(p){return p.seat===sbSeat;}) || nextCwSeatAfter(dSeat);
   }
-  var startIdx = canAct.indexOf(firstActor);
-  if (startIdx<0) startIdx=0;
-  var ordered=[];
-  for (var k=0;k<canAct.length;k++) ordered.push(canAct[(startIdx+k)%canAct.length]);
-  for (var m=0;m<ordered.length;m++) {
-    var pl=ordered[m];
-    var myChips=chips[pl.name]||0;
-    var myAct=voluntary[pl.name];
-    var matched=myChips>=maxBet;
+  if (!firstActor) firstActor = canAct[0];
+
+  // Build ordered list of who can act, starting from firstActor going clockwise
+  var faIdx = cwSeats.indexOf(firstActor.seat);
+  if (faIdx === -1) faIdx = 0;
+  var ordered = [];
+  for (var k=0; k<cwSeats.length; k++) {
+    var s = cwSeats[(faIdx+k) % cwSeats.length];
+    var pl = canAct.find(function(p){return p.seat===s;});
+    if (pl) ordered.push(pl);
+  }
+
+  // Walk through ordered players and find first who still needs to act
+  for (var m=0; m<ordered.length; m++) {
+    var pl2 = ordered[m];
+    var myChips = chips[pl2.name]||0;
+    var myAct = voluntary[pl2.name];
+    var matched = myChips >= maxBet;
+
     if (!myAct) {
-      var isSpecial = (street==='pre') && ((pl.seat===bbSeat)||(strSeat&&pl.seat===strSeat));
-      if (isSpecial && matched) return pl.name;
-      return pl.name;
+      // Player hasn't acted voluntarily yet
+      // Special case: BB/straddle on pre-flop get option even if matched
+      var isSpecial = (street==='pre') && ((pl2.seat===bbSeat)||(strSeat&&pl2.seat===strSeat));
+      if (isSpecial && matched && maxBet > 0) {
+        // BB has option only if someone raised (maxBet > BB amount)
+        var bbAmt = chips[pl2.name]||0;
+        var bl = blindsInChips();
+        var threshold = (strSeat&&pl2.seat===strSeat) ? bl.straddle : bl.bb;
+        if (maxBet > threshold) return pl2.name; // someone raised, BB gets to act
+        // no raise, BB checks — round is over for this player, continue
+        continue;
+      }
+      return pl2.name;
     }
-    if (!matched) return pl.name;
+
+    if (!matched) {
+      // Player acted but didn't match current bet (bet happened after their action)
+      return pl2.name;
+    }
+    // Player acted and matched — they're done for this round
   }
+
+  // All players have acted and matched — round over
   return null;
 }
 
@@ -277,13 +323,23 @@ window.htStartHand = function() {
   var seated=getSeated();
   seated.forEach(function(p){ saveToRoster(p.name); });
   if(seated.length<2){toast('Need at least 2 players');return;}
-  var seats=seated.map(function(p){return p.seat;});
-  var last=gameInfo().currentDealerSeat||0;
-  var suggested=seats.find(function(s){return s>last;})||seats[0];
-  hs._suggestedDealer=suggested;
-  if(!last || !hs.hand) {
+
+  var totalSeats = gameInfo().seats || Math.max.apply(null, seated.map(function(p){return p.seat;}).concat([9]));
+  var cwOrder = buildClockwiseOrder(totalSeats);
+  var cwSeats = cwOrder.filter(function(s){ return seated.some(function(p){return p.seat===s;}); });
+
+  var last = gameInfo().currentDealerSeat||0;
+  // Find next dealer clockwise from last
+  var lastIdx = cwSeats.indexOf(last);
+  var nextIdx = lastIdx === -1 ? 0 : (lastIdx+1) % cwSeats.length;
+  var suggested = cwSeats[nextIdx];
+  hs._suggestedDealer = suggested;
+
+  // Only show dealer picker on very first hand (no previous dealer set)
+  if (!last) {
     hs.view='dealer'; renderBody();
   } else {
+    // Auto-rotate dealer, skip picker
     window.htPickDealer(suggested);
   }
 };
@@ -403,16 +459,16 @@ window.htUndoAction = function(){
 
 window.htAct = function(action,playerName) {
   if(!hs.hand)return;
-  var cv=gameInfo().chip_value||0;
   var chips=parseInt(hs.chipInput)||0;
   if(action==='allin'){
+    var pEA=null; Object.values(window.state.players).forEach(function(p){if(p&&p.name===playerName)pEA=p;});
     htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions',{
       method:'POST',
-      body:JSON.stringify({action:'allin',chips:chips,display_name:playerName,street:hs.street}),
+      body:JSON.stringify({user_id:pEA?pEA.userId:null,display_name:playerName,action:'allin',chips:chips,street:hs.street}),
     }).then(function(r){
       hs.actions=r.actions;hs.pot=r.pot_chips;hs.chipInput='';
       saveSession();
-      renderBody();
+      renderBody();renderBoardOnFelt();
     }).catch(function(e){toast('Error: '+e.message);});
     return;
   }
@@ -1692,6 +1748,17 @@ waitForState(function(){
     var restored = restoreSession();
     if(restored){ toast('Session restored'); renderBody(); renderBoardOnFelt&&renderBoardOnFelt(); }
     else { loadCurrentHand(); }
+  }
+
+  // Hook into renderTable so felt badges re-apply after seat rebuild
+  var _origRenderTable = window.renderTable;
+  if(_origRenderTable){
+    window.renderTable = function(){
+      _origRenderTable.apply(this, arguments);
+      if(hs.hand && !hs.hand.result && gameInfo().hand_tracking){
+        setTimeout(renderBoardOnFelt, 50);
+      }
+    };
   }
 });
 
