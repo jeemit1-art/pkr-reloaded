@@ -305,28 +305,37 @@ window.htStartHand = function() {
   }
 };
 
+function buildClockwiseOrder(totalSeats) {
+  var sideCount = totalSeats - 2;
+  var leftCount = Math.ceil(sideCount / 2);
+  var rightCount = Math.floor(sideCount / 2);
+  var topSeat = 1, leftStart = 2;
+  var bottomSeat = leftCount + 2;
+  var rightStart = leftCount + 3;
+  var order = [topSeat];
+  for (var r = 0; r < rightCount; r++) order.push(rightStart + r);
+  order.push(bottomSeat);
+  for (var l = leftCount - 1; l >= 0; l--) order.push(leftStart + l);
+  return order;
+}
 window.htPickDealer = function(dealerSeat) {
-  var seated=getSeated();
-  var seats=seated.map(function(p){return p.seat;});
-  var di=seats.indexOf(dealerSeat);
-  if(di===-1){ toast('Dealer not found'); return; }
-  var n=seats.length;
-  // next(i) steps i positions clockwise through OCCUPIED seats only
-  function next(i){ return seats[(di+i)%n]; }
-  var huMode=n===2;
+  var seated = getSeated();
+  var occupiedSeats = seated.map(function(p){ return p.seat; });
+  var totalSeats = (gameInfo().seats) || Math.max.apply(null, occupiedSeats.concat([9]));
+  var cwOrder = buildClockwiseOrder(totalSeats);
+  var seats = cwOrder.filter(function(s){ return occupiedSeats.indexOf(s) !== -1; });
+  occupiedSeats.forEach(function(s){ if (seats.indexOf(s) === -1) seats.push(s); });
+  var di = seats.indexOf(dealerSeat);
+  if (di === -1) { toast('Dealer seat not found'); return; }
+  var n = seats.length;
+  function next(i){ return seats[(di + i) % n]; }
+  var huMode = n === 2;
   var sb, bb, utg;
-  if(huMode){
-    sb=dealerSeat;
-    bb=next(1);
-    utg=bb;
-  } else {
-    sb=next(1);
-    bb=next(2);
-    utg=next(3);
-  }
-  hs.straddleSeat=null;
-  hs._pendingHand={dealer:dealerSeat,sb:sb,bb:bb,utg:utg};
-  hs.view='straddle'; renderBody();
+  if (huMode) { sb = dealerSeat; bb = next(1); utg = bb; }
+  else { sb = next(1); bb = next(2); utg = next(3); }
+  hs.straddleSeat = null;
+  hs._pendingHand = {dealer:dealerSeat, sb:sb, bb:bb, utg:utg};
+  hs.view = 'straddle'; renderBody();
 };
 
 window.htConfirmStart = function(straddleSeat) {
