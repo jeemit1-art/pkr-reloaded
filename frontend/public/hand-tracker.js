@@ -491,19 +491,24 @@ window.htAct = function(action,playerName) {
       if(si>=0&&si<3){
         var ns=so[si+1];
         var streetName=ns.charAt(0).toUpperCase()+ns.slice(1);
+        renderBoardOnFelt();
         setTimeout(function(){
-          hs.street=ns; hs.chipInput='';
-          var slots={flop:[0,1,2],turn:[3],river:[4]};
-          var sl=slots[ns];
-          if(sl){
-            hs.cardTarget=sl[0];hs.view='cards';
-            if(ns==='flop') hs._autoCardMode='flop';
-            else hs._autoCardMode=null;
-          }
-          renderBody();
-          var sh=document.getElementById('handTrackerSheet');if(sh)sh.classList.add('open');
-        },400);
+          animateChipsToPot(function(){
+            hs.street=ns; hs.chipInput='';
+            var slots={flop:[0,1,2],turn:[3],river:[4]};
+            var sl=slots[ns];
+            if(sl){
+              hs.cardTarget=sl[0];hs.view='cards';
+              if(ns==='flop') hs._autoCardMode='flop';
+              else hs._autoCardMode=null;
+            }
+            renderBody();renderBoardOnFelt();
+            var sh=document.getElementById('handTrackerSheet');if(sh)sh.classList.add('open');
+          });
+        },300);
         toast('Deal the '+streetName+'!');
+        renderBody();renderBoardOnFelt();
+        return;
       }
     }
     renderBody();renderBoardOnFelt();
@@ -648,99 +653,224 @@ function calculateSidePots(actions,seated){
 }
 
 // --- DEALER CHIP ON FELT ---
+// ─── CHIP ANIMATION SYSTEM ───────────────────────────────────────────────────
+
+// Inject global CSS for chip animations (once)
+function ensureChipStyles() {
+  if (document.getElementById('ht-chip-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'ht-chip-styles';
+  s.textContent = [
+    '@keyframes htChipPop{0%{transform:translate(-50%,-50%) scale(0.3);opacity:0}60%{transform:translate(-50%,-50%) scale(1.2)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}',
+    '@keyframes htChipSlide{0%{opacity:1}100%{opacity:0}}',
+    '@keyframes htGlow{0%,100%{box-shadow:0 0 6px rgba(201,168,76,0.4)}50%{box-shadow:0 0 14px rgba(201,168,76,0.9)}}',
+    '.ht-chip-stack{position:absolute;transform:translate(-50%,-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:10;animation:htChipPop 0.25s ease-out forwards}',
+    '.ht-chip-disc{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;font-family:DM Sans,sans-serif}',
+    '.ht-chip-amount{font-size:10px;font-weight:700;color:#c9a84c;font-family:DM Sans,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;background:rgba(0,0,0,0.55);padding:1px 4px;border-radius:3px}',
+    '.ht-seat-glow{animation:htGlow 1s ease-in-out infinite}',
+    '.ht-seat-folded{opacity:0.3!important}',
+    '#htChipsLayer{position:absolute;inset:0;pointer-events:none;z-index:8}',
+  ].join('');
+  document.head.appendChild(s);
+}
+
+// Get absolute pixel position of a seat element relative to tableFelt
+function getSeatPos(sid) {
+  var seatEl = document.getElementById(sid);
+  var felt = document.getElementById('tableFelt');
+  if (!seatEl || !felt) return null;
+  var sr = seatEl.getBoundingClientRect();
+  var fr = felt.getBoundingClientRect();
+  return {
+    x: sr.left + sr.width/2 - fr.left,
+    y: sr.top  + sr.height/2 - fr.top
+  };
+}
+
+// Get center of felt
+function getFeltCenter() {
+  var felt = document.getElementById('tableFelt');
+  if (!felt) return {x:0,y:0};
+  return { x: felt.offsetWidth/2, y: felt.offsetHeight/2 };
+}
+
+// Chip colours by denomination bucket
+function chipColor(amt) {
+  if (amt <= 5)   return '#c0392b'; // red
+  if (amt <= 25)  return '#27ae60'; // green
+  if (amt <= 100) return '#2980b9'; // blue
+  if (amt <= 500) return '#8e44ad'; // purple
+  return '#c9a84c;border-color:rgba(201,168,76,0.8)'; // gold
+}
+
+// Draw a stack of chips at absolute position (x,y) inside #htChipsLayer
+function drawChipStack(layer, x, y, amount, label, isAllin, isFolded, cv) {
+  var stack = document.createElement('div');
+  stack.className = 'ht-chip-stack';
+  stack.style.left = x + 'px';
+  stack.style.top  = y + 'px';
+
+  if (isFolded) {
+    // Just show folded text
+    var ft = document.createElement('div');
+    ft.style.cssText = 'font-size:10px;font-weight:700;color:rgba(231,76,60,0.7);font-family:DM Sans,sans-serif;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:3px';
+    ft.textContent = '\u2715 FOLD';
+    stack.appendChild(ft);
+    layer.appendChild(stack);
+    return;
+  }
+
+  // Stack discs (1-4 visible chips)
+  var numDiscs = Math.min(4, Math.max(1, Math.ceil(Math.log10((amount||1)+1))));
+  var colors = ['#c0392b','#27ae60','#2980b9','#8e44ad'];
+  for (var d = 0; d < numDiscs; d++) {
+    var disc = document.createElement('div');
+    disc.className = 'ht-chip-disc';
+    disc.style.background = colors[d % colors.length];
+    disc.style.marginTop = d === 0 ? '0' : '-14px'; // stack overlap
+    disc.style.zIndex = String(numDiscs - d);
+    if (d === 0) disc.textContent = amount > 999 ? (amount/1000).toFixed(1)+'k' : String(amount);
+    stack.appendChild(disc);
+  }
+
+  // Amount label
+  var lbl = document.createElement('div');
+  lbl.className = 'ht-chip-amount';
+  var txt = isAllin ? 'ALL-IN ' + amount : String(amount);
+  if (cv && amount) txt += ' \u00B7 $' + (amount * cv / 100).toFixed(0);
+  lbl.textContent = txt;
+  stack.appendChild(lbl);
+
+  layer.appendChild(stack);
+  return stack;
+}
+
+// Animate all chip stacks sliding to center (called when street ends)
+function animateChipsToPot(onDone) {
+  var layer = document.getElementById('htChipsLayer');
+  if (!layer) { if(onDone) onDone(); return; }
+  var center = getFeltCenter();
+  var stacks = layer.querySelectorAll('.ht-chip-stack');
+  if (!stacks.length) { if(onDone) onDone(); return; }
+  var total = stacks.length;
+  var done = 0;
+  stacks.forEach(function(stack) {
+    var startX = parseFloat(stack.style.left);
+    var startY = parseFloat(stack.style.top);
+    var dx = center.x - startX;
+    var dy = center.y - startY;
+    stack.style.transition = 'left 0.4s ease-in, top 0.4s ease-in, opacity 0.4s ease-in';
+    // force reflow
+    void stack.offsetWidth;
+    stack.style.left = center.x + 'px';
+    stack.style.top  = center.y + 'px';
+    stack.style.opacity = '0';
+    stack.addEventListener('transitionend', function handler() {
+      stack.removeEventListener('transitionend', handler);
+      stack.remove();
+      done++;
+      if (done >= total && onDone) onDone();
+    });
+  });
+}
+
+// ─── MAIN FELT RENDERER ─────────────────────────────────────────────────────
+
 function renderBoardOnFelt(){
-  var tc=document.getElementById('tableCenter'); if(!tc)return;
-  ['htBoard','htPot','htDealerChip','htSidePots'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
+  ensureChipStyles();
+  var tc = document.getElementById('tableCenter'); if(!tc) return;
+  var felt = document.getElementById('tableFelt'); if(!felt) return;
 
-  // Always render the compact action panel (handles its own show/hide)
+  // Clean up centre HUD elements
+  ['htBoard','htPot','htDealerChip'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.remove();
+  });
+
+  // Always update seat visuals and action panel
   renderActionPanel();
+  updateSeatVisuals();
 
-  // Clear per-seat chip bet badges
-  document.querySelectorAll('.ht-seat-bet').forEach(function(el){el.remove();});
-  // Clear seat dim/highlight overlays
-  document.querySelectorAll('.ht-seat-overlay').forEach(function(el){el.remove();});
+  if (!hs.hand || hs.hand.result) {
+    // Hand over — remove chip layer and clean seats
+    var cl = document.getElementById('htChipsLayer');
+    if (cl) cl.remove();
+    document.querySelectorAll('.seat').forEach(function(el){
+      el.style.opacity=''; el.style.filter='';
+    });
+    return;
+  }
 
-  if(!hs.hand||hs.hand.result) return;
+  // Ensure chip layer exists
+  var layer = document.getElementById('htChipsLayer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'htChipsLayer';
+    felt.appendChild(layer);
+  }
 
-  var seated=getSeated();
-  var cv2=gameInfo().chip_value||0;
+  // Redraw all chip stacks for current street
+  layer.innerHTML = '';
+  var seated = getSeated();
+  var cv = gameInfo().chip_value||0;
   var allFolded={}, allAllin={};
   hs.actions.forEach(function(a){
     if(a.action==='fold')  allFolded[a.display_name]=true;
     if(a.action==='allin') allAllin[a.display_name]=true;
   });
-  var nextPlayer=computeNextPlayer(hs.street,hs.actions,hs.hand);
-  // Street chip totals per player
   var scm={};
   seated.forEach(function(p){scm[p.name]=0;});
   hs.actions.filter(function(a){return a.street===hs.street;}).forEach(function(a){
     if(a.chips>0) scm[a.display_name]=(scm[a.display_name]||0)+a.chips;
   });
+  var center = getFeltCenter();
 
-  // Inject chip bet badge + status overlay into each seat element on the felt
   seated.forEach(function(pl){
-    var seatEl=document.getElementById(pl.sid);
-    if(!seatEl) return;
-    var isFolded=allFolded[pl.name];
-    var isNext=pl.name===nextPlayer;
-    var isAllin=allAllin[pl.name];
-    var betAmt=scm[pl.name]||0;
+    var betAmt = scm[pl.name]||0;
+    var isFolded = allFolded[pl.name];
+    var isAllin = allAllin[pl.name];
+    if (!betAmt && !isFolded) return;
 
-    // Dim folded players
-    seatEl.style.opacity=isFolded?'0.35':'1';
-    // Gold ring on next-to-act
-    seatEl.style.filter=isNext?'drop-shadow(0 0 6px rgba(201,168,76,0.9))':'none';
+    var pos = getSeatPos(pl.sid);
+    if (!pos) return;
 
-    // Chip bet badge below seat
-    if(betAmt>0||isAllin||isFolded){
-      var badge=document.createElement('div');
-      badge.className='ht-seat-bet';
-      badge.style.cssText='margin-top:2px;font-size:clamp(0.52rem,1.2vw,0.65rem);font-weight:700;padding:1px 5px;border-radius:3px;pointer-events:none;text-align:center;line-height:1.4;';
-      if(isFolded){
-        badge.textContent='\u2715 fold';
-        badge.style.color='rgba(231,76,60,0.7)';
-        badge.style.background='rgba(231,76,60,0.08)';
-      } else if(isAllin){
-        badge.textContent='ALL-IN'+(betAmt?' '+betAmt:'');
-        badge.style.color='var(--green,#2ecc71)';
-        badge.style.background='rgba(46,204,113,0.1)';
-      } else {
-        badge.textContent=betAmt+(cv2?' \u00B7 $'+(betAmt*cv2/100).toFixed(0):'');
-        badge.style.color='var(--gold,#c9a84c)';
-        badge.style.background='rgba(201,168,76,0.1)';
-      }
-      seatEl.appendChild(badge);
-    }
+    // Position chip stack between seat and center (40% toward center)
+    var chipX = pos.x + (center.x - pos.x) * 0.38;
+    var chipY = pos.y + (center.y - pos.y) * 0.38;
+
+    drawChipStack(layer, chipX, chipY, betAmt, pl.name, isAllin, isFolded, cv);
   });
 
   // Board cards
-  var row=document.createElement('div');row.id='htBoard';row.style.cssText='display:flex;gap:4px;justify-content:center;margin-top:8px;pointer-events:all';
+  var row=document.createElement('div');row.id='htBoard';
+  row.style.cssText='display:flex;gap:4px;justify-content:center;margin-top:8px;pointer-events:all';
   for(var i=0;i<5;i++){
     var card=hs.board[i],isRed=card&&(card.indexOf('\u2665')>=0||card.indexOf('\u2666')>=0);
     var el=document.createElement('div');
     el.style.cssText='width:clamp(20px,4.5vw,30px);height:clamp(30px,7vw,48px);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-weight:700;line-height:1.1;'
       +(card?'background:#fff;color:'+(isRed?'#d63031':'#1a1a1a')+';':'background:rgba(255,255,255,0.06);border:1px dashed rgba(201,168,76,0.3);color:rgba(201,168,76,0.25);');
-    if(card){var rd=document.createElement('div');rd.style.fontSize='clamp(8px,1.9vw,12px)';rd.textContent=card.slice(0,-1);var sd=document.createElement('div');sd.style.fontSize='clamp(9px,2.1vw,14px)';sd.textContent=card.slice(-1);el.appendChild(rd);el.appendChild(sd);}
+    if(card){var rd=document.createElement('div');rd.style.fontSize='clamp(8px,1.9vw,12px)';rd.textContent=card.slice(0,-1);var sd2=document.createElement('div');sd2.style.fontSize='clamp(9px,2.1vw,14px)';sd2.textContent=card.slice(-1);el.appendChild(rd);el.appendChild(sd2);}
     else{el.style.fontSize='clamp(5px,1vw,7px)';el.style.textAlign='center';el.textContent=i<3?'F':i===3?'T':'R';}
-    el.dataset.slot=i;el.addEventListener('click',function(){window.htOpenCards(parseInt(this.dataset.slot));openSheet('handTrackerSheet');});row.appendChild(el);
+    el.dataset.slot=i;
+    el.addEventListener('click',function(){window.htOpenCards(parseInt(this.dataset.slot));openSheet('handTrackerSheet');});
+    row.appendChild(el);
   }
   tc.appendChild(row);
 
-  // Pot + side pots in centre
+  // Pot display
+  var cv2=gameInfo().chip_value||0;
   var potWrap=document.createElement('div');potWrap.id='htPot';
-  potWrap.style.cssText='margin-top:3px;text-align:center;pointer-events:none';
+  potWrap.style.cssText='margin-top:4px;text-align:center;pointer-events:none';
   if(hs.pot>0){
     var pm=document.createElement('div');
-    pm.style.cssText='font-size:clamp(0.6rem,1.3vw,0.75rem);color:var(--gold,#c9a84c);font-weight:700';
-    pm.textContent='POT '+hs.pot+(cv2?' \u00B7 $'+(hs.pot*cv2/100).toFixed(2):'');
+    pm.style.cssText='font-size:clamp(0.62rem,1.4vw,0.78rem);color:#c9a84c;font-weight:700;font-family:DM Sans,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.8)';
+    pm.textContent='POT \u00B7 '+hs.pot+(cv2?' \u00B7 $'+(hs.pot*cv2/100).toFixed(0):'');
     potWrap.appendChild(pm);
   }
-  // Side pots
   var sp=calculateSidePots(hs.actions,seated);
   if(sp.length>1){
     sp.forEach(function(pot){
       var sd=document.createElement('div');
-      sd.style.cssText='font-size:clamp(0.48rem,1vw,0.6rem);color:rgba(46,204,113,0.85);font-weight:600;margin-top:1px';
+      sd.style.cssText='font-size:clamp(0.48rem,1vw,0.6rem);color:rgba(46,204,113,0.85);font-weight:600;margin-top:1px;font-family:DM Sans,sans-serif';
       sd.textContent=pot.label+': '+pot.chips+(cv2?' ($'+(pot.chips*cv2/100).toFixed(0)+')':'');
       potWrap.appendChild(sd);
     });
@@ -748,21 +878,49 @@ function renderBoardOnFelt(){
   tc.appendChild(potWrap);
 
   // Dealer chip
-  if(hs.hand){
-    var dChip=document.createElement('div');dChip.id='htDealerChip';
-    var dSeated=getSeated().find(function(p){return p.seat===hs.hand.dealer_seat;});
-    dChip.style.cssText='font-size:0.6rem;font-weight:700;color:#000;background:var(--gold,#c9a84c);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;margin:4px auto 0;pointer-events:none';
-    dChip.textContent='D';
-    if(dSeated){
-      var dn=document.createElement('div');dn.style.cssText='font-size:0.55rem;color:rgba(201,168,76,0.7);margin-top:1px;pointer-events:none';
-      dn.textContent=dSeated.name.split(' ')[0];
-      var dWrap=document.createElement('div');dWrap.id='htDealerChip';dWrap.style.cssText='display:flex;flex-direction:column;align-items:center;pointer-events:none';
-      dWrap.appendChild(dChip);dWrap.appendChild(dn);tc.appendChild(dWrap);
-    } else {
-      tc.appendChild(dChip);
-    }
-  }
+  var dChip=document.createElement('div');dChip.id='htDealerChip';
+  var dSeated=getSeated().find(function(p){return p.seat===hs.hand.dealer_seat;});
+  dChip.style.cssText='font-size:0.6rem;font-weight:700;color:#000;background:#c9a84c;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;margin:4px auto 0;pointer-events:none';
+  dChip.textContent='D';
+  if(dSeated){
+    var dn=document.createElement('div');dn.style.cssText='font-size:0.55rem;color:rgba(201,168,76,0.7);margin-top:1px;pointer-events:none';
+    dn.textContent=dSeated.name.split(' ')[0];
+    var dWrap=document.createElement('div');dWrap.id='htDealerChip';dWrap.style.cssText='display:flex;flex-direction:column;align-items:center;pointer-events:none';
+    dWrap.appendChild(dChip);dWrap.appendChild(dn);tc.appendChild(dWrap);
+  } else { tc.appendChild(dChip); }
 }
+
+// Apply fold/glow/allin visual state to seat elements
+function updateSeatVisuals() {
+  if (!hs.hand || !gameInfo().hand_tracking) {
+    document.querySelectorAll('.seat').forEach(function(el){
+      el.style.opacity=''; el.style.filter=''; el.classList.remove('ht-seat-glow');
+    });
+    return;
+  }
+  var allFolded={}, allAllin={};
+  hs.actions.forEach(function(a){
+    if(a.action==='fold')  allFolded[a.display_name]=true;
+    if(a.action==='allin') allAllin[a.display_name]=true;
+  });
+  var nextPlayer = hs.hand && !hs.hand.result ? computeNextPlayer(hs.street,hs.actions,hs.hand) : null;
+  var seated = getSeated();
+  seated.forEach(function(pl){
+    var seatEl = document.getElementById(pl.sid);
+    if (!seatEl) return;
+    var isFolded = allFolded[pl.name];
+    var isNext   = pl.name === nextPlayer;
+    seatEl.style.opacity = isFolded ? '0.3' : '1';
+    if (isNext) {
+      seatEl.style.filter = 'drop-shadow(0 0 8px rgba(201,168,76,0.95))';
+      seatEl.classList.add('ht-seat-glow');
+    } else {
+      seatEl.style.filter = '';
+      seatEl.classList.remove('ht-seat-glow');
+    }
+  });
+}
+
 
 // --- COMPACT ACTION PANEL (floating on felt) ---
 var _apOpen = true; // panel expanded state
