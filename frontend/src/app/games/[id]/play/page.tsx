@@ -1032,6 +1032,7 @@ function buildSeats(count, tW, tH, cx, cy) {
     var p = state.players[sid];
     var seat = document.createElement('div');
     seat.className = 'seat';
+    seat.id = sid;
     seat.style.left = pos.x + 'px';
     seat.style.top = pos.y + 'px';
     var cs = chipSize + 'px';
