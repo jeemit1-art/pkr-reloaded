@@ -673,11 +673,15 @@ window.htPickCard  = function(card){
     hs.board=b.filter(Boolean);
     if(hs.hand)htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/board',{method:'PUT',body:JSON.stringify({board:hs.board})}).catch(function(){});
     renderBoardOnFelt();
+
     if(hs._autoCardMode==='flop'){
       var nextSlot=null;
-      for(var fsi=0;fsi<3;fsi++){if(!hs.board[fsi]){nextSlot=fsi;break;}}
+      for(var fsi=0;fsi<3;fsi++){
+        if(!hs.board[fsi]){ nextSlot=fsi; break; }
+      }
       if(nextSlot!==null){
         hs.cardTarget=nextSlot;
+        hs.view='cards';
         if(typeof window.openCardPicker==='function') window.openCardPicker();
         else renderBody();
         return;
@@ -694,6 +698,7 @@ window.htPickCard  = function(card){
     if(ix!==-1)hc.splice(ix,1);else if(hc.length<2)hc.push(card);
     hs.holes[hs.cardTarget]=hc;
   }
+
   hs.view='main';
   renderBody();
   if(typeof window.closeCardPicker==='function') window.closeCardPicker();
