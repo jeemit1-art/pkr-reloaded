@@ -1376,6 +1376,19 @@ function renderMain(body){
   var hand=hs.hand,allFolded={},allAllin={};
   hs.actions.forEach(function(a){if(a.action==='fold')allFolded[a.display_name]=true;if(a.action==='allin')allAllin[a.display_name]=true;});
   var nextPlayer=computeNextPlayer(hs.street,hs.actions,hand);
+
+// --- calculate amount to call ---
+var streetActs = hs.actions.filter(function(a){ return a.street===hs.street; });
+var contrib = {};
+seated.forEach(function(p){ contrib[p.name]=0; });
+
+streetActs.forEach(function(a){
+  if(a.chips>0) contrib[a.display_name]=(contrib[a.display_name]||0)+a.chips;
+});
+
+var maxBet = Math.max.apply(null,[0].concat(Object.values(contrib)));
+var toCall = Math.max(0, maxBet - (contrib[nextPlayer]||0));
+
   var huMode=seated.length===2;
   var tabs=document.createElement('div');tabs.style.cssText='display:flex;gap:3px;margin-bottom:10px';
   ['pre','flop','turn','river'].forEach(function(s){
