@@ -453,6 +453,18 @@ window.htAct = function(action, playerName) {
     }
   }
 
+  if (action === 'allin') {
+    var suggested = hs.chipInput && parseInt(hs.chipInput) > 0 ? String(parseInt(hs.chipInput)) : '';
+    var entered = window.prompt('Enter all-in amount for ' + playerName, suggested);
+    if (entered === null) return;
+
+    chips = parseInt(String(entered).replace(/[^0-9]/g, ''), 10) || 0;
+    if (chips <= 0) {
+      toast('Enter a valid all-in amount');
+      return;
+    }
+  }
+
   if ((action === 'bet' || action === 'raise') && chips === 0) {
     toast('Enter chip amount');
     return;
