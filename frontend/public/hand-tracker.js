@@ -301,6 +301,12 @@ window.openCardPicker = function(){
     renderCards(body);
   }
 
+  sheet.onclick = function(e){
+    if(e.target === sheet && typeof window.closeCardPicker === 'function'){
+      window.closeCardPicker();
+    }
+  };
+
   openSheet('cardPickerSheet');
 };
 
@@ -593,15 +599,27 @@ window.htPickCard  = function(card){
     if(hs._autoCardMode==='flop'){
       var nextSlot=null;
       for(var fsi=0;fsi<3;fsi++){if(!hs.board[fsi]){nextSlot=fsi;break;}}
-      if(nextSlot!==null){hs.cardTarget=nextSlot;renderBody();return;}
-      else{hs._autoCardMode=null;hs.view='main';renderBody();return;}
+      if(nextSlot!==null){
+        hs.cardTarget=nextSlot;
+        if(typeof window.openCardPicker==='function') window.openCardPicker();
+        else renderBody();
+        return;
+      } else {
+        hs._autoCardMode=null;
+        hs.view='main';
+        renderBody();
+        if(typeof window.closeCardPicker==='function') window.closeCardPicker();
+        return;
+      }
     }
   } else {
     var hc=(hs.holes[hs.cardTarget]||[]).slice(),ix=hc.indexOf(card);
     if(ix!==-1)hc.splice(ix,1);else if(hc.length<2)hc.push(card);
     hs.holes[hs.cardTarget]=hc;
   }
-  hs.view='main';renderBody();
+  hs.view='main';
+  renderBody();
+  if(typeof window.closeCardPicker==='function') window.closeCardPicker();
 };
 
 window.htAssignPotWinner = function(potIdx, winnerName){
