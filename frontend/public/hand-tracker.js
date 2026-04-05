@@ -1,4 +1,4 @@
-// hand-tracker.js — PKR Reloaded Hand Tracker v7
+// hand-tracker.js — PKR Reloaded Hand Tracker v8.1
 // v6 features + mid-session player changes + pause/resume + roster + all-in/side pot + action log + chip denoms + player stats + session export
 
 (function() {
