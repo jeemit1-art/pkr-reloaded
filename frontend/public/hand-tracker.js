@@ -162,71 +162,148 @@ function getChipValue() {
 function computeNextPlayer(street, actions, hand) {
   if (!hand) return null;
 
-  var seated = getSeated().slice().sort(function(a,b){ return a.seat - b.seat; });
+  var seated = getSeated();
   if (!seated.length) return null;
 
-  // build active players
-  var folded={}, allin={};
+  // Build the physical clockwise ring for THIS hand.
+  var totalSeats = gameInfo().seats || Math.max.apply(null, seated.map(function(p){ return p.seat; }).concat([9]));
+  var cwOrder = buildClockwiseOrder(totalSeats);
+  var ring = cwOrder.filter(function(seatNo){
+    return seated.some(function(p){ return p.seat === seatNo; });
+  });
+
+  var playerBySeat = {};
+  var seatByName = {};
+  seated.forEach(function(p){
+    playerBySeat[p.seat] = p;
+    seatByName[p.name] = p.seat;
+  });
+
+  var folded = {}, allin = {};
   actions.forEach(function(a){
-    if(a.action==='fold') folded[a.display_name]=true;
-    if(a.action==='allin') allin[a.display_name]=true;
+    if (a.action === 'fold') folded[a.display_name] = true;
+    if (a.action === 'allin') allin[a.display_name] = true;
   });
 
-  var active = seated.filter(function(p){ return !folded[p.name]; });
-  if(active.length <= 1) return null;
-
-  // contributions
-  var streetActs = actions.filter(function(a){ return a.street===street; });
-  var contrib={};
-  seated.forEach(function(p){ contrib[p.name]=0; });
-  streetActs.forEach(function(a){
-    if(a.chips>0) contrib[a.display_name]=(contrib[a.display_name]||0)+a.chips;
+  var activeSeats = ring.filter(function(seatNo){
+    var p = playerBySeat[seatNo];
+    return p && !folded[p.name];
+  });
+  var canActSeats = activeSeats.filter(function(seatNo){
+    var p = playerBySeat[seatNo];
+    return p && !allin[p.name];
   });
 
-  // max bet (important: include all active)
-  var maxBet = Math.max.apply(null,[0].concat(active.map(function(p){
-    return contrib[p.name]||0;
-  })));
+  if (activeSeats.length <= 1 || canActSeats.length === 0) return null;
 
-  // find last action player
-  var last = streetActs.length ? streetActs[streetActs.length-1].display_name : null;
-
-  // ring order
-  var ring = seated.map(function(p){ return p.name; });
-
-  function nextPlayer(name){
-    var idx = ring.indexOf(name);
-    for(var i=1;i<=ring.length;i++){
-      var n = ring[(idx+i)%ring.length];
-      var p = seated.find(function(x){ return x.name===n; });
-      if(p && !folded[n] && !allin[n]) return n;
+  function nextActiveSeatAfter(seatNo, includeAllIn) {
+    var pool = includeAllIn ? activeSeats : canActSeats;
+    var idx = ring.indexOf(seatNo);
+    if (idx === -1) idx = 0;
+    for (var i = 1; i <= ring.length; i++) {
+      var s = ring[(idx + i) % ring.length];
+      if (pool.indexOf(s) >= 0) return s;
     }
     return null;
   }
 
-  // start point
-  var cursor = last ? nextPlayer(last) : active[0].name;
+  var streetActs = actions.filter(function(a){ return a.street === street; });
 
-  // iterate once around table
-  for(var i=0;i<ring.length;i++){
-    var name = cursor;
-    var player = seated.find(function(p){ return p.name===name; });
+  // Progressive contribution tracking for this street.
+  var contrib = {};
+  seated.forEach(function(p){ contrib[p.name] = 0; });
 
-    if(!player || folded[name] || allin[name]){
-      cursor = nextPlayer(name);
-      continue;
+  // Who has taken a voluntary action this street?
+  var voluntaryActed = {};
+  // Last seat that changed the amount to call.
+  var lastAmountChangeSeat = null;
+
+  // Track current bet and minimum full raise size.
+  var bl = blindsInChips();
+  var currentBet = 0;
+  var lastFullRaise = (street === 'pre')
+    ? ((hs.straddleSeat && hand && hand.straddle) ? bl.bb : bl.bb)
+    : bl.bb;
+
+  streetActs.forEach(function(a){
+    var name = a.display_name;
+    var prevPlayer = contrib[name] || 0;
+    var prevBet = currentBet;
+
+    if (a.chips > 0) contrib[name] = prevPlayer + a.chips;
+
+    if (a.action !== 'post' && a.action !== 'straddle') {
+      voluntaryActed[name] = true;
     }
 
-    var matched = (contrib[name]||0) >= maxBet;
-    var hasActed = streetActs.some(function(a){
-      return a.display_name===name && a.action!=='post' && a.action!=='straddle';
-    });
+    var newPlayer = contrib[name] || 0;
 
-    if(!hasActed || !matched){
-      return name;
+    // Detect any change to the amount to call.
+    if (newPlayer > prevBet && a.action !== 'post' && a.action !== 'straddle') {
+      lastAmountChangeSeat = seatByName[name];
+      var raiseSize = newPlayer - prevBet;
+
+      // Bet / raise always re-open.
+      if (a.action === 'bet' || a.action === 'raise') {
+        if (raiseSize > 0) lastFullRaise = raiseSize;
+      }
+
+      // All-in only sets a new full-raise size if it is large enough.
+      if (a.action === 'allin' && raiseSize >= lastFullRaise) {
+        lastFullRaise = raiseSize;
+      }
+
+      currentBet = newPlayer;
+    } else {
+      currentBet = Math.max(currentBet, newPlayer);
+    }
+  });
+
+  var dealerSeat = hand.dealer_seat;
+  var bbSeat = hand.bb_seat;
+  var strSeat = hs.straddleSeat;
+
+  // First actor by standard hold'em rules.
+  var firstActorSeat;
+  if (street === 'pre') {
+    firstActorSeat = nextActiveSeatAfter(strSeat || bbSeat, false);
+  } else {
+    firstActorSeat = nextActiveSeatAfter(dealerSeat, false);
+  }
+  if (!firstActorSeat) return null;
+
+  // Case 1: unopened street / no voluntary action has changed the price to call.
+  // Example: pre-flop limped pot returning to BB, or checked-around flop.
+  if (!lastAmountChangeSeat) {
+    var cursor = firstActorSeat;
+    for (var j = 0; j < ring.length; j++) {
+      if (canActSeats.indexOf(cursor) >= 0) {
+        var p0 = playerBySeat[cursor];
+        if (!voluntaryActed[p0.name]) return p0.name;
+      }
+      cursor = nextActiveSeatAfter(cursor, false);
+      if (cursor === null) break;
+    }
+    return null;
+  }
+
+  // Case 2: there is a bet / raise / all-in that increased the amount to call.
+  // Action continues from the NEXT active player clockwise after that seat.
+  var cursor2 = nextActiveSeatAfter(lastAmountChangeSeat, false);
+  if (!cursor2) return null;
+
+  for (var k = 0; k < ring.length; k++) {
+    if (cursor2 === lastAmountChangeSeat) break;
+
+    var p1 = playerBySeat[cursor2];
+    if (p1 && canActSeats.indexOf(cursor2) >= 0) {
+      var owes = (contrib[p1.name] || 0) < currentBet;
+      if (owes) return p1.name;
     }
 
-    cursor = nextPlayer(name);
+    var nextSeat = nextActiveSeatAfter(cursor2, false);
+    if (nextSeat === null) break;
+    cursor2 = nextSeat;
   }
 
   return null;
