@@ -1108,7 +1108,7 @@ function renderActionPanel(){
   var panel=document.createElement('div');
   panel.id='htActionPanel';
   // Fixed bottom-left, above bottom nav
-  panel.style.cssText='position:fixed;bottom:70px;left:8px;z-index:999;width:210px;font-family:DM Sans,sans-serif;';
+  panel.style.cssText='position:fixed;bottom:70px;left:8px;z-index:999;width:260px;font-family:DM Sans,sans-serif;';
 
   if(!_apOpen){
     // Collapsed tab
@@ -1159,15 +1159,16 @@ function renderActionPanel(){
         var slots={flop:[0,1,2],turn:[3],river:[4]};
         var sl=slots[ns];
         if(sl){hs.cardTarget=sl[0];hs.view='cards';if(ns==='flop')hs._autoCardMode='flop';else hs._autoCardMode=null;}
-        openSheet('handTrackerSheet');
         renderBody();renderActionPanel();
+        if(typeof window.openCardPicker==='function') window.openCardPicker();
+        else if(typeof openSheet==='function') openSheet('cardPickerSheet');
       };
       box.appendChild(dealBtn);
     } else if(activePl.length<=1||(si===3)){
       var winBtn=document.createElement('button');
       winBtn.style.cssText='width:100%;padding:8px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:#2ecc71;border-radius:7px;cursor:pointer;font-size:0.78rem;font-weight:700';
       winBtn.textContent='\uD83C\uDFC6 Declare Winner';
-      winBtn.onclick=function(){hs.view='winner';openSheet('handTrackerSheet');renderBody();};
+      winBtn.onclick=function(){hs.view='winner';renderBody();renderActionPanel();if(typeof window.openWinnerOverlay==='function') window.openWinnerOverlay();};
       box.appendChild(winBtn);
     }
   } else {
