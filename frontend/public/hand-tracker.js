@@ -1362,68 +1362,98 @@ function renderStraddleView(body){
 
 // --- MAIN VIEW ---
 function renderMain(body){
-  var cv=getChipValue(),seated=getSeated();
+  var cv=getChipValue(), seated=getSeated();
+
+  // ── No active hand ──────────────────────────────────────────────────────────
   if(!hs.hand||hs.hand.result){
     if(hs.hand&&hs.hand.result){
-      var res=hs.hand.result,rb=document.createElement('div');
+      var res=hs.hand.result, rb=document.createElement('div');
       rb.style.cssText='background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px';
       var ri=document.createElement('div');ri.style.flex='1';
       ri.innerHTML='<div style="font-size:0.85rem;color:var(--green);font-weight:700">\uD83C\uDFC6 Hand #'+hs.hand.hand_no+'</div>'
         +'<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">'+(res.winner_name||'')+' won '+(res.pot_chips||hs.pot)+' chips'+(cv&&res.pot_chips?' ($'+(res.pot_chips*cv/100).toFixed(2)+')':'')+'</div>';
-      rb.appendChild(ri);rb.appendChild(mkB('\u21A9 Undo','background:none;border:1px solid rgba(231,76,60,0.3);color:var(--red);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif;flex-shrink:0',window.htUndoWinner));
+      rb.appendChild(ri);
+      rb.appendChild(mkB('\u21A9 Undo','background:none;border:1px solid rgba(231,76,60,0.3);color:var(--red);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif;flex-shrink:0',window.htUndoWinner));
       body.appendChild(rb);
     }
-    var nextNo=hs.hand?hs.hand.hand_no+1:1,sb2=document.createElement('button');
-    sb2.className='btn-primary';sb2.style.cssText='width:100%;padding:16px;font-size:1rem;border-radius:10px;margin-bottom:10px';
-    sb2.textContent='\u25B6\uFE0F Start Hand #'+nextNo;sb2.addEventListener('click',window.htStartHand);body.appendChild(sb2);
-    appendLiveCardsToggle(body);return;
+    var nextNo=hs.hand?hs.hand.hand_no+1:1, sb2=document.createElement('button');
+    sb2.className='btn-primary';
+    sb2.style.cssText='width:100%;padding:16px;font-size:1rem;border-radius:10px;margin-bottom:10px';
+    sb2.textContent='\u25B6\uFE0F Start Hand #'+nextNo;
+    sb2.addEventListener('click',window.htStartHand);
+    body.appendChild(sb2);
+    appendLiveCardsToggle(body);
+    return;
   }
-  var hand=hs.hand,allFolded={},allAllin={};
-  hs.actions.forEach(function(a){if(a.action==='fold')allFolded[a.display_name]=true;if(a.action==='allin')allAllin[a.display_name]=true;});
+
+  var hand=hs.hand, allFolded={}, allAllin={};
+  hs.actions.forEach(function(a){
+    if(a.action==='fold')  allFolded[a.display_name]=true;
+    if(a.action==='allin') allAllin[a.display_name]=true;
+  });
   var nextPlayer=computeNextPlayer(hs.street,hs.actions,hand);
-
-// --- calculate amount to call ---
-var streetActs = hs.actions.filter(function(a){ return a.street===hs.street; });
-var contrib = {};
-seated.forEach(function(p){ contrib[p.name]=0; });
-
-streetActs.forEach(function(a){
-  if(a.chips>0) contrib[a.display_name]=(contrib[a.display_name]||0)+a.chips;
-});
-
-var maxBet = Math.max.apply(null,[0].concat(Object.values(contrib)));
-var toCall = Math.max(0, maxBet - (contrib[nextPlayer]||0));
-
   var huMode=seated.length===2;
-  var tabs=document.createElement('div');tabs.style.cssText='display:flex;gap:3px;margin-bottom:10px';
+
+  // ── HUD: street tabs + board + pot ─────────────────────────────────────────
+  var hud=document.createElement('div');
+  hud.style.cssText='background:rgba(0,0,0,0.25);border-radius:10px;padding:10px 12px;margin-bottom:8px';
+
+  // Street tabs
+  var tabs=document.createElement('div');
+  tabs.style.cssText='display:flex;gap:3px;margin-bottom:8px';
   ['pre','flop','turn','river'].forEach(function(s){
     var active=hs.street===s;
-    var t=mkB(s,'flex:1;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;font-family:DM Sans,sans-serif;border:1px solid '+(active?'rgba(201,168,76,0.5)':'rgba(201,168,76,0.1)')+';background:'+(active?'rgba(201,168,76,0.15)':'transparent')+';color:'+(active?'var(--gold)':'var(--muted)'),
-      function(){window.htSetStreet(this.textContent);});t.textContent=s;tabs.appendChild(t);
-  });body.appendChild(tabs);
-  var boardRow=document.createElement('div');boardRow.style.cssText='display:flex;gap:6px;align-items:center;background:rgba(0,0,0,0.25);border-radius:8px;padding:9px 12px;margin-bottom:10px';
-  var bl2=document.createElement('div');bl2.style.cssText='font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);flex-shrink:0;margin-right:2px';bl2.textContent='Board';boardRow.appendChild(bl2);
-  var bc=document.createElement('div');bc.style.cssText='display:flex;gap:4px;flex:1';
+    var t=document.createElement('button');
+    t.style.cssText='flex:1;padding:5px 4px;border-radius:5px;cursor:pointer;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;font-family:DM Sans,sans-serif;border:1px solid '+(active?'rgba(201,168,76,0.5)':'rgba(201,168,76,0.1)')+';background:'+(active?'rgba(201,168,76,0.15)':'transparent')+';color:'+(active?'var(--gold)':'var(--muted)');
+    t.textContent=s;
+    t.addEventListener('click',function(){window.htSetStreet(s);});
+    tabs.appendChild(t);
+  });
+  hud.appendChild(tabs);
+
+  // Board + pot row
+  var boardRow=document.createElement('div');
+  boardRow.style.cssText='display:flex;gap:5px;align-items:center';
   for(var si=0;si<5;si++){
-    var bcard=hs.board[si],isR2=bcard&&(bcard.indexOf('\u2665')>=0||bcard.indexOf('\u2666')>=0);
+    var bcard=hs.board[si], isR2=bcard&&(bcard.indexOf('\u2665')>=0||bcard.indexOf('\u2666')>=0);
     var be=document.createElement('div');
-    be.style.cssText='width:26px;height:36px;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-weight:700;line-height:1.1;'
+    be.style.cssText='width:28px;height:38px;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-weight:700;line-height:1.1;flex-shrink:0;'
       +(bcard?'background:#fff;color:'+(isR2?'#d63031':'#1a1a1a')+';':'background:rgba(255,255,255,0.04);border:1px dashed rgba(201,168,76,0.25);color:rgba(201,168,76,0.25);font-size:0.55rem;');
-    if(bcard){var rr=document.createElement('div');rr.style.fontSize='0.7rem';rr.textContent=bcard.slice(0,-1);var ss=document.createElement('div');ss.style.fontSize='0.8rem';ss.textContent=bcard.slice(-1);be.appendChild(rr);be.appendChild(ss);}
-    else{be.textContent=si<3?'F':si===3?'T':'R';}
-    be.dataset.slot=si;be.addEventListener('click',function(){window.htOpenCards(parseInt(this.dataset.slot));});bc.appendChild(be);
+    if(bcard){
+      var rr=document.createElement('div');rr.style.fontSize='0.7rem';rr.textContent=bcard.slice(0,-1);
+      var ss=document.createElement('div');ss.style.fontSize='0.8rem';ss.textContent=bcard.slice(-1);
+      be.appendChild(rr);be.appendChild(ss);
+    } else {
+      be.textContent=si<3?'F':si===3?'T':'R';
+    }
+    be.dataset.slot=si;
+    be.addEventListener('click',function(){window.htOpenCards(parseInt(this.dataset.slot));});
+    boardRow.appendChild(be);
   }
-  boardRow.appendChild(bc);
-  if(hs.pot>0){var pl3=document.createElement('div');pl3.style.cssText='font-size:0.75rem;color:var(--gold);font-weight:700;text-align:right;flex-shrink:0';pl3.innerHTML='<div>'+hs.pot+'</div><div style="font-size:0.6rem;color:var(--muted);font-weight:400">'+(cv?'$'+(hs.pot*cv/100).toFixed(2):'chips')+'</div>';boardRow.appendChild(pl3);}
-  body.appendChild(boardRow);
+  if(hs.pot>0){
+    var potDiv=document.createElement('div');
+    potDiv.style.cssText='margin-left:auto;text-align:right;flex-shrink:0';
+    potDiv.innerHTML='<div style="font-size:0.8rem;color:var(--gold);font-weight:700">'+hs.pot+' chips</div>'+(cv?'<div style="font-size:0.65rem;color:var(--muted)">$'+(hs.pot*cv/100).toFixed(2)+'</div>':'');
+    boardRow.appendChild(potDiv);
+  }
+  hud.appendChild(boardRow);
+
+  // Street action log (collapsible)
+  if(hs.actions.filter(function(a){return a.street===hs.street&&a.action!=='post'&&a.action!=='straddle';}).length>0){
+    renderStreetLog(hud,hs.actions,hs.street);
+  }
+
+  body.appendChild(hud);
+
+  // ── Deal next street button ──────────────────────────────────────────────────
   if(!nextPlayer){
     var activePl2=seated.filter(function(p){return !allFolded[p.name];});
     if(activePl2.length>1){
-      var so2=['pre','flop','turn','river'],si2=so2.indexOf(hs.street);
+      var so2=['pre','flop','turn','river'], si2=so2.indexOf(hs.street);
       if(si2>=0&&si2<3){
         var ns2=so2[si2+1];
         var dealBtn=document.createElement('button');
-        dealBtn.style.cssText='width:100%;padding:12px;background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));border:1px solid rgba(201,168,76,0.4);color:var(--gold);border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;font-family:DM Sans,sans-serif;margin-bottom:8px;animation:pulse 1.5s infinite';
+        dealBtn.style.cssText='width:100%;padding:11px;background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));border:1px solid rgba(201,168,76,0.4);color:var(--gold);border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:DM Sans,sans-serif;margin-bottom:8px;animation:htPulse 1.5s ease-in-out infinite';
         dealBtn.textContent='\uD83C\uDCA0 Deal '+ns2.charAt(0).toUpperCase()+ns2.slice(1);
         dealBtn.onclick=function(){
           hs.street=ns2;hs.chipInput='';
@@ -1436,17 +1466,28 @@ var toCall = Math.max(0, maxBet - (contrib[nextPlayer]||0));
       }
     }
   }
+
+  // ── Side pots ────────────────────────────────────────────────────────────────
   var sidePots2=calculateSidePots(hs.actions,seated);
   if(sidePots2.length>1){
-    var spBox=document.createElement('div');spBox.style.cssText='background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:8px 12px;margin-bottom:10px';
-    var spH=document.createElement('div');spH.style.cssText='font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(201,168,76,0.6);margin-bottom:6px;font-weight:600';spH.textContent='Side Pots';spBox.appendChild(spH);
-    var cv3=gameInfo().chip_value||0;
+    var spBox=document.createElement('div');
+    spBox.style.cssText='background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:8px 12px;margin-bottom:8px';
+    var spH=document.createElement('div');
+    spH.style.cssText='font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(201,168,76,0.6);margin-bottom:6px;font-weight:600';
+    spH.textContent='Side pots';
+    spBox.appendChild(spH);
+    var cv3=getChipValue();
     sidePots2.forEach(function(pot){
-      var pr=document.createElement('div');pr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:4px';
+      var pr=document.createElement('div');
+      pr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:4px';
       var ll=document.createElement('div');
       var lb=document.createElement('div');lb.style.cssText='font-size:0.72rem;color:var(--gold);font-weight:700';lb.textContent=pot.label;ll.appendChild(lb);
       var eg=document.createElement('div');eg.style.cssText='display:flex;gap:3px;flex-wrap:wrap';
-      pot.eligible.forEach(function(name){var chip=document.createElement('div');chip.style.cssText='font-size:0.62rem;padding:1px 5px;border-radius:10px;background:rgba(201,168,76,0.12);color:var(--cream2);border:1px solid rgba(201,168,76,0.2)';chip.textContent=window.inits?window.inits(name):name.slice(0,2).toUpperCase();chip.title=name;eg.appendChild(chip);});
+      pot.eligible.forEach(function(name){
+        var chip=document.createElement('div');
+        chip.style.cssText='font-size:0.62rem;padding:1px 5px;border-radius:10px;background:rgba(201,168,76,0.12);color:var(--cream2);border:1px solid rgba(201,168,76,0.2)';
+        chip.textContent=window.inits?window.inits(name):name.slice(0,2).toUpperCase();chip.title=name;eg.appendChild(chip);
+      });
       ll.appendChild(eg);pr.appendChild(ll);
       var rr2=document.createElement('div');rr2.style.cssText='text-align:right;flex-shrink:0';
       var cl=document.createElement('div');cl.style.cssText='font-size:0.78rem;color:var(--gold);font-weight:700';cl.textContent=pot.chips+' chips';rr2.appendChild(cl);
@@ -1455,36 +1496,50 @@ var toCall = Math.max(0, maxBet - (contrib[nextPlayer]||0));
     });
     body.appendChild(spBox);
   }
-  if (hs.actions.filter(function(a){return a.street===hs.street&&a.action!=='post'&&a.action!=='straddle';}).length > 0) {
-    renderStreetLog(body, hs.actions, hs.street);
-  }
+
+  // ── Seat rows ────────────────────────────────────────────────────────────────
   var scm={};seated.forEach(function(p){scm[p.name]=0;});
   hs.actions.filter(function(a){return a.street===hs.street;}).forEach(function(a){if(a.chips>0)scm[a.display_name]=(scm[a.display_name]||0)+a.chips;});
   var maxBet=Math.max.apply(null,[0].concat(Object.values(scm)));
+
   seated.forEach(function(pl){
-    var isFolded=allFolded[pl.name],isAllin=allAllin[pl.name],isNext=pl.name===nextPlayer;
-    var myChips=scm[pl.name]||0,callAmt=Math.max(0,maxBet-myChips);
-    var isD=pl.seat===hand.dealer_seat,isSB=pl.seat===hand.sb_seat,isBB=pl.seat===hand.bb_seat,isStr=hs.straddleSeat&&pl.seat===hs.straddleSeat;
+    var isFolded=allFolded[pl.name], isAllin=allAllin[pl.name], isNext=pl.name===nextPlayer;
+    var myChips=scm[pl.name]||0, callAmt=Math.max(0,maxBet-myChips);
+    var isD=pl.seat===hand.dealer_seat, isSB=pl.seat===hand.sb_seat, isBB=pl.seat===hand.bb_seat, isStr=hs.straddleSeat&&pl.seat===hs.straddleSeat;
     var sActs=hs.actions.filter(function(a){return a.street===hs.street&&a.display_name===pl.name&&a.action!=='post'&&a.action!=='straddle';});
     var lastAct=sActs[sActs.length-1];
     var postActs=hs.actions.filter(function(a){return a.street==='pre'&&a.display_name===pl.name&&(a.action==='post'||a.action==='straddle');});
     var posted=postActs.length>0?postActs[postActs.length-1].chips:0;
+
+    // Seat row container
     var rowDiv=document.createElement('div');
-    rowDiv.style.cssText='border-radius:8px;margin-bottom:4px;overflow:hidden;border:1px solid '+(isNext?'rgba(201,168,76,0.35)':'rgba(255,255,255,0.05)')+';background:'+(isNext?'rgba(201,168,76,0.06)':isFolded?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.02)')+';opacity:'+(isFolded?'0.45':'1');
-    var infoRow=document.createElement('div');infoRow.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px';
-    var av=document.createElement('div');av.style.cssText='width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7a5820,#5a3010);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:var(--cream);flex-shrink:0';
-    av.textContent=window.inits?window.inits(pl.name):pl.name.slice(0,2).toUpperCase();infoRow.appendChild(av);
+    var borderCol=isNext?'rgba(201,168,76,0.6)':isAllin?'rgba(46,204,113,0.3)':isFolded?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)';
+    var bgCol=isNext?'rgba(201,168,76,0.05)':isFolded?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.02)';
+    rowDiv.style.cssText='border-radius:8px;margin-bottom:5px;overflow:hidden;border-left:3px solid '+borderCol+';border-top:1px solid rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.04);background:'+bgCol+';opacity:'+(isFolded?'0.38':'1')+';transition:opacity 0.2s,border-color 0.2s';
+    if(isNext) rowDiv.style.animation='htActivePulse 2s ease-in-out infinite';
+
+    // Info row
+    var infoRow=document.createElement('div');
+    infoRow.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px';
+
+    var av=document.createElement('div');
+    av.style.cssText='width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7a5820,#5a3010);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:var(--cream);flex-shrink:0';
+    av.textContent=window.inits?window.inits(pl.name):pl.name.slice(0,2).toUpperCase();
+    infoRow.appendChild(av);
+
     var inf=document.createElement('div');inf.style.flex='1';
     var nl=document.createElement('div');nl.style.cssText='display:flex;align-items:center;gap:3px;flex-wrap:wrap';
     var nm=document.createElement('span');nm.style.cssText='font-size:0.85rem;color:var(--cream);font-weight:600';nm.textContent=pl.name;nl.appendChild(nm);
     if(isD)  nl.appendChild(bdg('D','var(--gold)','#000',true));
-    if(isSB && !huMode) nl.appendChild(bdg('SB','rgba(58,106,170,0.3)','#6aaaee',false));
+    if(isSB&&!huMode) nl.appendChild(bdg('SB','rgba(58,106,170,0.3)','#6aaaee',false));
     if(isBB) nl.appendChild(bdg('BB','rgba(170,58,58,0.3)','#ee8888',false));
     if(isStr)nl.appendChild(bdg('STR','rgba(201,168,76,0.2)','var(--gold)',false));
     if(isAllin)nl.appendChild(bdg('ALL-IN','rgba(46,204,113,0.15)','var(--green)',false));
     if(huMode&&isD)nl.appendChild(bdg('HU\u00B7SB','rgba(58,106,170,0.2)','#6aaaee',false));
     inf.appendChild(nl);
-    var sub=document.createElement('div');sub.style.cssText='font-size:0.68rem;margin-top:1px;color:'+(isFolded?'var(--red)':isNext?'var(--gold)':'var(--muted)');
+
+    var sub=document.createElement('div');
+    sub.style.cssText='font-size:0.68rem;margin-top:1px;color:'+(isFolded?'var(--red)':isNext?'var(--gold)':'var(--muted)');
     if(isFolded){sub.textContent='\u2715 Folded';}
     else if(isAllin){
       var aiChips=hs.actions.filter(function(a){return a.display_name===pl.name&&a.action==='allin';}).reduce(function(s,a){return s+(a.chips||0);},0);
@@ -1499,78 +1554,113 @@ var toCall = Math.max(0, maxBet - (contrib[nextPlayer]||0));
     else if(lastAct){sub.textContent=lastAct.action+(lastAct.chips>0?' '+lastAct.chips+' chips'+(cv?' ($'+(lastAct.chips*cv/100).toFixed(2)+')':''):'');}
     else if(posted>0){sub.textContent=(isStr?'Straddle ':'Posted ')+posted+' chips';}
     else{sub.textContent='Waiting';}
-    inf.appendChild(sub);infoRow.appendChild(inf);
-    var hc2=hs.holes[pl.name]||[],hcBtn=document.createElement('div');
+    inf.appendChild(sub);
+    infoRow.appendChild(inf);
+
+    // Hole cards
+    var hc2=hs.holes[pl.name]||[], hcBtn=document.createElement('div');
     hcBtn.style.cssText='display:flex;gap:2px;align-items:center;cursor:pointer;padding:4px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.07);background:rgba(0,0,0,0.2)';
     hcBtn.dataset.player=pl.name;
     if(hc2.length>0){hc2.forEach(function(c){hcBtn.appendChild(cDiv(c,true));});}
     else{var ph=document.createElement('span');ph.style.cssText='font-size:0.72rem;color:rgba(255,255,255,0.12)';ph.textContent='\uD83C\uDCA0\uD83C\uDCA0';hcBtn.appendChild(ph);}
-    hcBtn.addEventListener('click',function(){window.htOpenCards(this.dataset.player);});infoRow.appendChild(hcBtn);
+    hcBtn.addEventListener('click',function(){window.htOpenCards(this.dataset.player);});
+    infoRow.appendChild(hcBtn);
+
     rowDiv.appendChild(infoRow);
+
+    // ── Inline action panel (active player only) ─────────────────────────────
     if(isNext){
-      var actPanel=document.createElement('div');actPanel.style.cssText='padding:10px 10px 12px;border-top:1px solid rgba(201,168,76,0.1);background:rgba(0,0,0,0.12)';
+      var actPanel=document.createElement('div');
+      actPanel.style.cssText='padding:10px 10px 12px;border-top:1px solid rgba(201,168,76,0.12);background:rgba(0,0,0,0.15)';
+
       var isOption2=maxBet===0||(hs.street==='pre'&&(isBB||isStr)&&myChips>=maxBet&&!lastAct);
       var potSize=hs.pot||blindsInChips().bb*2;
-      var halfPot=Math.round(potSize/2),thirdPot=Math.round(potSize/3),fullPot=potSize,twoBB=blindsInChips().bb*2;
+      var halfPot=Math.round(potSize/2), thirdPot=Math.round(potSize/3), fullPot=potSize, twoBB=blindsInChips().bb*2;
       var smartChips=[twoBB,thirdPot,halfPot,fullPot].filter(function(v,i,a){return v>0&&a.indexOf(v)===i;}).sort(function(a,b){return a-b;}).slice(0,4);
-      var actBtns=document.createElement('div');actBtns.style.cssText='display:flex;gap:4px;margin-bottom:7px';
+
+      // Action buttons
+      var actBtns=document.createElement('div');actBtns.style.cssText='display:flex;gap:4px;margin-bottom:8px';
       var acts=isOption2?[
-        {a:'fold', l:'Fold',  bg:'rgba(231,76,60,0.12)', col:'#e74c3c',    br:'rgba(231,76,60,0.3)'},
-        {a:'check',l:'Check', bg:'rgba(107,140,110,0.1)',col:'var(--muted)',br:'var(--border)'},
-        {a:'bet',  l:'Bet',   bg:'rgba(201,168,76,0.1)', col:'var(--gold)', br:'rgba(201,168,76,0.3)'},
-        {a:'allin',l:'All-in',bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)'},
+        {a:'fold', l:'Fold',   bg:'rgba(231,76,60,0.12)', col:'#e74c3c',   br:'rgba(231,76,60,0.3)'},
+        {a:'check',l:'Check',  bg:'rgba(107,140,110,0.1)',col:'var(--muted)',br:'var(--border)'},
+        {a:'bet',  l:'Bet',    bg:'rgba(201,168,76,0.1)', col:'var(--gold)',br:'rgba(201,168,76,0.3)'},
+        {a:'allin',l:'All-in', bg:'rgba(46,204,113,0.1)', col:'var(--green)',br:'rgba(46,204,113,0.3)'},
       ]:[
-        {a:'fold', l:'Fold',           bg:'rgba(231,76,60,0.12)', col:'#e74c3c',    br:'rgba(231,76,60,0.3)'},
-        {a:'call', l:'Call '+callAmt,  bg:'rgba(58,106,170,0.12)',col:'#6aaaee',    br:'rgba(58,106,170,0.3)'},
-        {a:'raise',l:'Raise',          bg:'rgba(201,168,76,0.1)', col:'var(--gold)', br:'rgba(201,168,76,0.3)'},
-        {a:'allin',l:'All-in',         bg:'rgba(46,204,113,0.1)',col:'var(--green)', br:'rgba(46,204,113,0.3)'},
+        {a:'fold', l:'Fold',          bg:'rgba(231,76,60,0.12)', col:'#e74c3c',   br:'rgba(231,76,60,0.3)'},
+        {a:'call', l:'Call '+callAmt, bg:'rgba(58,106,170,0.12)',col:'#6aaaee',   br:'rgba(58,106,170,0.3)'},
+        {a:'raise',l:'Raise',         bg:'rgba(201,168,76,0.1)', col:'var(--gold)',br:'rgba(201,168,76,0.3)'},
+        {a:'allin',l:'All-in',        bg:'rgba(46,204,113,0.1)', col:'var(--green)',br:'rgba(46,204,113,0.3)'},
       ];
       var cn=pl.name;
       acts.forEach(function(cfg){
         var b=document.createElement('button');
         b.style.cssText='flex:1;padding:9px 2px;background:'+cfg.bg+';color:'+cfg.col+';border:1px solid '+cfg.br+';border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;font-family:DM Sans,sans-serif;min-width:0';
         b.textContent=cfg.l;b.dataset.action=cfg.a;b.dataset.player=cn;
-        b.addEventListener('click',function(){window.htAct(this.dataset.action,this.dataset.player);});actBtns.appendChild(b);
+        b.addEventListener('click',function(){window.htAct(this.dataset.action,this.dataset.player);});
+        actBtns.appendChild(b);
       });
       actPanel.appendChild(actBtns);
+
+      // Smart chip buttons
       var chipRow=document.createElement('div');chipRow.style.cssText='display:flex;gap:3px;flex-wrap:wrap;margin-bottom:7px';
-      var chipLabels={};chipLabels[twoBB]='2BB';chipLabels[thirdPot]='1/3 pot';chipLabels[halfPot]='\u00BD pot';chipLabels[fullPot]='pot';
+      var chipLabels={};chipLabels[twoBB]='2BB';chipLabels[thirdPot]='1/3';chipLabels[halfPot]='1/2';chipLabels[fullPot]='pot';
       smartChips.forEach(function(n){
-        var sel=hs.chipInput===String(n),cb=document.createElement('button');
+        var sel=hs.chipInput===String(n), cb=document.createElement('button');
         var lbl=chipLabels[n]||String(n);
-        cb.style.cssText='flex:1;padding:5px 4px;background:'+(sel?'var(--gold)':'rgba(255,255,255,0.05)')+';color:'+(sel?'#000':'var(--cream2)')+';border:1px solid '+(sel?'var(--gold)':'rgba(255,255,255,0.08)')+';border-radius:4px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;font-weight:'+(sel?'700':'400');
-        cb.innerHTML='<div style="font-weight:700">'+n+'</div><div style="font-size:0.55rem;opacity:0.7">'+lbl+'</div>';
-        cb.dataset.chips=n;cb.addEventListener('click',function(){window.htSetChip(parseInt(this.dataset.chips));});chipRow.appendChild(cb);
+        cb.style.cssText='flex:1;padding:5px 3px;background:'+(sel?'var(--gold)':'rgba(255,255,255,0.05)')+';color:'+(sel?'#000':'var(--cream2)')+';border:1px solid '+(sel?'var(--gold)':'rgba(255,255,255,0.08)')+';border-radius:4px;cursor:pointer;font-size:0.62rem;font-family:DM Sans,sans-serif;text-align:center';
+        cb.innerHTML='<div style="font-weight:700;font-size:0.68rem">'+n+'</div><div style="font-size:0.55rem;opacity:0.7">'+lbl+'</div>';
+        cb.dataset.chips=n;
+        cb.addEventListener('click',function(){window.htSetChip(parseInt(this.dataset.chips));});
+        chipRow.appendChild(cb);
       });
+      // Fixed chip buttons
       [1,2,5,10,25,50,100].forEach(function(n){
         if(smartChips.indexOf(n)>=0)return;
-        var sel=hs.chipInput===String(n),cb=document.createElement('button');
+        var sel=hs.chipInput===String(n), cb=document.createElement('button');
         cb.style.cssText='padding:5px 7px;background:'+(sel?'var(--gold)':'rgba(255,255,255,0.05)')+';color:'+(sel?'#000':'var(--cream2)')+';border:1px solid '+(sel?'var(--gold)':'rgba(255,255,255,0.08)')+';border-radius:4px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif;font-weight:'+(sel?'700':'400');
-        cb.textContent=String(n);cb.dataset.chips=n;cb.addEventListener('click',function(){window.htSetChip(parseInt(this.dataset.chips));});chipRow.appendChild(cb);
+        cb.textContent=String(n);cb.dataset.chips=n;
+        cb.addEventListener('click',function(){window.htSetChip(parseInt(this.dataset.chips));});
+        chipRow.appendChild(cb);
       });
       actPanel.appendChild(chipRow);
+
+      // Chip input + live dollar preview
       var inpRow=document.createElement('div');inpRow.style.cssText='display:flex;gap:6px;align-items:center';
-      var inp=document.createElement('input');inp.type='number';inp.min='0';inp.value=hs.chipInput||'';inp.placeholder='or enter chips';
+      var inp=document.createElement('input');inp.type='number';inp.min='0';inp.value=hs.chipInput||'';inp.placeholder='chips...';
       inp.style.cssText='flex:1;background:rgba(4,12,5,0.9);border:1px solid var(--border);color:var(--cream);padding:8px 10px;font-size:0.88rem;border-radius:6px;outline:none;font-family:DM Sans,sans-serif';
-      inp.addEventListener('input',function(){window.htChipInput(this.value);});inpRow.appendChild(inp);
+      var dollarPrev=document.createElement('span');
+      dollarPrev.style.cssText='font-size:0.82rem;color:var(--gold);font-weight:700;white-space:nowrap;min-width:40px;text-align:right';
       var cn2=parseInt(hs.chipInput)||0;
-      if(cv&&cn2>0){var cvl=document.createElement('span');cvl.style.cssText='font-size:0.82rem;color:var(--gold);font-weight:700;white-space:nowrap';cvl.textContent='$'+(cn2*cv/100).toFixed(2);inpRow.appendChild(cvl);}
-      actPanel.appendChild(inpRow);rowDiv.appendChild(actPanel);
+      dollarPrev.textContent=cv&&cn2>0?'$'+(cn2*cv/100).toFixed(2):'';
+      inp.addEventListener('input',function(){
+        window.htChipInput(this.value);
+        var v=parseInt(this.value)||0;
+        dollarPrev.textContent=cv&&v>0?'$'+(v*cv/100).toFixed(2):'';
+      });
+      inpRow.appendChild(inp);
+      if(cv) inpRow.appendChild(dollarPrev);
+      actPanel.appendChild(inpRow);
+
+      rowDiv.appendChild(actPanel);
     }
+
     body.appendChild(rowDiv);
   });
+
+  // ── All-folded info ──────────────────────────────────────────────────────────
   if(!nextPlayer){
     var activePl3=seated.filter(function(p){return !allFolded[p.name];});
-    var _allinCount=hs.actions.filter(function(a){return a.action==='allin';}).length;
-    if(_allinCount>0) renderSidePots(body,hs.actions,getSeated());
     if(activePl3.length<=1) body.appendChild(infoBox('All others folded \u2014 declare the winner','rgba(201,168,76,0.07)','rgba(201,168,76,0.2)','var(--gold)'));
   }
-  var btm=document.createElement('div');btm.style.cssText='display:flex;gap:6px;margin-top:6px';
-  btm.appendChild(mkB('+ Player','padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',function(){hs.view='add_player';renderBody();}));
-  btm.appendChild(mkB('Chips'+(hs._chipConfig?' \u25CF':''),'padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:'+(hs._chipConfig?'var(--gold)':'var(--muted)')+';border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',function(){hs.view='chip_settings';renderBody();}));
-  btm.appendChild(mkB('\u2715 Void','padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:7px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif',window.htVoidHand));
-  btm.appendChild(mkB('\uD83C\uDFC6 Declare Winner','flex:1;padding:10px;background:rgba(46,204,113,0.08);color:var(--green);border:1px solid rgba(46,204,113,0.25);border-radius:7px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:DM Sans,sans-serif',function(){hs.view='winner';renderBody();}));
+
+  // ── Bottom bar: slim, two buttons only ──────────────────────────────────────
+  var btm=document.createElement('div');btm.style.cssText='display:flex;gap:6px;margin-top:8px';
+  btm.appendChild(mkB('+ Player','padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',function(){hs.view='add_player';renderBody();}));
+  btm.appendChild(mkB('Chips'+(hs._chipConfig?' \u25CF':''),'padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:'+(hs._chipConfig?'var(--gold)':'var(--muted)')+';border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',function(){hs.view='chip_settings';renderBody();}));
+  btm.appendChild(mkB('\u2715 Void','padding:9px 12px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',window.htVoidHand));
+  btm.appendChild(mkB('\uD83C\uDFC6 Winner','flex:1;padding:9px;background:rgba(46,204,113,0.08);color:var(--green);border:1px solid rgba(46,204,113,0.25);border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:700;font-family:DM Sans,sans-serif',function(){hs.view='winner';renderBody();}));
   body.appendChild(btm);
+
   appendLiveCardsToggle(body);
 }
 
@@ -2073,6 +2163,15 @@ window.htClearSession = function() {
   document.querySelectorAll('.ht-seat-bet').forEach(function(el){el.remove();});
   toast('Session cleared'); renderBody();
 };
+
+
+// ── PKR-style CSS animations ─────────────────────────────────────────────────
+(function(){
+  if(document.getElementById('ht-pkr-styles')) return;
+  var s=document.createElement('style');s.id='ht-pkr-styles';
+  s.textContent='@keyframes htActivePulse{0%,100%{border-left-color:rgba(201,168,76,0.6)}50%{border-left-color:rgba(201,168,76,1)}}@keyframes htPulse{0%,100%{opacity:1}50%{opacity:0.65}}';
+  document.head.appendChild(s);
+})();
 
 waitForState(function(){
   var g=gameInfo();
