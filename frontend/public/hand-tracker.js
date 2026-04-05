@@ -282,6 +282,35 @@ window.toggleHandHistory = function(){hs.view=hs.view==='history'?'main':'histor
 function openSheet(id){var s=document.getElementById(id);if(s)s.classList.add('open');}
 function closeSheet(id){var s=document.getElementById(id);if(s)s.classList.remove('open');}
 
+window.openCardPicker = function(){
+  var sheet = document.getElementById('cardPickerSheet');
+  var body = document.getElementById('cardPickerBody');
+  var title = document.getElementById('cardPickerTitle');
+  if(!sheet || !body) return;
+
+  body.innerHTML = '';
+  if(title){
+    if(typeof hs.cardTarget === 'number'){
+      title.textContent = 'Pick board card';
+    } else {
+      title.textContent = 'Pick card';
+    }
+  }
+
+  if(typeof renderCards === 'function'){
+    renderCards(body);
+  }
+
+  openSheet('cardPickerSheet');
+};
+
+window.closeCardPicker = function(){
+  closeSheet('cardPickerSheet');
+  var body = document.getElementById('cardPickerBody');
+  if(body) body.innerHTML = '';
+  if(typeof renderActionPanel === 'function') renderActionPanel();
+};
+
 // --- START HAND ---
 window.htStartHand = function() {
   flushPendingPlayerChanges();
@@ -548,7 +577,12 @@ window.htSetStreet = function(s){hs.street=s;hs.chipInput='';renderBody();};
 window.htSetChip   = function(n){hs.chipInput=String(n);renderBody();};
 window.htChipInput = function(v){hs.chipInput=v;renderBody();};
 
-window.htOpenCards = function(target){hs.cardTarget=target;hs.view='cards';renderBody();};
+window.htOpenCards = function(target){
+  hs.cardTarget=target;
+  hs.view='cards';
+  if(typeof window.openCardPicker==='function') window.openCardPicker();
+  else renderBody();
+};
 window.htPickCard  = function(card){
   if(typeof hs.cardTarget==='number'){
     var b=hs.board.slice(),ex=b.indexOf(card);
