@@ -2149,6 +2149,9 @@ function restoreSession() {
     hs._lastHandSummary=snap._lastHandSummary||null; hs._suggestedDealer=snap._suggestedDealer||null;
     hs._wasHU=snap._wasHU||false; hs._chipConfig=snap._chipConfig||null;
     hs._pendingJoins=snap._pendingJoins||[]; hs._pendingLeaves=snap._pendingLeaves||[];
+    // reset transient views — card picker and winner flow shouldn't persist
+    var transientViews=['cards','winner'];
+    if(transientViews.indexOf(hs.view)>=0) hs.view='main';
     return true;
   } catch(e) { return false; }
 }
