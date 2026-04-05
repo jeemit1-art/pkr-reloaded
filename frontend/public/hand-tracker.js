@@ -273,16 +273,23 @@ function computeNextPlayer(street, actions, hand) {
   if (!firstActorSeat) return null;
 
   // Case 1: unopened street / no voluntary action has changed the price to call.
-  // Example: pre-flop limped pot returning to BB, or checked-around flop.
+  // Walk clockwise from firstActorSeat; return first canAct player who hasn't voluntarily acted.
   if (!lastAmountChangeSeat) {
-    var cursor = firstActorSeat;
+    var startIdx = ring.indexOf(firstActorSeat);
+    if (startIdx === -1) startIdx = 0;
     for (var j = 0; j < ring.length; j++) {
-      if (canActSeats.indexOf(cursor) >= 0) {
-        var p0 = playerBySeat[cursor];
-        if (!voluntaryActed[p0.name]) return p0.name;
+      var checkSeat = ring[(startIdx + j) % ring.length];
+      if (canActSeats.indexOf(checkSeat) >= 0) {
+        var p0 = playerBySeat[checkSeat];
+        if (p0 && !voluntaryActed[p0.name]) return p0.name;
       }
-      cursor = nextActiveSeatAfter(cursor, false);
-      if (cursor === null) break;
+    }
+    // Special case: BB/straddle option — if nobody else needs to act, BB gets option
+    var bbPlayer = playerBySeat[bbSeat];
+    var strPlayer = strSeat ? playerBySeat[strSeat] : null;
+    var optionPlayer = strPlayer || bbPlayer;
+    if (optionPlayer && canActSeats.indexOf(optionPlayer.seat) >= 0 && street === 'pre') {
+      return optionPlayer.name;
     }
     return null;
   }
