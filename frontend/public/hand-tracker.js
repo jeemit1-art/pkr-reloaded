@@ -182,7 +182,6 @@ function computeNextPlayer(street, actions, hand) {
     if (a.chips > 0) chips[a.display_name] = (chips[a.display_name] || 0) + a.chips;
   });
 
-  // Include all active players, including all-in players, when setting the amount to match
   var maxBet = Math.max.apply(null, [0].concat(active.map(function(p) {
     return chips[p.name] || 0;
   })));
@@ -217,17 +216,11 @@ function computeNextPlayer(street, actions, hand) {
 
   var firstActor;
   if (street === 'pre') {
-    if (huMode) {
-      firstActor = canAct.find(function(p) { return p.seat === dSeat; }) || canAct[0];
-    } else {
-      firstActor = nextCwSeatAfter(strSeat || bbSeat);
-    }
+    if (huMode) firstActor = canAct.find(function(p) { return p.seat === dSeat; }) || canAct[0];
+    else firstActor = nextCwSeatAfter(strSeat || bbSeat);
   } else {
-    if (huMode) {
-      firstActor = canAct.find(function(p) { return p.seat !== dSeat; }) || canAct[0];
-    } else {
-      firstActor = canAct.find(function(p) { return p.seat === sbSeat; }) || nextCwSeatAfter(dSeat);
-    }
+    if (huMode) firstActor = canAct.find(function(p) { return p.seat !== dSeat; }) || canAct[0];
+    else firstActor = canAct.find(function(p) { return p.seat === sbSeat; }) || nextCwSeatAfter(dSeat);
   }
   if (!firstActor) firstActor = canAct[0];
 
@@ -247,14 +240,22 @@ function computeNextPlayer(street, actions, hand) {
     var myAct = voluntary[pl2.name];
     var matched = myChips >= maxBet;
 
-    if (!myAct) return pl2.name;
+    if (!myAct) {
+      var isSpecial = (street === 'pre') && ((pl2.seat === bbSeat) || (strSeat && pl2.seat === strSeat));
+      if (isSpecial && matched && maxBet > 0) {
+        var bl = blindsInChips();
+        var threshold = (strSeat && pl2.seat === strSeat) ? bl.straddle : bl.bb;
+        if (maxBet > threshold) return pl2.name;
+        continue;
+      }
+      return pl2.name;
+    }
+
     if (!matched) return pl2.name;
   }
 
   return null;
-}
-
-function loadCurrentHand() {
+}function loadCurrentHand() {
   return htApi('/games/'+getGameId()+'/hands').then(function(hands){
     hs.history=hands||[];
     if (hands&&hands.length>0) {
@@ -506,13 +507,11 @@ window.htAct = function(action, playerName) {
     if (!next && hs.hand && !hs.hand.result) {
       var so = ['pre', 'flop', 'turn', 'river'];
       var si = so.indexOf(hs.street);
-
       if (si >= 0 && si < 3) {
         var ns = so[si + 1];
         var streetName = ns.charAt(0).toUpperCase() + ns.slice(1);
 
         renderBoardOnFelt();
-
         setTimeout(function() {
           animateChipsToPot(function() {
             hs.street = ns;
@@ -520,7 +519,6 @@ window.htAct = function(action, playerName) {
 
             var slots = { flop: [0, 1, 2], turn: [3], river: [4] };
             var sl = slots[ns];
-
             if (sl) {
               hs.cardTarget = sl[0];
               hs.view = 'cards';
