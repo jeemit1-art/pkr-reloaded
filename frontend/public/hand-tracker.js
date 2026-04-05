@@ -517,7 +517,15 @@ window.htAct = function(action, playerName) {
             renderBoardOnFelt();
 
             var sh = document.getElementById('handTrackerSheet');
-            if (sh) sh.classList.add('open');
+            if (sh) sh.classList.remove('open');
+
+            if (typeof renderActionPanel === 'function') renderActionPanel();
+
+            if (typeof window.openCardPicker === 'function' && sl) {
+              window.openCardPicker();
+            } else if (typeof openSheet === 'function' && sl) {
+              openSheet('cardPickerSheet');
+            }
           });
         }, 300);
 
