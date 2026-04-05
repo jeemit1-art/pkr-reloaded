@@ -171,7 +171,7 @@ export default function LobbyPage() {
               className="btn btn-primary"
               style={{width:'100%',fontSize:14,padding:'14px',
                 background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
-              onClick={() => router.push(`/games/${id}/play`)}>
+              onClick={() => { window.location.href = `/games/${id}/play`; }}>
               🃏 Open Table
             </button>
           </div>
