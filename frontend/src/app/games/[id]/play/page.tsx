@@ -94,13 +94,13 @@ export default function PlayPage() {
       } else {
         injectTableScript();
       }
-      // Load hand tracker as separate static file (no string escaping issues)
-      if (!document.getElementById('pkr-hand-tracker')) {
-        const htScript = document.createElement('script');
-        htScript.id  = 'pkr-hand-tracker';
-        htScript.src = '/hand-tracker.js?v=' + Date.now();
-        document.head.appendChild(htScript);
-      }
+      // Load hand tracker as separate static file (always reload to pick up updates)
+      const existingHt = document.getElementById('pkr-hand-tracker');
+      if (existingHt) existingHt.remove();
+      const htScript = document.createElement('script');
+      htScript.id  = 'pkr-hand-tracker';
+      htScript.src = '/hand-tracker.js?v=' + Date.now();
+      document.head.appendChild(htScript);
       // Load tournament.js
       if (!document.getElementById('pkr-tournament')) {
         const tScript = document.createElement('script');
