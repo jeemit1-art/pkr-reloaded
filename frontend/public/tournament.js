@@ -16,6 +16,7 @@ var DEFAULT_LEVELS = [
 var ts = {
   view:'main', state:null, levels:[], rebuys:[], eliminations:[],
   timerInterval:null, secsRemaining:0,
+  voiceEnabled:true, voiceWarningDone:false, voiceWarningMinutes:2,
   setupLevels:JSON.parse(JSON.stringify(DEFAULT_LEVELS)),
   setupConfig:{starting_chips:10000,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,addon_chips:5000,
     payout_structure:[{place:1,pct:50},{place:2,pct:30},{place:3,pct:20}]},
@@ -49,16 +50,52 @@ function updateTimerCalc(){
   if(!lv)return;
   var elapsed=now-(ts.state.level_started_at||now);
   ts.secsRemaining=Math.max(0,lv.duration_secs-elapsed);
+  if(ts.secsRemaining===ts.voiceWarningMinutes*60&&!ts.voiceWarningDone){
+    ts.voiceWarningDone=true;
+    speak('Attention players. '+ts.voiceWarningMinutes+' minutes remaining on level '+ts.state.current_level+'.');
+  }
   if(ts.secsRemaining===0&&ts._lastNotifiedLevel!==ts.state.current_level){
     ts._lastNotifiedLevel=ts.state.current_level;
     var next=ts.levels.find(function(l){return l.level_num===ts.state.current_level+1;});
-    if(next){toast('\u23f0 Level '+ts.state.current_level+' done! Next: '+(next.is_break?'BREAK':next.small_blind+'/'+next.big_blind));}
+    if(next){toast('\u23f0 Level '+ts.state.current_level+' done! Next: '+(next.is_break?'BREAK':next.small_blind+'/'+next.big_blind));speak('Level '+ts.state.current_level+' complete. '+(next.is_break?'Break time.':buildAnn(next,ts.levels.find(function(l){return l.level_num===ts.state.current_level+2;}))));}
     if('Notification'in window&&Notification.permission==='granted'&&next){
       new Notification('PKR \u2014 Level Up!',{body:next.is_break?'Time for a break!':'Blinds: '+next.small_blind+'/'+next.big_blind,icon:'/icon-192.png'});
     }
   }
 }
 function renderTimerDisplay(){var el=document.getElementById('tTimerDisplay');if(!el)return;el.textContent=fmtTime(ts.secsRemaining);el.style.color=ts.secsRemaining<60?'var(--red)':'var(--cream)';}
+
+function speak(text) {
+  if(!ts.voiceEnabled) return;
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  var voices = window.speechSynthesis.getVoices();
+  var pref = voices.find(function(v){return v.lang==='en-AU';}) || voices.find(function(v){return v.lang.startsWith('en');});
+  if(pref) u.voice=pref; u.rate=0.92; u.pitch=1.0; u.volume=1.0;
+  window.speechSynthesis.speak(u);
+}
+function buildAnn(lv, next) {
+  if(!lv) return '';
+  if(lv.is_break) return 'Attention players. Break time. '+Math.round(lv.duration_secs/60)+' minutes.';
+  var msg='Attention players. Blinds are now '+lv.small_blind+' and '+lv.big_blind;
+  if(lv.ante) msg+=', with an ante of '+lv.ante; msg+='.';
+  if(next&&!next.is_break) msg+=' Next level: '+next.small_blind+' and '+next.big_blind+'.';
+  return msg;
+}
+
+function genBlinds(chips, hours) {
+  var dur=Math.round((hours||2)*60/10)*60, brk=Math.min(600,dur);
+  var sb=Math.round(chips/400/25)*25; if(sb<25)sb=25;
+  var lvs=[],s=sb;
+  for(var i=1;i<=10;i++){
+    if(i===5){lvs.push({level_num:i,small_blind:0,big_blind:0,ante:0,duration_secs:brk,is_break:true});continue;}
+    var ln=i<5?i:i-1;
+    lvs.push({level_num:i,small_blind:s,big_blind:s*2,ante:ln>=4?Math.round(s*0.25/25)*25:0,duration_secs:dur,is_break:false});
+    s=Math.round(s*(ln<=3?1.5:2)/25)*25;
+  }
+  return lvs;
+}
 function loadTournament(){
   return tApi('/games/'+getGameId()+'/tournament').then(function(d){
     ts.state=d.state;ts.levels=d.levels||[];ts.rebuys=d.rebuys||[];ts.eliminations=d.eliminations||[];
@@ -78,6 +115,8 @@ window.tNextLevel=function(){
   tApi('/games/'+getGameId()+'/tournament/next-level',{method:'POST'}).then(function(r){
     ts.state.current_level=r.current_level;ts.state.level_started_at=Math.floor(Date.now()/1000);
     ts.secsRemaining=(r.level&&r.level.duration_secs)||900;ts._lastNotifiedLevel=null;
+    ts.voiceWarningDone=false;
+    if(r.level){var nv=ts.levels.find(function(l){return l.level_num===r.current_level+1;});speak(buildAnn(r.level,nv));}
     toast('Level '+r.current_level+(r.level&&r.level.is_break?' \u2014 BREAK':(' \u2014 '+r.level.small_blind+'/'+r.level.big_blind)));renderBody();
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
@@ -179,7 +218,15 @@ function renderMain(body){
     });
   }
   body.appendChild(ps);
+  var vr=document.createElement('div');vr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;margin-bottom:8px';
+  var vlb=document.createElement('span');vlb.style.cssText='font-size:0.8rem;color:var(--cream)';vlb.textContent='📣 Voice Announcements';vr.appendChild(vlb);
+  var vtg=document.createElement('button');vtg.style.cssText='padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif;border:none;'+(ts.voiceEnabled?'background:var(--gold);color:#000':'background:rgba(255,255,255,0.08);color:var(--muted)');
+  vtg.textContent=ts.voiceEnabled?'ON':'OFF';
+  vtg.addEventListener('click',function(){ts.voiceEnabled=!ts.voiceEnabled;this.textContent=ts.voiceEnabled?'ON':'OFF';this.style.background=ts.voiceEnabled?'var(--gold)':'rgba(255,255,255,0.08)';this.style.color=ts.voiceEnabled?'#000':'var(--muted)';if(ts.voiceEnabled)speak('Voice announcements enabled.');});
+  vr.appendChild(vtg);body.appendChild(vr);
   var nav=document.createElement('div');nav.style.cssText='display:flex;gap:6px';
+  var c4=window.getPkrCtx&&window.getPkrCtx();
+  if(c4&&c4.gameId){nav.appendChild(mkB('\ud83d\udcfa TV','flex:1;padding:10px;background:rgba(106,170,238,0.06);border:1px solid rgba(106,170,238,0.2);color:#6aaaee;border-radius:7px;cursor:pointer;font-size:0.8rem;font-family:DM Sans,sans-serif',function(){window.open('/games/'+c4.gameId+'/tv','_blank');}));}
   nav.appendChild(mkB('\ud83d\udcb0 Payouts','flex:1;padding:10px;background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);color:var(--green);border-radius:7px;cursor:pointer;font-size:0.8rem;font-family:DM Sans,sans-serif',function(){ts.view='payouts';renderBody();}));
   nav.appendChild(mkB('\u2699\ufe0f Edit Setup','flex:1;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.8rem;font-family:DM Sans,sans-serif',function(){ts.view='setup';renderBody();}));
   body.appendChild(nav);
@@ -198,6 +245,22 @@ function renderSetup(body){
   reRow.innerHTML='<span style="font-size:0.82rem;color:var(--cream);font-weight:600">Allow Rebuys</span>';
   var rtog=document.createElement('button');rtog.style.cssText='padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif;border:none;'+(ts.setupConfig.rebuy_allowed?'background:var(--gold);color:#000':'background:rgba(255,255,255,0.08);color:var(--muted)');
   rtog.textContent=ts.setupConfig.rebuy_allowed?'ON':'OFF';rtog.addEventListener('click',function(){ts.setupConfig.rebuy_allowed=!ts.setupConfig.rebuy_allowed;renderBody();});reRow.appendChild(rtog);body.appendChild(reRow);
+  var ab=document.createElement('div');ab.style.cssText='background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px';
+  var abH=document.createElement('div');abH.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;font-weight:600';abH.textContent='✨ Auto-generate structure';ab.appendChild(abH);
+  var abR=document.createElement('div');abR.style.cssText='display:flex;gap:6px';
+  ['2h','3h','4h','5h'].forEach(function(h){
+    var btn=document.createElement('button');
+    btn.style.cssText='flex:1;padding:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif';
+    btn.textContent=h;
+    btn.addEventListener('click',function(){
+      abR.querySelectorAll('button').forEach(function(b){b.style.background='rgba(255,255,255,0.04)';b.style.color='var(--muted)';b.style.borderColor='rgba(255,255,255,0.1)';});
+      this.style.background='rgba(201,168,76,0.12)';this.style.color='var(--gold)';this.style.borderColor='rgba(201,168,76,0.3)';
+      ts.setupLevels=genBlinds(ts.setupConfig.starting_chips,parseFloat(h));
+      toast('Structure generated for '+h+' ✓');renderBody();
+    });
+    abR.appendChild(btn);
+  });
+  ab.appendChild(abR);body.appendChild(ab);
   var lvHdr=document.createElement('div');lvHdr.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin:14px 0 8px;font-weight:600';lvHdr.textContent='Blind Levels';body.appendChild(lvHdr);
   ts.setupLevels.forEach(function(lv,idx){
     var row=document.createElement('div');row.style.cssText='display:flex;gap:4px;align-items:center;margin-bottom:4px;padding:6px 8px;background:'+(lv.is_break?'rgba(58,106,170,0.08)':'rgba(255,255,255,0.02)')+';border-radius:6px;border:1px solid var(--border)';

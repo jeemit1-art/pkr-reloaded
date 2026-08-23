@@ -861,6 +861,19 @@ async function notifyPlayer(playerName, title, body) {
 
 // ── Utility functions ──
 function fmt(n) { return '$' + (n || 0).toFixed(2); }
+function getBankSize() { return (state.game && state.game.bank_size) ? state.game.bank_size : (state.game && state.game.defaultBuyin ? state.game.defaultBuyin : 0); }
+function fmtB(dollars) {
+  var b = getBankSize(); if(!b || b<=0) return fmt(dollars);
+  var n = dollars/b; var nr = Math.round(n*10)/10;
+  var banksStr = nr%1===0 ? (nr+'b') : (nr.toFixed(1)+'b');
+  return banksStr + ' ($' + Math.abs(dollars).toFixed(0) + ')';
+}
+function fmtBNet(n) {
+  if(!getBankSize()) return fmtNet(n);
+  var sign = n>0?'+':n<0?'-':''; var abs = Math.abs(n);
+  return sign + fmtB(abs);
+}
+
 function fmtNet(n) { return n > 0 ? '+$' + n.toFixed(2) : n < 0 ? '-$' + Math.abs(n).toFixed(2) : '$0.00'; }
 function nc(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero'; }
 function inits(n) { return (n || '').split(' ').map(function(w){ return w[0] || ''; }).join('').slice(0,2).toUpperCase() || '?'; }
@@ -968,11 +981,11 @@ function updateBank() {
   var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   var cashed = players.filter(function(p){ return pCash(p) > 0; }).length;
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
-  set('bbIn', fmt(totalIn) + ' in');
-  set('bbBank', fmt(inBank) + ' bank');
-  set('bcIn', fmt(totalIn));
-  set('bcOut', fmt(totalOut));
-  set('bcBank', fmt(inBank));
+  set('bbIn', fmtB(totalIn) + ' in');
+  set('bbBank', fmtB(inBank) + ' bank');
+  set('bcIn', fmtB(totalIn));
+  set('bcOut', fmtB(totalOut));
+  set('bcBank', fmtB(inBank));
   set('bcBankSub', inBank >= 0 ? 'still on table' : 'over-cashed!');
   set('bcStatus', active + ' Active');
   set('bcStatusSub', cashed ? cashed + ' cashed out' : '');
@@ -1042,7 +1055,7 @@ function buildSeats(count, tW, tH, cx, cy) {
       var bi = pBuyin(p), co = pCash(p), net = pNet(p);
       var isRsvp = p.rsvp && bi === 0;
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
-      var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
+      var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtBNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
       var chipHtml = '';
       var _g = state && state.game;
       if (bi > 0 && _g && _g.chip_value > 0 && _g.starting_chips > 0) {
@@ -1087,7 +1100,7 @@ function refreshPanelSummary(sid) {
   var p = state.players[sid];
   if (!p) return;
   var el = document.getElementById('pNetDisplay');
-  if (el) { var n = pNet(p); el.className = 'p-net ' + nc(n); el.textContent = fmtNet(n); }
+  if (el) { var n = pNet(p); el.className = 'p-net ' + nc(n); el.textContent = fmtBNet(n); }
 }
 
 function buildPanel(sid) {
@@ -1881,6 +1894,8 @@ if (ctx && ctx.gameId) {
         code: game.live_token || ctx.gameId,
         chip_value: game.chip_value || 0,
         starting_chips: game.starting_chips || 0,
+        bank_size: game.buy_in ? game.buy_in / 100 : 0,
+        bank_size: game.buy_in ? game.buy_in / 100 : 0,
         small_blind: game.small_blind || 0,
         big_blind: game.big_blind || 0,
         hand_tracking: game.hand_tracking || 0,

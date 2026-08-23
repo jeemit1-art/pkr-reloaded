@@ -814,6 +814,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 // ─── Game Card with RSVP count + push + links ───
 function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onDelete}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
+  const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
   const statusBg:Record<string,string> = {
     scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
@@ -865,7 +866,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
               Delete
             </button>
           </>)}
-          <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'));}}
+          <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(rsvpUrl).then(()=>alert('RSVP link copied!'));}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
             📋 RSVP Link
           </button>
