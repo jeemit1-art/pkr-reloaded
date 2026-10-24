@@ -1,10 +1,12 @@
-name: PKR staging isolation
+name: PKR staging isolation and test-only schema
 on:
   pull_request:
     paths:
       - 'worker/wrangler.staging.toml'
       - 'worker/wrangler.toml'
       - 'worker/scripts/check-staging-config.mjs'
+      - 'worker/staging.schema.sql'
+      - 'worker/scripts/check-staging-schema.py'
       - '.github/workflows/staging-isolation.yml'
   workflow_dispatch:
 permissions:
@@ -19,3 +21,4 @@ jobs:
           node-version: '20'
       - run: node --check worker/scripts/check-staging-config.mjs
       - run: node worker/scripts/check-staging-config.mjs
+      - run: python3 worker/scripts/check-staging-schema.py

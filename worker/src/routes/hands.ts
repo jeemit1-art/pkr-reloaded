@@ -116,8 +116,8 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
 
   const id = generateId();
   await c.env.DB.prepare(
-    'INSERT INTO hand_actions(id,hand_id,user_id,display_name,street,action,chips) VALUES(?,?,?,?,?,?,?)'
-  ).bind(id, handId, user_id||null, display_name, street, action, chips||0).run();
+    'INSERT INTO hand_actions(id,hand_id,game_id,user_id,display_name,street,action,chips) VALUES(?,?,?,?,?,?,?,?)'
+  ).bind(id, handId, gameId, user_id||null, display_name, street, action, chips||0).run();
 
   // Update pot_chips if chips > 0 and action is not fold
   if (chips > 0 && action !== 'fold') {
