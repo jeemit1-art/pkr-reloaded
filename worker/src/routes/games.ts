@@ -111,10 +111,9 @@ games.delete('/games/:id', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can delete games'},403);
-  if (game.status==='settled') {
-    await rebuildLeaderboard(c.env.DB, game.event_id);
-  }
+  const wasSettled = game.status==='settled';
   await c.env.DB.prepare('DELETE FROM games WHERE id=?').bind(gameId).run();
+  if (wasSettled) await rebuildLeaderboard(c.env.DB, game.event_id);
   return c.json({ok:true});
 });
 
@@ -148,10 +147,10 @@ games.get('/games/live/:token', async (c) => {
 
 games.get('/games/results/:token', async (c) => {
   const token = c.req.param('token');
-  const game = await c.env.DB.prepare('SELECT * FROM games WHERE results_token=?').bind(token).first<any>();
+  const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status,results_token,variance FROM games WHERE results_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   const event     = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  const players   = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY net DESC NULLS LAST').bind(game.id).all();
+  const players   = await c.env.DB.prepare('SELECT user_id,display_name,seat_number,buy_ins,buy_in_total,cashout,net,settled_at FROM game_players WHERE game_id=? ORDER BY net DESC NULLS LAST').bind(game.id).all();
   const transfers = await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(game.id).all();
   return c.json({ game, event, players:players.results, transfers:transfers.results });
 });
@@ -260,10 +259,11 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
   const { count, total } = await c.req.json<{count:number, total?:number}>();
-  if (typeof count !== 'number' || count < 0) return c.json({error:'Invalid count'},400);
+  if (!Number.isSafeInteger(count) || count < 0 || (total !== undefined && (!Number.isSafeInteger(total) || total < 0))) return c.json({error:'Invalid buy-in amounts'},400);
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const prev = await c.env.DB.prepare('SELECT display_name, buy_in_total FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
   const prevTotal = prev?.buy_in_total ?? 0;
   await c.env.DB.prepare(
@@ -291,7 +291,11 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
   const { cashout } = await c.req.json<{cashout:number}>();
-  if (typeof cashout !== 'number' || cashout < 0) return c.json({error:'Invalid cashout'},400);
+  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Invalid cashout'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<{event_id:string;status:string}>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare(
     'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?'
   ).bind(cashout, gameId, userId).run();
