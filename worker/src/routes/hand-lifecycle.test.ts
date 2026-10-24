@@ -19,6 +19,13 @@ const exec:any={waitUntil:(_:Promise<unknown>)=>{}};
 function fixture(){
   const game={id:'g',event_id:'e',status:'active',seats:4,
     current_hand_no:0,current_dealer_seat:null as null|number};
+  const roster=[
+    {user_id:'d',display_name:'Dealer',seat_number:1,buy_ins:1},
+    {user_id:'s',display_name:'Small',seat_number:4,buy_ins:1},
+    {user_id:'b',display_name:'Big',seat_number:3,buy_ins:1},
+    {user_id:'u',display_name:'UTG',seat_number:2,buy_ins:1},
+  ];
+  let swapSeatsDuringInsert=false;
   const records:Array<{id:string;game_id:string;hand_no:number;voided:number;
     dealer_seat:number;sb_seat:number;bb_seat:number;straddle:number;
     board:string;pot_chips:number;mode:string}>=[];
@@ -46,6 +53,8 @@ function fixture(){
         return null;
       },
       async all():Promise<any>{
+        if(sql.includes('FROM game_players WHERE game_id=? AND seat_number IS NOT NULL'))
+          return {results:roster.map(p=>({...p}))};
         if(sql.includes('FROM hands WHERE game_id=? ORDER BY hand_no DESC'))
           return {results:records.slice().reverse().map(h=>({...h}))};
         if(sql.includes('FROM hand_actions WHERE hand_id=?'))
@@ -78,9 +87,28 @@ function fixture(){
         const sql=q.sql.trim(),args=q.args;
         if(sql.startsWith('INSERT INTO hands')){
           const [id,gameId,no,dealer,sb,bb,straddle,board,pot,mode,checkGame,
-            expected,unfinishedGame]=args;
-          didInsert=Number(game.status==='active' && gameId==='g'&&checkGame==='g'&&
-            unfinishedGame==='g'&&game.current_hand_no===expected&&
+            expected,checkMode,unfinishedGame,rosterMode,rosterGame,rosterSize,
+            rosterJson,identityGame]=args;
+          expect(sql).toContain('json_each(?)');
+          expect(sql).toContain("status='active'");
+          if(swapSeatsDuringInsert){
+            const previous=roster[1].seat_number;
+            roster[1].seat_number=roster[3].seat_number;
+            roster[3].seat_number=previous;
+            swapSeatsDuringInsert=false;
+          }
+          const recorded=JSON.parse(rosterJson);
+          const currentRoster=roster.filter(p=>p.seat_number!==null&&p.buy_ins>0);
+          const matches=mode==='manual'||(
+            rosterMode==='full'&&rosterGame==='g'&&identityGame==='g'&&
+            currentRoster.length===rosterSize&&
+            recorded.length===rosterSize&&
+            recorded.every((seat:any)=>currentRoster.some(p=>
+              p.user_id===seat.user_id&&p.display_name===seat.display_name&&
+              p.seat_number===seat.seat_number)));
+          didInsert=Number(game.status==='active'&&gameId==='g'&&checkGame==='g'&&
+            checkMode===mode&&unfinishedGame==='g'&&
+            game.current_hand_no===expected&&matches&&
             !latestUnfinished()&&!records.some(h=>h.hand_no===no));
           if(didInsert){
             records.push({id,game_id:gameId,hand_no:no,dealer_seat:dealer,
@@ -99,7 +127,8 @@ function fixture(){
     },
   };
   return {env:{DB:db,JWT_SECRET:'fixture',PKR_ENV:'staging'} as any,
-    records,actions,game,getInserts:()=>inserts,
+    records,actions,game,roster,getInserts:()=>inserts,
+    swapSeatsBeforeInsert:()=>{swapSeatsDuringInsert=true;},
     addResult:(handId:string,id:string)=>{finalResult={id,hand_id:handId,game_id:'g'};},
     getResult:()=>finalResult};
 }
