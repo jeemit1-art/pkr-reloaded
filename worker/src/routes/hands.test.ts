@@ -57,8 +57,10 @@ function fixture(status = 'active', hasWinner = false) {
               const [id, hand_id, game_id, user_id, display_name, street, action, chips] = params;
               actions.push({id,hand_id,game_id,user_id,display_name,street,action,chips,created_at:123});
             }
-            if (sql.startsWith('DELETE FROM hand_actions')) {
-              actions = actions.filter(a=>a.id !== params[0]);
+            if (sql.trimStart().startsWith('DELETE FROM hand_actions')) {
+              const last=actions[actions.length-1];
+              if(!last||last.id!==params[0]||hasWinner)return {meta:{changes:0}};
+              actions=actions.filter(a=>a.id!==params[0]);
             }
             if (sql.includes('UPDATE hands SET pot_chips=(')) {
               hand.pot_chips = actions.filter(a=>a.action!=='fold')
@@ -129,11 +131,30 @@ describe('hand-tracking record integrity',()=>{
     }
     expect(f.hand.pot_chips).toBe(100);
     const undo=await hands.request('https://test.invalid/games/g/hands/h/actions/last',
-      request('DELETE',''),f.env);
+      request('DELETE','',{expected_action_id:f.actions[f.actions.length-1].id}),f.env);
     expect(undo.status).toBe(200);
     expect(f.actions.map(a=>a.display_name)).toEqual(['Alice','Bob']);
     expect(f.hand.pot_chips).toBe(50);
     expect(f.batchCalls).toBe(4);
+  });
+
+  it('refuses an undo retry that would otherwise remove an older action',async()=>{
+    const f=fixture();
+    for(const [name,amount] of [['Alice',20],['Bob',30]] as const)
+      expect((await hands.request('https://test.invalid/games/g/hands/h/actions',
+        request('POST','',action(name,amount)),f.env)).status).toBe(200);
+    const lastId=f.actions[f.actions.length-1].id;
+    const url='https://test.invalid/games/g/hands/h/actions/last';
+    expect((await hands.request(url,request('DELETE','',{
+      expected_action_id:lastId,
+    }),f.env)).status).toBe(200);
+    const retry=await hands.request(url,request('DELETE','',{
+      expected_action_id:lastId,
+    }),f.env);
+    expect(retry.status).toBe(409);
+    expect(await retry.json()).toMatchObject({code:'HAND_ACTION_CONFLICT'});
+    expect(f.actions.map(a=>a.display_name)).toEqual(['Alice']);
+    expect(f.hand.pot_chips).toBe(20);
   });
 
   it('does not add chips on check and fold',async()=>{
