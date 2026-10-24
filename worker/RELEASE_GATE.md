@@ -59,3 +59,38 @@ Do not share customer data, auth secrets or SQL dumps in GitHub. Record differen
 | Owner production approval | Explicit written authorisation tied to commit | **Not given** |
 
 Stop the release if any item is unverified. No staging code change is an approval to alter production.
+
+## Restored-copy verification procedure
+
+Cloudflare modern D1 supports Time Travel bookmarks and read-only SQL exports.
+Legacy snapshot backup commands are not appropriate for normal new D1 databases.
+A Time Travel restore overwrites the selected database and must NEVER be used
+to rehearse recovery on live production.
+
+Use a secure operator workstation. Confirm the production DB name and ID first.
+These commands are examples only; nothing is executed from this document.
+
+    # Schema-only, read-only D1 export:
+    npx wrangler d1 export <PRODUCTION_DB_NAME> --remote --output=/secure/private/schema.sql --no-data
+
+    # Full export only with authorisation to handle private customer data:
+    npx wrangler d1 export <PRODUCTION_DB_NAME> --remote --output=/secure/private/backup.sql
+
+    # Restore to a SEPARATE local SQLite database, not staging or production:
+    sqlite3 /secure/private/restored-copy.sqlite < /secure/private/backup.sql
+
+    # Check schema and financial aggregates with a read-only local connection:
+    python3 worker/scripts/verify-restored-d1.py --restore /secure/private/restored-copy.sqlite
+
+The script does not create or verify the export; an independent reviewer must
+reconcile source and restored row counts and critical financial totals. Never
+upload full exported records, database files, auth tokens or private financial
+reports to GitHub, Vercel or ChatGPT.
+
+The optional additive staging migration remains unexecuted remotely and its
+integrity flags remain disabled. Test it only after an isolated staging D1
+backup, schema inspection and explicit confirmation of staging DB ID.
+
+Cloudflare documentation:
+- https://developers.cloudflare.com/d1/best-practices/import-export-data/
+- https://developers.cloudflare.com/d1/reference/time-travel/
