@@ -5,7 +5,7 @@ import { authMiddleware, requireEventRole, generateId } from '../middleware';
 const tournament = new Hono<{ Bindings: Env }>();
 
 async function getGameAndVerify(c: any, gameId: string) {
-  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
   if (!game) return null;
   if (!await requireEventRole(c, game.event_id, 'cohost')) return null;
   return game;

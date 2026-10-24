@@ -39,7 +39,7 @@ async function encryptPayload(
   // Generate ephemeral ECDH key pair (server side)
   const serverKeyPair = await crypto.subtle.generateKey(
     { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
-  );
+  ) as CryptoKeyPair;
 
   // Export server public key (uncompressed, 65 bytes)
   const serverPublicKeyRaw = new Uint8Array(
@@ -53,7 +53,7 @@ async function encryptPayload(
 
   // ECDH shared secret
   const sharedSecret = new Uint8Array(
-    await crypto.subtle.deriveBits({ name:'ECDH', public: subscriberKey }, serverKeyPair.privateKey, 256)
+    await crypto.subtle.deriveBits({ name:'ECDH', public: subscriberKey } as any, serverKeyPair.privateKey, 256)
   );
 
   // Random 16-byte salt

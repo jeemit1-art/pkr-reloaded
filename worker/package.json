@@ -6,7 +6,9 @@
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 execute pkr-reloaded-db --file=./schema.sql",
-    "db:migrate:local": "wrangler d1 execute pkr-reloaded-db --local --file=./schema.sql"
+    "db:migrate:local": "wrangler d1 execute pkr-reloaded-db --local --file=./schema.sql",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.4.0"
@@ -14,6 +16,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240524.0",
     "typescript": "^5.4.5",
+    "vitest": "^5.0.5",
     "wrangler": "^3.114.17"
   }
 }
