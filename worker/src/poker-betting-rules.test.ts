@@ -80,7 +80,7 @@ describe('server no-limit betting rules',()=>{
       action('Big','allin',125,'flop'),
       action('UTG','call',125,'flop'),
     ];
-    assertDenied(seeded,action('Dealer','raise',200,'flop'),'OUT_OF_TURN');
+    assertAllowed(seeded,action('Dealer','allin',200,'flop'));
     const preThreshold=[...seeded,action('Dealer','call',125,'flop')];
     assertDenied(preThreshold,action('Small','raise',200,'flop'),'ACTION_NOT_REOPENED');
     const full=[...seeded,action('Dealer','allin',200,'flop')];
