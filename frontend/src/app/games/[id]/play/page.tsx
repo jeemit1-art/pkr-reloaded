@@ -601,80 +601,171 @@ var _pkrSeatedPlayers = {};
 var _pkrLastSnapshot = {};
 
 // ── Offline action queue ──
-var _offlineQueue = [];
+var OFFLINE_Q_KEY = 'pkr_pending_v2_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
+function restorePendingActions() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(OFFLINE_Q_KEY) || '[]');
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(function(a) {
+      return a && typeof a.id === 'string' && typeof a.url === 'string' &&
+        a.url.indexOf('/games/' + _ctx.gameId + '/') === 0 &&
+        a.options && ['POST','PUT','DELETE'].indexOf(a.options.method) >= 0 &&
+        typeof a.key === 'string';
+    }).slice(-200);
+  } catch(e) { return []; }
+}
+var _offlineQueue = restorePendingActions();
 var _isOnline = navigator.onLine;
 var _flushingQueue = false;
+var _syncError = '';
 
-window.addEventListener('online', function() {
-  _isOnline = true;
-  showConnBanner(false);
-  flushOfflineQueue();
-});
-window.addEventListener('offline', function() {
-  _isOnline = false;
-  showConnBanner(true);
-});
-
-function showConnBanner(offline) {
-  var existing = document.getElementById('conn-banner');
-  if (offline) {
-    if (existing) return;
-    var b = document.createElement('div');
-    b.id = 'conn-banner';
-    b.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#b45309;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
-    b.textContent = '⚠ You are offline — actions will sync when reconnected';
-    document.body.appendChild(b);
-  } else {
-    if (existing) existing.remove();
-    var b2 = document.createElement('div');
-    b2.id = 'conn-banner';
-    b2.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#166534;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
-    b2.textContent = '✓ Back online — syncing...';
-    document.body.appendChild(b2);
-    setTimeout(function(){ var el=document.getElementById('conn-banner'); if(el)el.remove(); }, 3000);
+function savePendingActions() {
+  try {
+    if (_offlineQueue.length) localStorage.setItem(OFFLINE_Q_KEY, JSON.stringify(_offlineQueue));
+    else localStorage.removeItem(OFFLINE_Q_KEY);
+    return true;
+  } catch(e) {
+    _syncError = 'Browser storage is unavailable. Do not close or refresh until your changes are saved.';
+    showConnBanner();
+    return false;
   }
+}
+
+function showConnBanner() {
+  var existing = document.getElementById('conn-banner');
+  if (!_syncError && _isOnline && _offlineQueue.length === 0) {
+    if (existing) existing.remove();
+    return;
+  }
+  var b = existing || document.createElement('div');
+  b.id = 'conn-banner';
+  b.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#92400e;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
+  b.textContent = _syncError ||
+    (!_isOnline
+      ? 'Offline: changes saved on this device; reconnect to sync'
+      : 'Unsynced changes: ' + _offlineQueue.length + ' operation(s) pending');
+  if (!existing) document.body.appendChild(b);
+}
+
+function queueAction(url, options, seatSid, seatName) {
+  var method = (options && options.method || '').toUpperCase();
+  if (['PUT','POST','DELETE'].indexOf(method) < 0 ||
+      url.indexOf('/games/' + _ctx.gameId + '/') !== 0 ||
+      url.indexOf('/settle') >= 0) {
+    throw new Error('Only game-specific, retry-safe changes can be queued');
+  }
+  var key = method + ':' + url + (seatSid ? ':' + seatSid : '');
+  _offlineQueue = _offlineQueue.filter(function(a){ return a.key !== key; });
+  _offlineQueue.push({
+    id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
+    key: key, url: url,
+    options: {method:method, body:options.body},
+    seatSid:seatSid || null, seatName:seatName || null,
+  });
+  savePendingActions();
+  showConnBanner();
+}
+
+function queueLatestSeatAmounts(sid, playerId, expectedName) {
+  var current = _pkrSnapshotPlayers()[sid];
+  if (!current || current.name !== expectedName) return;
+  var base = '/games/' + _ctx.gameId;
+  queueAction(base + '/buyin/' + playerId, {
+    method:'PUT', body:JSON.stringify({
+      count: current.buyins,
+      total: Math.round(current.biTotal * 100),
+    }),
+  });
+  queueAction(base + '/cashout/' + playerId, {
+    method:'PUT', body:JSON.stringify({
+      cashout: current.hadCashout ? Math.round(current.cashout * 100) : null,
+    }),
+  });
 }
 
 async function flushOfflineQueue() {
-  if (_flushingQueue || _offlineQueue.length === 0) return;
+  if (_flushingQueue || _offlineQueue.length === 0 || !navigator.onLine) return;
   _flushingQueue = true;
-  var queue = _offlineQueue.slice();
-  _offlineQueue = [];
-  for (var i = 0; i < queue.length; i++) {
-    var action = queue[i];
-    try {
-      await pkrApi(action.url, action.options);
-    } catch(e) {
-      console.warn('Failed to flush queued action:', action.url, e);
-      _offlineQueue.unshift(action); // re-queue failed action
-      break;
+  _syncError = '';
+  try {
+    var game = await pkrApi('/games/' + _ctx.gameId);
+    if (!game || game.status === 'settled' || game.status === 'cancelled') {
+      _syncError = 'Game is closed. Pending changes were NOT applied; review them before proceeding.';
+      return;
     }
-  }
-  _flushingQueue = false;
-  if (_offlineQueue.length === 0) {
-    // Reload game state to get latest from server
-    loadGameFromPkr();
+    while (_offlineQueue.length && navigator.onLine) {
+      var action = _offlineQueue[0];
+      // If a seat was removed locally while offline, never replay stale seating.
+      if (action.seatSid && action.seatName) {
+        var live = _pkrSnapshotPlayers()[action.seatSid];
+        if (!live || live.name !== action.seatName) {
+          _offlineQueue = _offlineQueue.filter(function(x){return x.id !== action.id;});
+          savePendingActions();
+          continue;
+        }
+      }
+      var response = await pkrApi(action.url, action.options);
+      _offlineQueue = _offlineQueue.filter(function(x){return x.id !== action.id;});
+      savePendingActions();
+      // The seat has its real server-generated user ID now. Reconcile the
+      // CURRENT local amounts, including changes made after the seat was queued.
+      if (action.seatSid && response && Array.isArray(response.players)) {
+        var player = response.players.find(function(p){
+          return p.display_name === action.seatName;
+        });
+        if (player && player.user_id) {
+          _pkrSeatedPlayers[action.seatSid] = {
+            user_id:player.user_id, name:action.seatName,
+          };
+          queueLatestSeatAmounts(action.seatSid, player.user_id, action.seatName);
+        }
+      }
+    }
+    if (_offlineQueue.length === 0) loadGameFromPkr();
+  } catch(e) {
+    console.warn('Pending game sync failed; edits are retained locally:', e);
+    _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
+  } finally {
+    _flushingQueue = false;
+    showConnBanner();
   }
 }
 
-async function pkrApiQueued(url, options) {
-  if (!_isOnline) {
-    _offlineQueue.push({ url: url, options: options });
-    toast('Offline — action queued');
+async function pkrApiQueued(url, options, seatSid, seatName) {
+  if (!_isOnline || _flushingQueue || _offlineQueue.length > 0) {
+    queueAction(url, options, seatSid, seatName);
+    if (_isOnline && !_flushingQueue) flushOfflineQueue();
     return null;
   }
   try {
     return await pkrApi(url, options);
   } catch(e) {
-    if (!navigator.onLine) {
-      _offlineQueue.push({ url: url, options: options });
-      toast('Offline — action queued');
-      showConnBanner(true);
+    if (!navigator.onLine || e instanceof TypeError) {
+      _isOnline = false;
+      queueAction(url, options, seatSid, seatName);
+      showConnBanner();
       return null;
     }
     throw e;
   }
 }
+
+window.addEventListener('online', function() {
+  _isOnline = true;
+  _syncError = '';
+  showConnBanner();
+  flushOfflineQueue();
+});
+window.addEventListener('offline', function() {
+  _isOnline = false;
+  showConnBanner();
+});
+if (!_isOnline || _offlineQueue.length) {
+  showConnBanner();
+  if (_isOnline) setTimeout(flushOfflineQueue, 100);
+}
+window.pkrSyncPendingActions = flushOfflineQueue;
+window.pkrHasPendingActions = function() { return _offlineQueue.length > 0; };
 
 async function loadGameFromPkr() {
   var ctx = getPkrCtx();
