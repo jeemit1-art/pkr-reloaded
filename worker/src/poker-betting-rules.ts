@@ -91,7 +91,11 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
   const status=(street:string)=>{
     const contrib=new Map(players.map(p=>[p.display_name,0]));
     const folded=new Set<string>(),allIn=new Set<string>(),acted=new Set<string>();
-    let bet=0,lastFullRaise=baseRaise,lastActor:string|null=null;
+    // A live straddle becomes the opening blind: a full preflop raise must
+    // increase the straddle by at least the straddled amount (e.g. 4 -> 8).
+    const straddlePost=currentPost.filter(a=>a.action==='straddle').slice(-1)[0];
+    let bet=0,lastFullRaise=street==='pre' ?
+      Math.max(baseRaise,straddlePost?.chips||0):baseRaise,lastActor:string|null=null;
     const streetActions=actions.filter(a=>a.street===street);
     for(const action of actions){
       if(STREETS.indexOf(action.street as typeof STREETS[number])>STREETS.indexOf(street as typeof STREETS[number]))break;

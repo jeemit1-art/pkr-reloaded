@@ -18,7 +18,13 @@ function htApi(path, opts) {
     credentials: 'include',
     headers: Object.assign({'Content-Type':'application/json'}, token ? {'Authorization':'Bearer '+token} : {}),
   }, opts)).then(function(r) {
-    if (!r.ok) return r.json().catch(function(){return {};}).then(function(e){ throw new Error(e.error || r.status); });
+    if (!r.ok) return r.json().catch(function(){return {};}).then(function(e){
+      var error = new Error(e.error || String(r.status));
+      error.code = e.code || '';
+      error.nextActor = e.next_actor || null;
+      error.toCall = typeof e.to_call === 'number' ? e.to_call : null;
+      throw error;
+    });
     return r.json();
   });
 }
@@ -662,6 +668,25 @@ window.htAct = function(action, playerName) {
     renderBody();
     renderBoardOnFelt();
   }).catch(function(e) {
+    // A rejected move is never replayed automatically. Reload the saved
+    // action history so another host's move is visible before the next try.
+    var ruleCodes = [
+      'OUT_OF_TURN','INVALID_CALL','CHECK_NOT_ALLOWED','RAISE_TOO_SMALL',
+      'RAISE_NOT_ALLOWED','BET_NOT_ALLOWED','ACTION_NOT_REOPENED',
+      'INVALID_BLIND','HAND_BLINDS_INCOMPLETE','BETTING_ROUND_INCOMPLETE',
+      'STREET_OUT_OF_ORDER','HAND_ACTION_CONFLICT','BETTING_STATE_UNAVAILABLE',
+      'HAND_HISTORY_INVALID','INVALID_PLAYER_IDENTITY',
+    ];
+    if (e && ruleCodes.indexOf(e.code) >= 0) {
+      toast('Move not saved: ' + e.message +
+        (e.nextActor ? ' Next: '+e.nextActor : ''));
+      loadCurrentHand().then(function() {
+        renderBody();
+        renderBoardOnFelt();
+        if (typeof renderActionPanel === 'function') renderActionPanel();
+      });
+      return;
+    }
     toast('Error: ' + e.message);
   });
 };

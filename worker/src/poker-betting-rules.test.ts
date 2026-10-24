@@ -35,6 +35,14 @@ describe('server no-limit betting rules',()=>{
     assertDenied(posts,posts[1],'INVALID_BLIND');
     assertDenied([...posts,action('UTG','call',2)],action('Dealer','straddle',4),'INVALID_BLIND');
   });
+  it('treats a live straddle as the opening blind for minimum raises',()=>{
+    const withStraddle=[...posts,action('UTG','straddle',4)];
+    const opts={hand:{...hand,straddle:1}};
+    expect(assess(withStraddle,action('Dealer','raise',7),opts))
+      .toMatchObject({ok:false,code:'RAISE_TOO_SMALL',minimumRaise:4});
+    expect(assess(withStraddle,action('Dealer','raise',8),opts))
+      .toMatchObject({ok:true,minimumRaise:4});
+  });
   it('enforces the first preflop actor and exact calls',()=>{
     assertDenied(posts,action('Dealer','call',2),'OUT_OF_TURN');
     assertDenied(posts,action('UTG','check'),'CHECK_NOT_ALLOWED');
