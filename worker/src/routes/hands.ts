@@ -3,6 +3,7 @@ import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
 import { serializeHandCards, revealHandPotAllocations, HandResultError } from '../hand-result-pots';
 import { validateBettingAction } from '../poker-betting-rules';
+import { calculateHandPots, PokerPotError } from '../poker-pot-accounting';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -293,7 +294,63 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
 
   let storedCards:string;
   try {
-    storedCards = serializeHandCards(hole_cards,pot_winners,hand.pot_chips);
+    let allocations=pot_winners;
+    let refunds:Array<{display_name:string;chips:number}>=[];
+    // For complete hands, the server derives the contestable pots and
+    // unmatched refunds from recorded actions. Client chip totals alone are
+    // not authority and cannot assign an opponent's uncalled wager to a pot.
+    if(hand.mode==='full'&&hand.pot_chips>0){
+      const history=(await c.env.DB.prepare(
+        'SELECT display_name,action,chips FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+      ).bind(handId).all<{display_name:string;action:string;chips:number}>()).results;
+      const roster=(await c.env.DB.prepare(
+        'SELECT display_name,seat_number FROM game_players WHERE game_id=? AND seat_number IS NOT NULL'
+      ).bind(gameId).all<{display_name:string;seat_number:number}>()).results;
+      let accounting;
+      try {
+        accounting=calculateHandPots(history,roster);
+      } catch(err){
+        if(err instanceof PokerPotError)return c.json({
+          error:'Cannot reconcile the recorded pot: '+err.message,
+          code:'POT_RECONCILIATION_REQUIRED',
+        },409);
+        throw err;
+      }
+      if(accounting.grossChips!==hand.pot_chips || !accounting.pots.length){
+        return c.json({
+          error:'Recorded action chips do not reconcile to the hand pot.',
+          code:'POT_RECONCILIATION_REQUIRED',
+        },409);
+      }
+      refunds=accounting.uncalledReturns;
+      if(allocations===undefined && accounting.pots.length===1){
+        const single=accounting.pots[0];
+        allocations=[{potIdx:0,winnerName:winner_name.trim(),
+          chips:single.chips,label:single.label}];
+      }
+      if(!Array.isArray(allocations)||allocations.length!==accounting.pots.length){
+        return c.json({
+          error:'Each contestable main or side pot needs one eligible winner.',
+          code:'POT_ALLOCATION_INVALID',
+        },422);
+      }
+      for(let i=0;i<accounting.pots.length;i++){
+        const pot=accounting.pots[i];
+        const row=allocations[i];
+        if(!row||row.potIdx!==i||row.chips!==pot.chips||
+           !pot.eligible.includes(row.winnerName)){
+          return c.json({
+            error:'Pot allocation does not match the eligible players and chip total.',
+            code:'POT_ALLOCATION_INVALID',
+          },422);
+        }
+      }
+      allocations=accounting.pots.map((pot,i)=>({
+        potIdx:i,winnerName:allocations[i].winnerName,
+        chips:pot.chips,label:pot.label,
+      }));
+    }
+    storedCards=serializeHandCards(hole_cards,allocations,hand.pot_chips,refunds);
   } catch(e) {
     if (e instanceof HandResultError) return c.json({ error:e.message },422);
     throw e;
