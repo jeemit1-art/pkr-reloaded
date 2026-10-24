@@ -91,6 +91,10 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
   const status=(street:string)=>{
     const contrib=new Map(players.map(p=>[p.display_name,0]));
     const folded=new Set<string>(),allIn=new Set<string>(),acted=new Set<string>();
+    // The level faced when a player last acted is required for cumulative
+    // short all-ins (2026 Poker TDA Rule 49). The old 'acted' flag alone
+    // incorrectly blocked raising after two short all-ins combine into a full raise.
+    const lastActedBet=new Map<string,number>();
     // A live straddle becomes the opening blind: a full preflop raise must
     // increase the straddle by at least the straddled amount (e.g. 4 -> 8).
     const straddlePost=currentPost.filter(a=>a.action==='straddle').slice(-1)[0];
@@ -124,6 +128,7 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
       }
       acted.add(name);
       bet=Math.max(bet,raisedTo);
+      lastActedBet.set(name,bet);
     }
     const live=players.filter(p=>!folded.has(p.display_name));
     const able=live.filter(p=>!allIn.has(p.display_name));
@@ -143,7 +148,7 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
         }
       }
     }
-    return {invalid:false,next,contrib,folded,allIn,acted,bet,lastFullRaise,lastActor};
+    return {invalid:false,next,contrib,folded,allIn,acted,bet,lastFullRaise,lastActor,lastActedBet};
   };
 
   if(proposed.action==='post'||proposed.action==='straddle'){
@@ -197,8 +202,9 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
   if(proposed.action==='raise'&&total<=current.bet)
     return invalid('RAISE_NOT_ALLOWED','A raise must increase the amount to call.');
   const increases=AGGRESSIVE.has(proposed.action)&&total>current.bet;
-  if(increases&&current.acted.has(name))
-    return invalid('ACTION_NOT_REOPENED','A short all-in has not reopened raising for this player.');
+  if(increases&&current.acted.has(name)&&
+     current.bet-(current.lastActedBet.get(name)||0)<current.lastFullRaise)
+    return invalid('ACTION_NOT_REOPENED','The increase faced since your last action is less than a full raise.');
   const minimumRaise=Math.max(baseRaise,current.lastFullRaise);
   if((proposed.action==='raise'||proposed.action==='bet') &&
      total-current.bet<minimumRaise)

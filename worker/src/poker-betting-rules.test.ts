@@ -70,6 +70,23 @@ describe('server no-limit betting rules',()=>{
       action('Big','call',2)];
     assertAllowed(finished,action('Small','check',0,'flop'));
   });
+  it('reopens an earlier bettor only when cumulative short all-ins equal a full raise',()=>{
+    // 2026 TDA Rule 49: A bets 100, B all-in 125, C calls 125,
+    // D all-in 200; A is now facing a full 100-chip increase.
+    const seeded=[
+      ...posts,action('UTG','call',2),action('Dealer','call',2),
+      action('Small','call',1),action('Big','check'),
+      action('Small','bet',100,'flop'),
+      action('Big','allin',125,'flop'),
+      action('UTG','call',125,'flop'),
+    ];
+    assertDenied(seeded,action('Dealer','raise',200,'flop'),'OUT_OF_TURN');
+    const preThreshold=[...seeded,action('Dealer','call',125,'flop')];
+    assertDenied(preThreshold,action('Small','raise',200,'flop'),'ACTION_NOT_REOPENED');
+    const full=[...seeded,action('Dealer','allin',200,'flop')];
+    assertAllowed(full,action('Small','raise',300,'flop'));
+    assertDenied(full,action('Small','raise',299,'flop'),'RAISE_TOO_SMALL');
+  });
   it('prohibits acting after folding or committing all-in',()=>{
     const prior=[...posts,action('UTG','fold')];
     assertDenied(prior,action('UTG','call',2),'OUT_OF_TURN');
