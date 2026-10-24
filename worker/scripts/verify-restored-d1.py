@@ -73,6 +73,17 @@ def assess(restored, expected_schema=EXPECTED):
                 })
     check = restored.execute("PRAGMA quick_check").fetchone()
     integrity = str(check[0]) if check else "no response"
+    # quick_check does NOT validate foreign-key references. Check them
+    # separately, reporting only table-level counts (never customer row IDs).
+    foreign_key_violations = {}
+    foreign_key_check_error = None
+    try:
+        for table, _rowid, _parent, _fkid in restored.execute("PRAGMA foreign_key_check"):
+            foreign_key_violations[table] = foreign_key_violations.get(table, 0) + 1
+    except sqlite3.DatabaseError:
+        # A malformed or missing referenced table may prevent the PRAGMA
+        # completing; that is a blocker, not an assumption of zero orphans.
+        foreign_key_check_error = "Foreign-key verification could not complete"
     financial = {}
     for table, fields in (
         ("game_players", ["buy_ins", "buy_in_total", "cashout", "net"]),
@@ -85,9 +96,13 @@ def assess(restored, expected_schema=EXPECTED):
         if summary is not None:
             financial[table] = summary
     issues = bool(missing_tables or missing_columns or
-                  incompatible_columns or integrity != "ok")
+                  incompatible_columns or integrity != "ok" or
+                  foreign_key_violations or foreign_key_check_error)
     return {
         "restored_integrity_check": integrity,
+        "foreign_key_violations_by_table": dict(sorted(foreign_key_violations.items())),
+        "foreign_key_violation_count": sum(foreign_key_violations.values()),
+        "foreign_key_check_error": foreign_key_check_error,
         "schema_compatible": not issues,
         "missing_tables": missing_tables,
         "additional_tables_not_an_error": extra_tables,
