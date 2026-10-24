@@ -37,7 +37,7 @@ function fixture() {
                 return {results:[]};
               },
               async run(){
-                if(sql.startsWith('INSERT INTO hand_results')){
+                if(sql.trimStart().startsWith('INSERT INTO hand_results')){
                   insertCount++;
                   result={
                     id:params[0],hand_id:params[1],game_id:params[2],
