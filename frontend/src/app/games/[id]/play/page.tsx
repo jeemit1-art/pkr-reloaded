@@ -776,18 +776,18 @@ function queueLatestSeatAmounts(sid, playerId, expectedName, serverPlayer) {
   if (!current || current.name !== expectedName) return;
   var base = '/games/' + _ctx.gameId;
   queueAction(base + '/buyin/' + playerId, {
-    method:'PUT', body:JSON.stringify({
+    method:'PUT', body:JSON.stringify(pkrVersioned({
       count: current.buyins,
       total: Math.round(current.biTotal * 100),
       expected_count: serverPlayer && Number.isSafeInteger(serverPlayer.buy_ins) ? serverPlayer.buy_ins : 0,
       expected_total: serverPlayer && Number.isSafeInteger(serverPlayer.buy_in_total) ? serverPlayer.buy_in_total : 0,
-    }),
+    },serverPlayer)),
   });
   queueAction(base + '/cashout/' + playerId, {
-    method:'PUT', body:JSON.stringify({
+    method:'PUT', body:JSON.stringify(pkrVersioned({
       cashout: current.hadCashout ? Math.round(current.cashout * 100) : null,
       expected_cashout: serverPlayer && serverPlayer.cashout != null ? serverPlayer.cashout : null,
-    }),
+    },serverPlayer)),
   });
 }
 
@@ -815,6 +815,7 @@ function prepareConflictRetry(action, game) {
     if (!player) return result;
     next.expected_count = player.buy_ins || 0;
     next.expected_total = player.buy_in_total || 0;
+    if(Number.isSafeInteger(player.revision))next.expected_revision=player.revision;
     result.player = player.display_name;
     result.type = 'Buy-ins';
     result.server = String(next.expected_count) + ' buy-ins, ' + formatted(next.expected_total);
@@ -824,6 +825,7 @@ function prepareConflictRetry(action, game) {
     player = game.players.find(function(p){return p.user_id === parts[1];});
     if (!player) return result;
     next.expected_cashout = player.cashout == null ? null : player.cashout;
+    if(Number.isSafeInteger(player.revision))next.expected_revision=player.revision;
     result.player = player.display_name;
     result.type = 'Cash-out';
     result.server = formatted(next.expected_cashout);
@@ -1281,20 +1283,20 @@ window.saveState = function() {
         // accidentally charging the same buy-in twice.
         await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, {
           method:'PUT',
-          body:JSON.stringify({
+          body:JSON.stringify(pkrVersioned({
             count:cur.buyins,total:Math.round(cur.biTotal*100),
             expected_count:previous.buyins,expected_total:Math.round(previous.biTotal*100),
-          }),
+          },seated)),
         });
       }
       if (cur.hadCashout !== previous.hadCashout ||
           Math.abs(cur.cashout - previous.cashout) >= 0.001) {
         await pkrApiQueued('/games/' + ctx.gameId + '/cashout/' + seated.user_id, {
           method:'PUT',
-          body:JSON.stringify({
+          body:JSON.stringify(pkrVersioned({
             cashout:cur.hadCashout ? Math.round(cur.cashout*100) : null,
             expected_cashout:previous.hadCashout ? Math.round(previous.cashout*100) : null,
-          }),
+          },seated)),
         });
       }
     } catch(e) {
