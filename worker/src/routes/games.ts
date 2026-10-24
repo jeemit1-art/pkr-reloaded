@@ -151,15 +151,37 @@ games.post('/games/:id/cancel', authMiddleware, async (c) => {
   return c.json({ok:true,status:'cancelled'});
 });
 
-/* ── Delete game (host only) ── */
-games.delete('/games/:id', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
-  if (!game) return c.json({error:'Not found'},404);
-  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can delete games'},403);
-  const wasSettled = game.status==='settled';
-  await c.env.DB.prepare('DELETE FROM games WHERE id=?').bind(gameId).run();
-  if (wasSettled) await rebuildLeaderboard(c.env.DB, game.event_id);
+/* ── Delete an unused/cancelled game only; never erase financial history ── */
+games.delete('/games/:id', authMiddleware, async(c)=>{
+  const gameId=c.req.param('id');
+  const game=await c.env.DB.prepare(
+    'SELECT event_id,status FROM games WHERE id=?'
+  ).bind(gameId).first<{event_id:string;status:string}>();
+  if(!game)return c.json({error:'Game not found'},404);
+  if(!await requireEventRole(c,game.event_id,'host'))
+    return c.json({error:'Only the host can delete a game'},403);
+
+  // One conditional DELETE prevents a racing buy-in, hand or settlement
+  // from being erased after an earlier "is this game empty?" preflight.
+  // Active or settled games always retain their player/accounting records.
+  const result=await c.env.DB.prepare(`
+    DELETE FROM games WHERE id=? AND status IN ('scheduled','lobby','cancelled')
+    AND NOT EXISTS (
+      SELECT 1 FROM game_players WHERE game_id=?
+      AND (buy_ins>0 OR buy_in_total>0 OR cashout IS NOT NULL
+        OR net IS NOT NULL OR settled_at IS NOT NULL)
+    )
+    AND NOT EXISTS (SELECT 1 FROM hands WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM settlements WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM settlement_transfers WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM tournament_state WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM tournament_rebuys WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM tournament_eliminations WHERE game_id=?)
+  `).bind(gameId,gameId,gameId,gameId,gameId,gameId,gameId,gameId).run();
+  if(!result.meta.changes)return c.json({
+    error:'Game has active play, money, hands or tournament history. Deletion is blocked to preserve records.',
+    code:'GAME_HAS_HISTORY',
+  },409);
   return c.json({ok:true});
 });
 
