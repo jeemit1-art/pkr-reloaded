@@ -43,7 +43,8 @@ function fixture(gameStatus='active') {
               return {meta:{changes:1}};
             }
             if(sql.startsWith('UPDATE game_players SET cashout=')){
-              const [cashout,gameId,userId,expectedCashout]=args;
+              const [cashout,gameId,userId,expectedValue]=args;
+              const expectedCashout=sql.includes('cashout IS NULL') ? null : expectedValue;
               if(gameId!=='g'||userId!=='alex'||player.cashout!==expectedCashout)
                 return {meta:{changes:0}};
               player.cashout=cashout;writes++;
@@ -60,6 +61,9 @@ function fixture(gameStatus='active') {
 }
 function put(body:unknown):RequestInit{
   return {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+}
+function post(body:unknown):RequestInit{
+  return {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
 }
 const execution:any={waitUntil:(_promise:Promise<unknown>)=>{}};
 const buyUrl='https://fixture.invalid/games/g/buyin/alex';
@@ -103,6 +107,24 @@ describe('atomic compare-and-swap for financial edits',()=>{
     expect(f.player.cashout).toBe(3000);
     expect(f.getWrites()).toBe(1);
     expect(f.sqls.some(sql=>sql.includes('cashout IS ?'))).toBe(true);
+  });
+
+  it('legacy POST cash-out cannot overwrite a figure entered by another host',async()=>{
+    const f=fixture();
+    expect((await games.request(cashUrl,post({cashout:3000}),f.env,execution)).status).toBe(200);
+    const other=await games.request(cashUrl,post({cashout:4000}),f.env,execution);
+    expect(other.status).toBe(409);
+    expect(await other.json()).toMatchObject({code:'EDIT_CONFLICT',current:{cashout:3000}});
+    expect(f.player.cashout).toBe(3000);
+    expect(f.getWrites()).toBe(1);
+    expect(f.sqls.some(sql=>sql.includes('cashout IS NULL'))).toBe(true);
+  });
+
+  it('legacy POST cash-out retry remains idempotent without duplicate notifications',async()=>{
+    const f=fixture();
+    expect((await games.request(cashUrl,post({cashout:3500}),f.env,execution)).status).toBe(200);
+    expect((await games.request(cashUrl,post({cashout:3500}),f.env,execution)).status).toBe(200);
+    expect(f.getWrites()).toBe(1);
   });
 
   it('supports a deliberate null cash-out correction',async()=>{

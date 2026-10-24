@@ -17,7 +17,7 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Access permissions | Co-host/host-only financial mutations, authenticated transfer changes, restrict generic status transitions | Route-level mocked-D1 tests |
 | Client data exposure | Omit event PIN hashes and game passwords; redact WhatsApp contacts from unauthenticated RSVP/lobby responses | Client response tests and public RSVP tests |
 | Cash game settlement | Reject unbalanced outcomes and invalid cents, scope idempotency to game, prevent duplicate paid status changes | Settlement conservation/property tests and API-level tests |
-| Concurrent money edits | Atomic value-based guards for buy-ins and cash-outs, conflict responses, retained local journal and paused replay | Staging Worker concurrent route tests and browser journal tests |
+| Concurrent money edits | Atomic value-based guards for exact buy-ins and cash-outs; legacy cash-out POST is first-write-only and cannot overwrite an existing figure; conflict responses retain local journal and pause replay | Staging Worker concurrent route tests and browser journal tests |
 | Hand actions | Atomic action insert/undo and pot recalculation, deterministic same-second action ordering, protect finished hands and games | Hand action transaction and undo tests |
 | Betting order | Prevent repeated big-blind option after checking; assert preflop/postflop actor sequence | Real shipped JavaScript action-order tests |
 | Side pots | Use the same accounting function for winner selection and display, include folded contributions | Chip conservation and side-pot fixture tests |

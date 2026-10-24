@@ -433,10 +433,29 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { cashout } = await c.req.json<{cashout:number}>();
   if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Cashout must be integer cents'},400);
-  await c.env.DB.prepare('UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?').bind(cashout,gameId,userId).run();
+  // Legacy POST can only record the FIRST cash-out. Unlike the guarded PUT,
+  // it carries no expected amount, so it must never overwrite a recorded value.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS NULL ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(cashout,gameId,userId,gameId).run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare(
+      'SELECT cashout FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{cashout:number|null}>();
+    if (!current) return c.json({error:'Player not found'},404);
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game has closed; review before editing',code:'GAME_CLOSED'},409);
+    if (current.cashout!==cashout)
+      return c.json({
+        error:'Cash-out already exists. Review it and use a conditional correction instead.',
+        code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+      },409);
+  }
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   const player = players.results.find((p:any) => p.user_id===userId) as any;
-  if (player && cashout != null) {
+  if (player && result.meta.changes > 0 && cashout != null) {
     const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
     const totalBuyIn = player.buy_in_total || ((player.buy_ins||1) * (evData2?.buy_in||0));
     const net2 = cashout - totalBuyIn;
