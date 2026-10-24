@@ -20,6 +20,7 @@ tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
   const state   = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
   const levels  = await c.env.DB.prepare('SELECT * FROM tournament_levels WHERE game_id=? ORDER BY level_num ASC').bind(gameId).all<any>();
   const rebuys  = await c.env.DB.prepare('SELECT * FROM tournament_rebuys WHERE game_id=? ORDER BY created_at DESC').bind(gameId).all<any>();
+  const eliminations=await c.env.DB.prepare('SELECT * FROM tournament_eliminations WHERE game_id=? ORDER BY finishing_position DESC').bind(gameId).all<any>();
   let pool:number|null=null,payouts:any[]=[];
   let errorMessage:string|null=null;
   if(state){
@@ -41,6 +42,7 @@ tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
   }
   return c.json({
     state:state||null,levels:levels.results,rebuys:rebuys.results,
+    eliminations:eliminations.results,
     prize_pool_cents:pool,payouts,payout_error:errorMessage,
   });
 });
