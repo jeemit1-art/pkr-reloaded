@@ -32,7 +32,9 @@ const checks = [
   })()],
   ['no cron triggers', !/^\s*\[triggers\]\s*$/m.test(stage)],
   ['no production routes', !/^\s*(routes?|zone_id)\s*=/m.test(stage)],
-  ['no secrets in config', !/^\s*(JWT_SECRET|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|VAPID_PRIVATE_KEY|ANTHROPIC_API_KEY)\s*=/m.test(stage)],
+  ['staging Google OAuth client ID differs from production', quoted(stage, 'GOOGLE_CLIENT_ID') !== quoted(prod, 'GOOGLE_CLIENT_ID')],
+  ['staging Google OAuth client ID is well formed', quoted(stage, 'GOOGLE_CLIENT_ID').endsWith('.apps.googleusercontent.com')],
+  ['no secrets in config', !/^\s*(JWT_SECRET|GOOGLE_CLIENT_SECRET|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|VAPID_PRIVATE_KEY|ANTHROPIC_API_KEY)\s*=/m.test(stage)],
 ];
 const failed=checks.filter(([,good])=>!good);
 for(const [label,good] of checks) console.log((good?'PASS':'FAIL')+' '+label);
