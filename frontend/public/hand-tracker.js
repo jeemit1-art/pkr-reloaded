@@ -757,7 +757,16 @@ window.htAssignPotWinner = function(potIdx, winnerName){
   var seated=getSeated();
   var pots=calculateSidePots(hs.actions,seated);
   var pot=pots[potIdx];if(!pot)return;
-  hs.potWinners[potIdx]={potIdx:potIdx,winnerName:winnerName,chips:pot.chips,label:pot.label};
+  var allocation={potIdx:potIdx,winnerName:winnerName,chips:pot.chips,label:pot.label};
+  if(winnerName.indexOf('SPLIT: ')===0){
+    var names=winnerName.slice(7).split(', ').filter(Boolean);
+    var shares=distributeTiedShares(pot,names,seated,hs.hand.dealer_seat,
+      gameInfo().seats||9);
+    if(!shares){toast('Cannot calculate a valid tied-pot split.');return;}
+    allocation.winnerName=names.join(', ');
+    allocation.split_winners=shares;
+  }
+  hs.potWinners[potIdx]=allocation;
   var allDone=pots.every(function(p,i){return hs.potWinners[i];});
   if(allDone){
     var pE=null;Object.values(window.state.players).forEach(function(p){if(p&&p.name===hs.potWinners[0].winnerName)pE=p;});
@@ -794,9 +803,31 @@ window.htDeclareWinner = function(name){
   var seated=getSeated();
   var pots=calculateSidePots(hs.actions,seated);
   if(pots.length>1){window.htAssignPotWinner(hs.currentPotIndex,name);return;}
-  var pE=null;Object.values(window.state.players).forEach(function(p){if(p&&p.name===name)pE=p;});
+  var isTie=name.indexOf('SPLIT: ')===0;
+  var splitNames=isTie?name.slice(7).split(', ').filter(Boolean):[];
+  var actualName=isTie?splitNames.join(', '):name;
+  var pE=null;Object.values(window.state.players).forEach(function(p){
+    if(p&&p.name===actualName)pE=p;
+  });
+  var payload={winner_user_id:pE?pE.userId:null,
+    winner_name:actualName,hole_cards:hs.holes,split_pot:isTie};
+  if(isTie){
+    var players=getSeated(),folded={};
+    hs.actions.forEach(function(a){if(a.action==='fold')folded[a.display_name]=true;});
+    var eligible=players.filter(function(p){return !folded[p.name];}).map(function(p){return p.name;});
+    var uncalled=calculateUncalledReturn(hs.actions,players);
+    var total=hs.pot-(uncalled?uncalled.chips:0);
+    var main=pots.length?pots[0]:{
+      potIdx:0,chips:total,eligible:eligible,label:'Main Pot',
+    };
+    var shares=distributeTiedShares(main,splitNames,players,hs.hand.dealer_seat,
+      gameInfo().seats||9);
+    if(!shares){toast('Cannot calculate a valid tied-pot split.');return;}
+    payload.pot_winners=[{potIdx:0,winnerName:actualName,
+      chips:main.chips,label:'Main Pot',split_winners:shares}];
+  }
   htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/result',{method:'POST',
-    body:JSON.stringify({winner_user_id:pE?pE.userId:null,winner_name:name,hole_cards:hs.holes,split_pot:false}),
+    body:JSON.stringify(payload),
   }).then(function(saved){
     hs._lastHandSummary={
       handNo: hs.hand.hand_no,
@@ -887,6 +918,27 @@ function calculateUncalledReturn(actions,seated) {
     .sort(function(a,b){return b.chips-a.chips;});
   if(amounts.length<2||amounts[0].chips<=amounts[1].chips)return null;
   return {display_name:amounts[0].name,chips:amounts[0].chips-amounts[1].chips};
+}
+
+function distributeTiedShares(pot,winners,seated,dealerSeat,capacity) {
+  if(!pot||!Array.isArray(winners)||winners.length<2||
+     new Set(winners).size!==winners.length||!seated.length)return null;
+  var ring=buildClockwiseOrder(capacity),button=ring.indexOf(dealerSeat);
+  if(button<0||winners.some(function(name){
+    return pot.eligible.indexOf(name)<0||!seated.some(function(p){
+      return p.name===name&&ring.indexOf(p.seat)>=0;
+    });
+  }))return null;
+  var order=ring.slice(button+1).concat(ring.slice(0,button+1));
+  var ordered=order.map(function(seat){
+    var p=seated.find(function(p){return p.seat===seat;});
+    return p&&winners.indexOf(p.name)>=0?p.name:null;
+  }).filter(Boolean);
+  if(ordered.length!==winners.length)return null;
+  var base=Math.floor(pot.chips/winners.length),odd=pot.chips%winners.length;
+  return ordered.map(function(name,i){
+    return {winnerName:name,chips:base+(i<odd?1:0)};
+  });
 }
 
 // --- DEALER CHIP ON FELT ---
