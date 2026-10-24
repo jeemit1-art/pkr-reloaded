@@ -740,13 +740,14 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
   try {
     return await pkrApi(url, options);
   } catch(e) {
-    if (!navigator.onLine || e instanceof TypeError) {
-      _isOnline = false;
-      queueAction(url, options, seatSid, seatName);
-      showConnBanner();
-      return null;
-    }
-    throw e;
+    // Even a server failure must not silently discard a locally recorded
+    // money change. Retain the absolute PUT or idempotent seat request so the
+    // host can retry or resolve a conflict, without claiming it synced.
+    queueAction(url, options, seatSid, seatName);
+    if (!navigator.onLine || e instanceof TypeError) _isOnline = false;
+    else _syncError = 'Change not saved to server: review the sync warning before settling.';
+    showConnBanner();
+    return null;
   }
 }
 
@@ -755,6 +756,12 @@ window.addEventListener('online', function() {
   _syncError = '';
   showConnBanner();
   flushOfflineQueue();
+});
+window.addEventListener('focus', function() {
+  if (navigator.onLine && _offlineQueue.length && !_flushingQueue) {
+    _isOnline = true;
+    flushOfflineQueue();
+  }
 });
 window.addEventListener('offline', function() {
   _isOnline = false;
