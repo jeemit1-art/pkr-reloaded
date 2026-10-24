@@ -59,6 +59,19 @@ describe('hand result pot winner persistence',()=>{
       .toThrow(/Reserved/);
   });
 
+  it('preserves every tied winner with individual exact integer chips',()=>{
+    const pots=[{potIdx:0,winnerName:'Alex, Charlie',chips:101,label:'Main Pot',
+      split_winners:[{winnerName:'Alex',chips:51},{winnerName:'Charlie',chips:50}]}];
+    const saved=serializeHandCards(cards,pots,101);
+    expect(revealHandPotAllocations({hole_cards:saved})?.pot_winners).toEqual(pots);
+    expect(()=>serializeHandCards(cards,[{...pots[0],split_winners:[
+      {winnerName:'Alex',chips:80},{winnerName:'Charlie',chips:50},
+    ]}],101)).toThrow(/must equal/);
+    expect(()=>serializeHandCards(cards,[{...pots[0],split_winners:[
+      {winnerName:'Alex',chips:51},{winnerName:'Alex',chips:50},
+    ]}],101)).toThrow(/valid/);
+  });
+
   it('continues to read historical records with imperfect or null hole card data',()=>{
     expect(revealHandPotAllocations({hole_cards:'{bad json'})).toEqual({hole_cards:'{bad json'});
     expect(revealHandPotAllocations(null)).toBeNull();

@@ -12,6 +12,7 @@ export interface HandPotAllocation {
   winnerName: string;
   chips: number;
   label: string;
+  split_winners?:Array<{winnerName:string;chips:number}>;
 }
 
 export class HandResultError extends Error {
@@ -76,8 +77,31 @@ export function serializeHandCards(
     if (!Number.isSafeInteger(total)) {
       throw new HandResultError('Side-pot allocations exceed integer chip precision');
     }
+    let splitWinners:HandPotAllocation['split_winners'];
+    if(row.split_winners!==undefined){
+      if(!Array.isArray(row.split_winners)||row.split_winners.length<2||
+         row.split_winners.length>20)
+        throw new HandResultError('A tied pot requires at least two distinct winners');
+      const seenWinners=new Set<string>();
+      let splitChips=0;
+      splitWinners=[];
+      for(const split of row.split_winners){
+        const entry=split as Record<string,unknown>|null;
+        const splitName=typeof entry?.winnerName==='string'?entry.winnerName.trim():'';
+        const amount=entry?.chips;
+        if(!splitName||splitName.length>120||seenWinners.has(splitName)||
+           !Number.isSafeInteger(amount)||Number(amount)<0)
+          throw new HandResultError('Tied pot player names and chip amounts must be valid');
+        seenWinners.add(splitName);
+        splitChips+=Number(amount);
+        splitWinners.push({winnerName:splitName,chips:Number(amount)});
+      }
+      if(splitChips!==chips)
+        throw new HandResultError('Tied winner chips must equal that pot allocation');
+    }
     allocations.push({
       potIdx:potIdx as number,winnerName,chips:chips as number,label,
+      ...(splitWinners?{split_winners:splitWinners}:{}),
     });
   }
   allocations.sort((a,b)=>a.potIdx-b.potIdx);
