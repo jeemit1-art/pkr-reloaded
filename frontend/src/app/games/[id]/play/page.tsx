@@ -831,6 +831,105 @@ function prepareConflictRetry(action, game) {
   return result;
 }
 
+// "Keep saved value" must reconcile BOTH local table state and the persistent
+// offline journal. Dropping a journal entry alone would leave stale local money
+// on screen and allow it to be queued again on a later table edit.
+function keepServerFinancialEdit(action, game) {
+  if (_flushingQueue || !action || !game || !Array.isArray(game.players)) {
+    return {ok:false,error:'Game or sync state is not ready for reconciliation.'};
+  }
+  if (!_offlineQueue.some(function(entry){return entry.id===action.id;})) {
+    return {ok:false,error:'This pending edit has changed. Review the warning again.'};
+  }
+  var prefix='/games/'+_ctx.gameId+'/';
+  if (!action.url || action.url.indexOf(prefix)!==0 ||
+      !action.options || action.options.method!=='PUT') {
+    return {ok:false,error:'Only financial value conflicts can be resolved this way.'};
+  }
+  var parts=action.url.slice(prefix.length).split('/');
+  var kind=parts[0],userId=parts[1];
+  if (parts.length!==2 || ['buyin','cashout'].indexOf(kind)<0) {
+    return {ok:false,error:'This change requires a manual table correction.'};
+  }
+  var player=game.players.find(function(p){return p.user_id===userId;});
+  if (!player) return {ok:false,error:'Player no longer exists on the server.'};
+  var matches=Object.keys(_pkrSeatedPlayers).filter(function(sid) {
+    var linked=_pkrSeatedPlayers[sid];
+    return linked && linked.user_id===userId && state &&
+      state.players && state.players[sid] &&
+      state.players[sid].name===player.display_name;
+  });
+  // Only reconcile a uniquely identified player, never a guessed seat.
+  if (matches.length!==1) {
+    return {ok:false,error:'Cannot safely match the server player to one local seat. Keep this edit pending.'};
+  }
+  var sid=matches[0],local=state.players[sid];
+  if (!Array.isArray(local.transactions)) {
+    return {ok:false,error:'Local transaction history is unavailable.'};
+  }
+  var pending;
+  try { pending=JSON.parse(action.options.body||'{}'); }
+  catch(e) { return {ok:false,error:'Pending financial record is invalid.'}; }
+  var originals=local.transactions;
+  var buyins=originals.filter(function(t){return t.type!=='cashout';});
+  var cashouts=originals.filter(function(t){return t.type==='cashout';});
+  var replacement;
+  if (kind==='buyin') {
+    if (!Number.isSafeInteger(player.buy_ins) || player.buy_ins<0 ||
+        player.buy_ins>500 || !Number.isSafeInteger(player.buy_in_total) ||
+        player.buy_in_total<0 || (player.buy_ins===0 && player.buy_in_total!==0)) {
+      return {ok:false,error:'Server buy-in figures cannot be reconstructed safely.'};
+    }
+    var localTotal=Math.round(buyins.reduce(function(n,t){return n+(t.amount||0);},0)*100);
+    if (buyins.length!==pending.count || localTotal!==pending.total) {
+      return {ok:false,error:'Local buy-ins changed after this edit was queued. Review again.'};
+    }
+    var perBuyin=player.buy_ins ? player.buy_in_total/(100*player.buy_ins) : 0;
+    replacement=Array.from({length:player.buy_ins},function(_,i) {
+      return {type:'buyin',amount:perBuyin,
+        ts:buyins[i] && buyins[i].ts || Date.now()-i*60000};
+    }).concat(cashouts);
+  } else {
+    if (player.cashout!==null &&
+        (!Number.isSafeInteger(player.cashout) || player.cashout<0)) {
+      return {ok:false,error:'Server cash-out amount cannot be reconstructed safely.'};
+    }
+    var localCashout=cashouts.length ?
+      Math.round(cashouts.reduce(function(n,t){return n+(t.amount||0);},0)*100) : null;
+    if (localCashout!==pending.cashout) {
+      return {ok:false,error:'Local cash-out changed after this edit was queued. Review again.'};
+    }
+    replacement=buyins.concat(player.cashout===null ? [] : [{
+      type:'cashout',amount:player.cashout/100,
+      ts:cashouts[0] && cashouts[0].ts || Date.now(),
+    }]);
+  }
+  var previousQueue=_offlineQueue;
+  var previousSnapshot=_pkrLastSnapshot;
+  try {
+    local.transactions=replacement;
+    // Save without invoking window.saveState(), which would enqueue more writes.
+    _origSaveState();
+    _offlineQueue=_offlineQueue.filter(function(entry){return entry.id!==action.id;});
+    if (!savePendingActions()) {
+      _offlineQueue=previousQueue;
+      local.transactions=originals;
+      try { _origSaveState(); } catch(e) {}
+      return {ok:false,error:'Browser storage failed. The pending edit was retained.'};
+    }
+    _pkrLastSnapshot=_pkrSnapshotPlayers();
+    clearSyncConflict();
+    if (typeof renderTable==='function') renderTable();
+    return {ok:true};
+  } catch(e) {
+    _offlineQueue=previousQueue;
+    local.transactions=originals;
+    _pkrLastSnapshot=previousSnapshot;
+    try { _origSaveState(); } catch(ignore) {}
+    return {ok:false,error:'Could not persist the saved values locally. The pending edit remains.'};
+  }
+}
+
 async function flushOfflineQueue() {
   if (_flushingQueue || _syncConflict || _offlineQueue.length === 0 || !navigator.onLine) return;
   // Check that every pending operation is durable BEFORE any replay begins.
@@ -1001,6 +1100,23 @@ window.pkrReviewPendingEdits = async function() {
       shade.remove();
       showConnBanner();
       await flushOfflineQueue();
+    });
+  }
+  // A deliberate "keep server" decision is also available for financial edits.
+  // Fetch again on click: the figures shown in a previous review can be stale.
+  if (review.canApply && (review.type==='Buy-ins' || review.type==='Cash-out')) {
+    control('Keep the saved value','width:100%;padding:12px;margin-bottom:10px;background:#26352c;color:#fff;border:1px solid #5d8766;border-radius:8px;font-weight:bold;cursor:pointer',async function() {
+      if (!window.confirm('Discard THIS pending change and use the latest saved amount? Any unsynced local breakdown for this amount will be replaced.')) return;
+      var fresh;
+      try { fresh=await pkrApi('/games/'+_ctx.gameId); }
+      catch(e) { alert('Could not verify the latest server amount. Nothing was discarded.');return; }
+      var queued=_offlineQueue.find(function(entry){return entry.id===action.id;});
+      if (!queued) { alert('The pending edit changed. Review it again.');shade.remove();return; }
+      var decision=keepServerFinancialEdit(queued,fresh);
+      if (!decision.ok) { alert(decision.error);return; }
+      shade.remove();
+      showConnBanner();
+      if (_offlineQueue.length && _isOnline) await flushOfflineQueue();
     });
   }
   control('Keep pending and close','width:100%;padding:12px;background:transparent;color:#eee;border:1px solid #726c58;border-radius:8px;cursor:pointer',function(){shade.remove();});

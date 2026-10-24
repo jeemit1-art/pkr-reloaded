@@ -38,6 +38,10 @@ function harness(
   const frame:any={
     _ctx:{gameId:'synthetic-game',userId:'synthetic-host'},
     _pkrSeatedPlayers:{},
+    state:{players:{}},
+    _pkrLastSnapshot:{},
+    _origSaveState:()=>{},
+    renderTable:()=>{},
     _pkrSnapshotPlayers:()=>snapshot,
     pkrApi:request,
     loadGameFromPkr:()=>Promise.resolve(),
@@ -285,6 +289,87 @@ describe('durable staging game sync journal',()=>{
       method:'POST',body:JSON.stringify({cashout:2000}),
     })).toThrow(/retry-safe/);
     expect(storage.has(key)).toBe(false);
+  });
+
+  it('keeps the server cash-out and removes only the conflicting queued edit',()=>{
+    storage.clear();
+    const h=harness(false,async()=>({}));
+    h.frame.state.players.seat1={name:'Alex',transactions:[
+      {type:'buyin',amount:20,ts:1},
+      {type:'cashout',amount:50,ts:2},
+    ]};
+    h.frame._pkrSeatedPlayers.seat1={user_id:'alex',name:'Alex',seat_number:1};
+    let saves=0;
+    h.frame._origSaveState=()=>{saves++;};
+    const cash=h.frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'PUT',body:JSON.stringify({cashout:5000,expected_cashout:null}),
+    });
+    const other=h.frame.queueAction('/games/synthetic-game/buyin/ben',{
+      method:'PUT',body:JSON.stringify({count:1,total:2000,expected_count:0,expected_total:0}),
+    });
+    const done=h.frame.keepServerFinancialEdit(cash,{
+      status:'active',players:[{user_id:'alex',display_name:'Alex',cashout:3500}],
+    });
+    expect(done.ok).toBe(true);
+    expect(saves).toBe(1);
+    expect(h.frame.state.players.seat1.transactions.map((t:any)=>[t.type,t.amount]))
+      .toEqual([['buyin',20],['cashout',35]]);
+    expect(h.frame._offlineQueue.map((a:any)=>a.id)).toEqual([other.id]);
+    expect(JSON.parse(storage.get(key)||'[]')).toHaveLength(1);
+  });
+
+  it('keeps exact server buy-in count and total without losing the local cash-out',()=>{
+    storage.clear();
+    const h=harness(false,async()=>({}));
+    h.frame.state.players.seat1={name:'Alex',transactions:[
+      {type:'buyin',amount:20,ts:1},
+      {type:'buyin',amount:20,ts:2},
+      {type:'cashout',amount:35,ts:3},
+    ]};
+    h.frame._pkrSeatedPlayers.seat1={user_id:'alex',name:'Alex'};
+    const action=h.frame.queueAction('/games/synthetic-game/buyin/alex',{
+      method:'PUT',body:JSON.stringify({count:2,total:4000,expected_count:1,expected_total:2000}),
+    });
+    const done=h.frame.keepServerFinancialEdit(action,{
+      status:'active',players:[{user_id:'alex',display_name:'Alex',buy_ins:1,buy_in_total:2500}],
+    });
+    expect(done.ok).toBe(true);
+    expect(h.frame.state.players.seat1.transactions.map((t:any)=>[t.type,t.amount]))
+      .toEqual([['buyin',25],['cashout',35]]);
+    expect(h.frame._offlineQueue).toHaveLength(0);
+    expect(storage.has(key)).toBe(false);
+  });
+
+  it('retains a pending conflict if the local player cannot be identified uniquely',()=>{
+    storage.clear();
+    const h=harness(false,async()=>({}));
+    const action=h.frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'PUT',body:JSON.stringify({cashout:5000,expected_cashout:null}),
+    });
+    const done=h.frame.keepServerFinancialEdit(action,{
+      status:'active',players:[{user_id:'alex',display_name:'Alex',cashout:3500}],
+    });
+    expect(done.ok).toBe(false);
+    expect(h.frame._offlineQueue).toHaveLength(1);
+    expect(storage.has(key)).toBe(true);
+  });
+
+  it('does not discard a pending money edit if the browser cannot persist the updated journal',()=>{
+    storage.clear();
+    const h=harness(false,async()=>({}));
+    h.frame.state.players.seat1={name:'Alex',transactions:[{type:'cashout',amount:50,ts:1}]};
+    h.frame._pkrSeatedPlayers.seat1={user_id:'alex',name:'Alex'};
+    const action=h.frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'PUT',body:JSON.stringify({cashout:5000,expected_cashout:null}),
+    });
+    h.setStorageWritable(false);
+    const done=h.frame.keepServerFinancialEdit(action,{
+      status:'active',players:[{user_id:'alex',display_name:'Alex',cashout:3500}],
+    });
+    expect(done.ok).toBe(false);
+    expect(h.frame.state.players.seat1.transactions[0].amount).toBe(50);
+    expect(h.frame._offlineQueue).toHaveLength(1);
+    expect(JSON.parse(storage.get(key)||'[]')).toHaveLength(1);
   });
 
   it('never queues settlement requests or cross-game mutations',()=>{
