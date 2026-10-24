@@ -15,10 +15,11 @@ var DEFAULT_LEVELS = [
 ];
 var ts = {
   view:'main', state:null, levels:[], rebuys:[], eliminations:[],
+  payouts:[],prizePoolCents:null,payoutError:null,
   timerInterval:null, secsRemaining:0,
   voiceEnabled:true, voiceWarningDone:false, voiceWarningMinutes:2,
   setupLevels:JSON.parse(JSON.stringify(DEFAULT_LEVELS)),
-  setupConfig:{starting_chips:10000,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,addon_chips:5000,
+  setupConfig:{starting_chips:10000,buy_in_amount:0,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,addon_chips:5000,
     payout_structure:[{place:1,pct:50},{place:2,pct:30},{place:3,pct:20}]},
 };
 function tApi(path,opts){
@@ -99,6 +100,8 @@ function genBlinds(chips, hours) {
 function loadTournament(){
   return tApi('/games/'+getGameId()+'/tournament').then(function(d){
     ts.state=d.state;ts.levels=d.levels||[];ts.rebuys=d.rebuys||[];ts.eliminations=d.eliminations||[];
+    ts.payouts=d.payouts||[];ts.prizePoolCents=d.prize_pool_cents;ts.payoutError=d.payout_error;
+    if(ts.state)ts.setupConfig.buy_in_amount=ts.state.buy_in_amount||0;
     if(ts.state&&ts.state.status==='running')startLocalTimer();
     renderBody();
   }).catch(function(e){console.warn('loadTournament:',e.message);renderBody();});
@@ -175,19 +178,15 @@ window.tEliminate=function(playerName){
 };
 window.tSetup=function(){
   tApi('/games/'+getGameId()+'/tournament/setup',{method:'POST',body:JSON.stringify({
-    starting_chips:ts.setupConfig.starting_chips,rebuy_allowed:ts.setupConfig.rebuy_allowed,
+    starting_chips:ts.setupConfig.starting_chips,buy_in_amount:ts.setupConfig.buy_in_amount,
+    rebuy_allowed:ts.setupConfig.rebuy_allowed,
     rebuy_levels:ts.setupConfig.rebuy_levels,addon_allowed:ts.setupConfig.addon_allowed,
     addon_chips:ts.setupConfig.addon_chips,payout_structure:ts.setupConfig.payout_structure,levels:ts.setupLevels,
   })}).then(function(){toast('\u2705 Tournament configured');ts.view='main';loadTournament();}).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 function calculatePayouts(){
-  if(!ts.state)return[];
-  var playerCount=getActivePlayers().length+(ts.eliminations||[]).length;
-  var rebuyCost=ts.state.buy_in_amount||0;
-  var rebuysCount=(ts.rebuys||[]).filter(function(r){return r.type==='rebuy';}).length;
-  var prizePool=(playerCount*rebuyCost)+(rebuysCount*rebuyCost);
-  var structure=ts.state.payout_structure?JSON.parse(typeof ts.state.payout_structure==='string'?ts.state.payout_structure:JSON.stringify(ts.state.payout_structure)):[];
-  return structure.map(function(s){return{place:s.place,pct:s.pct,amount:Math.round(prizePool*s.pct/100)};});
+  // Use the Worker's financially reconciled values, never a local estimate.
+  return Array.isArray(ts.payouts)?ts.payouts:[];
 }
 function mkB(label,style,onClick){var b=document.createElement('button');b.style.cssText=style;b.textContent=label;b.addEventListener('click',onClick);return b;}
 function renderBody(){
@@ -276,6 +275,7 @@ function renderSetup(body){
     i.addEventListener('input',function(){onChange(this.value);});w.appendChild(i);body.appendChild(w);
   }
   addField('Starting Chips',ts.setupConfig.starting_chips,function(v){ts.setupConfig.starting_chips=parseInt(v)||10000;});
+  addField('Entry fee ($)',(ts.setupConfig.buy_in_amount/100).toFixed(2),function(v){ts.setupConfig.buy_in_amount=Math.round(Math.max(0,Number(v)||0)*100);});
   var reRow=document.createElement('div');reRow.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px';
   reRow.innerHTML='<span style="font-size:0.82rem;color:var(--cream);font-weight:600">Allow Rebuys</span>';
   var rtog=document.createElement('button');rtog.style.cssText='padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif;border:none;'+(ts.setupConfig.rebuy_allowed?'background:var(--gold);color:#000':'background:rgba(255,255,255,0.08);color:var(--muted)');
@@ -314,12 +314,13 @@ function renderSetup(body){
 function renderPayouts(body){
   body.appendChild(mkB('\u2190 Back','background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;margin-bottom:12px;padding:0;font-family:DM Sans,sans-serif',function(){ts.view='main';renderBody();}));
   var h=document.createElement('div');h.style.cssText='font-size:0.95rem;font-weight:700;color:var(--cream);margin-bottom:14px';h.textContent='\ud83d\udcb0 Payout Structure';body.appendChild(h);
-  var payouts=calculatePayouts();var total=payouts.reduce(function(s,p){return s+p.amount;},0);
+  var payouts=calculatePayouts();var total=ts.prizePoolCents;
+  if(ts.payoutError){var warning=document.createElement('div');warning.style.cssText='color:var(--red);margin-bottom:12px;font-size:0.8rem';warning.textContent='Payout review required: '+ts.payoutError;body.appendChild(warning);}
   var sr=document.createElement('div');sr.style.cssText='background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between';
-  sr.innerHTML='<span style="font-size:0.8rem;color:var(--muted)">Prize Pool</span><span style="font-size:0.9rem;color:var(--gold);font-weight:700">$'+(total/100).toFixed(0)+'</span>';body.appendChild(sr);
+  sr.innerHTML='<span style="font-size:0.8rem;color:var(--muted)">Prize Pool</span><span style="font-size:0.9rem;color:var(--gold);font-weight:700">'+(total===null?'Pending':('$'+(total/100).toFixed(2)))+'</span>';body.appendChild(sr);
   payouts.forEach(function(p){
     var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px';
-    row.innerHTML='<span style="font-size:0.85rem;color:var(--cream);font-weight:600">'+(['1st','2nd','3rd'][p.place-1]||p.place+'th')+' Place</span><div style="text-align:right"><div style="font-size:0.9rem;color:var(--gold);font-weight:700">$'+(p.amount/100).toFixed(0)+'</div><div style="font-size:0.65rem;color:var(--muted)">'+p.pct+'%</div></div>';
+    row.innerHTML='<span style="font-size:0.85rem;color:var(--cream);font-weight:600">'+(['1st','2nd','3rd'][p.place-1]||p.place+'th')+' Place</span><div style="text-align:right"><div style="font-size:0.9rem;color:var(--gold);font-weight:700">$'+(p.amount/100).toFixed(2)+'</div><div style="font-size:0.65rem;color:var(--muted)">'+p.pct+'%</div></div>';
     body.appendChild(row);
   });
 }
