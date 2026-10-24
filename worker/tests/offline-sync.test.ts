@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 // Test the actual inline game-sync implementation executed in the browser.
 // No application credentials, live HTTP endpoints, or real users are involved.
 const source = readFileSync(new URL('../../frontend/src/app/games/[id]/play/page.tsx', import.meta.url),'utf8');
-const start = source.indexOf("var OFFLINE_Q_KEY = 'pkr_pending_v2_'");
+const start = source.indexOf('var _pkrSeatedPlayers = {}');
 const end = source.indexOf('async function loadGameFromPkr()',start);
 if (start < 0 || end <= start) throw new Error('Could not locate shipped offline queue implementation');
 const queueCode = source.slice(start,end);
@@ -95,6 +95,74 @@ describe('durable staging game sync journal',()=>{
       .toEqual({count:2,total:4000,expected_count:0,expected_total:0});
     expect(frame._offlineQueue).toHaveLength(0);
     expect(storage.has(key)).toBe(false);
+  });
+
+  it('advances an offline cash-out to the new revision after an acknowledged buy-in',async()=>{
+    storage.clear();
+    const seed=harness(false,async()=>({}));
+    const base='/games/synthetic-game';
+    seed.frame.queueAction(base+'/buyin/alex',{
+      method:'PUT',body:JSON.stringify({
+        count:2,total:4000,expected_count:1,expected_total:2000,expected_revision:7,
+      }),
+    });
+    seed.frame.queueAction(base+'/cashout/alex',{
+      method:'PUT',body:JSON.stringify({
+        cashout:3500,expected_cashout:null,expected_revision:7,
+      }),
+    });
+    const sent:any[]=[];
+    const replay=harness(true,async(path,options)=>{
+      if(path===base)return {status:'active'};
+      const body=JSON.parse(options.body);
+      sent.push({path,body});
+      if(path.includes('/buyin/'))return {ok:true,revision:8};
+      return {ok:true,revision:9};
+    });
+    replay.frame._pkrSeatedPlayers.seat1={user_id:'alex',revision:7};
+    await replay.frame.flushOfflineQueue();
+    expect(sent.map(x=>x.body.expected_revision)).toEqual([7,8]);
+    expect(replay.frame._pkrSeatedPlayers.seat1.revision).toBe(9);
+    expect(replay.frame._offlineQueue).toHaveLength(0);
+  });
+
+  it('persists a direct financial conflict across refresh instead of silently replaying',async()=>{
+    storage.clear();
+    const h=harness(true,async()=>{
+      const err:any=new Error('Other host has an updated revision');
+      err.code='EDIT_CONFLICT';err.status=409;
+      throw err;
+    });
+    await h.frame.pkrApiQueued('/games/synthetic-game/buyin/alex',{
+      method:'PUT',body:JSON.stringify({
+        count:2,total:4000,expected_count:1,expected_total:2000,expected_revision:6,
+      }),
+    });
+    const conflict='pkr_pending_conflict_v1_synthetic-game_synthetic-host';
+    expect(storage.has(conflict)).toBe(true);
+    expect(h.frame._syncConflict).toBe(true);
+    const resumed=harness(true,async()=>{throw Error('No automatic retry permitted');});
+    expect(resumed.frame._syncConflict).toBe(true);
+    expect(resumed.frame._offlineQueue).toHaveLength(1);
+  });
+
+  it('replaces a stale revision when a host explicitly reviews the latest saved amount',()=>{
+    storage.clear();
+    const h=harness(false,async()=>({}));
+    const item=h.frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'PUT',body:JSON.stringify({
+        cashout:5000,expected_cashout:null,expected_revision:2,
+      }),
+    });
+    const reviewed=h.frame.prepareConflictRetry(item,{
+      status:'active',players:[{
+        user_id:'alex',display_name:'Alex',cashout:3500,revision:5,
+      }],
+    });
+    expect(reviewed.nextBody).toMatchObject({
+      cashout:5000,expected_cashout:3500,expected_revision:5,
+    });
+    expect(JSON.parse(item.options.body).expected_revision).toBe(2);
   });
 
   it('never applies a pending edit to a settled game',async()=>{
