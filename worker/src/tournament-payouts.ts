@@ -37,9 +37,10 @@ export function calculateTournamentPayouts(
   if(entrants>0&&tiers.length>entrants)
     throw new TournamentPayoutError('There are more paid places than tournament entrants');
   const provisional=bases.map((basis,i)=>{
-    const exact=pool*basis/10000;
-    return {place:i+1,pct:tiers[i].pct,amount:Math.floor(exact),
-      remainder:exact-Math.floor(exact)};
+    // BigInt prevents floating-point cent loss for large prizes.
+    const exact=BigInt(pool)*BigInt(basis);
+    return {place:i+1,pct:tiers[i].pct,amount:Number(exact/10000n),
+      remainder:Number(exact%10000n)};
   });
   const floorSum=provisional.reduce((s,p)=>s+p.amount,0);
   let centsLeft=pool-floorSum;
