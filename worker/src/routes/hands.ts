@@ -32,11 +32,18 @@ async function verifyHandInGame(c: any, gameId: string, handId: string): Promise
   return !!hand;
 }
 
+async function hasDeclaredWinner(c: any, handId: string): Promise<boolean> {
+  const result = await c.env.DB.prepare('SELECT id FROM hand_results WHERE hand_id=?')
+    .bind(handId).first();
+  return !!result;
+}
+
 // ── Toggle hand tracking on/off ─────────────────────────────────────────────
 hands.post('/games/:id/tracking/toggle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   const newVal = game.hand_tracking ? 0 : 1;
   await c.env.DB.prepare('UPDATE games SET hand_tracking=? WHERE id=?').bind(newVal, gameId).run();
   return c.json({ ok: true, hand_tracking: newVal });
@@ -47,6 +54,7 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
 
   const { dealer_seat, sb_seat, bb_seat, straddle, mode } = await c.req.json();
   const handNo = (game.current_hand_no || 0) + 1;
@@ -74,7 +82,7 @@ hands.get('/games/:id/hands', authMiddleware, async (c) => {
   const handRows = await c.env.DB.prepare('SELECT * FROM hands WHERE game_id=? ORDER BY hand_no DESC').bind(gameId).all<any>();
   const results: any[] = [];
   for (const h of handRows.results) {
-    const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(h.id).all<any>();
+    const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(h.id).all<any>();
     const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(h.id).first() as any;
     results.push({ ...h, board: JSON.parse(h.board || '[]'), actions: actions.results, result });
   }
@@ -91,7 +99,7 @@ hands.get('/games/:id/hands/:handId', authMiddleware, async (c) => {
 
   const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=? AND game_id=?').bind(handId, gameId).first() as any;
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(handId).all<any>();
+  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all<any>();
   const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(handId).first() as any;
   return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result });
 });
@@ -102,7 +110,9 @@ hands.put('/games/:id/hands/:handId/board', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
+  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
 
   const { board } = await c.req.json<{ board: string[] }>();
   if (!Array.isArray(board) || board.length > 5 || board.some(card => typeof card !== 'string' || !/^[2-9TJQKA][♠♥♦♣]$/.test(card)) || new Set(board).size !== board.length) return c.json({error:'Invalid board cards'},400);
@@ -117,7 +127,9 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
+  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
 
   const input = await c.req.json().catch(() => null) as {
     user_id?:unknown;display_name?:unknown;street?:unknown;action?:unknown;chips?:unknown
@@ -162,7 +174,9 @@ hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) 
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
+  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
 
   const last = await c.env.DB.prepare(
     'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1'
@@ -189,6 +203,7 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { winner_user_id, winner_name, hole_cards, split_pot } = await c.req.json();
@@ -219,7 +234,9 @@ hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
+  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
 
   const { dealer_seat, sb_seat, bb_seat } = await c.req.json();
   await c.env.DB.prepare(
@@ -236,6 +253,7 @@ hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   await c.env.DB.batch([
@@ -253,12 +271,13 @@ hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   await c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId).run();
   const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(handId).first() as any;
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(handId).all();
+  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
   return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result: null });
 });
 
@@ -267,6 +286,7 @@ hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   const { enabled } = await c.req.json() as any;
   await c.env.DB.prepare('UPDATE games SET live_cards_enabled=? WHERE id=?').bind(enabled ? 1 : 0, gameId).run();
   return c.json({ live_cards_enabled: enabled ? 1 : 0 });
@@ -276,9 +296,10 @@ hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
 // ── Seat draw ────────────────────────────────────────────────────────────────
 hands.post('/games/:id/seat-draw', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
-  const game = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first<any>();
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({ error: 'Not found' }, 404);
   if (!await requireEventRole(c, game.event_id, 'cohost')) return c.json({ error: 'Forbidden' }, 403);
+  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   const { result } = await c.req.json() as any;
   await c.env.DB.prepare('UPDATE games SET seat_draw_result=? WHERE id=?')
     .bind(JSON.stringify(result || []), gameId).run();
@@ -301,7 +322,7 @@ hands.get('/games/live/:token/hand', async (c) => {
   if (!hand) return c.json({ hand_tracking: true, hand: null });
 
   const actions = await c.env.DB.prepare(
-    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at'
+    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid'
   ).bind(hand.id).all<any>();
   const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(hand.id).first() as any;
 
