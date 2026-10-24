@@ -1387,7 +1387,7 @@ function renderMain(body){
       ri.innerHTML='<div style="font-size:0.85rem;color:var(--green);font-weight:700"></div>'
         +'<div style="font-size:0.75rem;color:var(--muted);margin-top:2px"></div>';
       ri.children[0].textContent='Hand #'+hs.hand.hand_no;
-      ri.children[1].textContent=(res.winner_name||'')+' won '+(res.pot_chips||hs.pot)+' chips'+(cv&&res.pot_chips?' (
+      ri.children[1].textContent=(res.winner_name||'')+' won '+(res.pot_chips||hs.pot)+' chips'+(cv&&res.pot_chips?' ('+String.fromCharCode(36)+(res.pot_chips*cv/100).toFixed(2)+')':'');
       rb.appendChild(ri);
       rb.appendChild(mkB('\u21A9 Undo','background:none;border:1px solid rgba(231,76,60,0.3);color:var(--red);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif;flex-shrink:0',window.htUndoWinner));
       body.appendChild(rb);
