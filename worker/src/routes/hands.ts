@@ -111,6 +111,40 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
   return c.json(hand,201);
 });
 
+// The host sees authoritative seat identities but must physically count chips.
+// Do not read optional migration tables when integrity mode is disabled.
+hands.get('/games/:id/hands/:handId/stack-baseline',authMiddleware,async(c)=>{
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  const hand=await c.env.DB.prepare(
+    'SELECT id,mode,voided FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<{id:string;mode:string;voided:number}>();
+  if(!hand)return c.json({error:'Hand not found'},404);
+  if(c.env.PKR_INTEGRITY_STACKS!=='1')
+    return c.json({enabled:false,confirmed:false,players:[]});
+  const saved=(await c.env.DB.prepare(
+    'SELECT user_id,display_name,seat_number,opening_chips FROM hand_stack_baselines WHERE hand_id=? ORDER BY seat_number'
+  ).bind(handId).all<{user_id:string;display_name:string;seat_number:number;opening_chips:number}>()).results;
+  if(saved.length)return c.json({enabled:true,confirmed:true,players:saved});
+  if(hand.mode!=='full'||hand.voided||game.status!=='active')
+    return c.json({error:'Opening stacks can only be confirmed for an active full hand.',
+      code:'STACK_BASELINE_UNAVAILABLE'},409);
+  const roster=(await c.env.DB.prepare(
+    'SELECT user_id,display_name,seat_number FROM game_players '+
+    'WHERE game_id=? AND seat_number IS NOT NULL AND buy_ins>0 ORDER BY seat_number'
+  ).bind(gameId).all<{user_id:string;display_name:string;seat_number:number}>()).results;
+  if(roster.length<2||roster.length>50)
+    return c.json({error:'At least two registered seated players are required.',
+      code:'STACK_BASELINE_UNAVAILABLE'},409);
+  const actions=await c.env.DB.prepare(
+    'SELECT id FROM hand_actions WHERE hand_id=? LIMIT 1'
+  ).bind(handId).first<{id:string}>();
+  if(actions)return c.json({error:'Opening stacks must be confirmed before betting.',
+    code:'STACK_BASELINE_CONFLICT'},409);
+  return c.json({enabled:true,confirmed:false,players:roster});
+});
+
 // ── Explicit, immutable opening stacks (optional integrity upgrade) ────────
 hands.post('/games/:id/hands/:handId/confirm-stacks', authMiddleware, async (c) => {
   if(c.env.PKR_INTEGRITY_STACKS!=='1')
