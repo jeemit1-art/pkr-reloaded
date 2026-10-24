@@ -469,12 +469,20 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const body = await c.req.json().catch(() => null) as {
     count:number;total:number;expected_count:number;expected_total:number;
+    expected_revision?:number;
   } | null;
   if (!body || typeof body !== 'object') return c.json({error:'Invalid buy-in request'},400);
   if (!Object.prototype.hasOwnProperty.call(body,'expected_count') ||
       !Object.prototype.hasOwnProperty.call(body,'expected_total')) {
     return c.json({error:'Original buy-in amounts required. Reload and review before editing.',code:'PRECONDITION_REQUIRED'},428);
   }
+  const enabled=revisionMode(c.env),versionRequested=body.expected_revision;
+  if(enabled&&(!Number.isSafeInteger(versionRequested)||(versionRequested as number)<0))
+    return c.json({error:'Current player revision is required. Reload before editing.',
+      code:'PRECONDITION_REQUIRED'},428);
+  if(!enabled&&versionRequested!==undefined)
+    return c.json({error:'Financial revision protection is not enabled in this environment.',
+      code:'REVISION_UNAVAILABLE'},503);
   const {count,total,expected_count,expected_total} = body;
   if (![count,total,expected_count,expected_total].every(v => Number.isSafeInteger(v) && v >= 0) ||
       (count === 0 && total !== 0)) {
@@ -488,24 +496,39 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   }
   // The write checks prior money and open-game status in ONE D1 statement.
   // A stale browser cannot overwrite another host's distinct edit.
-  const result = await c.env.DB.prepare(
-    'UPDATE game_players SET buy_ins=?,buy_in_total=? ' +
-    'WHERE game_id=? AND user_id=? AND buy_ins=? AND buy_in_total=? ' +
-    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
-  ).bind(count,total,gameId,userId,expected_count,expected_total,gameId).run();
+  const result=enabled
+    ? await c.env.DB.prepare(`
+      UPDATE game_players SET buy_ins=?,buy_in_total=?
+      WHERE game_id=? AND user_id=? AND buy_ins=? AND buy_in_total=?
+      AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+      AND EXISTS (SELECT 1 FROM game_player_revisions
+        WHERE game_id=? AND user_id=? AND revision=?)
+    `).bind(count,total,gameId,userId,expected_count,expected_total,
+      gameId,gameId,userId,versionRequested).run()
+    : await c.env.DB.prepare(
+      'UPDATE game_players SET buy_ins=?,buy_in_total=? ' +
+      'WHERE game_id=? AND user_id=? AND buy_ins=? AND buy_in_total=? ' +
+      "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+    ).bind(count,total,gameId,userId,expected_count,expected_total,gameId).run();
   const current = await c.env.DB.prepare(
     'SELECT user_id,display_name,buy_ins,buy_in_total,cashout FROM game_players WHERE game_id=? AND user_id=?'
   ).bind(gameId,userId).first<any>();
   if (!current) return c.json({error:'Player no longer exists in this game'},404);
+  const version=enabled?await c.env.DB.prepare(
+    'SELECT revision FROM game_player_revisions WHERE game_id=? AND user_id=?'
+  ).bind(gameId,userId).first<{revision:number}>():null;
+  if(enabled&&!Number.isSafeInteger(version?.revision))
+    return c.json({error:'Revision ledger is not initialised.',code:'REVISION_UNAVAILABLE'},503);
   if (result.meta.changes === 0) {
     const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
     if (!latest||latest.status==='settled'||latest.status==='cancelled')
       return c.json({error:'Game closed before the change could be saved',code:'GAME_CLOSED'},409);
-    if (current.buy_ins===count&&current.buy_in_total===total)
+    if (!enabled&&current.buy_ins===count&&current.buy_in_total===total)
       return c.json({ok:true,already_applied:true,buy_ins:count,buy_in_total:total});
     return c.json({
       error:'Another host changed these buy-ins. Review both amounts before retrying.',
-      code:'EDIT_CONFLICT',current:{buy_ins:current.buy_ins,buy_in_total:current.buy_in_total},
+      code:'EDIT_CONFLICT',current:{buy_ins:current.buy_ins,buy_in_total:current.buy_in_total,
+        ...(enabled?{revision:version?.revision}:{})},
     },409);
   }
   if (count > 0 && total > expected_total) {
@@ -520,7 +543,8 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
       data:{gameId,eventId:game.event_id,type:'buyin'},
     }));
   }
-  return c.json({ok:true,buy_ins:count,buy_in_total:total});
+  return c.json({ok:true,buy_ins:count,buy_in_total:total,
+    ...(enabled?{revision:version?.revision}:{})});
 });
 
 /* ── Exact cash-out update using null-safe compare-and-swap ── */
