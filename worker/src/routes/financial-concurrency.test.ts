@@ -33,6 +33,11 @@ function fixture(gameStatus='active') {
             if(sql.includes('FROM events WHERE id=?'))return {...event};
             return null;
           },
+          async all():Promise<any>{
+            if(sql.includes('FROM game_players WHERE game_id=? ORDER BY'))
+              return {results:[{...player}]};
+            return {results:[]};
+          },
           async run():Promise<any>{
             if(game.status==='settled'||game.status==='cancelled')return {meta:{changes:0}};
             if(sql.startsWith('UPDATE game_players SET buy_ins=')){
