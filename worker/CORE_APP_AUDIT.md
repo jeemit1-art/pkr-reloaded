@@ -40,16 +40,14 @@ Run logs are available in GitHub Actions; test count grows with each change.
 
 ## Important unresolved blockers — do not release yet
 
-1. **Optional migration not applied.** `PKR_INTEGRITY_REVISIONS` and `PKR_INTEGRITY_STACKS` remain disabled by default. The migration and API changes are tested against **disposable SQLite**, not installed or enabled on the remote staging D1. They must first be applied to the exact isolated staging resource after independent schema/backup checks and exercised with the real browser.
-2. **Actual mobile/offline and multi-device UAT.** localStorage journalling is best effort; it cannot prevent device storage eviction. Test at least two live devices, network interruption during each financial request, app restart, conflicting seat/board changes, duplicate rebuy/settlement taps and recovery of an unfinished hand. Existing smoke tests do not prove this.
-3. **Full hand stack provenance.** The new optional host-confirmed baseline prevents over-stack and false-all-in actions **only when enabled and fully confirmed before blind posting**. Old and incomplete hand records still lack immutable starting stacks and reliable historical player rosters. Do not infer opening stacks from purchase dollars.
-4. **Poker rules and legacy results.** Core turn order, cumulative short all-ins, matched side pots, uncalled refunds and clockwise tied-pot odd chips are covered, but exhaustive multiway/legacy rules and real-device UI acceptance are still required before launch.
-5. **Vercel preview build rate limit.** New Vercel preview builds are blocked by the account build-rate limit. GitHub Actions now independently build the Next.js preview source successfully, but that is **not** proof a current interactive Vercel preview was deployed.
-6. **Actual production schema and data.** The staged schema is reconstructed; production schema compatibility, a verified independent production D1 backup and **successful restore rehearsal**, financial reconciliation, monitoring and documented rollback have not been performed. No production changes are authorised.
-7. **Release authorisation.** The owner must approve a specific tested commit in writing before any merge to `main` or promotion to production. Commercialisation is out of scope.
+1. **Actual production schema and backup:** The old repository schema defines 11 tables, staging defines 20. Only a read-only inspection of the ACTUAL production database can establish compatibility. The local restored-copy verifier exists but has only been exercised on synthetic data. Independently validate a production backup, restore and financial reconciliation before any release.
+2. **Optional remote migrations are not installed:** Monotonic financial revisions and host-confirmed immutable per-hand stacks are implemented behind disabled Worker flags. Their additive migration passes disposable SQLite tests but must be independently backed up, applied and verified in isolated remote staging before enabling either flag. Do not release code with the required enforcement accidentally absent.
+3. **Browser/mobile and two-host UAT:** Synthetic route and shipped-script tests now cover stale financial/hand/board edits, offline journal recovery, ABA protection, stack limits, interrupted blind posting and correct payouts. Real iPhone offline/refresh/storage-loss and simultaneous two-host gameplay have NOT been performed on the latest complete frontend.
+4. **Vercel Preview access:** The newest frontend is build-verified by GitHub Actions but Vercel preview creation is blocked by the project's build-rate limit. A successful build in GitHub is not evidence that the latest code is deployed or usable through the Preview URL.
+5. **Residual betting/stack rules:** Full hands now validate blinds/straddle, turn order, minimum raises, short all-ins, contested pots, refunds and tied odd chips. Immutable starting stacks are optional and require physical host confirmation for every hand; the system cannot derive a prior hand's chips or prove balances when that flag is disabled. Do not imply exhaustive poker-rule compliance without targeted UAT.
+6. **Release process:** Independently verify production D1 export/bookmark, restored row counts and financial aggregates, deployed Worker snapshot, monitoring, rollback owner and security of existing data. Obtain explicit owner approval on a frozen SHA before any merge to main, D1 mutation or production deployment.
 
-Detailed release gate and read-only schema review instructions: `worker/RELEASE_GATE.md`.
-
+Reconciliation/checklists: worker/RELEASE_GATE.md and worker/UAT_ACCEPTANCE.md.
 ## Acceptance requirements for any future release
 
 - No production deployment or `main` merge during the current audit.
