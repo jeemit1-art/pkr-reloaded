@@ -26,7 +26,10 @@ const checks = [
   ['distinct KV', quoted(stage, 'id') !== quoted(prod, 'id')],
   ['staging label', quoted(stage, 'PKR_ENV') === 'staging'],
   ['distinct frontend origin', quoted(stage, 'FRONTEND_URL') !== quoted(prod, 'FRONTEND_URL')],
-  ['staging frontend origin', new URL(quoted(stage, 'FRONTEND_URL')).hostname.startsWith('staging.')],
+  ['staging frontend origin', (() => {
+    const host = new URL(quoted(stage, 'FRONTEND_URL')).hostname;
+    return host.startsWith('staging.') || (host.endsWith('.vercel.app') && host.includes('-git-'));
+  })()],
   ['no cron triggers', !/^\s*\[triggers\]\s*$/m.test(stage)],
   ['no production routes', !/^\s*(routes?|zone_id)\s*=/m.test(stage)],
   ['no secrets in config', !/^\s*(JWT_SECRET|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|VAPID_PRIVATE_KEY|ANTHROPIC_API_KEY)\s*=/m.test(stage)],

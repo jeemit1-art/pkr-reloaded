@@ -1,38 +1,37 @@
-# PKR Reloaded — staging environment (not deployed)
+# PKR Reloaded — staging (not deployed)
 
-This file sets up **staging only**. No production deployments, remote migrations, or data operations are performed by committing this code.
+## Dedicated resources
 
-## Dedicated staging resources
-| Component | Name or planned URL | ID |
+| Component | Stage | Status |
 | --- | --- | --- |
-| D1 database | `pkr-reloaded-db-staging` | `03577857-fc94-49ed-bd1b-5cd658aa0978` |
-| KV namespace | `pkr-reloaded-kv-staging` | `9e86adbcfb5d4817a32dfd4482d3dbf9` |
-| Worker | `pkr-reloaded-worker-staging` | Not deployed |
-| Frontend | `https://staging.mypkr.app` | Proposed hostname, not live |
+| Cloudflare D1 | `pkr-reloaded-db-staging`, ID `03577857-fc94-49ed-bd1b-5cd658aa0978` | Owner supplied; not initialised by this PR |
+| Cloudflare KV | `pkr-reloaded-kv-staging`, ID `9e86adbcfb5d4817a32dfd4482d3dbf9` | Owner supplied |
+| Cloudflare Worker | `pkr-reloaded-worker-staging` | Configured in GitHub; not deployed |
+| Vercel frontend | `https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app` | Vercel automatically generated a preview for this branch; **do not test login until env variables are set** |
 
-The separate `worker/wrangler.staging.toml` config has **no** production resource bindings. Do not change or replace `worker/wrangler.toml`.
+The existing frontend project is hosted on **Vercel**, confirmed via GitHub deployment status. Vercel automatically creates preview builds on this draft PR. The preview URL above is a branch alias, not a production domain.
 
-## Required before deployment
-1. Verify the given D1 and KV IDs and their actual resource names in the Cloudflare dashboard.
-2. **Schema blocker:** `worker/schema.sql` is outdated and does not include all the current tables and columns. Do NOT run the existing `db:migrate` script or apply this base schema to production. First create and test a complete versioned schema for the **empty staging database** using synthetic test fixtures. Nothing has been migrated.
-3. Create a separate **frontend deployment project** and serve it at `https://staging.mypkr.app`. Frontend hosting infrastructure is not confirmed; do not assume the current Next.js app is ready for Cloudflare Pages without an adapter. If you choose another staging URL, change `FRONTEND_URL` in the staging config.
-4. On that staging frontend build, set:
-   - `NEXT_PUBLIC_PKR_ENV=staging`
-   - `NEXT_PUBLIC_API_URL=https://pkr-reloaded-worker-staging.jeemit1.workers.dev` (verify Worker subdomain once deployed).
-   These variables must be defined in the **staging frontend** environment only. `frontend/.env.staging.example` is reference documentation, NOT an automatically loaded Next.js file.
-5. Create a separate **Google OAuth web client** for staging and authorise the callback URL `https://pkr-reloaded-worker-staging.jeemit1.workers.dev/auth/callback` (adjust after actual Worker URL is confirmed). Store `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a newly generated independent `JWT_SECRET` as **secrets on the staging Worker only**. Never reuse production secrets or put secret values in GitHub.
-6. Outbound push notifications, scheduled payment reminders, Stripe checkout/portal/webhooks, and paid AI analysis are deliberately disabled in the staging runtime. The billing plan status read remains usable.
-7. When schema, frontend, and credentials are ready and deployment is approved, from `worker/`, run `npm run check:staging` and inspect its output. The explicit deployment command is `npm run deploy:staging`. **It deploys the staging Worker; do not run it without approval.** This command does NOT run migrations.
-8. Confirm `GET /health` returns `environment: "staging"` before any test login. All test games must use synthetic players, never copied production records.
+## Required before testing the preview
 
-## Safety notes
-- Only staging bindings are declared in `wrangler.staging.toml`; no Worker routes or cron triggers are attached.
-- Do not run the default `npm run deploy`, `wrangler d1 execute` or `wrangler d1 migrations apply` against production for staging work.
-- No database exports or copies were made. Take a separate verified production backup before any later production release.
-- Never copy production tokens, Google or Stripe secrets, real phone numbers, or real financial records into staging.
-- Audit the final PR, tests and migration/rollback plans before merging to `main`.
+1. In **Vercel → pkr-reloaded → Settings → Environment Variables**, add the following **Preview** variables, scoped to branch `codex/pkr-production-protection-20261024`:
+   - `NEXT_PUBLIC_PKR_ENV` = `staging`
+   - `NEXT_PUBLIC_API_URL` = `https://pkr-reloaded-worker-staging.jeemit1.workers.dev`
+2. Redeploy the preview **after** adding those variables. The Vercel preview build now deliberately fails closed if its staging variables are missing or point at production. These variables must **not** replace the production values.
+3. Confirm Cloudflare's D1 and KV resource IDs and names match the supplied values.
+4. **Database blocker:** `worker/schema.sql` does not describe the full current data model. A reviewed versioned schema and synthetic fixtures are needed to initialise the *empty staging DB*. Never apply the base schema or the existing default `db:migrate` script to production, and do not copy production financial/player data to staging.
+5. After schema work is prepared and deployment is approved, from `worker/`, run `npm run check:staging`. Then `npm run deploy:staging` **only with explicit deployment approval**. This deploys **only** `pkr-reloaded-worker-staging`, not the production Worker, and does not run migrations. Do not run the default `npm run deploy`.
+6. Use a **separate staging Google OAuth web client**. Its authorised redirect URI must match the deployed staging Worker, expected `https://pkr-reloaded-worker-staging.jeemit1.workers.dev/auth/callback` (verify the actual URL). Store a new `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and unique `JWT_SECRET` as Cloudflare **secrets for the staging Worker only**. Do not reuse production secrets or paste secrets into GitHub/chat.
+7. Confirm staging Worker `GET /health` includes `environment: "staging"`. After that, test signing in, creating games, seating players, cash-outs, settlements, tournaments and hand tracking with synthetic data.
+8. The staging Worker has no cron trigger, disables outbound push notifications, blocks Stripe checkout/portal/webhooks, and blocks paid AI calls. The production runtime is unchanged unless code is separately merged and deployed with approval.
 
-Cloudflare official docs:
+## Production protection
+
+- This PR only updates source code on a development branch; it does not perform Cloudflare migrations, database exports, backend deployments or changes to `mypkr.app`.
+- Vercel independently builds branch previews; they do **not** automatically become production releases. Do not use or share preview URLs until they are correctly pointed at staging.
+- For a future production release, first independently back up D1, test an isolated deployment, verify financial reconciliations, and explicitly approve promotion.
+- Cloudflare account IDs and D1/KV resource IDs are identifiers, not authentication secrets; real API keys, JWT keys and OAuth secrets must remain private.
+
+References:
 https://developers.cloudflare.com/workers/wrangler/configuration/
-https://developers.cloudflare.com/d1/configuration/environments/
 https://developers.cloudflare.com/d1/reference/migrations/
+https://vercel.com/docs/environment-variables

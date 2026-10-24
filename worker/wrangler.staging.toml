@@ -18,7 +18,7 @@ database_id = "03577857-fc94-49ed-bd1b-5cd658aa0978"
 
 [vars]
 PKR_ENV = "staging"
-# Planned separate frontend hostname; not active until configured.
-FRONTEND_URL = "https://staging.mypkr.app"
+# Vercel-generated branch preview URL confirmed via GitHub; no production hostname.
+FRONTEND_URL = "https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app"
 
 # No production routes, cron triggers, secrets or production bindings.

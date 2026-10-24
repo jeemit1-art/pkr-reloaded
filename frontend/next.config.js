@@ -1,5 +1,9 @@
-// Staging build fails closed when configured to contact a production API.
-// Production builds remain unchanged unless NEXT_PUBLIC_PKR_ENV=staging.
+// Vercel Preview is an untrusted testing environment until explicitly
+// configured. Fail the build rather than silently calling the production API.
+if (process.env.VERCEL_ENV === 'preview' && process.env.NEXT_PUBLIC_PKR_ENV !== 'staging') {
+  throw new Error('Vercel Preview requires NEXT_PUBLIC_PKR_ENV=staging and a separate staging API');
+}
+// Production builds are unchanged when VERCEL_ENV=production and PKR_ENV is unset.
 if (process.env.NEXT_PUBLIC_PKR_ENV === 'staging') {
   const rawApi = process.env.NEXT_PUBLIC_API_URL;
   if (!rawApi) throw new Error('Staging requires NEXT_PUBLIC_API_URL');
