@@ -51,9 +51,22 @@ ON CONFLICT(game_id,user_id) DO NOTHING;
 CREATE TRIGGER IF NOT EXISTS trg_pkr_player_revision_insert
 AFTER INSERT ON game_players
 BEGIN
+  -- A newly registered player starts with revision 1. If an old player ID
+  -- is reused, keep the prior revision and increment it to prevent ABA.
   INSERT INTO game_player_revisions(game_id,user_id,revision,updated_at)
-  VALUES(NEW.game_id,NEW.user_id,0,unixepoch())
-  ON CONFLICT(game_id,user_id) DO NOTHING;
+  VALUES(NEW.game_id,NEW.user_id,1,unixepoch())
+  ON CONFLICT(game_id,user_id) DO UPDATE SET
+    revision=revision+1,updated_at=unixepoch();
+
+  INSERT INTO game_financial_audit(
+    game_id,user_id,revision,old_buy_ins,new_buy_ins,
+    old_buy_in_total,new_buy_in_total,old_cashout,new_cashout,
+    old_seat_number,new_seat_number,changed_at
+  ) SELECT NEW.game_id,NEW.user_id,revision,
+    NULL,NEW.buy_ins,NULL,NEW.buy_in_total,NULL,NEW.cashout,
+    NULL,NEW.seat_number,unixepoch()
+    FROM game_player_revisions
+    WHERE game_id=NEW.game_id AND user_id=NEW.user_id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_pkr_player_revision_update
@@ -76,4 +89,26 @@ BEGIN
     OLD.cashout,NEW.cashout,OLD.seat_number,NEW.seat_number,
     unixepoch() FROM game_player_revisions
   WHERE game_id=NEW.game_id AND user_id=NEW.user_id;
+END;
+
+
+-- Preserve a deletion as an auditable revision. The revision row intentionally
+-- remains, so recreating the same user_id will never resurrect the old version.
+CREATE TRIGGER IF NOT EXISTS trg_pkr_player_revision_delete
+AFTER DELETE ON game_players
+BEGIN
+  INSERT INTO game_player_revisions(game_id,user_id,revision,updated_at)
+  VALUES(OLD.game_id,OLD.user_id,1,unixepoch())
+  ON CONFLICT(game_id,user_id) DO UPDATE SET
+    revision=revision+1,updated_at=unixepoch();
+
+  INSERT INTO game_financial_audit(
+    game_id,user_id,revision,old_buy_ins,new_buy_ins,
+    old_buy_in_total,new_buy_in_total,old_cashout,new_cashout,
+    old_seat_number,new_seat_number,changed_at
+  ) SELECT OLD.game_id,OLD.user_id,revision,
+    OLD.buy_ins,NULL,OLD.buy_in_total,NULL,OLD.cashout,NULL,
+    OLD.seat_number,NULL,unixepoch()
+    FROM game_player_revisions
+    WHERE game_id=OLD.game_id AND user_id=OLD.user_id;
 END;
