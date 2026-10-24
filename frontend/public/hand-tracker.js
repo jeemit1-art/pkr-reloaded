@@ -657,46 +657,55 @@ window.htUndoAction = function(){
 // stacks they physically counted; buy-in dollar values are NOT chip stacks.
 window.htAuditStacks = function(){
   if(!hs.hand){toast('Start or load a hand before auditing stacks.');return;}
-  var seated=getSeated();
-  var unique={};
-  seated.forEach(function(p){unique[p.name]=true;});
-  var allPresent=hs.actions.every(function(a){return unique[a.display_name];});
-  if(!allPresent||seated.length<2){
-    toast('Full historical player seating is unavailable. Do not guess a stack baseline.');
-    return;
-  }
-  var opening=[];
-  for(var i=0;i<seated.length;i++){
-    var p=seated[i];
-    var entered=window.prompt(
-      'Verified opening stack for '+p.name+' (actual chips at start of hand, whole chips):',
-      '');
-    if(entered===null)return;
-    if(!/^\d+$/.test(entered.trim())||
-       !Number.isSafeInteger(Number(entered.trim()))){
-      toast('Audit cancelled: enter actual whole-chip counts for every player.');
-      return;
-    }
-    opening.push({display_name:p.name,seat_number:p.seat,
-      opening_chips:Number(entered.trim())});
-  }
-  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/audit-stacks',{
-    method:'POST',body:JSON.stringify({opening_stacks:opening}),
-  }).then(function(response){
-    var audit=response.audit;
-    var lines=['Opening chips: '+audit.opening_total,
-      'Hand pot: '+audit.recorded_pot_chips,
-      'Unallocated pot: '+audit.unsettled_pot_chips,
-      'Player balances:'];
-    audit.stacks.forEach(function(p){
-      lines.push(p.display_name+': '+p.closing_chips+
-        ' (paid '+p.contributed_chips+
-        ', returned '+p.returned_chips+', won '+p.won_chips+')');
+  var id=hs.hand.id;
+  function showAudit(opening,useSaved){
+    return htApi('/games/'+getGameId()+'/hands/'+id+'/audit-stacks',{
+      method:'POST',body:JSON.stringify(useSaved?{}:{opening_stacks:opening}),
+    }).then(function(r){
+      var audit=r.audit;
+      var text=['Opening chips: '+audit.opening_total,
+        'Hand pot: '+audit.recorded_pot_chips,
+        'Unallocated pot: '+audit.unsettled_pot_chips,
+        'Baseline: '+(r.persisted_baseline?'Confirmed and immutable':'Host supplied for this check'),
+        'Player balances:'];
+      audit.stacks.forEach(function(p){
+        text.push(p.display_name+': '+p.closing_chips+
+          ' (paid '+p.contributed_chips+', returned '+p.returned_chips+
+          ', won '+p.won_chips+')');
+      });
+      window.alert(text.join('\n'));
     });
-    window.alert(lines.join('\n'));
-  }).catch(function(error){
-    toast('Chip-stack audit found an issue: '+error.message);
-  });
+  }
+  htApi('/games/'+getGameId()+'/hands/'+id+'/stack-baseline')
+    .then(function(snapshot){
+      if(snapshot.enabled){
+        if(!snapshot.confirmed){
+          toast('Confirm physically counted opening chips before auditing.');return;
+        }
+        return showAudit([],true);
+      }
+      var seated=getSeated(),names={};
+      seated.forEach(function(p){names[p.name]=true;});
+      if(seated.length<2||hs.actions.some(function(a){return !names[a.display_name];})){
+        toast('Historical seating is incomplete. Do not guess opening stacks.');return;
+      }
+      var entered=[];
+      for(var index=0;index<seated.length;index++){
+        var p=seated[index];
+        var raw=window.prompt('Physically verified opening chips for '+p.name+
+          ' (seat '+p.seat+'):','');
+        if(raw===null)return;
+        var value=Number(raw.trim());
+        if(!raw.trim()||!Number.isSafeInteger(value)||value<0){
+          toast('Enter whole-chip counts for every player. Audit cancelled.');return;
+        }
+        entered.push({display_name:p.name,seat_number:p.seat,
+          opening_chips:value});
+      }
+      return showAudit(entered,false);
+    }).catch(function(error){
+      toast('Chip-stack audit found an issue: '+error.message);
+    });
 };
 
 window.htAct = function(action, playerName) {
