@@ -3,6 +3,7 @@ import { Env, SettleRequest, Transfer } from '../types';
 import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { sendPushToEvent, sendPushToPlayer } from '../push';
 import { minimumTransfers } from '../settle';
+import { clientSafeGame } from '../public-data';
 
 const games = new Hono<{ Bindings: Env }>();
 
@@ -19,7 +20,7 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
   if (status) { q+=' AND status=?'; b.push(status); }
   q+=' ORDER BY scheduled_at DESC';
   const rows = await c.env.DB.prepare(q).bind(...b).all();
-  return c.json(rows.results);
+  return c.json(rows.results.map(clientSafeGame));
 });
 
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
@@ -68,7 +69,7 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     data:{ gameId:id, eventId, type:'game_scheduled', scheduled_at, location:location||null },
   }));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
-  return c.json(game,201);
+  return c.json(game ? clientSafeGame(game) : null,201);
 });
 
 /* ── Get single game (with players + rsvps) ── */
@@ -84,7 +85,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
   const transfers = game.status==='settled'
     ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
     : [];
-  return c.json({...game, buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
+  return c.json({...clientSafeGame(game), buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
 });
 
 /* ── Update game ── */
@@ -102,7 +103,7 @@ games.put('/games/:id', authMiddleware, async (c) => {
     WHERE id=?`
   ).bind(scheduled_at||null,location||null,notes||null,status||null,seats||null,game_password||null,gameId).run();
   const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
-  return c.json(updated);
+  return c.json(updated ? clientSafeGame(updated) : null);
 });
 
 /* ── Delete game (host only) ── */
