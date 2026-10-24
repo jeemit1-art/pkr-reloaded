@@ -127,8 +127,8 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
     if(live.length>1&&able.length){
       const start=lastActor?playerMap.get(lastActor)?.seat_number:
         street==='pre'?
-          (currentPost.findLast(a=>a.action==='straddle') &&
-           playerMap.get(currentPost.findLast(a=>a.action==='straddle')!.display_name)?.seat_number || hand.bb_seat):
+          (currentPost.filter(a=>a.action==='straddle').slice(-1)[0] &&
+           playerMap.get(currentPost.filter(a=>a.action==='straddle').slice(-1)[0].display_name)?.seat_number || hand.bb_seat):
           hand.dealer_seat;
       const index=ring.indexOf(start||hand.bb_seat);
       for(let step=1;step<=ring.length;step++){
