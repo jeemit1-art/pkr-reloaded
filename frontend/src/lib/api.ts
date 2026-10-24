@@ -108,6 +108,8 @@ export const api = {
     buyin:    (id:string,userId:string)  => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/buyin/${userId}`,{method:'POST'}),
     cashout:  (id:string,userId:string,cashout:number) =>
       req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/cashout/${userId}`,{method:'POST',body:JSON.stringify({cashout})}),
+    markPaid: (token:string,tid:string) => pub<{ok:boolean}>(`/games/results/${token}/transfers/${tid}/paid`,{method:'POST'}),
+    setTransferStatus: (gameId:string,tid:string,status:'owed'|'paid'|'not_received') => req<{ok:boolean}>(`/games/${gameId}/transfers/${tid}/status`,{method:'PUT',body:JSON.stringify({status})}),
     unsettle: (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/unsettle`,{method:'POST'}),
     cancel:   (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/cancel`,{method:'POST'}),
     delete:   (id:string) => req<{ok:boolean}>(`/games/${id}`,{method:'DELETE'}),
@@ -169,7 +171,8 @@ export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsv
 export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
 export interface LeaderboardEntry { user_id:string; display_name:string; games_played:number; games_won:number; total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null; }
-export interface Transfer { from:string; from_name:string; to:string; to_name:string; amount:number; }
+export interface Transfer { from:string; from_name:string; to:string; to_name:string; amount:number;
+  id?:string; status?:'owed'|'paid'|'not_received'|'legacy'; paid_at?:number|null; last_reminded_at?:number|null; reminder_count?:number; }
 export interface SettlementResult { settlement_id:string; game_id:string; results:any[]; transfers:Transfer[]; settled_at:number; results_token:string; cached?:boolean; }
 
 export function fmt(cents:number):string {

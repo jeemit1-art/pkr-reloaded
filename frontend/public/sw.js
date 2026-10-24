@@ -25,8 +25,8 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'dismiss') return;
-  const { gameId, eventId } = event.notification.data || {};
-  const url = gameId ? `/games/${gameId}` : eventId ? `/events/${eventId}` : '/dashboard';
+  const { gameId, eventId, results_token } = event.notification.data || {};
+  const url = results_token ? `/games/results/${results_token}` : gameId ? `/games/${gameId}` : eventId ? `/events/${eventId}` : '/dashboard';
   event.waitUntil(
     clients.matchAll({ type:'window', includeUncontrolled:true }).then(cs => {
       for (const c of cs) { if ('focus' in c) { c.navigate(url); return c.focus(); } }

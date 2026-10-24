@@ -9,6 +9,8 @@ import billing from './routes/billing';
 import hands      from './routes/hands';
 import tournament from './routes/tournament';
 import analysis   from './routes/analysis';
+import payments   from './routes/payments';
+import { sendPaymentReminders } from './reminders';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -25,6 +27,7 @@ app.route('/auth',    auth);
 app.route('/events',  events);
 app.route('/billing', billing);
 app.route('/',        hands);
+app.route('/',        payments);
 app.route('/',        games);
 app.route('/',        tournament);
 app.route('/',        analysis);
@@ -33,4 +36,9 @@ app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worke
 app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
 app.notFound(               (c) => c.json({ error:'Not found' }, 404));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(sendPaymentReminders(env));
+  },
+};

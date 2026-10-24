@@ -23,3 +23,6 @@ GOOGLE_CLIENT_ID = "385656194684-dnd32g5qbgb8qrennc2m6avoifmksacr.apps.googleuse
 # wrangler secret put VAPID_PUBLIC_KEY
 # wrangler secret put VAPID_PRIVATE_KEY
 # wrangler secret put VAPID_EMAIL
+
+[triggers]
+crons = ["0 8 * * *"]

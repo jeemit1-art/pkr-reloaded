@@ -1,13 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { api, ResultsData, fmt, fmtSign, fmtDate, waLink } from '@/lib/api';
+import { api, getToken, ResultsData, Transfer, fmt, fmtSign, fmtDate, waLink } from '@/lib/api';
+import { subscribePush, canUsePush, isIOS, isPWAInstalled } from '@/lib/push';
 
 export default function ResultsPage() {
   const { token } = useParams<{token:string}>();
   const [data, setData]       = useState<ResultsData|null>(null);
   const [error, setError]     = useState('');
   const [copied, setCopied]   = useState<number|null>(null);
+  const [busy, setBusy]       = useState<string|null>(null);
+  const isBanker = typeof window !== 'undefined' && !!getToken();
 
   useEffect(()=>{ api.games.results(token as string).then(setData).catch(()=>setError('Results not found')); },[token]);
 
@@ -34,6 +37,36 @@ export default function ResultsPage() {
 
   function buildTransferMsg(t: typeof transfers[0]) {
     return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Please transfer when you get a chance 🃏`;
+  }
+
+  function patchTransfer(id:string, p:Partial<Transfer>) {
+    setData(d => d ? {...d, transfers:d.transfers.map(x => x.id===id ? {...x,...p} : x)} : d);
+  }
+
+  async function markPaid(t: Transfer) {
+    if (!t.id) return;
+    if (!confirm(`Confirm: you paid ${t.to_name} ${fmt(t.amount)}?`)) return;
+    setBusy(t.id);
+    try { await api.games.markPaid(token as string, t.id); patchTransfer(t.id, {status:'paid', paid_at:Math.floor(Date.now()/1000)}); }
+    catch(e:any) { alert(e.message || 'Could not update'); }
+    setBusy(null);
+  }
+
+  async function bankerSet(t: Transfer, status:'owed'|'paid'|'not_received') {
+    if (!t.id) return;
+    setBusy(t.id);
+    try { await api.games.setTransferStatus(data!.game.id, t.id, status); patchTransfer(t.id, {status}); }
+    catch(e:any) { alert(e.message || 'Could not update'); }
+    setBusy(null);
+  }
+
+  async function enableReminders(t: Transfer) {
+    if (isIOS() && !isPWAInstalled()) {
+      alert("On iPhone: tap Share, then Add to Home Screen. Open PKR from your home screen and tap Remind me again.");
+      return;
+    }
+    const ok = await subscribePush(data!.game.event_id, undefined, t.from_name);
+    alert(ok ? "Reminders on. You will get a nudge at 6pm until you tap I've paid." : "Could not enable notifications. Check your browser settings.");
   }
 
   function share() {
@@ -124,6 +157,33 @@ export default function ResultsPage() {
                       {fmt(t.amount)}
                     </span>
                   </div>
+                  {t.status && t.status!=='legacy' && (
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
+                      <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
+                        color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
+                        {t.status==='paid'?'✓ Paid':t.status==='not_received'?'⚠ Not received':'Owed'}
+                      </span>
+                      {t.status!=='paid' && (
+                        <button className="btn btn-primary" disabled={busy===t.id} onClick={()=>markPaid(t)}
+                          style={{fontSize:11,padding:'5px 12px'}}>I&apos;ve paid</button>
+                      )}
+                      {t.status!=='paid' && (canUsePush() || isIOS()) && (
+                        <button className="btn btn-ghost" onClick={()=>enableReminders(t)}
+                          style={{fontSize:11,padding:'5px 10px'}}>🔔 Remind me</button>
+                      )}
+                      {isBanker && t.status!=='paid' && (
+                        <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'paid')}
+                          style={{fontSize:11,padding:'5px 10px'}}>✓ Received</button>
+                      )}
+                      {isBanker && t.status==='paid' && (
+                        <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'not_received')}
+                          style={{fontSize:11,padding:'5px 10px'}}>✗ Not received</button>
+                      )}
+                      {isBanker && !!t.reminder_count && (
+                        <span style={{fontSize:10,color:'var(--faint)'}}>reminded ×{t.reminder_count}</span>
+                      )}
+                    </div>
+                  )}
                   {/* Actions row — always copy, WA only if number known */}
                   <div style={{display:'flex',gap:6}}>
                     <button
