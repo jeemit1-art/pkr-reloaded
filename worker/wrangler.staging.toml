@@ -18,6 +18,8 @@ database_id = "03577857-fc94-49ed-bd1b-5cd658aa0978"
 
 [vars]
 PKR_ENV = "staging"
+# Public OAuth client ID; keep the Google CLIENT SECRET and JWT SECRET in Cloudflare Secrets only.
+GOOGLE_CLIENT_ID = "385656194684-ost4dd5uumdphq17v5ostvu2ohqrrfgf.apps.googleusercontent.com"
 # Vercel-generated branch preview URL confirmed via GitHub; no production hostname.
 FRONTEND_URL = "https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app"
 
