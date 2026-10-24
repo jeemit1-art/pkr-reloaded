@@ -329,7 +329,22 @@ function computeNextPlayer(street, actions, hand) {
     var h=(hands||[]).find(function(item){return !item.voided;});
     if (h) {
       hs.hand=h; hs.actions=h.actions||[]; hs.pot=h.pot_chips||0; hs.board=h.board||[];
-      hs._awaitingStackGate=!h.result&&h.mode==='full'&&!hs.actions.some(function(a){return a.action==='post'&&a.display_name===getSeated().find(function(p){return p.seat===h.bb_seat;})?.name;});
+      // Never offer betting after a refresh until both blinds, and any
+      // selected straddle, have been saved. One successful blind is not enough.
+      var occupants=getSeated();
+      var small=occupants.find(function(p){return p.seat===h.sb_seat;});
+      var big=occupants.find(function(p){return p.seat===h.bb_seat;});
+      var smallRecorded=small&&hs.actions.some(function(a){
+        return a.display_name===small.name&&a.action==='post';
+      });
+      var bigRecorded=big&&hs.actions.some(function(a){
+        return a.display_name===big.name&&a.action==='post';
+      });
+      var straddleRecorded=!h.straddle||hs.actions.some(function(a){
+        return a.action==='straddle';
+      });
+      hs._awaitingStackGate=!h.result&&h.mode==='full'&&
+        (!smallRecorded||!bigRecorded||!straddleRecorded);
       hs.straddleSeat=null;
       if (h.straddle) {
         var sa=(h.actions||[]).find(function(a){return a.action==='straddle';});
