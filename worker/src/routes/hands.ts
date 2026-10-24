@@ -152,6 +152,16 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   }
   const user_id = typeof input?.user_id === 'string' ? input.user_id : null;
 
+  // The action IDs and betting history MUST come from the same snapshot.
+  // A separate last-action lookup after validation would let a simultaneous
+  // second host advance the log between those reads.
+  const historyRows=(await c.env.DB.prepare(
+    'SELECT id,display_name,street,action,chips FROM hand_actions '+
+    'WHERE hand_id=? ORDER BY created_at,rowid'
+  ).bind(handId).all<{
+    id:string;display_name:string;street:string;action:string;chips:number
+  }>()).results;
+
   // Validate complete full-hand betting history from the server, rather than
   // trusting the browser's predicted actor or submitted chip amounts.
   // Remaining stacks cannot be certified without a server chip-stack ledger.
@@ -178,12 +188,6 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
     if(user_id&&matching&&matching.user_id!==user_id)
       return c.json({error:'Player identity does not match the seat.',
         code:'INVALID_PLAYER_IDENTITY'},409);
-    const history=(await c.env.DB.prepare(
-      'SELECT display_name,street,action,chips FROM hand_actions '+
-      'WHERE hand_id=? ORDER BY created_at,rowid'
-    ).bind(handId).all<{
-      display_name:string;street:string;action:string;chips:number
-    }>()).results;
     const decision=validateBettingAction({
       seats:game.seats,
       players:roster,
@@ -193,7 +197,7 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
         bb_seat:handMeta.bb_seat as number,
         straddle:handMeta.straddle,
       },
-      actions:history,
+      actions:historyRows,
       proposed:{display_name,street,action,chips:chips as number},
     });
     if(!decision.ok){
@@ -209,9 +213,7 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   // Compare the previously observed last action within the INSERT itself:
   // two hosts cannot both append moves based on the same stale turn. Winner
   // publication and game closure are also checked inside the write.
-  const last=await c.env.DB.prepare(
-    'SELECT id FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1'
-  ).bind(handId).first<{id:string}>();
+  const expectedLastActionId=historyRows.length?historyRows[historyRows.length-1].id:null;
   const id=generateId();
   const outcome=await c.env.DB.batch([
     c.env.DB.prepare(`
@@ -223,7 +225,7 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
       AND (SELECT id FROM hand_actions WHERE hand_id=?
         ORDER BY created_at DESC,rowid DESC LIMIT 1) IS ?
     `).bind(id,handId,gameId,user_id,display_name,street,action,chips,
-      handId,gameId,gameId,handId,handId,last?.id||null),
+      handId,gameId,gameId,handId,handId,expectedLastActionId),
     c.env.DB.prepare(`UPDATE hands SET pot_chips=(
       SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips > 0 THEN chips ELSE 0 END),0)
       FROM hand_actions WHERE hand_id=?
