@@ -8,7 +8,7 @@ vi.mock('../middleware',async(importOriginal)=>{
 });
 import hands from './hands';
 
-function fixture(options?:{potChange?:boolean;closeOnInsert?:boolean}){
+function fixture(options?:{potChange?:boolean;closeOnInsert?:boolean;silentActionChange?:boolean}){
   const game={id:'g',event_id:'e',status:'active'};
   const hand={id:'h',game_id:'g',hand_no:1,pot_chips:200,voided:0,board:'[]'};
   let saved:any=null,writes=0;
@@ -23,6 +23,7 @@ function fixture(options?:{potChange?:boolean;closeOnInsert?:boolean}){
             if(sql.includes('SELECT id FROM hands WHERE id=? AND game_id=?'))return {id:hand.id};
             if(sql.includes('SELECT * FROM hands WHERE id=? AND game_id=?'))return {...hand};
             if(sql.includes('FROM hand_results WHERE hand_id=?'))return saved?{...saved}:null;
+            if(sql.includes('SELECT id FROM hand_actions WHERE hand_id=?'))return {id:'observed-action'};
             return null;
           },
           async run():Promise<any>{
@@ -30,8 +31,9 @@ function fixture(options?:{potChange?:boolean;closeOnInsert?:boolean}){
             if(options?.potChange)hand.pot_chips++;
             if(options?.closeOnInsert)game.status='settled';
             const [id,handId,gameId,userId,winner,pot,cards,split,
-              expectedHand,expectedGame,expectedPot,statusGame]=args;
+              expectedHand,expectedGame,expectedPot,statusGame,lastHand,expectedLast]=args;
             if(saved || game.status!=='active' || hand.voided ||
+               lastHand!=='h'||expectedLast!=='observed-action'||options?.silentActionChange||
                handId!=='h'||gameId!=='g'||expectedHand!=='h'||
                expectedGame!=='g'||expectedPot!==hand.pot_chips||statusGame!=='g'){
               return {meta:{changes:0}};
@@ -83,6 +85,16 @@ describe('hand winner concurrent writes',()=>{
     expect(await response.json()).toMatchObject({code:'HAND_STATE_CONFLICT'});
     expect(f.getWrites()).toBe(0);
   });
+  it('rejects a concurrent zero-chip fold or check even if the pot amount is unchanged',async()=>{
+    const f=fixture({silentActionChange:true});
+    const response=await hands.request(url,post(body),f.env,execution);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({code:'HAND_STATE_CONFLICT'});
+    expect(f.getWrites()).toBe(0);
+    expect(f.sqls.some(sql=>sql.includes('ORDER BY created_at DESC,rowid DESC LIMIT 1')))
+      .toBe(true);
+  });
+
   it('cannot declare a winner if the game closed before the insert',async()=>{
     const f=fixture({closeOnInsert:true});
     const response=await hands.request(url,post(body),f.env,execution);
