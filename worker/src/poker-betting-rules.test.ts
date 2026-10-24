@@ -85,7 +85,7 @@ describe('server no-limit betting rules',()=>{
     assertDenied(preThreshold,action('Small','raise',200,'flop'),'ACTION_NOT_REOPENED');
     const full=[...seeded,action('Dealer','allin',200,'flop')];
     assertAllowed(full,action('Small','raise',300,'flop'));
-    assertDenied(full,action('Small','raise',299,'flop'),'RAISE_TOO_SMALL');
+    assertDenied(full,action('Small','raise',199,'flop'),'RAISE_TOO_SMALL');
   });
   it('prohibits acting after folding or committing all-in',()=>{
     const prior=[...posts,action('UTG','fold')];

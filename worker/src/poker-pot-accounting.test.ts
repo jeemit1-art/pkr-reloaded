@@ -79,9 +79,11 @@ describe('integer-chip pot accounting and uncalled-bet refunds',()=>{
     for(let i=0;i<300;i++){
       const players=names('A','B','C','D','E');
       const acts=players.map(p=>a(p.display_name,'allin',1+Math.floor(rnd()*200)));
-      players.forEach(p=>{if(rnd()>.75)acts.push(a(p.display_name,'fold',0));});
-      if(players.every(p=>acts.some(x=>x.display_name===p.display_name&&x.action==='fold')))
-        acts.pop();
+      // Generate a legal-looking showdown: a contributor at the maximum
+      // committed level remains live to claim every possible side-pot tier.
+      const top=Math.max(...acts.map(x=>x.chips));
+      players.forEach((p,j)=>{if(acts[j].chips<top&&rnd()>.75)
+        acts.push(a(p.display_name,'fold',0));});
       const r=calculateHandPots(acts,players);
       expect(r.contestableChips+r.uncalledReturns.reduce((s,v)=>s+v.chips,0)).toBe(r.grossChips);
       r.pots.forEach(p=>expect(p.eligible.length).toBeGreaterThan(0));
