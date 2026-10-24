@@ -29,6 +29,8 @@ jobs:
           node worker/scripts/check-staging-config.mjs
       - name: Check test-only staging schema (in-memory)
         run: python3 worker/scripts/check-staging-schema.py
+      - name: Compile route SQL against isolated staging schema
+        run: python3 worker/scripts/check-staging-queries.py
       - name: Install Worker dependencies
         working-directory: worker
         run: npm ci
