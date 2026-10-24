@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
+import { clientSafeEvent, clientSafeGame } from '../public-data';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -18,7 +19,7 @@ events.get('/', authMiddleware, async (c) => {
     FROM events e JOIN event_members em ON em.event_id=e.id AND em.user_id=?
     ORDER BY e.created_at DESC
   `).bind(c.get('userId')).all();
-  return c.json(rows.results);
+  return c.json(rows.results.map(clientSafeEvent));
 });
 
 events.post('/', authMiddleware, async (c) => {
@@ -65,7 +66,7 @@ events.post('/', authMiddleware, async (c) => {
       .bind(id,userId,'host'),
   ]);
   const event = await c.env.DB.prepare('SELECT * FROM events WHERE id=?').bind(id).first();
-  return c.json(event,201);
+  return c.json(event ? clientSafeEvent(event) : null,201);
 });
 
 // IMPORTANT: /invite/:token MUST be before /:id
@@ -89,7 +90,7 @@ events.get('/invite/:token', authMiddleware, async (c) => {
       (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
     FROM events e WHERE e.id=?
   `).bind(eventId).first();
-  return c.json({ok:true,event,role});
+  return c.json({ok:true,event: event ? clientSafeEvent(event) : null,role});
 });
 
 events.get('/:id', authMiddleware, async (c) => {
@@ -107,7 +108,7 @@ events.get('/:id', authMiddleware, async (c) => {
     FROM event_members em JOIN users u ON u.id=em.user_id WHERE em.event_id=?
     ORDER BY CASE em.role WHEN 'host' THEN 0 WHEN 'cohost' THEN 1 ELSE 2 END,em.joined_at
   `).bind(eventId).all();
-  return c.json({...event, members:members.results});
+  return c.json({...clientSafeEvent(event), members:members.results});
 });
 
 events.put('/:id', authMiddleware, async (c) => {
@@ -204,7 +205,7 @@ events.get('/:id/history', authMiddleware, async (c) => {
       WHERE game_id=? AND net IS NOT NULL
       ORDER BY net DESC
     `).bind(g.id).all<{display_name:string; net:number}>();
-    return { ...g, top_players: top.results };
+    return { ...clientSafeGame(g), top_players: top.results };
   }));
 
   return c.json(result);
