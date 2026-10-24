@@ -127,10 +127,37 @@ window.tPause=function(){
     ts.state.status=r.status;if(r.status==='paused')stopLocalTimer();else startLocalTimer();renderBody();
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
+var pendingRebuys={};
 window.tAddRebuy=function(playerName,type){
+  if(!ts.state)return;
   var chips=type==='addon'?ts.state.addon_chips:ts.state.starting_chips;
-  tApi('/games/'+getGameId()+'/tournament/rebuy',{method:'POST',body:JSON.stringify({player_name:playerName,type:type,chips:chips,amount_paid:ts.state.buy_in_amount||0})})
-    .then(function(){toast((type==='addon'?'\ud83d\udd04 Add-on':'\u267b\ufe0f Rebuy')+' for '+playerName);loadTournament();}).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
+  var key='pkr_tournament_rebuy_'+getGameId()+'_'+encodeURIComponent(playerName)+'_'+type;
+  if(pendingRebuys[key])return;
+  var requestId;
+  try{
+    requestId=localStorage.getItem(key);
+    if(!requestId){
+      if(!window.crypto||typeof window.crypto.randomUUID!=='function'){
+        toast('Secure transaction ID unavailable. Rebuy was not sent.');return;
+      }
+      requestId=window.crypto.randomUUID();
+      localStorage.setItem(key,requestId);
+    }
+  }catch(e){toast('Browser storage unavailable. Rebuy was not sent.');return;}
+  pendingRebuys[key]=true;
+  tApi('/games/'+getGameId()+'/tournament/rebuy',{
+    method:'POST',body:JSON.stringify({
+      idempotency_key:requestId,player_name:playerName,type:type,chips:chips,
+      amount_paid:ts.state.buy_in_amount||0,
+    }),
+  }).then(function(){
+    try{if(localStorage.getItem(key)===requestId)localStorage.removeItem(key);}
+    catch(e){/* Retain the same ID for a safe retry. */}
+    toast((type==='addon'?'Add-on':'Rebuy')+' recorded for '+playerName);
+    loadTournament();
+  }).catch(function(e){
+    toast('Rebuy status uncertain: '+e.message+'. Retrying will use the same reference.');
+  }).finally(function(){delete pendingRebuys[key];});
 };
 window.tEliminate=function(playerName){
   var pos=getActivePlayers().length;

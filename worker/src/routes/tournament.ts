@@ -85,18 +85,80 @@ tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {
   return c.json({ error: 'Cannot toggle' }, 400);
 });
 
+// The client's durable idempotency key prevents charging a player twice
+// after an HTTP timeout or a simultaneous double-click. A D1 transaction
+// credits chips only once, and inserts the receipt only if the credit occurred.
 tournament.post('/games/:id/tournament/rebuy', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const { player_name, type, chips, amount_paid } = await c.req.json() as any;
-  const state = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
-  if (!state) return c.json({ error: 'Not set up' }, 400);
-  const now = Math.floor(Date.now() / 1000);
-  await c.env.DB.prepare('INSERT INTO tournament_rebuys(id,game_id,player_name,type,chips,amount_paid,created_at) VALUES(?,?,?,?,?,?,?)')
-    .bind(generateId(),gameId,player_name,type||'rebuy',chips||state.starting_chips,amount_paid||0,now).run();
-  await c.env.DB.prepare('UPDATE tournament_state SET total_chips_in_play=total_chips_in_play+? WHERE game_id=?').bind(chips||state.starting_chips,gameId).run();
-  return c.json({ ok: true });
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed',code:'TOURNAMENT_CLOSED'},409);
+  const body=await c.req.json().catch(()=>null) as {
+    idempotency_key?:unknown;player_name?:unknown;type?:unknown;
+    chips?:unknown;amount_paid?:unknown
+  }|null;
+  const key=typeof body?.idempotency_key==='string'?body.idempotency_key.trim():'';
+  if(!/^[A-Za-z0-9_-]{12,128}$/.test(key))
+    return c.json({error:'A persistent rebuy request ID is required.',
+      code:'PRECONDITION_REQUIRED'},428);
+  const name=typeof body?.player_name==='string'?body.player_name.trim():'';
+  const kind=body?.type==='addon'?'addon':body?.type==='rebuy'?'rebuy':'';
+  const state=await c.env.DB.prepare(
+    'SELECT * FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<any>();
+  if(!state)return c.json({error:'Tournament not set up'},400);
+  const expected=kind==='addon'?state.addon_chips:state.starting_chips;
+  const chips=body?.chips===undefined?expected:body.chips;
+  const cost=body?.amount_paid===undefined?state.buy_in_amount:body.amount_paid;
+  if(!name||name.length>120||!kind||!Number.isSafeInteger(chips)||
+     Number(chips)<=0||chips!==expected||
+     !Number.isSafeInteger(cost)||Number(cost)<0)
+    return c.json({error:'Invalid player, chips or payment.'},400);
+  const existing=await c.env.DB.prepare(
+    'SELECT * FROM tournament_rebuys WHERE id=?'
+  ).bind(key).first<any>();
+  const matches=(row:any)=>row&&row.game_id===gameId&&
+    row.player_name===name&&row.type===kind&&
+    row.chips===chips&&row.amount_paid===cost;
+  if(existing){
+    if(matches(existing))return c.json({ok:true,already_applied:true});
+    return c.json({error:'Request ID belongs to a different transaction.',
+      code:'REBUY_CONFLICT'},409);
+  }
+  const player=await c.env.DB.prepare(
+    'SELECT user_id FROM game_players WHERE game_id=? AND display_name=? AND buy_ins>0'
+  ).bind(gameId,name).first<{user_id:string}>();
+  if(!player)return c.json({error:'Player has no recorded tournament buy-in.'},409);
+  if(state.status!=='running'||
+     (kind==='rebuy'&&(!state.rebuy_allowed||state.current_level>state.rebuy_levels))||
+     (kind==='addon'&&!state.addon_allowed))
+    return c.json({error:'Rebuy or add-on is not allowed at this level.',
+      code:'REBUY_NOT_ALLOWED'},409);
+  const now=Math.floor(Date.now()/1000);
+  const result=await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE tournament_state SET total_chips_in_play=total_chips_in_play+?
+      WHERE game_id=? AND status='running'
+      AND ((?='rebuy' AND rebuy_allowed=1 AND current_level<=rebuy_levels)
+        OR (?='addon' AND addon_allowed=1))
+      AND total_chips_in_play<=?
+      AND NOT EXISTS (SELECT 1 FROM tournament_rebuys WHERE id=?)
+    `).bind(chips,gameId,kind,kind,Number.MAX_SAFE_INTEGER-Number(chips),key),
+    c.env.DB.prepare(`
+      INSERT INTO tournament_rebuys(id,game_id,player_name,type,chips,amount_paid,created_at)
+      SELECT ?,?,?,?,?,?,? WHERE changes()=1
+    `).bind(key,gameId,name,kind,chips,cost,now),
+  ]);
+  if(!result[0]?.meta?.changes||!result[1]?.meta?.changes){
+    const latest=await c.env.DB.prepare(
+      'SELECT * FROM tournament_rebuys WHERE id=?'
+    ).bind(key).first<any>();
+    if(matches(latest))return c.json({ok:true,already_applied:true});
+    return c.json({error:'Rebuy changed before recording. Reload the tournament.',
+      code:'REBUY_CONFLICT'},409);
+  }
+  return c.json({ok:true,request_id:key,chips});
 });
 
 tournament.post('/games/:id/tournament/eliminate', authMiddleware, async (c) => {
