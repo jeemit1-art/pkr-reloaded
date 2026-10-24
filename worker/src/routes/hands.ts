@@ -240,8 +240,23 @@ hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) =>
   if(!hand)return c.json({error:'Hand not found'},404);
   if(hand.voided)return c.json({error:'Voided hands cannot be used as live stack baselines.'},409);
   const body=await c.req.json().catch(()=>null) as {opening_stacks?:unknown}|null;
-  if(!Array.isArray(body?.opening_stacks))
-    return c.json({error:'Provide the physically verified opening chips for each seated player.'},400);
+  let opening:Parameters<typeof auditHandStacks>[0];
+  if(c.env.PKR_INTEGRITY_STACKS==='1'){
+    // In integrity mode the *persisted* baseline is the authority. Caller
+    // cannot substitute invented balances in an audit request.
+    opening=(await c.env.DB.prepare(
+      'SELECT display_name,seat_number,opening_chips FROM hand_stack_baselines WHERE hand_id=?'
+    ).bind(handId).all<{
+      display_name:string;seat_number:number;opening_chips:number
+    }>()).results;
+    if(opening.length<2)
+      return c.json({error:'Opening stacks have not been confirmed.',
+        code:'STACK_BASELINE_REQUIRED'},428);
+  }else{
+    if(!Array.isArray(body?.opening_stacks))
+      return c.json({error:'Provide physically counted opening chips for each player.'},400);
+    opening=body.opening_stacks as Parameters<typeof auditHandStacks>[0];
+  }
   const actions=(await c.env.DB.prepare(
     'SELECT display_name,action,chips FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
   ).bind(handId).all<{display_name:string;action:string;chips:number}>()).results;
@@ -250,7 +265,7 @@ hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) =>
   ).bind(handId).first<any>();
   const revealed=revealHandPotAllocations(savedResult) as any;
   try{
-    const audit=auditHandStacks(body.opening_stacks,actions,
+    const audit=auditHandStacks(opening,actions,
       revealed?{
         pot_winners:revealed.pot_winners||[],
         uncalled_returns:revealed.uncalled_returns||[],
@@ -261,7 +276,8 @@ hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) =>
         error:'Recorded action contributions do not equal the saved pot.',
         code:'STACK_AUDIT_FAILED',
       },409);
-    return c.json({ok:true,verified_input_only:true,audit});
+    return c.json({ok:true,verified_input_only:c.env.PKR_INTEGRITY_STACKS!=='1',
+      persisted_baseline:c.env.PKR_INTEGRITY_STACKS==='1',audit});
   }catch(err){
     if(err instanceof StackAuditError)return c.json({
       error:err.message,code:'STACK_AUDIT_FAILED',
