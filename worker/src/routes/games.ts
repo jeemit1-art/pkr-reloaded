@@ -93,17 +93,42 @@ games.put('/games/:id', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Cannot modify settled game. Unsettle first.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot modify a settled or cancelled game.'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { scheduled_at, location, notes, status, seats, game_password } = await c.req.json();
-  await c.env.DB.prepare(`UPDATE games SET
+  // Status transitions must use start/cancel/settle/unsettle, not this generic edit route.
+  if (status !== undefined) {
+    return c.json({error:'Use the dedicated game action to change status'},400);
+  }
+  const result = await c.env.DB.prepare(`UPDATE games SET
     scheduled_at=COALESCE(?,scheduled_at), location=COALESCE(?,location),
-    notes=COALESCE(?,notes), status=COALESCE(?,status),
+    notes=COALESCE(?,notes),
     seats=COALESCE(?,seats), game_password=COALESCE(?,game_password)
-    WHERE id=?`
-  ).bind(scheduled_at||null,location||null,notes||null,status||null,seats||null,game_password||null,gameId).run();
+    WHERE id=? AND status NOT IN ('settled','cancelled')`
+  ).bind(scheduled_at||null,location||null,notes||null,seats||null,game_password||null,gameId).run();
+  if (result.meta.changes === 0) return c.json({error:'Game state changed, reload before editing'},409);
   const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
   return c.json(updated ? clientSafeGame(updated) : null);
+});
+
+/* ── Cancel a game; settled games must first go through explicit unsettle ── */
+games.post('/games/:id/cancel', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?')
+    .bind(gameId).first<{event_id:string;status:string}>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  if (game.status === 'settled') {
+    return c.json({error:'Cannot cancel a settled game. Unsettle it first.'},409);
+  }
+  if (game.status === 'cancelled') return c.json({ok:true,status:'cancelled'});
+  const result = await c.env.DB.prepare(
+    "UPDATE games SET status='cancelled' WHERE id=? AND status IN ('scheduled','lobby','active')"
+  ).bind(gameId).run();
+  if (result.meta.changes === 0) return c.json({error:'Game state changed, reload before cancelling'},409);
+  return c.json({ok:true,status:'cancelled'});
 });
 
 /* ── Delete game (host only) ── */
@@ -185,7 +210,7 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
     if (!game) return c.json({error:'Not found'},404);
     if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-    if (game.status==='settled') return c.json({error:'Game already settled'},400);
+    if (game.status==='settled' || game.status==='cancelled') return c.json({error:'Cannot start a settled or cancelled game'},409);
     if (game.status==='active')  return c.json({error:'Game already active'},400);
     const { password } = await c.req.json().catch(()=>({password:''}));
     if (game.game_password && game.game_password !== password) return c.json({error:'Wrong password'},401);
