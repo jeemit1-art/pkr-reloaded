@@ -19,13 +19,21 @@ function harness(
   online:boolean,
   request: (path:string,options?:any)=>Promise<any>,
   snapshot: Record<string,any> = {},
+  storageWritable:boolean = true,
 ) {
+  let canPersist = storageWritable;
   const elements = new Map<string,any>();
   const listeners:Record<string,Function[]>={};
   const localStorage={
     getItem:(name:string)=>storage.get(name)||null,
-    setItem:(name:string,value:string)=>{storage.set(name,value);},
-    removeItem:(name:string)=>{storage.delete(name);},
+    setItem:(name:string,value:string)=>{
+      if(!canPersist)throw new Error('QuotaExceededError: synthetic storage unavailable');
+      storage.set(name,value);
+    },
+    removeItem:(name:string)=>{
+      if(!canPersist)throw new Error('QuotaExceededError: synthetic storage unavailable');
+      storage.delete(name);
+    },
   };
   const frame:any={
     _ctx:{gameId:'synthetic-game',userId:'synthetic-host'},
@@ -52,7 +60,7 @@ function harness(
     setTimeout:()=>0,
   };
   runInNewContext(queueCode,frame);
-  return {frame,listeners,elements};
+  return {frame,listeners,elements,setStorageWritable:(writable:boolean)=>{canPersist=writable;}};
 }
 
 describe('durable staging game sync journal',()=>{
@@ -244,6 +252,39 @@ describe('durable staging game sync journal',()=>{
     });
     game.players[0].buy_in_total=2000;
     expect(frame.prepareConflictRetry(deleting,game).canApply).toBe(false);
+  });
+
+  it('does not dispatch a financial edit when its recovery journal cannot be written',async()=>{
+    storage.clear();
+    let moneyRequests=0;
+    const h=harness(true,async(path)=>{
+      if(path==='/games/synthetic-game')return {status:'active'};
+      moneyRequests++;return {ok:true};
+    },{},false);
+    await expect(h.frame.pkrApiQueued('/games/synthetic-game/buyin/alex',{
+      method:'PUT',body:JSON.stringify({count:2,total:4000,expected_count:1,expected_total:2000}),
+    })).rejects.toThrow(/browser storage/i);
+    expect(moneyRequests).toBe(0);
+    expect(h.frame._offlineQueue).toHaveLength(1);
+    expect(storage.has(key)).toBe(false);
+    await h.frame.flushOfflineQueue();
+    expect(moneyRequests).toBe(0);
+    expect(h.frame._syncError).toMatch(/storage/i);
+    h.setStorageWritable(true);
+    await h.frame.flushOfflineQueue();
+    expect(moneyRequests).toBe(1);
+    expect(h.frame._offlineQueue).toHaveLength(0);
+  });
+
+  it('will not journal incremental money POSTs that can double-charge after a timeout',()=>{
+    storage.clear();
+    const {frame}=harness(false,async()=>({}));
+    expect(()=>frame.queueAction('/games/synthetic-game/buyin/alex',{method:'POST'}))
+      .toThrow(/retry-safe/);
+    expect(()=>frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'POST',body:JSON.stringify({cashout:2000}),
+    })).toThrow(/retry-safe/);
+    expect(storage.has(key)).toBe(false);
   });
 
   it('never queues settlement requests or cross-game mutations',()=>{

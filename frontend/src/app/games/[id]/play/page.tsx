@@ -693,9 +693,14 @@ function showConnBanner() {
 
 function queueAction(url, options, seatSid, seatName) {
   var method = (options && options.method || '').toUpperCase();
-  if (['PUT','POST','DELETE'].indexOf(method) < 0 ||
-      url.indexOf('/games/' + _ctx.gameId + '/') !== 0 ||
-      url.indexOf('/settle') >= 0) {
+  var prefix = '/games/' + _ctx.gameId + '/';
+  var route = url.indexOf(prefix) === 0 ? url.slice(prefix.length) : '';
+  // Incremental POST money updates and arbitrary game mutations cannot
+  // safely be replayed after a tab close or connectivity failure.
+  var safe = (method === 'POST' && route === 'seat') ||
+    (method === 'DELETE' && /^seat\/[^/]+$/.test(route)) ||
+    (method === 'PUT' && /^(buyin|cashout)\/[^/]+$/.test(route));
+  if (!safe) {
     throw new Error('Only game-specific, retry-safe changes can be queued');
   }
   var key = method + ':' + url + (seatSid ? ':' + seatSid : '');
@@ -727,7 +732,12 @@ function queueAction(url, options, seatSid, seatName) {
     return a.key !== key || a.id===_activeQueueId;
   });
   _offlineQueue.push(action);
-  savePendingActions();
+  if (!savePendingActions()) {
+    // Keep the action in RAM, but NEVER dispatch it without a durable journal.
+    var failure = new Error('Change not sent: browser storage could not save recovery data.');
+    failure.code = 'LOCAL_STORAGE_UNAVAILABLE';
+    throw failure;
+  }
   showConnBanner();
   return action;
 }
@@ -823,6 +833,8 @@ function prepareConflictRetry(action, game) {
 
 async function flushOfflineQueue() {
   if (_flushingQueue || _syncConflict || _offlineQueue.length === 0 || !navigator.onLine) return;
+  // Check that every pending operation is durable BEFORE any replay begins.
+  if (!savePendingActions()) return;
   _flushingQueue = true;
   _syncError = '';
   try {
@@ -867,6 +879,8 @@ async function flushOfflineQueue() {
     console.warn('Pending game sync failed; edits are retained locally:', e);
     if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
       markSyncConflict(e,_activeQueueId || (typeof inflight !== 'undefined' && inflight && inflight.id));
+    } else if (e && e.code === 'LOCAL_STORAGE_UNAVAILABLE') {
+      _syncError = 'Browser storage unavailable. Pending edits are not safe to retry. Keep this tab open.';
     } else {
       _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
     }
@@ -1136,7 +1150,9 @@ window.saveState = function() {
       }
     } catch(e) {
       console.warn('Game sync needs attention; local state retained:',e);
-      _syncError = 'An edit has not synced. Check your connection before saving results.';
+      _syncError = e && e.code === 'LOCAL_STORAGE_UNAVAILABLE'
+        ? 'Browser storage unavailable. Pending edits remain on this device; do not close the tab.'
+        : 'An edit has not synced. Check your connection before saving results.';
       showConnBanner();
     }
   });

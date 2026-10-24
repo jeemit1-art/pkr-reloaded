@@ -497,18 +497,14 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   return c.json({ok:true,cashout});
 });
 
+// Legacy incremental buy-in is deliberately fail-closed: a duplicated request
+// after an HTTP timeout must never charge or count a second buy-in.
+// Use the conditional absolute PUT endpoint, with original values, instead.
 games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
-  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
-  if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled' || game.status==='cancelled') {
-    return c.json({error:'Cannot edit a settled or cancelled game'},409);
-  }
-  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  await c.env.DB.prepare('UPDATE game_players SET buy_ins=buy_ins+1 WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
-  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
-  return c.json({ok:true, players:players.results});
+  return c.json({
+    error:'Unprotected incremental buy-ins are disabled. Refresh the app and use the guarded buy-in update.',
+    code:'PRECONDITION_REQUIRED',
+  },428);
 });
 
 games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {

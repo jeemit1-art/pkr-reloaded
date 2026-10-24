@@ -114,6 +114,18 @@ describe('atomic compare-and-swap for financial edits',()=>{
     expect(f.sqls.some(sql=>sql.includes('cashout IS ?'))).toBe(true);
   });
 
+  it('rejects legacy incremental POST buy-ins without altering the ledger',async()=>{
+    const f=fixture();
+    const existing=f.player.buy_ins;
+    const a=await games.request(buyUrl,post({}),f.env,execution);
+    const b=await games.request(buyUrl,post({}),f.env,execution);
+    expect(a.status).toBe(428);
+    expect(b.status).toBe(428);
+    expect(await a.json()).toMatchObject({code:'PRECONDITION_REQUIRED'});
+    expect(f.player.buy_ins).toBe(existing);
+    expect(f.getWrites()).toBe(0);
+  });
+
   it('legacy POST cash-out cannot overwrite a figure entered by another host',async()=>{
     const f=fixture();
     expect((await games.request(cashUrl,post({cashout:3000}),f.env,execution)).status).toBe(200);

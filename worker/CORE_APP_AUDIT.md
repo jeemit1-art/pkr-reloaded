@@ -17,7 +17,7 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Access permissions | Co-host/host-only financial mutations, authenticated transfer changes, restrict generic status transitions | Route-level mocked-D1 tests |
 | Client data exposure | Omit event PIN hashes and game passwords; redact WhatsApp contacts from unauthenticated RSVP/lobby responses | Client response tests and public RSVP tests |
 | Cash game settlement | Reject unbalanced outcomes and invalid cents, scope idempotency to game, prevent duplicate paid status changes | Settlement conservation/property tests and API-level tests |
-| Concurrent money edits | Atomic value-based guards for exact buy-ins and cash-outs; legacy cash-out POST is first-write-only and cannot overwrite an existing figure; conflict responses retain local journal and pause replay | Staging Worker concurrent route tests and browser journal tests |
+| Concurrent money edits | Atomic value-based guards for exact buy-ins and cash-outs; unprotected incremental buy-in POST is disabled; legacy cash-out POST is first-write-only; pending conflicts retain their journal and pause replay | Staging Worker financial route and browser journal tests |
 | Player seat protection | Conditional seat moves and atomic first-seat claims; prevent deleting a player with buy-ins, cash-outs or recorded hand history | Staging-only route concurrency tests |
 | Conflict review UI | Pending edits survive refresh, hosts compare local versus server values, and explicit retries use fresh expected-value guards; occupied seats and monetary-history deletion cannot be overridden | Browser queue regression tests and review-action tests |
 | Hand actions | Atomic action insert/undo and pot recalculation, deterministic same-second action ordering, protect finished hands and games | Hand action transaction and undo tests |
@@ -25,14 +25,14 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Side pots | Use the same accounting function for winner selection and display, include folded contributions | Chip conservation and side-pot fixture tests |
 | Hand result history | Persist individual side-pot allocations through existing result JSON without a migration; preserve historic result formats | Serialization and hand-route round-trip tests |
 | Hand tracker UI | Render dynamic player/winner names as text, not injected HTML | Browser script parse gate |
-| Recovery | Per-game hand sessions, durable browser journal of unsynced seat/money changes; absolute retry-safe buy-in updates, stop sync on closed game | Offline journal replay, refresh and closed-game tests |
+| Recovery | Per-game hand sessions; journaled seat/money changes; block financial network mutations when browser storage fails, and replay only after journal is persisted; stop sync on closed game | Offline journal persistence, denied-storage, recovery and closed-game tests |
 | Deployment safeguards | Staging-only Worker/D1/KV bindings, 222 SQL statement compatibility checks, typecheck, unit tests, live read-only staging smoke and browser syntax | GitHub staging-isolation CI |
 
 Run logs are available in GitHub Actions; test count grows with each change.
 
 ## Important unresolved blockers — do not release yet
 
-1. **Multi-device concurrent editing.** Conditional buy-in/cash-out writes and seat changes now reject stale values. Seat removal also protects money and hand history. Offline conflicts remain retained. **Still open:** monotonic revisions (ABA is not detected), RSVP auto-seating, a complete manual conflict-resolution UI, legacy buy-in increments and mobile/offline verification. Do not release until these are addressed.
+1. **Multi-device concurrent editing.** Conditional buy-in/cash-out writes and seat changes now reject stale values. Seat removal also protects money and hand history. Offline conflicts remain retained. Incremental POST buy-ins are now explicitly rejected; client helpers use guarded PUT. **Still open:** monotonic revisions (ABA is not detected), RSVP auto-seating, a complete manual conflict-resolution UI and mobile/offline verification. Do not release until these are addressed.
 2. **Offline browser lifecycle.** Journal uses localStorage, not a guaranteed durable offline database. Browser storage can be cleared or unavailable; page reload while offline may require connectivity to load the app. Validate realistic mobile/PWA recovery, storage exceptions, and network interruptions before release.
 3. **Complex poker hand rules.** Need focused tests and design decisions for uncalled overbets returned to the bettor, short all-in minimum-raise rules, odd-chip division in split pots and tournament payout/clock edge cases. The current side-pot tests verify contribution accounting, not exhaustive poker rule compliance.
 4. **Hand server validation.** The server validates street/action/chips, but complete legal-turn and stack-limit validation is not implemented. The UI computes turn order; a malicious client can still submit legal-shaped but strategically illegal hand actions.

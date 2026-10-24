@@ -107,9 +107,12 @@ export const api = {
     removeSeat:(id:string,userId:string,expectedSeatNumber:number|null) =>
       req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{
         method:'DELETE',body:JSON.stringify({expected_seat_number:expectedSeatNumber})}),
-    buyin:    (id:string,userId:string)  => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/buyin/${userId}`,{method:'POST'}),
-    cashout:  (id:string,userId:string,cashout:number) =>
-      req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/cashout/${userId}`,{method:'POST',body:JSON.stringify({cashout})}),
+    buyin:    (id:string,userId:string,values:{
+      count:number;total:number;expected_count:number;expected_total:number
+    }) => req<{ok:boolean;buy_ins:number;buy_in_total:number}>(`/games/${id}/buyin/${userId}`,{method:'PUT',body:JSON.stringify(values)}),
+    cashout:  (id:string,userId:string,cashout:number|null,expectedCashout:number|null) =>
+      req<{ok:boolean;cashout:number|null}>(`/games/${id}/cashout/${userId}`,{
+        method:'PUT',body:JSON.stringify({cashout,expected_cashout:expectedCashout})}),
     markPaid: (token:string,tid:string) => pub<{ok:boolean}>(`/games/results/${token}/transfers/${tid}/paid`,{method:'POST'}),
     setTransferStatus: (gameId:string,tid:string,status:'owed'|'paid'|'not_received') => req<{ok:boolean}>(`/games/${gameId}/transfers/${tid}/status`,{method:'PUT',body:JSON.stringify({status})}),
     unsettle: (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/unsettle`,{method:'POST'}),
