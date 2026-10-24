@@ -791,7 +791,7 @@ function nextDealerName(){
 }
 
 function calculateSidePots(actions,seated){
-  if(!seated||!seated.length)return[];
+  if(!Array.isArray(actions)||!Array.isArray(seated)||!seated.length)return[];
   var folded={};
   actions.forEach(function(a){if(a.action==='fold')folded[a.display_name]=true;});
   var total={};
@@ -2092,24 +2092,10 @@ function renderStreetLog(body, actions, street) {
 
 // --- SIDE POT DISPLAY ---
 function computeSidePots(actions, seated) {
-  var folded = {}, contrib = {};
-  seated.forEach(function(p){ contrib[p.name] = 0; });
-  actions.forEach(function(a){ if (a.action === 'fold') folded[a.display_name] = true; if (a.chips > 0) contrib[a.display_name] = (contrib[a.display_name]||0) + a.chips; });
-  var allinPlayers = [];
-  actions.forEach(function(a){ if (a.action === 'allin' && allinPlayers.indexOf(a.display_name) < 0) allinPlayers.push(a.display_name); });
-  if (!allinPlayers.length) return [];
-  var levels = allinPlayers.map(function(n){ return contrib[n]||0; }).filter(function(v,i,arr){ return arr.indexOf(v)===i; }).sort(function(a,b){ return a-b; });
-  var pots = [], prev = 0;
-  levels.forEach(function(level){
-    var pot = 0, eligible = [];
-    seated.forEach(function(p){ if (folded[p.name]) return; var c = contrib[p.name]||0; pot += Math.min(c, level) - Math.min(c, prev); if (c >= level) eligible.push(p.name); });
-    if (pot > 0) pots.push({ chips: pot, eligible: eligible, label: 'Side pot '+(pots.length+1) });
-    prev = level;
-  });
-  var mainPot = 0;
-  seated.forEach(function(p){ mainPot += Math.max(0, (contrib[p.name]||0) - prev); });
-  if (mainPot > 0) { var mainElig = seated.filter(function(p){ return !folded[p.name]; }).map(function(p){ return p.name; }); pots.push({ chips: mainPot, eligible: mainElig, label: 'Main pot' }); }
-  return pots;
+  // The live overlay, side-pot summary and winner assignment MUST use the
+  // same calculation. In particular, a folded player's chips still belong
+  // to the pot even though the folded player is ineligible to win.
+  return calculateSidePots(actions, seated);
 }
 
 function renderSidePots(body, actions, seated) {
