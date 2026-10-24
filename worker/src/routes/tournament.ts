@@ -39,50 +39,105 @@ tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const state = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
-  if (!state) return c.json({ error: 'Tournament not set up' }, 400);
-  const now = Math.floor(Date.now() / 1000);
-  const players = await c.env.DB.prepare("SELECT COUNT(*) as cnt FROM game_players WHERE game_id=? AND buy_ins>0").bind(gameId).first<{cnt:number}>();
-  const totalChips = (players?.cnt || 0) * (state.starting_chips || 10000);
-  await c.env.DB.prepare("UPDATE tournament_state SET status='running',started_at=?,level_started_at=?,current_level=1,total_chips_in_play=? WHERE game_id=?").bind(now,now,totalChips,gameId).run();
-  const level = await c.env.DB.prepare('SELECT * FROM tournament_levels WHERE game_id=? AND level_num=1').bind(gameId).first<any>();
-  return c.json({ ok: true, level, total_chips_in_play: totalChips });
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const state=await c.env.DB.prepare(
+    'SELECT * FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<any>();
+  if(!state)return c.json({error:'Tournament not set up'},400);
+  if(state.status!=='setup')return c.json({
+    error:'Tournament has already started or is no longer in setup.',
+    code:'TOURNAMENT_STATE_CONFLICT',
+  },409);
+  const level=await c.env.DB.prepare(
+    'SELECT * FROM tournament_levels WHERE game_id=? AND level_num=1'
+  ).bind(gameId).first<any>();
+  if(!level)return c.json({error:'Configure at least one initial level'},400);
+  const playerCount=await c.env.DB.prepare(
+    'SELECT COUNT(*) AS cnt FROM game_players WHERE game_id=? AND buy_ins>0'
+  ).bind(gameId).first<{cnt:number}>();
+  const count=playerCount?.cnt||0;
+  const chips=count*state.starting_chips;
+  if(!Number.isSafeInteger(count)||count<2||
+     !Number.isSafeInteger(chips)||chips<=0)
+    return c.json({error:'At least two registered players and valid chip totals are required.'},400);
+  const now=Math.floor(Date.now()/1000);
+  const result=await c.env.DB.prepare(
+    "UPDATE tournament_state SET status='running',started_at=?,level_started_at=?,"+
+    "current_level=1,total_chips_in_play=? WHERE game_id=? AND status='setup'"
+  ).bind(now,now,chips,gameId).run();
+  if(!result.meta.changes)return c.json({
+    error:'Another host started the tournament first.',code:'TOURNAMENT_STATE_CONFLICT',
+  },409);
+  return c.json({ok:true,level,total_chips_in_play:chips,level_started_at:now});
 });
 
 tournament.post('/games/:id/tournament/next-level', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const state = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
-  if (!state || state.status !== 'running') return c.json({ error: 'Tournament not running' }, 400);
-  const now = Math.floor(Date.now() / 1000);
-  const nextLevel = (state.current_level || 1) + 1;
-  const level = await c.env.DB.prepare('SELECT * FROM tournament_levels WHERE game_id=? AND level_num=?').bind(gameId, nextLevel).first<any>();
-  if (!level) return c.json({ error: 'No more levels' }, 400);
-  await c.env.DB.prepare('UPDATE tournament_state SET current_level=?,level_started_at=? WHERE game_id=?').bind(nextLevel, now, gameId).run();
-  return c.json({ ok: true, level, current_level: nextLevel });
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const state=await c.env.DB.prepare(
+    'SELECT * FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<any>();
+  if(!state||state.status!=='running')
+    return c.json({error:'Tournament is not running'},409);
+  const nextLevel=state.current_level+1;
+  const level=await c.env.DB.prepare(
+    'SELECT * FROM tournament_levels WHERE game_id=? AND level_num=?'
+  ).bind(gameId,nextLevel).first<any>();
+  if(!level)return c.json({error:'No more levels'},400);
+  const now=Math.floor(Date.now()/1000);
+  const result=await c.env.DB.prepare(
+    "UPDATE tournament_state SET current_level=?,level_started_at=? "+
+    "WHERE game_id=? AND status='running' AND current_level=?"
+  ).bind(nextLevel,now,gameId,state.current_level).run();
+  if(!result.meta.changes)return c.json({
+    error:'Another host has already changed the tournament level.',
+    code:'TOURNAMENT_STATE_CONFLICT',
+  },409);
+  return c.json({ok:true,level,current_level:nextLevel,level_started_at:now});
 });
 
 tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const state = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
-  if (!state) return c.json({ error: 'Not found' }, 404);
-  const now = Math.floor(Date.now() / 1000);
-  const { paused_elapsed } = await c.req.json() as any;
-  if (state.status === 'running') {
-    await c.env.DB.prepare("UPDATE tournament_state SET status='paused',paused_elapsed=? WHERE game_id=?").bind(paused_elapsed||0, gameId).run();
-    return c.json({ ok: true, status: 'paused' });
-  } else if (state.status === 'paused') {
-    const newStart = now - (state.paused_elapsed || 0);
-    await c.env.DB.prepare("UPDATE tournament_state SET status='running',level_started_at=?,paused_elapsed=0 WHERE game_id=?").bind(newStart, gameId).run();
-    return c.json({ ok: true, status: 'running' });
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const state=await c.env.DB.prepare(
+    'SELECT * FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<any>();
+  if(!state)return c.json({error:'Tournament not found'},404);
+  const now=Math.floor(Date.now()/1000);
+  if(state.status==='running'){
+    // Never trust client-supplied elapsed time: use the Worker clock.
+    const elapsed=Math.max(0,Math.min(86400,now-(state.level_started_at||now)));
+    const result=await c.env.DB.prepare(
+      "UPDATE tournament_state SET status='paused',paused_elapsed=? "+
+      "WHERE game_id=? AND status='running' AND current_level=? AND level_started_at IS ?"
+    ).bind(elapsed,gameId,state.current_level,state.level_started_at).run();
+    if(!result.meta.changes)return c.json({
+      error:'Tournament clock changed on another device.',code:'TOURNAMENT_STATE_CONFLICT',
+    },409);
+    return c.json({ok:true,status:'paused',paused_elapsed:elapsed});
   }
-  return c.json({ error: 'Cannot toggle' }, 400);
+  if(state.status==='paused'){
+    const newStart=now-Math.max(0,state.paused_elapsed||0);
+    const result=await c.env.DB.prepare(
+      "UPDATE tournament_state SET status='running',level_started_at=?,paused_elapsed=0 "+
+      "WHERE game_id=? AND status='paused' AND current_level=?"
+    ).bind(newStart,gameId,state.current_level).run();
+    if(!result.meta.changes)return c.json({
+      error:'Tournament clock changed on another device.',code:'TOURNAMENT_STATE_CONFLICT',
+    },409);
+    return c.json({ok:true,status:'running',level_started_at:newStart});
+  }
+  return c.json({error:'Tournament has not started'},409);
 });
 
 // The client's durable idempotency key prevents charging a player twice
