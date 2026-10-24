@@ -22,6 +22,7 @@ vi.mock('../push', () => ({
 
 import games from './games';
 import events from './events';
+import payments from './payments';
 
 function fixture(status: string = 'active', cached?: { game_id: string; payload_json: string }) {
   const writes: string[] = [];
@@ -58,6 +59,9 @@ function fixture(status: string = 'active', cached?: { game_id: string; payload_
             },
             async run(): Promise<any> {
               writes.push(sql);
+              if (sql.startsWith('UPDATE settlement_transfers') && _params[2] === 'missing') {
+                return {meta:{changes:0}};
+              }
               if (sql.includes("SET status='cancelled'")) game.status = 'cancelled';
               return {meta:{changes:1}};
             },
@@ -168,5 +172,31 @@ describe('game status and settlement protection', () => {
     expect(response.status).toBe(409);
     expect(JSON.stringify(await response.json())).not.toContain(secret);
     expect(f.getBatchCalls()).toBe(0);
+  });
+});
+
+
+describe('payment acknowledgement integrity', () => {
+  it('never marks transfers paid when the game has not been settled', async () => {
+    const f = fixture('active');
+    const response = await payments.request('https://test.invalid/games/game/transfers/t1/status',
+      json('PUT',{status:'paid'}), f.env);
+    expect(response.status).toBe(409);
+    expect(f.writes).toEqual([]);
+  });
+
+  it('allows a host to mark an existing settled-game transfer paid', async () => {
+    const f = fixture('settled');
+    const response = await payments.request('https://test.invalid/games/game/transfers/t1/status',
+      json('PUT',{status:'paid'}), f.env);
+    expect(response.status).toBe(200);
+    expect(f.writes).toHaveLength(1);
+  });
+
+  it('returns not found rather than false success for a nonexistent transfer', async () => {
+    const f = fixture('settled');
+    const response = await payments.request('https://test.invalid/games/game/transfers/missing/status',
+      json('PUT',{status:'paid'}), f.env);
+    expect(response.status).toBe(404);
   });
 });
