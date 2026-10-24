@@ -829,8 +829,11 @@ function calculateSidePots(actions,seated){
   actions.forEach(function(a){if(a.action==='allin')allinAt[a.display_name]=total[a.display_name];});
   if(!Object.keys(allinAt).length)return[];
   var levels=Object.values(allinAt).filter(function(v,i,arr){return arr.indexOf(v)===i;}).sort(function(a,b){return a-b;});
-  var mx=Math.max.apply(null,Object.values(total).concat([0]));
-  if(levels.indexOf(mx)<0)levels.push(mx);
+  // A unique unmatched top wager is returned, not awarded as a side pot.
+  var uncalled=calculateUncalledReturn(actions,seated);
+  var mx=Math.max.apply(null,Object.values(total).concat([0]))-(uncalled?uncalled.chips:0);
+  levels=levels.filter(function(level){return level>0&&level<mx;});
+  if(mx>0&&levels.indexOf(mx)<0)levels.push(mx);
   var pots=[],prev=0;
   levels.forEach(function(level){
     if(level<=prev)return;
@@ -847,6 +850,20 @@ function calculateSidePots(actions,seated){
   if(pots.length===1)pots[0].label='Main Pot';
   else{pots[0].label='Main Pot';for(var i=1;i<pots.length;i++)pots[i].label='Side Pot '+i;}
   return pots;
+}
+
+function calculateUncalledReturn(actions,seated) {
+  if(!Array.isArray(actions)||!Array.isArray(seated)||seated.length<2)return null;
+  var totals={};
+  seated.forEach(function(p){totals[p.name]=0;});
+  actions.forEach(function(action) {
+    if(action.chips>0&&Object.prototype.hasOwnProperty.call(totals,action.display_name))
+      totals[action.display_name]+=action.chips;
+  });
+  var amounts=Object.keys(totals).map(function(name){return {name:name,chips:totals[name]};})
+    .sort(function(a,b){return b.chips-a.chips;});
+  if(amounts.length<2||amounts[0].chips<=amounts[1].chips)return null;
+  return {display_name:amounts[0].name,chips:amounts[0].chips-amounts[1].chips};
 }
 
 // --- DEALER CHIP ON FELT ---
@@ -2160,6 +2177,7 @@ function computeSidePots(actions, seated) {
 function renderSidePots(body, actions, seated) {
   var pots = computeSidePots(actions, seated);
   if (!pots.length) return;
+  var uncalled = calculateUncalledReturn(actions,seated);
   var cv = gameInfo().chip_value||0;
   var wrap = document.createElement('div');wrap.style.cssText = 'margin:6px 0;padding:6px 10px;background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-radius:7px';
   var lbl = document.createElement('div');lbl.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px';lbl.textContent = 'Side pots';wrap.appendChild(lbl);
@@ -2169,6 +2187,12 @@ function renderSidePots(body, actions, seated) {
     var right = document.createElement('span');right.style.color = 'var(--green)';right.textContent = pot.chips + ' chips' + (cv ? ' ($'+(pot.chips*cv/100).toFixed(2)+')' : '');
     row.appendChild(left);row.appendChild(right);wrap.appendChild(row);
   });
+  if(uncalled){
+    var returned=document.createElement('div');
+    returned.style.cssText='font-size:0.72rem;color:var(--gold);margin-top:5px';
+    returned.textContent='Uncalled: '+uncalled.chips+' chips returned to '+uncalled.display_name;
+    wrap.appendChild(returned);
+  }
   body.appendChild(wrap);
 }
 

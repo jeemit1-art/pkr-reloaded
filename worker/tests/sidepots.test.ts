@@ -16,13 +16,14 @@ if ([mainStart,mainEnd,secondStart,secondEnd].some(x=>x<0)) {
 const sandbox:any = {};
 runInNewContext(
   js.slice(mainStart,mainEnd) + '\n' + js.slice(secondStart,secondEnd)
-  + '\nthis.winnerPots=calculateSidePots;this.displayPots=computeSidePots;',
+  + '\nthis.winnerPots=calculateSidePots;this.displayPots=computeSidePots;this.uncalled=calculateUncalledReturn;',
   sandbox,
 );
 const calc = (actions:any[],seated:any[]) =>
   JSON.parse(JSON.stringify(sandbox.winnerPots(actions,seated))) as Array<{chips:number;eligible:string[];label:string}>;
 const displayed = (actions:any[],seated:any[]) =>
   JSON.parse(JSON.stringify(sandbox.displayPots(actions,seated))) as Array<{chips:number;eligible:string[];label:string}>;
+const refund = (actions:any[],seated:any[]) => sandbox.uncalled(actions,seated) as {display_name:string;chips:number}|null;
 const seat = (...names:string[]) => names.map(name=>({name}));
 const act = (display_name:string, action:string, chips:number) => ({display_name,action,chips,street:'pre'});
 
@@ -64,6 +65,14 @@ describe('live hand tracking: one accurate side-pot model',()=>{
     expect(displayed(actions,seated)).toEqual(pots);
   });
 
+  it('returns the excess final wager and excludes it from side-pot winners',()=>{
+    const seated=seat('A','B','C');
+    const actions=[act('A','allin',50),act('B','allin',100),act('C','call',150)];
+    expect(refund(actions,seated)).toEqual({display_name:'C',chips:50});
+    expect(calc(actions,seated).map(p=>p.chips)).toEqual([150,100]);
+    expect(displayed(actions,seated)).toEqual(calc(actions,seated));
+  });
+
   it('conserves every contributed chip for deterministic random all-in tables',()=>{
     let seed=20261024;
     const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/2**32);
@@ -77,7 +86,7 @@ describe('live hand tracking: one accurate side-pot model',()=>{
       });
       const pots=calc(actions,seated);
       const sum=amounts.reduce((a,b)=>a+b,0);
-      expect(pots.reduce((a,p)=>a+p.chips,0)).toBe(sum);
+      expect(pots.reduce((a,p)=>a+p.chips,0)+(refund(actions,seated)?.chips||0)).toBe(sum);
       expect(displayed(actions,seated)).toEqual(pots);
       pots.forEach(p=>expect(p.chips).toBeGreaterThan(0));
     }
