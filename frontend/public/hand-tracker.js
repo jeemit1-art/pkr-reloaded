@@ -329,6 +329,7 @@ function computeNextPlayer(street, actions, hand) {
     var h=(hands||[]).find(function(item){return !item.voided;});
     if (h) {
       hs.hand=h; hs.actions=h.actions||[]; hs.pot=h.pot_chips||0; hs.board=h.board||[];
+      hs._awaitingStackGate=!h.result&&h.mode==='full'&&!hs.actions.some(function(a){return a.action==='post'&&a.display_name===getSeated().find(function(p){return p.seat===h.bb_seat;})?.name;});
       hs.straddleSeat=null;
       if (h.straddle) {
         var sa=(h.actions||[]).find(function(a){return a.action==='straddle';});
@@ -336,7 +337,7 @@ function computeNextPlayer(street, actions, hand) {
       }
       try { hs.holes=h.result&&h.result.hole_cards?JSON.parse(typeof h.result.hole_cards==='string'?h.result.hole_cards:JSON.stringify(h.result.hole_cards)):{};} catch(e){hs.holes={};}
     }
-    if(!h){hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};}
+    if(!h){hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};hs._awaitingStackGate=false;}
     renderBoardOnFelt();
   }).catch(function(e){console.warn('loadCurrentHand:',e.message);});
 }
@@ -508,9 +509,83 @@ window.htConfirmStart = function(straddleSeat) {
     hs.potWinners=[]; hs.currentPotIndex=0; hs._autoCardMode=null; hs._lastHandSummary=null;
     hs.view='main'; hs.straddleSeat=straddleSeat||null; hs._pendingHand=null; saveSession();
     hs.history.unshift(h);
-    autoPost(h,getSeated(),straddleSeat,function(){renderBody();renderBoardOnFelt();});
-    toast('Hand #'+h.hand_no+' started');
+    hs._awaitingStackGate=true;
+    toast('Hand #'+h.hand_no+' created. Confirm actual opening chips where required.');
+    window.htResumeBlindPosts();
   }).catch(function(e){toast('\u26A0 '+e.message);});
+};
+
+// Existing hand stacks must be physically counted. No dollar-to-chip inference.
+function htConfirmOpeningStacks(hand) {
+  return htApi('/games/'+getGameId()+'/hands/'+hand.id+'/stack-baseline')
+    .then(function(response){
+      if(!response.enabled||response.confirmed)return true;
+      var players=response.players||[],opening=[];
+      if(players.length<2||!window.prompt||!window.confirm)
+        throw new Error('A complete physical chip count is required before betting.');
+      for(var index=0;index<players.length;index++){
+        var p=players[index];
+        var raw=window.prompt('Count chips for '+p.display_name+
+          ' (seat '+p.seat_number+'):', '');
+        if(raw===null)return false;
+        var chips=Number(raw.trim());
+        if(!raw.trim()||!Number.isSafeInteger(chips)||chips<=0){
+          toast('Opening stacks must be positive whole-chip counts. Nothing was posted.');
+          return false;
+        }
+        opening.push({user_id:p.user_id,display_name:p.display_name,
+          seat_number:p.seat_number,opening_chips:chips});
+      }
+      var list=opening.map(function(p){
+        return p.display_name+': '+p.opening_chips+' chips';
+      }).join('\n');
+      if(!window.confirm('Confirm physically verified opening chips:\n'+list+
+        '\nThese hand baselines cannot be edited once saved.'))return false;
+      return htApi('/games/'+getGameId()+'/hands/'+hand.id+'/confirm-stacks',{
+        method:'POST',body:JSON.stringify({verified:true,opening_stacks:opening}),
+      }).then(function(r){return r.confirmed===true;});
+    }).catch(function(error){
+      toast('Unable to confirm stacks: '+error.message);
+      return false;
+    });
+}
+function htFindStraddler(hand,seated){
+  if(!hand.straddle)return null;
+  if(hs.straddleSeat&&seated.some(function(p){return p.seat===hs.straddleSeat}))
+    return hs.straddleSeat;
+  var ring=buildClockwiseOrder(gameInfo().seats||9).filter(function(seat){
+    return seated.some(function(p){return p.seat===seat;});
+  });
+  var index=ring.indexOf(hand.bb_seat);
+  return index>=0&&ring.length>2?ring[(index+1)%ring.length]:null;
+}
+window.htResumeBlindPosts=function(){
+  if(!hs.hand||hs.hand.result||hs._stackConfirming||hs._autoPosting)return;
+  // Never resume once voluntary betting has begun.
+  if(hs.actions.some(function(a){
+    return a.action!=='post'&&a.action!=='straddle';
+  })){toast('Betting has already started; blind recovery is unavailable.');return;}
+  var hand=hs.hand;
+  hs._stackConfirming=true;
+  htConfirmOpeningStacks(hand).then(function(approved){
+    hs._stackConfirming=false;
+    if(!approved){
+      hs._awaitingStackGate=true;
+      renderBody();return;
+    }
+    if(!hs.hand||hs.hand.id!==hand.id)return;
+    var seated=getSeated(),straddleSeat=htFindStraddler(hand,seated);
+    if(hand.straddle&&!straddleSeat){
+      toast('Straddle position could not be verified. Check seats before posting.');
+      hs._awaitingStackGate=true;renderBody();return;
+    }
+    hs._awaitingStackGate=false;
+    hs._autoPosting=true;
+    renderBody();
+    autoPost(hand,seated,straddleSeat,function(){
+      hs._autoPosting=false;renderBody();renderBoardOnFelt();
+    });
+  });
 };
 
 function autoPost(hand,seated,straddleSeat,cb) {
@@ -525,9 +600,21 @@ function autoPost(hand,seated,straddleSeat,cb) {
   function doPost(i){
     if(i>=posts.length){cb&&cb();return;}
     var po=posts[i];
+    var already=hs.actions.find(function(a){
+      return a.display_name===po.name&&a.action===po.action;
+    });
+    if(already){
+      if(already.chips!==po.chips){
+        hs._autoPosting=false;
+        toast('Existing blind differs from the current settings. Review the hand.');
+        loadCurrentHand().then(function(){renderBody();});return;
+      }
+      doPost(i+1);return;
+    }
     htApi('/games/'+getGameId()+'/hands/'+hand.id+'/actions',{method:'POST',
       body:JSON.stringify({user_id:po.userId||null,display_name:po.name,street:'pre',action:po.action,chips:po.chips}),
     }).then(function(r){hs.actions=r.actions;hs.pot=r.pot_chips;doPost(i+1);}).catch(function(e){
+      hs._autoPosting=false;hs._awaitingStackGate=true;
       toast('Blind post was not saved: '+e.message+'. Review the hand before betting.');
       loadCurrentHand().then(function(){renderBody();renderBoardOnFelt();});
     });
@@ -1583,6 +1670,19 @@ function renderMain(body){
     sb2.addEventListener('click',window.htStartHand);
     body.appendChild(sb2);
     appendLiveCardsToggle(body);
+    return;
+  }
+
+  if(hs._awaitingStackGate){
+    body.appendChild(infoBox(
+      'Opening blinds are not fully recorded. Confirm physical stacks where required and resume.',
+      'rgba(201,168,76,0.08)','rgba(201,168,76,0.25)','var(--gold)'
+    ));
+    var resume=mkB('Confirm stacks / resume blinds',
+      'width:100%;padding:12px;margin-bottom:12px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);border-radius:8px',
+      window.htResumeBlindPosts);
+    resume.disabled=!!hs._stackConfirming||!!hs._autoPosting;
+    body.appendChild(resume);
     return;
   }
 
