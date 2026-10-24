@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { Env, SettleRequest, Transfer } from '../types';
 import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { sendPushToEvent, sendPushToPlayer } from '../push';
-import { minimumTransfers } from '../settle';
+import { minimumTransfers, prepareSettlementPositions, SettlementValidationError } from '../settle';
 import { clientSafeGame } from '../public-data';
 
 const games = new Hono<{ Bindings: Env }>();
@@ -412,26 +412,32 @@ games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
 
 games.post('/games/:id/settle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
-  const body: SettleRequest = await c.req.json();
+  const body = await c.req.json().catch(() => null) as SettleRequest | null;
+  if (!body || typeof body !== 'object') return c.json({error:'Invalid settlement request'},400);
   const { idempotency_key, results } = body;
-  if (!idempotency_key) return c.json({error:'idempotency_key required'},400);
-  if (!results?.length)  return c.json({error:'results required'},400);
-  const seen = new Set<string>();
-  for (const r of results as any[]) {
-    const nm = String(r.display_name||'').trim().toLowerCase();
-    if (!nm || seen.has(nm)) return c.json({error:`Duplicate or missing player name: ${r.display_name||'(blank)'}`},400);
-    seen.add(nm);
-    r.cashout = Math.round(r.cashout||0);
-    if (r.buy_in_total != null) r.buy_in_total = Math.round(r.buy_in_total);
-    if (r.cashout < 0 || (r.buy_in_total != null && r.buy_in_total < 0)) return c.json({error:`Negative amount for ${r.display_name}`},400);
+  if (typeof idempotency_key !== 'string' || !idempotency_key.trim() || idempotency_key.length > 200) {
+    return c.json({error:'A valid idempotency_key is required'},400);
+  }
+  if (!Array.isArray(results) || results.length < 2) {
+    return c.json({error:'At least two player results are required'},400);
   }
 
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
 
+  // Scope idempotency to this game, and only reveal cached results to its host/cohost.
+  // A key reused for another game must never expose that game's private payload.
+  const cached = await c.env.DB.prepare(
+    'SELECT game_id,payload_json FROM settlements WHERE idempotency_key=?'
+  ).bind(idempotency_key).first<{game_id:string;payload_json:string}>();
+  if (cached && cached.game_id !== gameId) {
+    return c.json({error:'Idempotency key has already been used for a different game'},409);
+  }
   if (game.status === 'settled') {
-    const existing = await c.env.DB.prepare('SELECT * FROM settlements WHERE game_id=?').bind(gameId).first<any>();
+    if (cached) return c.json({...JSON.parse(cached.payload_json),cached:true});
+    const existing = await c.env.DB.prepare('SELECT id,created_at FROM settlements WHERE game_id=?')
+      .bind(gameId).first<{id:string;created_at:number}>();
     return c.json({
       error:'Game already settled',
       already_settled: true,
@@ -439,22 +445,27 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
       settled_at: existing?.created_at,
     }, 409);
   }
+  if (game.status === 'cancelled') {
+    return c.json({error:'Cannot settle a cancelled game'},409);
+  }
+  if (cached) return c.json({error:'Previous settlement state must be reviewed'},409);
 
-  const cached = await c.env.DB.prepare('SELECT payload_json FROM settlements WHERE idempotency_key=?')
-    .bind(idempotency_key).first<{payload_json:string}>();
-  if (cached) return c.json({...JSON.parse(cached.payload_json), cached:true});
-
-  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
-  const eventBuyIn = eventData?.buy_in || 0;
-  const positions = results.map((p:any) => ({
-    ...p,
-    net: (p.buy_in_total != null && p.buy_in_total > 0) ? (p.cashout||0) - p.buy_in_total : ((p.cashout||0) - (p.buy_ins * eventBuyIn)),
-  }));
-  const transfers  = minimumTransfers(positions);
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?')
+    .bind(game.event_id).first<{buy_in:number}>();
+  let positions;
+  let variance;
+  try {
+    ({ positions, variance } = prepareSettlementPositions(results, eventData?.buy_in ?? 0));
+  } catch (error) {
+    if (error instanceof SettlementValidationError) {
+      return c.json({ error: error.message, ...error.detail }, error.status);
+    }
+    throw error;
+  }
+  const transfers = minimumTransfers(positions);
   const sid = generateId();
   const now = Math.floor(Date.now()/1000);
   const resultsToken = generateId();
-  const variance = positions.reduce((s:number,p:any)=>s+Math.round(p.net||0),0);
   const carried = (await c.env.DB.prepare('SELECT from_user,to_user,amount,paid_at FROM paid_carryover WHERE game_id=?').bind(gameId).all<any>()).results;
   const paidAt = (t:any) => { const m = carried.find((x:any)=>x.from_user===t.from && x.to_user===t.to && x.amount===t.amount); return m ? (m.paid_at||now) : null; };
   const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, variance, settled_at:now, results_token:resultsToken };
