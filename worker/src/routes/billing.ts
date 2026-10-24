@@ -215,28 +215,54 @@ billing.post('/webhook', async (c) => {
 });
 
 // ── Stripe webhook signature verification ─────────────────────────────────────
-async function verifyStripeSignature(
+/**
+ * Validate the raw Stripe webhook body, with Stripe's 300-second freshness
+ * tolerance and cryptographic HMAC verification (instead of a string equality
+ * comparison). Accept multiple v1 signatures to support secret rotation.
+ *
+ * This only authenticates a delivery. Persistent event-ID deduplication and
+ * subscription-state ordering require a separate transactional work item.
+ */
+export async function verifyStripeSignature(
   payload: string,
   header: string,
-  secret: string
+  secret: string,
+  nowMs: number = Date.now(),
 ): Promise<boolean> {
   try {
-    const parts = Object.fromEntries(header.split(',').map(p => p.split('=')));
-    const timestamp = parts.t;
-    const sig = parts.v1;
-    if (!timestamp || !sig) return false;
+    if (!secret || !header) return false;
+    let timestampString = '';
+    const signatures: string[] = [];
+    for (const part of header.split(',')) {
+      const separator = part.indexOf('=');
+      if (separator === -1) continue;
+      const name = part.slice(0, separator).trim();
+      const value = part.slice(separator + 1).trim();
+      if (name === 't') timestampString = value;
+      if (name === 'v1') signatures.push(value);
+    }
+    if (!/^\d{1,12}$/.test(timestampString) || signatures.length === 0) return false;
+    const timestamp = Number(timestampString);
+    const nowSeconds = Math.floor(nowMs / 1000);
+    if (!Number.isSafeInteger(timestamp) || timestamp <= 0 ||
+        !Number.isSafeInteger(nowSeconds) || Math.abs(nowSeconds - timestamp) > 300) {
+      return false;
+    }
 
-    const signed = `${timestamp}.${payload}`;
+    const signed = new TextEncoder().encode(timestampString + '.' + payload);
     const key = await crypto.subtle.importKey(
       'raw',
       new TextEncoder().encode(secret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
-      ['sign']
+      ['verify'],
     );
-    const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signed));
-    const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
-    return expected === sig;
+    for (const signature of signatures) {
+      if (!/^[0-9a-f]{64}$/i.test(signature)) continue;
+      const bytes = Uint8Array.from(signature.match(/.{2}/g)!, x => Number.parseInt(x, 16));
+      if (await crypto.subtle.verify('HMAC', key, bytes, signed)) return true;
+    }
+    return false;
   } catch {
     return false;
   }
