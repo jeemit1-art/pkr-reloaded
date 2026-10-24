@@ -4,20 +4,8 @@ import { authMiddleware, requireEventRole } from '../middleware';
 
 const payments = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
-// Player marks own transfer as paid (public, authorised by the results token)
-payments.post('/games/results/:token/transfers/:tid/paid', async (c) => {
-  const { token, tid } = c.req.param();
-  const game = await c.env.DB.prepare("SELECT id FROM games WHERE results_token=? AND status='settled'")
-    .bind(token).first<{ id: string }>();
-  if (!game) return c.json({ error: 'Not found' }, 404);
-  const now = Math.floor(Date.now() / 1000);
-  const res = await c.env.DB.prepare(
-    "UPDATE settlement_transfers SET status='paid', paid_at=? WHERE id=? AND game_id=? AND status IN ('owed','not_received')"
-  ).bind(now, tid, game.id).run();
-  if (!res.meta.changes) return c.json({ error: 'Nothing to update' }, 409);
-  return c.json({ ok: true, status: 'paid', paid_at: now });
-});
-
+// Public result links are read-only. Only the host or co-host may confirm payments.
+// A secure payer-confirmation workflow requires verified player identity.
 // Host / co-host sets status (received, not received, back to owed)
 payments.put('/games/:id/transfers/:tid/status', authMiddleware, async (c) => {
   const { id: gameId, tid } = c.req.param();
