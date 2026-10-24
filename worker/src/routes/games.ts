@@ -552,7 +552,7 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
   const body = await c.req.json().catch(() => null) as {
-    cashout:number|null;expected_cashout:number|null;
+    cashout:number|null;expected_cashout:number|null;expected_revision?:number;
   } | null;
   if (!body || typeof body !== 'object' ||
       !Object.prototype.hasOwnProperty.call(body,'cashout')) {
@@ -561,6 +561,13 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   if (!Object.prototype.hasOwnProperty.call(body,'expected_cashout')) {
     return c.json({error:'Original cash-out amount required. Reload and review before editing.',code:'PRECONDITION_REQUIRED'},428);
   }
+  const enabled=revisionMode(c.env),versionRequested=body.expected_revision;
+  if(enabled&&(!Number.isSafeInteger(versionRequested)||(versionRequested as number)<0))
+    return c.json({error:'Current player revision required. Reload before editing.',
+      code:'PRECONDITION_REQUIRED'},428);
+  if(!enabled&&versionRequested!==undefined)
+    return c.json({error:'Financial revision protection is not enabled in this environment.',
+      code:'REVISION_UNAVAILABLE'},503);
   const {cashout,expected_cashout} = body;
   if ((cashout!==null&&(!Number.isSafeInteger(cashout)||cashout<0)) ||
       (expected_cashout!==null&&(!Number.isSafeInteger(expected_cashout)||expected_cashout<0))) {
@@ -574,10 +581,24 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
     return c.json({error:'Cannot edit a settled or cancelled game'},409);
 
   // IS ? makes both NULL -> NULL and cents -> cents comparisons atomic.
-  const result = await c.env.DB.prepare(
-    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS ? ' +
-    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
-  ).bind(cashout,gameId,userId,expected_cashout,gameId).run();
+  const result=enabled
+    ? await c.env.DB.prepare(`
+      UPDATE game_players SET cashout=?
+      WHERE game_id=? AND user_id=? AND cashout IS ?
+      AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+      AND EXISTS (SELECT 1 FROM game_player_revisions
+        WHERE game_id=? AND user_id=? AND revision=?)
+    `).bind(cashout,gameId,userId,expected_cashout,gameId,
+      gameId,userId,versionRequested).run()
+    : await c.env.DB.prepare(
+      'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS ? ' +
+      "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+    ).bind(cashout,gameId,userId,expected_cashout,gameId).run();
+  const version=enabled?await c.env.DB.prepare(
+    'SELECT revision FROM game_player_revisions WHERE game_id=? AND user_id=?'
+  ).bind(gameId,userId).first<{revision:number}>():null;
+  if(enabled&&!Number.isSafeInteger(version?.revision))
+    return c.json({error:'Revision ledger is not initialised.',code:'REVISION_UNAVAILABLE'},503);
   if (result.meta.changes === 0) {
     const current = await c.env.DB.prepare('SELECT cashout FROM game_players WHERE game_id=? AND user_id=?')
       .bind(gameId,userId).first<{cashout:number|null}>();
@@ -585,13 +606,15 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
     const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
     if (!latest||latest.status==='settled'||latest.status==='cancelled')
       return c.json({error:'Game closed before the change could be saved',code:'GAME_CLOSED'},409);
-    if (current.cashout===cashout) return c.json({ok:true,already_applied:true,cashout});
+    if(!enabled&&current.cashout===cashout) return c.json({ok:true,already_applied:true,cashout});
     return c.json({
       error:'Another host changed this cash-out. Review both amounts before retrying.',
-      code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+      code:'EDIT_CONFLICT',current:{cashout:current.cashout,
+        ...(enabled?{revision:version?.revision}:{})},
     },409);
   }
-  return c.json({ok:true,cashout});
+  return c.json({ok:true,cashout,
+    ...(enabled?{revision:version?.revision}:{})});
 });
 
 // Legacy incremental buy-in is deliberately fail-closed: a duplicated request
