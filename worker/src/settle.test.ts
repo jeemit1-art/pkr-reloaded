@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { minimumTransfers } from './settle';
+import { minimumTransfers, prepareSettlementPositions, SettlementValidationError } from './settle';
 
 type Pos = { user_id: string; display_name: string; net: number };
 const P = (name: string, net: number): Pos => ({ user_id: name, display_name: name, net });
@@ -75,5 +75,83 @@ describe('minimumTransfers — financial integrity', () => {
       }
       expect(pos).toEqual(original);
     }
+  });
+});
+
+
+const Player = (name: string, buy_ins: number, buy_in_total: number, cashout: number) => ({
+  user_id: name, display_name: name, buy_ins, buy_in_total, cashout,
+});
+
+describe('prepareSettlementPositions — API safety gates', () => {
+  it('preserves the proven balanced staging game exactly', () => {
+    const raw = [Player('Alex',1,2000,1000),Player('Ben',1,2000,2000),Player('Charlie',1,2000,3000)];
+    const snapshot = JSON.stringify(raw);
+    const { positions, total_buyins, total_cashouts, variance } = prepareSettlementPositions(raw, 2000);
+    expect({ total_buyins, total_cashouts, variance }).toEqual({
+      total_buyins:6000, total_cashouts:6000, variance:0,
+    });
+    expect(positions.map(p => p.net)).toEqual([-1000,0,1000]);
+    expect(JSON.stringify(raw)).toBe(snapshot);
+  });
+
+  it('sums rebuy amounts and generates exactly two owed transfers', () => {
+    const raw = [Player('Alex',2,4000,1500),Player('Ben',1,2000,3000),Player('Charlie',1,2000,3500)];
+    const data = prepareSettlementPositions(raw, 2000);
+    expect(data.total_buyins).toBe(8000);
+    expect(data.total_cashouts).toBe(8000);
+    expect(data.positions.map(p => p.net)).toEqual([-2500,1000,1500]);
+    expect(minimumTransfers(data.positions).map(t => t.amount)).toEqual([1500,1000]);
+  });
+
+  it('supports the existing default buy-in fallback when no explicit amount was recorded', () => {
+    const data = prepareSettlementPositions([
+      {user_id:'A',display_name:'A',buy_ins:1,cashout:1000},
+      {user_id:'B',display_name:'B',buy_ins:1,cashout:3000},
+    ], 2000);
+    expect(data.positions.map(p => p.buy_in_total)).toEqual([2000,2000]);
+  });
+
+  it('rejects a one-cent variance before any settlement is persisted', () => {
+    try {
+      prepareSettlementPositions([Player('Alex',1,2000,1000),Player('Charlie',1,2000,3001)], 2000);
+      throw new Error('Expected rejection');
+    } catch(e) {
+      expect(e).toBeInstanceOf(SettlementValidationError);
+      const err = e as SettlementValidationError;
+      expect(err.status).toBe(422);
+      expect(err.detail).toEqual({ total_buyins:4000, total_cashouts:4001, variance:1 });
+    }
+  });
+
+  it('rejects bad or duplicate identities', () => {
+    expect(() => prepareSettlementPositions([Player('Alex',1,2000,2000),Player('alex',1,2000,2000)], 2000)).toThrow(/Duplicate/);
+    expect(() => prepareSettlementPositions([
+      { ...Player('Alex',1,2000,2000),user_id:'same' },
+      { ...Player('Ben',1,2000,2000),user_id:'same' },
+    ], 2000)).toThrow(/Duplicate/);
+    expect(() => prepareSettlementPositions([null,Player('Ben',1,2000,2000)], 2000)).toThrow(/Invalid/);
+  });
+
+  it('rejects unsafe, negative, missing or fractional financial values', () => {
+    const valid = Player('Alex',1,2000,2000);
+    const other = Player('Ben',1,2000,2000);
+    for (const replacement of [
+      { ...valid,cashout:NaN },
+      { ...valid,cashout:Infinity },
+      { ...valid,cashout:-1 },
+      { ...valid,cashout:2000.5 },
+      { ...valid,buy_ins:1.5 },
+      { ...valid,buy_ins:-1 },
+      { ...valid,buy_in_total:1.5 },
+      { ...valid,buy_in_total:Number.MAX_SAFE_INTEGER + 1 },
+      { ...valid,buy_ins:undefined },
+    ]) {
+      expect(() => prepareSettlementPositions([replacement,other], 2000)).toThrow();
+    }
+    expect(() => prepareSettlementPositions([
+      { ...valid,buy_ins:Number.MAX_SAFE_INTEGER,buy_in_total:0 }, other,
+    ], 2000)).toThrow(/precision/);
+    expect(() => prepareSettlementPositions([valid,other], -1)).toThrow(/configuration/);
   });
 });
