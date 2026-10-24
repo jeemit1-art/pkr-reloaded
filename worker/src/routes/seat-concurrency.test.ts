@@ -16,12 +16,14 @@ function fixture(status='active'){
   const players:Player[]=[];
   const handHistory=new Set<string>();
   const namedHandHistory=new Set<string>();
+  let handOpen=false;
   let eventWrites=0;
   const db={prepare(sql:string){
     return {bind(...args:any[]){
       return {
         async first():Promise<any>{
           if(sql.includes('FROM games WHERE id=?'))return {...game};
+          if(sql.includes('SELECT h.id FROM hands h'))return handOpen?{id:'h'}:null;
           if(sql.includes('FROM event_players WHERE event_id=?'))return null;
           if(sql.includes('FROM game_players WHERE game_id=? AND display_name=?'))
             return players.find(p=>p.display_name===args[1])??null;
@@ -63,7 +65,7 @@ function fixture(status='active'){
               openGame!=='g'||actionGame!=='g'||resultGame!=='g'||actionUser!==userId||
               resultUser!==userId||p.seat_number!==expected||p.buy_ins!==0||
               p.buy_in_total!==0||p.cashout!==null||p.net!==null||p.settled_at!==null||
-              handHistory.has(userId)||namedHandHistory.has(p.display_name))return {meta:{changes:0}};
+              handHistory.has(userId)||namedHandHistory.has(p.display_name)||handOpen)return {meta:{changes:0}};
             players.splice(index,1);return {meta:{changes:1}};
           }
           if(sql.trimStart().startsWith('INSERT INTO event_players')){eventWrites++;return {meta:{changes:1}};}
@@ -73,7 +75,8 @@ function fixture(status='active'){
     }};
   }};
   const env:any={DB:db,KV:{get:async()=>null,put:async()=>{}},JWT_SECRET:'fixture',PKR_ENV:'staging'};
-  return {env,players,game,handHistory,namedHandHistory,eventWrites:()=>eventWrites};
+  return {env,players,game,handHistory,namedHandHistory,
+    setHandOpen:(open:boolean)=>{handOpen=open;},eventWrites:()=>eventWrites};
 }
 function req(method:'POST'|'DELETE',body:unknown):RequestInit{
   return {method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
@@ -132,6 +135,36 @@ describe('seat changes reject stale edits and protect history',()=>{
     expect(result.status).toBe(409);
     expect(f.players.map(p=>p.seat_number)).toEqual([1,2]);
   });
+  it('freezes occupied seats for the duration of an unfinished hand',async()=>{
+    const f=fixture();
+    expect((await games.request(url,req('POST',{
+      display_name:'Alex',seat_number:1,
+    }),f.env,execution)).status).toBe(200);
+    f.setHandOpen(true);
+    const moved=await games.request(url,req('POST',{
+      display_name:'Alex',seat_number:2,expected_seat_number:1,
+    }),f.env,execution);
+    expect(moved.status).toBe(409);
+    expect(await moved.json()).toMatchObject({code:'HAND_ACTIVE'});
+    const newSeat=await games.request(url,req('POST',{
+      display_name:'Ben',seat_number:2,
+    }),f.env,execution);
+    expect(newSeat.status).toBe(409);
+    const unassigned=await games.request(url,req('POST',{
+      display_name:'Charlie',
+    }),f.env,execution);
+    expect(unassigned.status).toBe(200);
+    expect(f.players.map(p=>p.seat_number)).toEqual([1,null]);
+    const removal=await games.request(remove(f.players[0].user_id),
+      req('DELETE',{expected_seat_number:1}),f.env,execution);
+    expect(removal.status).toBe(409);
+    expect(f.players).toHaveLength(2);
+    f.setHandOpen(false);
+    expect((await games.request(url,req('POST',{
+      display_name:'Alex',seat_number:2,expected_seat_number:1,
+    }),f.env,execution)).status).toBe(200);
+  });
+
   it('blocks removing a player with money or hand activity',async()=>{
     const f=fixture();
     await games.request(url,req('POST',{display_name:'Alex',seat_number:1}),f.env,execution);
