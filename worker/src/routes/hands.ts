@@ -111,6 +111,90 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
   return c.json(hand,201);
 });
 
+// ── Explicit, immutable opening stacks (optional integrity upgrade) ────────
+hands.post('/games/:id/hands/:handId/confirm-stacks', authMiddleware, async (c) => {
+  if(c.env.PKR_INTEGRITY_STACKS!=='1')
+    return c.json({error:'Persistent stack baselines are not enabled.',
+      code:'STACK_BASELINE_UNAVAILABLE'},503);
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  const hand=await c.env.DB.prepare(
+    'SELECT id,mode,voided FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<{id:string;mode:string;voided:number}>();
+  if(!hand)return c.json({error:'Hand not found'},404);
+  if(hand.mode!=='full'||hand.voided||game.status!=='active')
+    return c.json({error:'Only an active full hand can confirm opening stacks.'},409);
+  const input=await c.req.json().catch(()=>null) as {
+    verified?:unknown;opening_stacks?:unknown
+  }|null;
+  if(input?.verified!==true||!Array.isArray(input.opening_stacks))
+    return c.json({error:'Host verification of every opening stack is required.'},400);
+  const roster=(await c.env.DB.prepare(
+    'SELECT user_id,display_name,seat_number FROM game_players '+
+    'WHERE game_id=? AND seat_number IS NOT NULL AND buy_ins>0'
+  ).bind(gameId).all<{
+    user_id:string;display_name:string;seat_number:number
+  }>()).results;
+  const supplied=input.opening_stacks as Array<Record<string,unknown>>;
+  const ids=new Set<string>(),seats=new Set<number>();
+  if(roster.length<2||supplied.length!==roster.length||supplied.length>50)
+    return c.json({error:'Confirm every registered seated player exactly once.'},400);
+  for(const row of supplied){
+    if(!row||typeof row.user_id!=='string'||typeof row.display_name!=='string'||
+      !Number.isSafeInteger(row.seat_number)||!Number.isSafeInteger(row.opening_chips)||
+      Number(row.opening_chips)<=0||ids.has(row.user_id)||
+      seats.has(row.seat_number as number)||
+      !roster.some(p=>p.user_id===row.user_id&&p.display_name===row.display_name&&
+        p.seat_number===row.seat_number)){
+      return c.json({error:'Opening balances must match unique registered seat identities.'},400);
+    }
+    ids.add(row.user_id);seats.add(row.seat_number as number);
+  }
+  const clean=supplied.map(row=>({
+    user_id:row.user_id,display_name:row.display_name,
+    seat_number:row.seat_number,opening_chips:row.opening_chips,
+  }));
+  const json=JSON.stringify(clean);
+  // ONE insert-select statement: it either writes the entire confirmed
+  // roster or no rows. It rechecks roster, hand, game and absence of history
+  // inside the D1 write, preventing partial snapshots and racing actions.
+  const result=await c.env.DB.prepare(`
+    INSERT INTO hand_stack_baselines(
+      hand_id,game_id,user_id,display_name,seat_number,opening_chips,verified_by
+    )
+    SELECT ?,?,
+      json_extract(j.value,'$.user_id'),json_extract(j.value,'$.display_name'),
+      json_extract(j.value,'$.seat_number'),json_extract(j.value,'$.opening_chips'),?
+    FROM json_each(?) j
+    WHERE (SELECT COUNT(*) FROM game_players
+      WHERE game_id=? AND seat_number IS NOT NULL AND buy_ins>0)=?
+    AND NOT EXISTS(
+      SELECT 1 FROM json_each(?) v WHERE NOT EXISTS(
+        SELECT 1 FROM game_players gp WHERE gp.game_id=?
+          AND gp.user_id=json_extract(v.value,'$.user_id')
+          AND gp.display_name=json_extract(v.value,'$.display_name')
+          AND gp.seat_number=json_extract(v.value,'$.seat_number')
+          AND gp.buy_ins>0
+      )
+    )
+    AND NOT EXISTS(SELECT 1 FROM hand_stack_baselines WHERE hand_id=?)
+    AND NOT EXISTS(SELECT 1 FROM hand_actions WHERE hand_id=?)
+    AND NOT EXISTS(SELECT 1 FROM hand_results WHERE hand_id=?)
+    AND EXISTS(SELECT 1 FROM hands WHERE id=? AND game_id=? AND mode='full' AND voided=0)
+    AND EXISTS(SELECT 1 FROM games WHERE id=? AND status='active')
+  `).bind(handId,gameId,c.get('userId'),json,
+    gameId,clean.length,json,gameId,handId,handId,handId,
+    handId,gameId,gameId).run();
+  if(result.meta.changes!==clean.length)
+    return c.json({
+      error:'Opening stacks were already confirmed or the roster changed. Reload before retrying.',
+      code:'STACK_BASELINE_CONFLICT',
+    },409);
+  return c.json({ok:true,confirmed:true,players:clean.length});
+});
+
 // ── Read-only audit from host-confirmed opening chips; never guesses stacks ─
 hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) => {
   const gameId=c.req.param('id'),handId=c.req.param('handId');
