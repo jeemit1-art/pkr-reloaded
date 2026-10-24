@@ -25,6 +25,30 @@ with tempfile.TemporaryDirectory() as tmp:
     assert report["schema_compatible"] is True
     assert report["missing_tables"] == []
     assert report["aggregate_reconciliation_baseline"]["game_players"]["rows"] == 0
+    assert report["foreign_key_violation_count"] == 0
+    assert report["foreign_key_violations_by_table"] == {}
+    # An otherwise valid schema and quick_check=ok is not sufficient.
+    # Ensure orphaned financial/player records stop a restored-db release.
+    orphan = Path(tmp) / "orphaned_financial_copy.sqlite"
+    db = sqlite3.connect(orphan)
+    db.executescript(SCHEMA.read_text(encoding="utf-8"))
+    db.execute(
+        "INSERT INTO game_players(game_id,user_id,display_name,buy_ins) "
+        "VALUES(?,?,?,?)", ("nonexistent-game", "fictional-user", "Fictional", 1)
+    )
+    db.commit()
+    db.close()
+    broken = subprocess.run(
+        [sys.executable, str(CHECK), "--restore", str(orphan)],
+        capture_output=True, text=True, check=False,
+    )
+    assert broken.returncode == 2, broken.stderr + broken.stdout
+    broken_report = json.loads(broken.stdout)
+    assert broken_report["restored_integrity_check"] == "ok"
+    assert broken_report["schema_compatible"] is False
+    assert broken_report["foreign_key_violation_count"] == 1
+    assert broken_report["foreign_key_violations_by_table"] == {"game_players": 1}
+
     bad = Path(tmp) / "incomplete_copy.sqlite"
     db = sqlite3.connect(bad)
     db.execute("CREATE TABLE game_players(id TEXT)")
@@ -38,4 +62,4 @@ with tempfile.TemporaryDirectory() as tmp:
     assert problems["schema_compatible"] is False
     assert "hands" in problems["missing_tables"]
     assert "game_players.user_id" in problems["missing_columns"]
-print("PASS: restored-copy verifier is read-only and fails closed on missing schema")
+print("PASS: read-only restored-copy verifier rejects missing schema and orphaned foreign keys")
