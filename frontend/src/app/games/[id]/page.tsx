@@ -82,16 +82,16 @@ export default function GamePage() {
   const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null);
 
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+    <div className="pkr-app pkr-game-detail" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
       {/* Header */}
-      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',
+      <div className="pkr-topbar" style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',
         position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
-        <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px',height:56,
+        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',height:60,
           display:'flex',alignItems:'center',gap:12}}>
-          <button onClick={()=>router.push(`/events/${game.event_id}`)}
+          <button aria-label="Back to poker room" onClick={()=>router.push(`/events/${game.event_id}`)}
             style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',
               fontSize:20,padding:'4px 8px',lineHeight:1}}>‹</button>
           <div style={{flex:1,minWidth:0}}>
@@ -109,10 +109,11 @@ export default function GamePage() {
         </div>
       </div>
 
-      <div style={{maxWidth:640,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
+      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
 
         {/* Game info card */}
-        <div className="card-gold" style={{padding:'20px',marginBottom:16}}>
+        <div className="card-gold pkr-game-summary" style={{padding:'20px',marginBottom:16}}>
+          <div className="pkr-eyebrow" style={{marginBottom:8}}>Game night</div>
           <div className="display" style={{fontSize:22,color:'var(--white)',fontWeight:500,marginBottom:4}}>
             {fmtDate(game.scheduled_at)}
           </div>
@@ -133,7 +134,7 @@ export default function GamePage() {
               {({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as any)[game.format]||game.format}
             </span>
           )}
-          <div style={{display:'flex',gap:20,marginTop:16,paddingTop:14,borderTop:'1px solid var(--border-sub)'}}>
+          <div className="pkr-game-metrics" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,marginTop:16,paddingTop:14,borderTop:'1px solid var(--border-sub)'}}>
             {[
               {label:'Seats',  value:game.seats,                               color:'var(--white)'},
               {label:'Buy-in', value:game.buy_in>0 ? fmt(game.buy_in) : '—',   color:'var(--gold)'},
@@ -155,7 +156,7 @@ export default function GamePage() {
         {(game.status==='scheduled'||game.status==='lobby') && isHost && (<>
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:8,
-              background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)',
+              background:'var(--gold)',color:'#06271d',
               opacity:starting?0.7:1}}
             disabled={starting}
             onClick={doStartGame}>
@@ -181,7 +182,7 @@ export default function GamePage() {
         {game.status==='active' && isHost && (
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
-              background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
+              background:'var(--gold)',color:'#06271d'}}
             onClick={()=>router.push(`/games/${id}/play`)}>
             🃏 Open Table
           </button>
@@ -200,7 +201,7 @@ export default function GamePage() {
         {game.status==='settled' && resultsUrl && (
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
-              background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
+              background:'var(--gold)',color:'#06271d'}}
             onClick={()=>router.push(`/games/results/${game.results_token}`)}>
             ✅ View Results
           </button>

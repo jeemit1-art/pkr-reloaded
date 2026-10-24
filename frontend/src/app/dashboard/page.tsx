@@ -10,6 +10,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
+import PkrMobileNav from '@/components/PkrMobileNav';
 
 function DashboardInner() {
   const router = useRouter();
@@ -229,6 +230,13 @@ function DashboardInner() {
   const needsUpgrade = user && user.plan === 'trial' && !user.trial_active;
   const onTrial = user && user.plan === 'trial' && user.trial_active;
   const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
+  const activeRooms = events.filter(evt => (evt as any).status !== 'ended');
+  const featuredRoom = activeRooms[0] || events[0] || null;
+  const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
+  const openCreate = () => {
+    setShowCreate(true);
+    document.getElementById('pkr-rooms')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   if (loading) return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -237,7 +245,7 @@ function DashboardInner() {
   );
 
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+    <div className="pkr-app pkr-dashboard" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
@@ -291,28 +299,28 @@ function DashboardInner() {
       )}
 
       {/* Nav */}
-      <nav className="nav" style={{paddingTop:'env(safe-area-inset-top)'}}>
-        <div style={{maxWidth:640,margin:'0 auto',padding:'0 12px',display:'flex',flexDirection:'column'}}>
+      <nav className="nav pkr-topbar" style={{paddingTop:'env(safe-area-inset-top)'}}>
+        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',display:'flex',flexDirection:'column'}}>
           <div style={{height:52,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-          <div className="display" style={{fontSize:22,color:'var(--white)',letterSpacing:'0.02em',flexShrink:0}}>PKR</div>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
+          <div className="pkr-brand"><span className="pkr-brand-mark" aria-hidden="true">♠</span>PKR<span className="pkr-brand-sub">HOME POKER</span></div>
+          <div className="pkr-header-controls" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
             {user?.avatar_url && (
               <img src={user.avatar_url} alt={user.name}
                 style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
             )}
-            <span style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',
+            <span className="pkr-user-name" style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',
               maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const,display:'block'}}>
               {user?.name?.split(' ')[0]}
             </span>
             <PlanBadge />
             {isPaid && (
               <button
-                className="btn btn-ghost"
+                className="btn btn-ghost pkr-plan-manage"
                 style={{fontSize:10,padding:'3px 8px'}}
                 onClick={openBillingPortal}
                 disabled={manageLoading}
               >
-                {manageLoading ? '…' : 'Manage Plan'}
+                {manageLoading ? '…' : 'Plan'}
               </button>
             )}
             {(onTrial || needsUpgrade) && (
@@ -333,29 +341,49 @@ function DashboardInner() {
         </div>
       </nav>
 
-      <div style={{maxWidth:640,margin:'0 auto',padding:'40px 20px',position:'relative',zIndex:1}}>
-        {/* Page header */}
-        <div style={{marginBottom:24}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap' as const}}>
-            <div>
-              <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',
-                color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
-                Your Tables
-              </div>
-              <h2 className="display" style={{fontSize:28,color:'var(--white)',fontWeight:600,lineHeight:1}}>
-                Dashboard
-              </h2>
+      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'38px 20px 45px',position:'relative',zIndex:1}}>
+        {/* App-style introduction and featured room. No inferred 'live' status. */}
+        <div className="pkr-intro">
+          <span className="pkr-eyebrow">Your poker night starts here</span>
+          <h1>Welcome back{user?.name ? ', ' + user.name.split(' ')[0] : ''}.</h1>
+          <p>Keep your poker rooms, players and results together — without losing track of a buy-in.</p>
+        </div>
+
+        <section className="pkr-hero" aria-label={featuredRoom ? 'Your featured poker room' : 'Create your first poker room'}>
+          <div className="pkr-hero-top">
+            <span className="pkr-hero-tag"><span className="pkr-status-dot" />{featuredRoom ? 'YOUR POKER ROOM' : 'WELCOME TO PKR'}</span>
+            {featuredRoom && (featuredRoom as any).status === 'ended' && <span className="badge badge-settled">Ended</span>}
+          </div>
+          <h2>{featuredRoom ? featuredRoom.name : 'Ready for game night?'}</h2>
+          <p>{featuredRoom
+            ? 'Your group, upcoming games and results — all in one place.'
+            : 'Create a poker room for your group, then organise a game when you are ready.'}</p>
+          <div className="pkr-hero-metrics">
+            <div className="pkr-hero-metric">
+              <small>{featuredRoom ? 'Games in this room' : 'Your rooms'}</small>
+              <strong>{featuredRoom ? featuredRoom.game_count || 0 : 0}</strong>
             </div>
-            <div style={{display:'flex',gap:6,flexShrink:0}}>
-              <button className="btn btn-ghost" onClick={startScan} style={{fontSize:11,padding:'7px 10px'}}>
-                📷 Scan QR
-              </button>
-              <button className="btn btn-primary" onClick={()=>setShowCreate(true)} style={{fontSize:11,padding:'7px 12px'}}>
-                + New Table
-              </button>
+            <div className="pkr-hero-metric">
+              <small>{featuredRoom ? 'Room members' : 'Games recorded'}</small>
+              <strong>{featuredRoom ? featuredRoom.member_count || 1 : totalGames}</strong>
             </div>
           </div>
-        </div>
+          <button type="button" className="pkr-hero-action"
+            onClick={() => featuredRoom ? router.push('/events/' + featuredRoom.id) : openCreate()}>
+            {featuredRoom ? 'Open poker room' : 'Create your first room'} <span aria-hidden="true">→</span>
+          </button>
+        </section>
+
+        <section className="pkr-list-head" id="pkr-rooms" aria-label="Your poker rooms">
+          <div>
+            <span className="pkr-eyebrow">Your groups</span>
+            <h2>Poker rooms <span style={{fontSize:13,color:'var(--muted)',fontWeight:600}}>({activeRooms.length} active)</span></h2>
+          </div>
+          <div className="pkr-list-head-actions">
+            <button type="button" className="btn btn-ghost" onClick={startScan}>Scan invite</button>
+            <button type="button" className="btn btn-primary" onClick={openCreate}>+ New room</button>
+          </div>
+        </section>
 
         {/* QR Scanner Modal */}
         {showScanner && (
@@ -384,7 +412,7 @@ function DashboardInner() {
 
         {/* Create form */}
         {showCreate && (
-          <div className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
+          <div id="pkr-create-form" className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
             <div style={{fontSize:16,color:'var(--white)',marginBottom:20,
               fontFamily:'var(--font-display),serif',fontWeight:500}}>
               New Table
@@ -434,49 +462,31 @@ function DashboardInner() {
           </div>
         )}
 
-        <div style={{display:'grid',gap:8}}>
-          {events.map((evt,i)=>(
-            <div key={evt.id}
-              className="card animate-up"
-              style={{animationDelay:`${i*0.04}s`,cursor:'pointer',transition:'border-color 0.15s'}}
-              onClick={()=>router.push(`/events/${evt.id}`)}
-              onMouseEnter={e=>(e.currentTarget.style.borderColor='var(--border)')}
-              onMouseLeave={e=>(e.currentTarget.style.borderColor='var(--border-sub)')}>
-              <div style={{padding:'18px 20px',display:'flex',alignItems:'center',gap:16}}>
-                <div style={{
-                  width:40,height:40,borderRadius:2,
-                  background:'var(--bg3)',border:'1px solid var(--border)',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  fontSize:18,color:'var(--gold)',flexShrink:0,
-                }}>♠</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',
-                    fontWeight:500,marginBottom:3}}>{evt.name}</div>
-                  <div style={{fontSize:11,color:'var(--muted)',display:'flex',gap:12,
-                    fontFamily:'var(--font-body),sans-serif'}}>
-                    {evt.buy_in>0 && <span>{fmt(evt.buy_in)} buy-in</span>}
-                    <span>{evt.game_count||0} games</span>
-                    <span>{evt.member_count||1} member{evt.member_count!==1?'s':''}</span>
-                  </div>
-                </div>
-                <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  {(evt as any).status==='ended' && (
-                    <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(120,120,120,0.15)',color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',letterSpacing:'0.1em',textTransform:'uppercase'}}>Ended</span>
-                  )}
-                  {evt.role && (
-                    <span className={`badge badge-${evt.role}`}>{evt.role}</span>
-                  )}
-                  {(evt.role==='host') && (evt as any).status!=='ended' && (
-                    <button onClick={e=>{e.stopPropagation();setConfirmEndEventId(evt.id);}}
-                      className="btn btn-ghost"
-                      style={{fontSize:10,padding:'3px 8px',color:'var(--muted)',borderColor:'rgba(120,120,120,0.3)'}}>
-                      End
-                    </button>
-                  )}
-                  <span style={{color:'var(--faint)',fontSize:16}}>›</span>
-                </div>
-              </div>
-            </div>
+        <div className="pkr-room-grid">
+          {events.map(evt => (
+            <article key={evt.id} className="pkr-room-card">
+              <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
+                aria-label={'Open poker room ' + evt.name}>
+                <span className="pkr-room-icon" aria-hidden="true">♠</span>
+                <span className="pkr-room-copy">
+                  <span className="pkr-room-name" style={{display:'block'}}>{evt.name}</span>
+                  <span className="pkr-room-meta">
+                    <span>{evt.game_count || 0} games</span>
+                    <span>{evt.member_count || 1} members</span>
+                    {evt.buy_in > 0 && <span>{fmt(evt.buy_in)} buy-in</span>}
+                    {(evt as any).status === 'ended' && <span>Ended</span>}
+                  </span>
+                  {evt.role && <span className={'badge badge-' + evt.role} style={{marginTop:9}}>{evt.role}</span>}
+                </span>
+                <span className="pkr-room-arrow" aria-hidden="true">↗</span>
+              </button>
+              {evt.role === 'host' && (evt as any).status !== 'ended' && (
+                <button type="button" className="pkr-room-end"
+                  onClick={() => setConfirmEndEventId(evt.id)} aria-label={'End poker room ' + evt.name}>
+                  End
+                </button>
+              )}
+            </article>
           ))}
         </div>
 
@@ -501,6 +511,13 @@ function DashboardInner() {
           </div>
         )}
       </div>
+
+      <PkrMobileNav items={[
+        {id:'home',label:'Home',icon:'home',active:true,onSelect:()=>window.scrollTo({top:0,behavior:'smooth'})},
+        {id:'rooms',label:'Rooms',icon:'rooms',onSelect:()=>document.getElementById('pkr-rooms')?.scrollIntoView({behavior:'smooth'})},
+        {id:'scan',label:'Scan',icon:'scan',onSelect:startScan},
+        {id:'new',label:'New room',icon:'plus',onSelect:openCreate}
+      ]} />
 
       {/* Global upgrade modal — catches all 402s from this page */}
       <UpgradeModal />

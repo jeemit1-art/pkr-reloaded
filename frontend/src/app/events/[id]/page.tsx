@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
+import PkrMobileNav from '@/components/PkrMobileNav';
 
 type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
@@ -155,14 +156,18 @@ export default function EventPage() {
   const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
 
   const TABS_NAV = ['games','leaderboard','history','members'];
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+    <div className="pkr-app pkr-event" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
       {/* Header */}
-      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
-        <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px',height:56,display:'flex',alignItems:'center',gap:12}}>
-          <button onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
+      <div className="pkr-topbar" style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
+        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',height:60,display:'flex',alignItems:'center',gap:12}}>
+          <button aria-label="Back to poker rooms" onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
           <div style={{flex:1,minWidth:0}}>
             <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
           </div>
@@ -186,41 +191,33 @@ export default function EventPage() {
         </div>
       </div>
 
-      {/* Stats strip */}
-      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
-        <div style={{maxWidth:640,margin:'0 auto',display:'flex',gap:0}}>
-          {[
-            {l:'Buy-in', v:event.buy_in>0?fmt(event.buy_in):'—'},
-            {l:'Games',  v:`${event.game_count||0}`},
-            {l:'Members',v:`${event.member_count||1}`},
-          ].map((s,i)=>(
-            <div key={s.l} style={{padding:'14px 20px',borderRight:i<2?'1px solid var(--border-sub)':'none'}}>
-              <div className="display" style={{fontSize:18,color:'var(--white)',fontWeight:500}}>{s.v}</div>
-              <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.l}</div>
-            </div>
-          ))}
-          {/* Push status chip */}
-          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',padding:'0 16px'}}>
-            {pushEnabled
-              ? <span style={{fontSize:10,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>🔔 Notified</span>
-              : canUsePush() ? <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>🔕 No alerts</span> : null
-            }
+      {/* Room overview; all figures come from the existing event record. */}
+      <section className="pkr-event-overview" aria-label="Poker room overview">
+        <div className="pkr-event-overview-inner">
+          <span className="pkr-eyebrow">Your poker room</span>
+          <h1>{event.name}</h1>
+          <p>Manage upcoming games, player standings and results from this room.</p>
+          <div className="pkr-event-metrics">
+            <div className="pkr-event-metric"><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></div>
+            <div className="pkr-event-metric"><strong>{event.game_count || 0}</strong><small>Games</small></div>
+            <div className="pkr-event-metric"><strong>{event.member_count || 1}</strong><small>Members</small></div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Tab nav */}
-      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',padding:'0 16px'}}>
-        <div style={{maxWidth:640,margin:'0 auto',display:'flex'}}>
-          {TABS.map((t)=>(
-            <button key={t} onClick={()=>setTab(t)} className={`tab ${tab===t?'active':''}`}>
-              {t.charAt(0).toUpperCase()+t.slice(1)}
+      {/* Desktop tabs; phone navigation is fixed at the bottom. */}
+      <nav className="pkr-event-tabs" aria-label="Poker room sections">
+        <div className="pkr-event-tabs-inner">
+          {TABS.map(t => (
+            <button type="button" key={t} onClick={() => selectTab(t)}
+              aria-pressed={tab === t} className={'tab ' + (tab === t ? 'active' : '')}>
+              {t === 'leaderboard' ? 'Standings' : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
-      </div>
+      </nav>
 
-      <div style={{maxWidth:640,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
+      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
 
         {/* ── Games tab ── */}
         {tab==='games' && (
@@ -247,7 +244,7 @@ export default function EventPage() {
                   Recent Results
                 </div>
                 {settled.slice(0,3).map(g=>(
-                  <div key={g.id} className="card" style={{marginBottom:8,cursor:'pointer',opacity:0.7}} onClick={()=>router.push(`/games/${g.id}`)}>
+                  <div key={g.id} className="card pkr-game-card" style={{marginBottom:8,cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
                     <div style={{padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}>
                       <div style={{flex:1}}>
                         <div style={{fontSize:14,color:'var(--ivory)'}}>{fmtDate(g.scheduled_at)}</div>
@@ -738,6 +735,13 @@ export default function EventPage() {
         </div>
       )}
 
+      <PkrMobileNav items={[
+        {id:'games',label:'Games',icon:'games',active:tab==='games',onSelect:()=>selectTab('games')},
+        {id:'standings',label:'Standings',icon:'standings',active:tab==='leaderboard',onSelect:()=>selectTab('leaderboard')},
+        {id:'history',label:'History',icon:'history',active:tab==='history',onSelect:()=>selectTab('history')},
+        {id:'members',label:'Members',icon:'members',active:tab==='members',onSelect:()=>selectTab('members')}
+      ]} />
+
       {/* ── Quick Seat Modal (#13) ── */}
       {showQuickSeat && quickSeatGameId && (
         <QuickSeatModal
@@ -824,8 +828,10 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
     scheduled:'var(--amber)', active:'var(--green)', lobby:'var(--gold)', settled:'var(--muted)',
   };
   return (
-    <div className="card" style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
-      <div style={{padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}} onClick={onClick}>
+    <div className={"card pkr-game-card " + (game.status === "active" ? "is-live" : "")} style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
+      <div role="button" tabIndex={0} aria-label={'Open game scheduled ' + fmtDate(game.scheduled_at)}
+          style={{padding:'18px 20px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}}
+          onClick={onClick} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}}}>
         <div style={{flex:1}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>
@@ -849,7 +855,9 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
       </div>
       {/* Quick share row */}
       {(game.status==='scheduled'||game.status==='lobby'||game.status==='active') && (
-        <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
+        <div className="pkr-game-actions" style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
+          <button type="button" className="btn btn-ghost" onClick={(e)=>{e.stopPropagation();onClick();}}
+            style={{fontSize:11,padding:'5px 11px',color:'var(--green)'}}>Open game →</button>
           {isHost && (game.status==='scheduled'||game.status==='lobby') && (
             <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
