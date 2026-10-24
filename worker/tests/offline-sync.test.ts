@@ -192,6 +192,60 @@ describe('durable staging game sync journal',()=>{
     expect(writes).toBe(1);
   });
 
+  it('keeps a persisted conflict paused after a page refresh',async()=>{
+    storage.clear();
+    const initial=harness(false,async()=>({}));
+    initial.frame.queueAction('/games/synthetic-game/buyin/alex_remote',{
+      method:'PUT',body:JSON.stringify({count:2,total:4000,expected_count:1,expected_total:2000}),
+    });
+    const err:any=new Error('Stale buy-in');err.code='EDIT_CONFLICT';
+    const attempted=harness(true,async(path)=>{
+      if(path==='/games/synthetic-game')return {status:'active'};
+      throw err;
+    });
+    await attempted.frame.flushOfflineQueue();
+    const keyConflict='pkr_pending_conflict_v1_synthetic-game_synthetic-host';
+    expect(storage.has(keyConflict)).toBe(true);
+    const restored=harness(true,async()=>{throw Error('must not auto-retry');});
+    expect(restored.frame._syncConflict).toBe(true);
+    await restored.frame.flushOfflineQueue();
+    expect(restored.frame._offlineQueue).toHaveLength(1);
+  });
+
+  it('prepares a manual financial retry using fresh server values, not a blind overwrite',()=>{
+    storage.clear();
+    const {frame}=harness(false,async()=>({}));
+    const action=frame.queueAction('/games/synthetic-game/cashout/alex',{
+      method:'PUT',body:JSON.stringify({cashout:5000,expected_cashout:null}),
+    });
+    const review=frame.prepareConflictRetry(action,{
+      status:'active',players:[{user_id:'alex',display_name:'Alex',cashout:3500}],
+    });
+    expect(review.canApply).toBe(true);
+    expect(review.server).toBe('$35.00');
+    expect(review.pending).toBe('$50.00');
+    expect(review.nextBody).toEqual({cashout:5000,expected_cashout:3500});
+    expect(JSON.parse(action.options.body)).toEqual({cashout:5000,expected_cashout:null});
+  });
+
+  it('never offers a manual retry that steals an occupied seat or deletes recorded money',()=>{
+    storage.clear();
+    const {frame}=harness(false,async()=>({}));
+    const seat=frame.queueAction('/games/synthetic-game/seat',{
+      method:'POST',body:JSON.stringify({display_name:'Alex',seat_number:2,expected_seat_number:1}),
+    });
+    const game={status:'active',players:[
+      {user_id:'alex',display_name:'Alex',seat_number:1,buy_ins:0,buy_in_total:0,cashout:null},
+      {user_id:'ben',display_name:'Ben',seat_number:2,buy_ins:0,buy_in_total:0,cashout:null},
+    ]};
+    expect(frame.prepareConflictRetry(seat,game).canApply).toBe(false);
+    const deleting=frame.queueAction('/games/synthetic-game/seat/alex',{
+      method:'DELETE',body:JSON.stringify({expected_seat_number:1}),
+    });
+    game.players[0].buy_in_total=2000;
+    expect(frame.prepareConflictRetry(deleting,game).canApply).toBe(false);
+  });
+
   it('never queues settlement requests or cross-game mutations',()=>{
     storage.clear();
     const {frame}=harness(false,async()=>({}));

@@ -19,6 +19,7 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Cash game settlement | Reject unbalanced outcomes and invalid cents, scope idempotency to game, prevent duplicate paid status changes | Settlement conservation/property tests and API-level tests |
 | Concurrent money edits | Atomic value-based guards for exact buy-ins and cash-outs; legacy cash-out POST is first-write-only and cannot overwrite an existing figure; conflict responses retain local journal and pause replay | Staging Worker concurrent route tests and browser journal tests |
 | Player seat protection | Conditional seat moves and atomic first-seat claims; prevent deleting a player with buy-ins, cash-outs or recorded hand history | Staging-only route concurrency tests |
+| Conflict review UI | Pending edits survive refresh, hosts compare local versus server values, and explicit retries use fresh expected-value guards; occupied seats and monetary-history deletion cannot be overridden | Browser queue regression tests and review-action tests |
 | Hand actions | Atomic action insert/undo and pot recalculation, deterministic same-second action ordering, protect finished hands and games | Hand action transaction and undo tests |
 | Betting order | Prevent repeated big-blind option after checking; assert preflop/postflop actor sequence | Real shipped JavaScript action-order tests |
 | Side pots | Use the same accounting function for winner selection and display, include folded contributions | Chip conservation and side-pot fixture tests |

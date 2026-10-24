@@ -622,16 +622,44 @@ function restorePendingActions() {
   } catch(e) { return []; }
 }
 var _offlineQueue = restorePendingActions();
+var CONFLICT_KEY = 'pkr_pending_conflict_v1_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
+var _storedConflict = null;
+try { _storedConflict = JSON.parse(localStorage.getItem(CONFLICT_KEY) || 'null'); } catch(e) {}
 var _isOnline = navigator.onLine;
 var _flushingQueue = false;
 var _activeQueueId = null;
-var _syncConflict = false;
-var _syncError = '';
+var _syncConflict = !!(_storedConflict && _offlineQueue.some(function(a){return a.id===_storedConflict.actionId;}));
+var _syncConflictActionId = _syncConflict ? _storedConflict.actionId : null;
+var _syncConflictCode = _syncConflict ? _storedConflict.code : null;
+var _syncError = _syncConflict
+  ? 'CONFLICT: An edit needs review. Select this warning to compare the local and saved records.'
+  : '';
+
+function markSyncConflict(error, actionId) {
+  _syncConflict = true;
+  _syncConflictActionId = actionId || (_offlineQueue[0] && _offlineQueue[0].id) || null;
+  _syncConflictCode = error && error.code || 'EDIT_CONFLICT';
+  _syncError = 'CONFLICT: Unsynced edits are retained. Select this warning to review before settling.';
+  try { localStorage.setItem(CONFLICT_KEY,JSON.stringify({
+    actionId:_syncConflictActionId,code:_syncConflictCode,
+  })); } catch(e) { /* pending journal remains in memory */ }
+}
+
+function clearSyncConflict() {
+  _syncConflict = false;
+  _syncConflictActionId = null;
+  _syncConflictCode = null;
+  _syncError = '';
+  try { localStorage.removeItem(CONFLICT_KEY); } catch(e) {}
+}
 
 function savePendingActions() {
   try {
     if (_offlineQueue.length) localStorage.setItem(OFFLINE_Q_KEY, JSON.stringify(_offlineQueue));
-    else localStorage.removeItem(OFFLINE_Q_KEY);
+    else {
+      localStorage.removeItem(OFFLINE_Q_KEY);
+      localStorage.removeItem(CONFLICT_KEY);
+    }
     return true;
   } catch(e) {
     _syncError = 'Browser storage is unavailable. Do not close or refresh until your changes are saved.';
@@ -649,10 +677,17 @@ function showConnBanner() {
   var b = existing || document.createElement('div');
   b.id = 'conn-banner';
   b.style.cssText = 'position:fixed;top:56px;left:0;right:0;background:#92400e;color:#fff;text-align:center;font-size:13px;padding:8px;z-index:9999;font-family:var(--font-body),sans-serif';
-  b.textContent = _syncError ||
+  b.textContent = (_syncError ||
     (!_isOnline
       ? 'Offline: changes saved on this device; reconnect to sync'
-      : 'Unsynced changes: ' + _offlineQueue.length + ' operation(s) pending');
+      : 'Unsynced changes: ' + _offlineQueue.length + ' operation(s) pending')) +
+      (_syncConflict ? '  |  Review pending change' : '');
+  b.style.cursor = _syncConflict ? 'pointer' : 'default';
+  b.tabIndex = _syncConflict ? 0 : -1;
+  b.onclick = _syncConflict ? function() { window.pkrReviewPendingEdits(); } : null;
+  b.onkeydown = _syncConflict ? function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.pkrReviewPendingEdits(); }
+  } : null;
   if (!existing) document.body.appendChild(b);
 }
 
@@ -717,6 +752,75 @@ function queueLatestSeatAmounts(sid, playerId, expectedName, serverPlayer) {
   });
 }
 
+// An explicit manual retry still uses the server's conditional write guards.
+// This only constructs a NEW expected-value baseline; it never sends a request.
+function prepareConflictRetry(action, game) {
+  if (!action || !action.options || !game || !Array.isArray(game.players) ||
+      game.status === 'settled' || game.status === 'cancelled') return null;
+  var body;
+  try { body = JSON.parse(action.options.body || '{}'); } catch(e) { return null; }
+  var prefix = '/games/' + _ctx.gameId + '/';
+  if (action.url.indexOf(prefix) !== 0) return null;
+  var path = action.url.slice(prefix.length);
+  var parts = path.split('/');
+  var player = null;
+  var next = Object.assign({},body);
+  var formatted = function(cents) {
+    return cents == null ? 'not entered' : '$' + (cents / 100).toFixed(2);
+  };
+  var result = {canApply:false,reason:'This edit requires manual correction on the table.',
+    player:'',type:'Edit',server:'',pending:'',nextBody:next};
+
+  if (action.options.method === 'PUT' && parts[0] === 'buyin' && parts.length === 2) {
+    player = game.players.find(function(p){return p.user_id === parts[1];});
+    if (!player) return result;
+    next.expected_count = player.buy_ins || 0;
+    next.expected_total = player.buy_in_total || 0;
+    result.player = player.display_name;
+    result.type = 'Buy-ins';
+    result.server = String(next.expected_count) + ' buy-ins, ' + formatted(next.expected_total);
+    result.pending = String(body.count) + ' buy-ins, ' + formatted(body.total);
+    result.canApply = true;
+  } else if (action.options.method === 'PUT' && parts[0] === 'cashout' && parts.length === 2) {
+    player = game.players.find(function(p){return p.user_id === parts[1];});
+    if (!player) return result;
+    next.expected_cashout = player.cashout == null ? null : player.cashout;
+    result.player = player.display_name;
+    result.type = 'Cash-out';
+    result.server = formatted(next.expected_cashout);
+    result.pending = formatted(body.cashout);
+    result.canApply = true;
+  } else if (action.options.method === 'POST' && path === 'seat') {
+    player = game.players.find(function(p){return p.display_name === body.display_name;});
+    var target = body.seat_number == null ? null : body.seat_number;
+    var occupied = target !== null && game.players.some(function(p) {
+      return p.seat_number === target && p.display_name !== body.display_name;
+    });
+    result.player = body.display_name || 'Player';
+    result.type = 'Seat assignment';
+    result.server = player ? (player.seat_number == null ? 'Unassigned' : 'Seat '+player.seat_number)
+      : 'Not yet registered';
+    result.pending = target == null ? 'Unassigned' : 'Seat ' + target;
+    if (player) next.expected_seat_number = player.seat_number == null ? null : player.seat_number;
+    result.canApply = !occupied;
+    if (occupied) result.reason = 'That seat is now occupied. Choose another seat in the table.';
+  } else if (action.options.method === 'DELETE' && parts[0] === 'seat' && parts.length === 2) {
+    player = game.players.find(function(p){return p.user_id === parts[1];});
+    result.player = player ? player.display_name : 'Removed player';
+    result.type = 'Remove player';
+    result.server = player ? (player.seat_number == null ? 'Unassigned' : 'Seat '+player.seat_number)
+      : 'Already removed';
+    result.pending = 'Remove from the table';
+    if (player) next.expected_seat_number = player.seat_number == null ? null : player.seat_number;
+    var hasMoney = player && (player.buy_ins > 0 || player.buy_in_total > 0 ||
+      player.cashout != null || player.net != null || player.settled_at != null);
+    result.canApply = !hasMoney;
+    if (hasMoney) result.reason = 'This player has financial records and cannot be removed.';
+  }
+  result.nextBody = next;
+  return result;
+}
+
 async function flushOfflineQueue() {
   if (_flushingQueue || _syncConflict || _offlineQueue.length === 0 || !navigator.onLine) return;
   _flushingQueue = true;
@@ -762,8 +866,7 @@ async function flushOfflineQueue() {
   } catch(e) {
     console.warn('Pending game sync failed; edits are retained locally:', e);
     if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
-      _syncConflict = true;
-      _syncError = 'CONFLICT: A seat or amount changed elsewhere, or this player has recorded history. Your edit is retained. Review before settling.';
+      markSyncConflict(e,_activeQueueId || (typeof inflight !== 'undefined' && inflight && inflight.id));
     } else {
       _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
     }
@@ -831,6 +934,66 @@ if (!_isOnline || _offlineQueue.length) {
   showConnBanner();
   if (_isOnline) setTimeout(flushOfflineQueue, 100);
 }
+// Review the CURRENT server record before voluntarily retrying a pending edit.
+window.pkrReviewPendingEdits = async function() {
+  if (!navigator.onLine) { alert('Reconnect to review the latest server values.'); return; }
+  var action = _offlineQueue.find(function(a){return a.id===_syncConflictActionId;}) ||
+    _offlineQueue[0];
+  if (!action) { clearSyncConflict(); showConnBanner(); return; }
+  var game;
+  try { game = await pkrApi('/games/' + _ctx.gameId); }
+  catch(e) { alert('Could not load current game records: ' + e.message); return; }
+  var review = prepareConflictRetry(action,game);
+  if (!review) { alert('The game is closed or the pending edit is invalid. No changes were applied.'); return; }
+  var existing = document.getElementById('pkr-conflict-review');
+  if (existing) existing.remove();
+  var shade = document.createElement('div');
+  shade.id = 'pkr-conflict-review';
+  shade.style.cssText = 'position:fixed;inset:0;z-index:11000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:18px';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'background:#152018;border:1px solid #7a6333;border-radius:16px;padding:22px;color:#f5f0e5;max-width:480px;width:100%;font-family:Arial,sans-serif';
+  function line(text,css) {
+    var el=document.createElement('div');
+    el.textContent=text;el.style.cssText=css||'margin-bottom:12px;font-size:14px;line-height:1.5';
+    panel.appendChild(el);return el;
+  }
+  function control(text,css,handler) {
+    var el=document.createElement('button');
+    el.type='button';el.textContent=text;el.style.cssText=css;
+    el.onclick=handler;panel.appendChild(el);return el;
+  }
+  line('Review unsynced change','font-weight:bold;font-size:19px;margin-bottom:12px');
+  line('Nothing has been overwritten. Compare these values before deciding whether to retry.');
+  line('Player: '+review.player+'  |  '+review.type);
+  line('Currently on server: '+review.server,'font-weight:bold;margin-bottom:12px;font-size:14px');
+  line('Pending on this device: '+review.pending,'font-weight:bold;margin-bottom:15px;font-size:14px');
+  if (!review.canApply || _syncConflictCode==='PLAYER_HAS_HISTORY') {
+    line(review.reason||'This change cannot safely be retried. Correct the table or seek support.',
+      'color:#ffbf69;margin-bottom:16px;line-height:1.5;font-size:14px');
+  } else {
+    line('Retrying will use these latest server values as the expected starting point. If another host edits again, it will be blocked.');
+    control('Apply my pending value','width:100%;padding:12px;margin-bottom:10px;background:#235f37;color:white;border:0;border-radius:8px;font-weight:bold;cursor:pointer',async function() {
+      if (!window.confirm('Apply your pending value over the displayed server value, subject to a fresh conflict check?')) return;
+      var queued = _offlineQueue.find(function(a){return a.id===action.id;});
+      if (!queued) { alert('The pending edit changed. Review it again.');shade.remove();return; }
+      var originalBody=queued.options.body;
+      queued.options.body=JSON.stringify(review.nextBody);
+      if (!savePendingActions()) {
+        queued.options.body=originalBody;
+        alert('Browser storage is unavailable. No retry was sent.');
+        return;
+      }
+      clearSyncConflict();
+      shade.remove();
+      showConnBanner();
+      await flushOfflineQueue();
+    });
+  }
+  control('Keep pending and close','width:100%;padding:12px;background:transparent;color:#eee;border:1px solid #726c58;border-radius:8px;cursor:pointer',function(){shade.remove();});
+  shade.appendChild(panel);
+  document.body.appendChild(shade);
+};
+
 window.pkrSyncPendingActions = flushOfflineQueue;
 window.pkrHasPendingActions = function() { return _offlineQueue.length > 0; };
 
