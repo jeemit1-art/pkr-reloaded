@@ -240,7 +240,9 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const { display_name, whatsapp, seat_number, buy_ins } = await c.req.json();
   if (!display_name?.trim()) return c.json({error:'Name required'},400);
@@ -266,7 +268,7 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
     ON CONFLICT(game_id,display_name) DO UPDATE SET
-      user_id=excluded.user_id,
+      user_id=game_players.user_id,
       whatsapp=COALESCE(excluded.whatsapp,whatsapp),
       seat_number=COALESCE(excluded.seat_number,seat_number)
   `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||0).run();
@@ -283,7 +285,9 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare('DELETE FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
@@ -298,7 +302,9 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   if (!Number.isSafeInteger(count) || count < 0 || (total !== undefined && (!Number.isSafeInteger(total) || total < 0))) return c.json({error:'Invalid buy-in amounts'},400);
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const prev = await c.env.DB.prepare('SELECT display_name, buy_in_total FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
   const prevTotal = prev?.buy_in_total ?? 0;
@@ -334,7 +340,9 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   }
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<{event_id:string;status:string}>();
   if (!game) return c.json({error:'Game not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare(
     'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?'
@@ -347,7 +355,9 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare('UPDATE game_players SET buy_ins=buy_ins+1 WHERE game_id=? AND user_id=?').bind(gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
@@ -359,9 +369,12 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  const { cashout } = await c.req.json();
+  const { cashout } = await c.req.json<{cashout:number}>();
+  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Cashout must be integer cents'},400);
   await c.env.DB.prepare('UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?').bind(cashout,gameId,userId).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   const player = players.results.find((p:any) => p.user_id===userId) as any;
@@ -398,6 +411,9 @@ games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
   if (!real_user_id) return c.json({error:'real_user_id required'},400);
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
   const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
@@ -413,6 +429,9 @@ games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
   const userId = c.req.param('userId');
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
   const newUserId = 'manual_' + crypto.randomUUID();
   await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(newUserId,gameId,userId).run();
