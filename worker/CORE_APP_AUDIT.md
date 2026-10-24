@@ -25,6 +25,7 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Betting order | Prevent repeated big-blind option after checking; assert preflop/postflop actor sequence | Real shipped JavaScript action-order tests |
 | Side pots | Use the same accounting function for winner selection and display, include folded contributions | Chip conservation and side-pot fixture tests |
 | Hand result history | Persist individual side-pot allocations through existing result JSON without a migration; preserve historic result formats | Serialization and hand-route round-trip tests |
+| Hand winner conflicts | Winner declaration is first-write-wins; accept identical HTTP retries, reject competing winners, check pot and game status inside the write; corrections require explicit Undo Winner | Hono route concurrency, retry and mid-write pot-change tests |
 | Hand tracker UI | Render dynamic player/winner names as text, not injected HTML | Browser script parse gate |
 | Recovery | Per-game hand sessions; journaled seat/money changes; block financial network mutations when browser storage fails, and replay only after journal is persisted; stop sync on closed game | Offline journal persistence, denied-storage, recovery and closed-game tests |
 | Deployment safeguards | Staging-only Worker/D1/KV bindings, 222 SQL statement compatibility checks, typecheck, unit tests, live read-only staging smoke and browser syntax | GitHub staging-isolation CI |

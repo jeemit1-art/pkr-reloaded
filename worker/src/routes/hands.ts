@@ -208,7 +208,8 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { winner_user_id, winner_name, hole_cards, split_pot, pot_winners } = await c.req.json();
-  if (!winner_name) return c.json({ error: 'winner_name required' }, 400);
+  if (typeof winner_name!=='string' || !winner_name.trim() || winner_name.trim().length>120)
+    return c.json({error:'A valid winner name is required'},400);
 
   const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=? AND game_id=?').bind(handId, gameId).first() as any;
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
@@ -221,20 +222,45 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
     throw e;
   }
 
-  // Upsert result
-  const existing = await c.env.DB.prepare('SELECT id FROM hand_results WHERE hand_id=?').bind(handId).first() as any;
-  if (existing) {
-    await c.env.DB.prepare(
-      'UPDATE hand_results SET winner_user_id=?,winner_name=?,pot_chips=?,hole_cards=?,split_pot=? WHERE hand_id=?'
-    ).bind(winner_user_id||null, winner_name, hand.pot_chips, storedCards, split_pot?1:0, handId).run();
-  } else {
-    await c.env.DB.prepare(
-      'INSERT INTO hand_results(id,hand_id,game_id,winner_user_id,winner_name,pot_chips,hole_cards,split_pot) VALUES(?,?,?,?,?,?,?,?)'
-    ).bind(generateId(), handId, gameId, winner_user_id||null, winner_name, hand.pot_chips, storedCards, split_pot?1:0).run();
-  }
+  // Results are append-only until explicitly undone. A retry of the same
+  // winner is accepted, but a competing host cannot overwrite the outcome.
+  // Both game status and current pot are checked in the same D1 statement.
+  const resultId=generateId();
+  const winnerId=typeof winner_user_id==='string' && winner_user_id ? winner_user_id : null;
+  const winner=winner_name.trim();
+  const split=split_pot?1:0;
+  const written=await c.env.DB.prepare(
+    "INSERT INTO hand_results(id,hand_id,game_id,winner_user_id,winner_name,pot_chips,hole_cards,split_pot) "+
+    "SELECT ?,?,?,?,?,?,?,? WHERE "+
+    "EXISTS (SELECT 1 FROM hands WHERE id=? AND game_id=? AND pot_chips=? AND voided=0) "+
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled')) "+
+    "ON CONFLICT(hand_id) DO NOTHING"
+  ).bind(resultId,handId,gameId,winnerId,winner,hand.pot_chips,storedCards,split,
+    handId,gameId,hand.pot_chips,gameId).run();
 
-  const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(handId).first();
-  return c.json({ ok: true, result:revealHandPotAllocations(result) });
+  const result=await c.env.DB.prepare(
+    'SELECT * FROM hand_results WHERE hand_id=?'
+  ).bind(handId).first<any>();
+  if(written.meta.changes===0){
+    if(result){
+      // One replayed response may arrive after a network interruption.
+      const same=result.winner_user_id===winnerId &&
+        result.winner_name===winner &&
+        result.pot_chips===hand.pot_chips &&
+        result.hole_cards===storedCards &&
+        result.split_pot===split;
+      if(same) return c.json({ok:true,already_applied:true,result:revealHandPotAllocations(result)});
+      return c.json({
+        error:'Another host has already declared the winner. Undo that result before making a correction.',
+        code:'HAND_RESULT_CONFLICT',
+      },409);
+    }
+    return c.json({
+      error:'Hand pot or game status changed before the winner could be saved. Reload and review.',
+      code:'HAND_STATE_CONFLICT',
+    },409);
+  }
+  return c.json({ok:true,result:revealHandPotAllocations(result)});
 });
 
 // ── Update D/SB/BB assignments ──────────────────────────────────────────────────
