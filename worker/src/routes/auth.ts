@@ -17,6 +17,24 @@ function rejectOauth(front: string) {
   });
 }
 
+function rejectToken(front: string, reason: string) {
+  // Only a fixed, non-sensitive reason reaches the browser; never expose
+  // Google token responses, authorization codes, credentials or tokens.
+  const location = front + '/?error=token_failed&reason=' + encodeURIComponent(reason);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: location, 'Set-Cookie': clearOauthCookie },
+  });
+}
+
+const safeGoogleTokenErrors = new Set([
+  'invalid_client',
+  'invalid_grant',
+  'invalid_request',
+  'unauthorized_client',
+  'unsupported_grant_type',
+]);
+
 auth.get('/google', async (c) => {
   const state = generateId();
   const params = new URLSearchParams({
@@ -42,6 +60,10 @@ auth.get('/callback', async (c) => {
   const expectedState = stateCookie?.slice(oauthCookieName.length + 1);
   if (error || !code || !state || !expectedState || state !== expectedState) return rejectOauth(front);
 
+  if (!c.env.GOOGLE_CLIENT_SECRET) {
+    console.warn('Google OAuth token exchange: staging client secret not configured');
+    return rejectToken(front, 'missing_client_secret');
+  }
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
@@ -53,7 +75,25 @@ auth.get('/callback', async (c) => {
       grant_type:    'authorization_code',
     }),
   });
-  if (!tokenRes.ok) return c.redirect(`${front}/?error=token_failed`);
+  if (!tokenRes.ok) {
+    let reason = 'unknown';
+    try {
+      const response: unknown = await tokenRes.json();
+      if (response && typeof response === 'object' && 'error' in response) {
+        const errorCode = (response as { error?: unknown }).error;
+        if (typeof errorCode === 'string' && safeGoogleTokenErrors.has(errorCode)) {
+          reason = errorCode;
+        }
+      }
+    } catch {
+      // A non-JSON provider response is intentionally not exposed.
+    }
+    console.warn('Google OAuth token exchange rejected', {
+      status: tokenRes.status,
+      reason,
+    });
+    return rejectToken(front, reason);
+  }
   const tokens: { access_token:string } = await tokenRes.json();
 
   const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
