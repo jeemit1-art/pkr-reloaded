@@ -25,7 +25,7 @@ function fixture(status = 'active', hasWinner = false) {
     current_dealer_seat:1,
   };
   const hand = {
-    id:'h',game_id:'g',hand_no:2,board:'[]',pot_chips:0,mode:'full',
+    id:'h',game_id:'g',hand_no:2,board:'[]',pot_chips:0,mode:'manual', // legacy action-only fixture
   };
   let actions:RecordedAction[] = [];
   let batchCalls = 0;
