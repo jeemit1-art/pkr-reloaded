@@ -63,7 +63,7 @@ describe('hand result pot winner persistence',()=>{
     const pots=[{potIdx:0,winnerName:'Alex, Charlie',chips:101,label:'Main Pot',
       split_winners:[{winnerName:'Alex',chips:51},{winnerName:'Charlie',chips:50}]}];
     const saved=serializeHandCards(cards,pots,101);
-    expect(revealHandPotAllocations({hole_cards:saved})?.pot_winners).toEqual(pots);
+    expect((revealHandPotAllocations({hole_cards:saved}) as any)?.pot_winners).toEqual(pots);
     expect(()=>serializeHandCards(cards,[{...pots[0],split_winners:[
       {winnerName:'Alex',chips:80},{winnerName:'Charlie',chips:50},
     ]}],101)).toThrow(/must equal/);
