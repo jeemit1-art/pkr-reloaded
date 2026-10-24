@@ -11,7 +11,9 @@ describe('hand result pot winner persistence',()=>{
   it('stores all pot winners with the hole cards without new D1 columns',()=>{
     const saved=serializeHandCards(cards,winningPots,350);
     expect(saved).toContain('Main Pot');
-    const revealed=revealHandPotAllocations({id:'result',hole_cards:saved,winner_name:'Alex, Charlie'});
+    const revealed=revealHandPotAllocations({id:'result',hole_cards:saved,winner_name:'Alex, Charlie'}) as {
+      hole_cards:string;pot_winners?:typeof winningPots;
+    };
     expect(revealed.pot_winners).toEqual(winningPots);
     expect(JSON.parse(revealed.hole_cards)).toEqual(cards);
     expect(cards).toEqual({Alex:['A♠','A♥'],Charlie:['K♣','K♥']});
