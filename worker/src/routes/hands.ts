@@ -383,6 +383,7 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
 
   let storedCards:string;
+  let expectedLastActionId:string|null=null;
   try {
     let allocations=pot_winners;
     let refunds:Array<{display_name:string;chips:number}>=[];
@@ -391,8 +392,9 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
     // not authority and cannot assign an opponent's uncalled wager to a pot.
     if(hand.mode==='full'&&hand.pot_chips>0){
       const history=(await c.env.DB.prepare(
-        'SELECT display_name,action,chips FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
-      ).bind(handId).all<{display_name:string;action:string;chips:number}>()).results;
+        'SELECT id,display_name,action,chips FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+      ).bind(handId).all<{id:string;display_name:string;action:string;chips:number}>()).results;
+      expectedLastActionId=history.length?history[history.length-1].id:null;
       const roster=(await c.env.DB.prepare(
         'SELECT display_name,seat_number FROM game_players WHERE game_id=? AND seat_number IS NOT NULL'
       ).bind(gameId).all<{display_name:string;seat_number:number}>()).results;
@@ -476,6 +478,20 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
         }
       }
       allocations=calculated;
+      const canonicalWinner=calculated.map(p=>p.winnerName).join(', ');
+      if(winner_name.trim()!==canonicalWinner){
+        return c.json({
+          error:'Winner summary does not match the allocated main and side pots.',
+          code:'POT_ALLOCATION_INVALID',
+        },422);
+      }
+    }else{
+      // For a legacy or zero-pot hand, the last action still needs a
+      // conditional guard against zero-chip fold/check mutations.
+      const last=await c.env.DB.prepare(
+        'SELECT id FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1'
+      ).bind(handId).first<{id:string}>();
+      expectedLastActionId=last?.id||null;
     }
     storedCards=serializeHandCards(hole_cards,allocations,hand.pot_chips,refunds);
   } catch(e) {
@@ -495,9 +511,11 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
     SELECT ?,?,?,?,?,?,?,? WHERE
     EXISTS (SELECT 1 FROM hands WHERE id=? AND game_id=? AND pot_chips=? AND voided=0)
     AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+    AND (SELECT id FROM hand_actions WHERE hand_id=?
+      ORDER BY created_at DESC,rowid DESC LIMIT 1) IS ?
     ON CONFLICT(hand_id) DO NOTHING
   `).bind(resultId,handId,gameId,winnerId,winner,hand.pot_chips,storedCards,split,
-    handId,gameId,hand.pot_chips,gameId).run();
+    handId,gameId,hand.pot_chips,gameId,handId,expectedLastActionId).run();
 
   const result=await c.env.DB.prepare(
     'SELECT * FROM hand_results WHERE hand_id=?'
