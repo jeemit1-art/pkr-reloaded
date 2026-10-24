@@ -25,6 +25,19 @@ app.use('*', async (c, next) => {
 
 app.route('/auth',    auth);
 app.route('/events',  events);
+// Staging cannot initiate payments, expose a billing portal, or accept webhooks.
+app.use('/billing/*', async (c, next) => {
+  if (c.env.PKR_ENV === 'staging' && c.req.path !== '/billing/plan') {
+    return c.json({ error: 'Payments are disabled in PKR staging' }, 403);
+  }
+  await next();
+});
+app.use('/games/:id/analysis/*', async (c, next) => {
+  if (c.env.PKR_ENV === 'staging' && c.req.method === 'POST') {
+    return c.json({ error: 'Paid AI analysis is disabled in staging' }, 403);
+  }
+  await next();
+});
 app.route('/billing', billing);
 app.route('/',        hands);
 app.route('/',        payments);
@@ -32,13 +45,14 @@ app.route('/',        games);
 app.route('/',        tournament);
 app.route('/',        analysis);
 
-app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worker', ts:Date.now() }));
+app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worker', environment:c.env.PKR_ENV === 'staging' ? 'staging' : 'production', ts:Date.now() }));
 app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
 app.notFound(               (c) => c.json({ error:'Not found' }, 404));
 
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    if (env.PKR_ENV === 'staging') return;
     ctx.waitUntil(sendPaymentReminders(env));
   },
 };

@@ -147,6 +147,7 @@ async function sendToSub(
 
 /** Broadcast to ALL subscribers of an event */
 export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<void> {
+  if (env.PKR_ENV === 'staging') return;
   const subs = await env.DB.prepare(
     'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
   ).bind(eventId).all<{endpoint:string; p256dh:string; auth_key:string}>();
@@ -157,6 +158,7 @@ export async function sendPushToEvent(env: Env, eventId: string, payload: PushPa
 
 /** Send push to a specific player by display_name within an event */
 export async function sendPushToPlayer(env: Env, eventId: string, displayName: string, payload: PushPayload): Promise<void> {
+  if (env.PKR_ENV === 'staging') return;
   const name = displayName.toLowerCase().trim();
   const firstName = name.split(/\s+/)[0];
 

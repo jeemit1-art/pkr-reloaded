@@ -1,0 +1,24 @@
+# PKR STAGING ONLY. Do not replace or edit worker/wrangler.toml.
+# Every binding below points to a dedicated staging resource.
+account_id = "4b4794b983d6966f4207d2ff4fd8c991"
+name = "pkr-reloaded-worker-staging"
+main = "src/index.ts"
+compatibility_date = "2024-05-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "9e86adbcfb5d4817a32dfd4482d3dbf9"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pkr-reloaded-db-staging"
+database_id = "03577857-fc94-49ed-bd1b-5cd658aa0978"
+
+[vars]
+PKR_ENV = "staging"
+# Planned separate frontend hostname; not active until configured.
+FRONTEND_URL = "https://staging.mypkr.app"
+
+# No production routes, cron triggers, secrets or production bindings.

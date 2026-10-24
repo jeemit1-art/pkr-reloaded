@@ -3,6 +3,7 @@ export interface Env {
   KV: KVNamespace;
   DB: D1Database;
   FRONTEND_URL: string;
+  PKR_ENV?: 'production' | 'staging';
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   JWT_SECRET: string;

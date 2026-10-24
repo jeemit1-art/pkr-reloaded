@@ -1,0 +1,21 @@
+name: PKR staging isolation
+on:
+  pull_request:
+    paths:
+      - 'worker/wrangler.staging.toml'
+      - 'worker/wrangler.toml'
+      - 'worker/scripts/check-staging-config.mjs'
+      - '.github/workflows/staging-isolation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node --check worker/scripts/check-staging-config.mjs
+      - run: node worker/scripts/check-staging-config.mjs
