@@ -92,7 +92,7 @@ describe('API response confidentiality', () => {
     expect(JSON.stringify(await listed.json())).not.toContain('secret-pin-hash');
     const detail = await events.request('https://test.invalid/evt', {}, f.env);
     expect(detail.status).toBe(200);
-    const body = await detail.json();
+    const body = await detail.json() as { name:string };
     expect(JSON.stringify(body)).not.toContain('secret-pin-hash');
     expect(body.name).toBe('Safe testing only');
   });
@@ -149,7 +149,7 @@ describe('game status and settlement protection', () => {
         ],
       }), f.env);
     expect(response.status).toBe(422);
-    expect((await response.json()).variance).toBe(1);
+    expect((await response.json() as { variance:number }).variance).toBe(1);
     expect(f.getBatchCalls()).toBe(0);
     expect(f.writes).toEqual([]);
   });
