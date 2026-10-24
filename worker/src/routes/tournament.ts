@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import {calculateTournamentPayouts,TournamentPayoutError} from '../tournament-payouts';
 
 const tournament = new Hono<{ Bindings: Env }>();
 
@@ -19,7 +20,29 @@ tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
   const state   = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(gameId).first<any>();
   const levels  = await c.env.DB.prepare('SELECT * FROM tournament_levels WHERE game_id=? ORDER BY level_num ASC').bind(gameId).all<any>();
   const rebuys  = await c.env.DB.prepare('SELECT * FROM tournament_rebuys WHERE game_id=? ORDER BY created_at DESC').bind(gameId).all<any>();
-  return c.json({ state: state || null, levels: levels.results, rebuys: rebuys.results });
+  let pool:number|null=null,payouts:any[]=[];
+  let errorMessage:string|null=null;
+  if(state){
+    const registered=await c.env.DB.prepare(
+      'SELECT COUNT(*) AS cnt FROM game_players WHERE game_id=? AND buy_ins>0'
+    ).bind(gameId).first<{cnt:number}>();
+    try{
+      const prize=calculateTournamentPayouts(
+        registered?.cnt||0,state.buy_in_amount||0,
+        rebuys.results.map((r:any)=>r.amount_paid),
+        JSON.parse(state.payout_structure||'[]'),
+      );
+      pool=prize.prize_pool_cents;
+      payouts=prize.payouts;
+    }catch(error){
+      errorMessage=error instanceof TournamentPayoutError?
+        error.message:'Payout configuration needs review.';
+    }
+  }
+  return c.json({
+    state:state||null,levels:levels.results,rebuys:rebuys.results,
+    prize_pool_cents:pool,payouts,payout_error:errorMessage,
+  });
 });
 
 tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
