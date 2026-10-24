@@ -543,18 +543,24 @@ async function rebuildLeaderboard(db: D1Database, eventId: string) {
 function minimumTransfers(
   positions: Array<{user_id:string; display_name:string; net:number}>
 ): Transfer[] {
-  const creds = positions.filter(p=>p.net>0).map(p=>({...p,bal:p.net}));
-  const debts = positions.filter(p=>p.net<0).map(p=>({...p,bal:-p.net}));
+  // Round to cents to avoid float drift
+  const creds = positions.filter(p=>p.net>0).map(p=>({...p,bal:Math.round(p.net)}));
+  const debts = positions.filter(p=>p.net<0).map(p=>({...p,bal:Math.round(-p.net)}));
   creds.sort((a,b)=>b.bal-a.bal);
   debts.sort((a,b)=>b.bal-a.bal);
+  // Correct any rounding drift so totals match exactly
+  const totalDebt = debts.reduce((s,p)=>s+p.bal,0);
+  const totalCred = creds.reduce((s,p)=>s+p.bal,0);
+  const drift = totalCred - totalDebt;
+  if (drift !== 0 && creds.length > 0) creds[0].bal -= drift;
   const out: Transfer[] = [];
   let i=0,j=0;
   while (i<debts.length && j<creds.length) {
     const amt = Math.min(debts[i].bal, creds[j].bal);
     if (amt>0) out.push({from:debts[i].user_id,from_name:debts[i].display_name,to:creds[j].user_id,to_name:creds[j].display_name,amount:amt});
     debts[i].bal-=amt; creds[j].bal-=amt;
-    if (debts[i].bal===0) i++;
-    if (creds[j].bal===0) j++;
+    if (debts[i].bal<=0) i++;
+    if (creds[j].bal<=0) j++;
   }
   return out;
 }

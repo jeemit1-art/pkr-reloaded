@@ -1565,17 +1565,30 @@ function renderLbSheet() {
 
 // ── Settlement ──
 function calcSettlements(players) {
-  var debtors = players.filter(function(p){ return p.net < -0.005; }).map(function(p){ return { name: p.display_name, amount: -p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
-  var creditors = players.filter(function(p){ return p.net > 0.005; }).map(function(p){ return { name: p.display_name, amount: p.net }; }).sort(function(a,b){ return b.amount - a.amount; });
+  // Use p.name OR p.display_name — support both shapes
+  // Round to cents first to avoid floating point drift
+  var debtors = players
+    .map(function(p){ return { name: p.name||p.display_name, amount: Math.round(-p.net * 100) }; })
+    .filter(function(p){ return p.amount > 0; })
+    .sort(function(a,b){ return b.amount - a.amount; });
+  var creditors = players
+    .map(function(p){ return { name: p.name||p.display_name, amount: Math.round(p.net * 100) }; })
+    .filter(function(p){ return p.amount > 0; })
+    .sort(function(a,b){ return b.amount - a.amount; });
+  // Verify net sums to zero (fix rounding drift)
+  var totalDebt = debtors.reduce(function(s,p){return s+p.amount;},0);
+  var totalCred = creditors.reduce(function(s,p){return s+p.amount;},0);
+  var drift = totalCred - totalDebt;
+  if (drift !== 0 && creditors.length > 0) creditors[0].amount -= drift;
   var transfers = [];
   var i = 0, j = 0;
   while (i < debtors.length && j < creditors.length) {
     var pay = debtors[i], recv = creditors[j];
     var amt = Math.min(pay.amount, recv.amount);
-    if (amt > 0.005) transfers.push({ from: pay.name, to: recv.name, amount: amt });
+    if (amt > 0) transfers.push({ from: pay.name, to: recv.name, amount: amt / 100 });
     pay.amount -= amt; recv.amount -= amt;
-    if (pay.amount < 0.005) i++;
-    if (recv.amount < 0.005) j++;
+    if (pay.amount <= 0) i++;
+    if (recv.amount <= 0) j++;
   }
   return transfers;
 }
