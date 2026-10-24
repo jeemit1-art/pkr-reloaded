@@ -112,14 +112,32 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
       WHERE EXISTS(
         SELECT 1 FROM games WHERE id=? AND current_hand_no=?
           AND status NOT IN ('settled','cancelled')
+          AND (?='manual' OR status='active')
       )
       AND NOT EXISTS(
         SELECT 1 FROM hands h WHERE h.game_id=? AND h.voided=0
           AND NOT EXISTS(SELECT 1 FROM hand_results r WHERE r.hand_id=h.id)
       )
+      -- Recheck exactly the same seated player IDs, names and physical seats
+      -- inside the write. Same-count seat swaps must fail, not silently start.
+      AND (?='manual' OR (
+        (SELECT COUNT(*) FROM game_players WHERE game_id=?
+          AND seat_number IS NOT NULL AND buy_ins>0)=?
+        AND NOT EXISTS(
+          SELECT 1 FROM json_each(?) observed
+          WHERE NOT EXISTS(
+            SELECT 1 FROM game_players gp WHERE gp.game_id=?
+              AND gp.user_id=json_extract(observed.value,'$.user_id')
+              AND gp.display_name=json_extract(observed.value,'$.display_name')
+              AND gp.seat_number=json_extract(observed.value,'$.seat_number')
+              AND gp.buy_ins>0
+          )
+        )
+      ))
       ON CONFLICT(game_id,hand_no) DO NOTHING
-    `).bind(id,gameId,nextNo,dealer,small,big,input?.straddle?1:0,
-      '[]',0,mode,gameId,currentNo,gameId),
+    `).bind(id,gameId,nextNo,dealer,small,big,Boolean(straddle)?1:0,
+      '[]',0,mode,gameId,currentNo,mode,gameId,mode,
+      gameId,registeredSeats.length,JSON.stringify(registeredSeats),gameId),
     c.env.DB.prepare(`
       UPDATE games SET current_hand_no=?,current_dealer_seat=?
       WHERE id=? AND current_hand_no=? AND status NOT IN ('settled','cancelled')
