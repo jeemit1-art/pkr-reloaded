@@ -63,7 +63,7 @@ function fixture(options?:{
           } else if(sql.startsWith('UPDATE game_players SET seat_number=')){
             const [seat,gameId,userId,seatGame,seatValue,statusGame]=args;
             const p=players.find(p=>p.user_id===userId);
-            if(game.status==='active'&&gameId==='g'&&seatGame==='g'&&statusGame==='g'&&
+            if(game.status==='scheduled'&&gameId==='g'&&seatGame==='g'&&statusGame==='g'&&
               seat===seatValue&&p&&p.seat_number===null&&
               !players.some(p=>p.seat_number===seat)){
               p.seat_number=seat;changes=1;
@@ -71,7 +71,7 @@ function fixture(options?:{
           } else if(sql.startsWith('INSERT INTO game_players')){
             const [gameId,userId,name,whatsapp,wanted,seatGame,checkSeat,wantedAgain,
               statusGame,knownGame,knownUser,knownName]=args;
-            if(game.status==='active'&&gameId==='g'&&seatGame==='g'&&statusGame==='g'&&
+            if(game.status==='scheduled'&&gameId==='g'&&seatGame==='g'&&statusGame==='g'&&
               knownGame==='g'&&knownUser===userId&&knownName===name&&
               !players.some(p=>p.user_id===userId||p.display_name===name)){
               const seat=wanted!==null&&wanted===checkSeat&&wanted===wantedAgain&&
@@ -146,6 +146,21 @@ describe('transactional game start and RSVP registration',()=>{
     expect((await games.request(url,post(),f.env,exec)).status).toBe(409);
     expect(f.batchCount()).toBe(1);
     expect(f.players).toHaveLength(1);
+  });
+
+  it('allows only one of two simultaneous hosts to start and allocate the RSVP list',async()=>{
+    const f=fixture({rsvps:[
+      {id:'a',display_name:'Alice',whatsapp:null},
+      {id:'b',display_name:'Ben',whatsapp:null},
+    ]});
+    const [first,second]=await Promise.all([
+      games.request(url,post(),f.env,exec),
+      games.request(url,post(),f.env,exec),
+    ]);
+    expect([first.status,second.status].sort()).toEqual([200,409]);
+    expect(f.game.status).toBe('active');
+    expect(f.players.map(p=>p.display_name)).toEqual(['Alice','Ben']);
+    expect(new Set(f.players.map(p=>p.seat_number)).size).toBe(2);
   });
 
   it('cannot start on an incorrect password and never runs the seating transaction',async()=>{

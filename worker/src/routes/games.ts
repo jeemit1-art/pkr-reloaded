@@ -232,16 +232,14 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       "SELECT id,display_name,whatsapp FROM game_rsvps WHERE game_id=? AND status='yes' ORDER BY created_at ASC,id ASC"
     ).bind(gameId).all<ConfirmedRsvp>()).results;
     const plan=planStartSeating(game.seats,existing,rsvps);
-    const statements=[
-      c.env.DB.prepare(
-        "UPDATE games SET status='active' WHERE id=? AND status NOT IN ('active','settled','cancelled')"
-      ).bind(gameId),
-    ];
+    // Only the winning start transaction may allocate seats.
+    // Activate LAST, after guarded seating operations, within the D1 batch.
+    const statements: D1PreparedStatement[]=[];
 
     // Existing unassigned Quick Seat players have first option on vacant seats.
     for(const move of plan.existingMoves){
       statements.push(c.env.DB.prepare(
-        "UPDATE game_players SET seat_number=? WHERE game_id=? AND user_id=? AND seat_number IS NULL AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) AND EXISTS (SELECT 1 FROM games WHERE id=? AND status='active')"
+        "UPDATE game_players SET seat_number=? WHERE game_id=? AND user_id=? AND seat_number IS NULL AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('active','settled','cancelled'))"
       ).bind(move.seat_number,gameId,move.user_id,gameId,move.seat_number,gameId));
     }
     for(const player of plan.newPlayers){
@@ -251,15 +249,19 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       const userId=known?.user_id||'rsvp_'+player.id;
       // A late seat collision retains the RSVP with NULL seat, never displacing another player.
       statements.push(c.env.DB.prepare(
-        "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status='active') AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=?)) ON CONFLICT DO NOTHING"
+        "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('active','settled','cancelled')) AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=?)) ON CONFLICT DO NOTHING"
       ).bind(gameId,userId,player.display_name,player.whatsapp,
         player.seat_number,gameId,player.seat_number,player.seat_number,
         gameId,gameId,userId,player.display_name));
     }
 
-    // D1 batch runs the status transition and all seating in one transaction.
+    statements.push(c.env.DB.prepare(
+      "UPDATE games SET status='active' WHERE id=? AND status NOT IN ('active','settled','cancelled')"
+    ).bind(gameId));
+    // D1 transaction is committed only after conditional activation.
+    // A losing concurrent starter cannot add more RSVP players.
     const outcome=await c.env.DB.batch(statements);
-    if(!outcome[0]?.meta?.changes) return c.json({
+    if(!outcome[outcome.length-1]?.meta?.changes) return c.json({
       error:'Game already started or closed on another device',code:'GAME_STATE_CONFLICT',
     },409);
     const players=(await c.env.DB.prepare(
