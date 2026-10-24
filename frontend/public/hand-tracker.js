@@ -1702,7 +1702,12 @@ function renderWinner(body){
     var pc=document.createElement('div');pc.style.cssText='font-size:1.1rem;font-weight:700;color:var(--cream)';pc.textContent=curPot.chips+' chips'+(cv?' = $'+(curPot.chips*cv/100).toFixed(2):'');
     var pe=document.createElement('div');pe.style.cssText='font-size:0.72rem;color:var(--muted);margin-top:4px';pe.textContent='Eligible: '+curPot.eligible.join(' \u00B7 ');
     ph.appendChild(plb);ph.appendChild(pc);ph.appendChild(pe);body.appendChild(ph);
-    hs.potWinners.filter(Boolean).forEach(function(pw){var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:5px 0;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.04)';row.innerHTML='<span style="color:var(--muted)">'+pw.label+'</span><span style="color:var(--green)">\uD83C\uDFC6 '+pw.winnerName+' \u00B7 '+pw.chips+' chips</span>';body.appendChild(row);});
+    hs.potWinners.filter(Boolean).forEach(function(pw){
+      var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:5px 0;font-size:0.75rem;border-bottom:1px solid rgba(255,255,255,0.04)';
+      var lbl=document.createElement('span');lbl.style.color='var(--muted)';lbl.textContent=pw.label;
+      var val=document.createElement('span');val.style.color='var(--green)';val.textContent='Winner: '+pw.winnerName+' - '+pw.chips+' chips';
+      row.appendChild(lbl);row.appendChild(val);body.appendChild(row);
+    });
     var wlbl=document.createElement('div');wlbl.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:10px 0 6px';wlbl.textContent='Who wins this pot?';body.appendChild(wlbl);
     curPot.eligible.forEach(function(name){
       var hc3=hs.holes[name]||[],rb2=document.createElement('button');
@@ -1755,7 +1760,8 @@ function renderHistory(body){
     stats.style.cssText='background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center';
     stats.innerHTML='<div><div style="font-size:1rem;font-weight:700;color:var(--gold)">'+settled.length+'</div><div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase">Hands</div></div>'
       +'<div><div style="font-size:0.85rem;font-weight:700;color:var(--green)">'+totalPot+(cv?' <span style="font-size:0.6rem">chips</span>':'')+'</div><div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase">Total pot</div></div>'
-      +'<div><div style="font-size:0.75rem;font-weight:700;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(topW||'\u2014')+'</div><div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase">Most wins</div></div>';
+      +'<div><div style="font-size:0.75rem;font-weight:700;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+'\u2014'+'</div><div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase">Most wins</div></div>';    // Never inject player-supplied winner names into innerHTML.
+    stats.children[2].firstChild.textContent=topW||'\u2014';
     body.appendChild(stats);
   }
   hs.history.forEach(function(h){
@@ -1768,15 +1774,34 @@ function renderHistory(body){
       var winnerSpan=document.createElement('div');winnerSpan.style.cssText='font-size:0.8rem;color:var(--green);font-weight:700';winnerSpan.textContent='\uD83C\uDFC6 '+(h.result.winner_name||'');
       var potSpan=document.createElement('div');potSpan.style.cssText='font-size:0.68rem;color:var(--muted)';potSpan.textContent=(h.result.pot_chips||0)+' chips'+(cv2&&h.result.pot_chips?' = $'+(h.result.pot_chips*cv2/100).toFixed(2):'');
       res.appendChild(winnerSpan);res.appendChild(potSpan);
+      if(Array.isArray(h.result.pot_winners) && h.result.pot_winners.length){
+        h.result.pot_winners.forEach(function(p){
+          var allocation=document.createElement('div');
+          allocation.style.cssText='font-size:0.68rem;color:var(--gold);margin-top:3px';
+          allocation.textContent=p.label+': '+p.winnerName+' ('+p.chips+' chips)';
+          res.appendChild(allocation);
+        });
+      }
     } else {
       var ip=document.createElement('span');ip.style.cssText='font-size:0.75rem;color:var(--amber)';ip.textContent='In progress';res.appendChild(ip);
     }
     top.appendChild(num);top.appendChild(res);row.appendChild(top);
     var meta=document.createElement('div');meta.style.cssText='display:flex;gap:8px;flex-wrap:wrap;font-size:0.68rem;color:var(--muted);margin-bottom:4px';
-    if(h.dealer_seat){var ds=getSeated().find(function(p){return p.seat===h.dealer_seat;});meta.innerHTML+='<span>\uD83C\uDFAF Dealer: '+(ds?ds.name:'Seat '+h.dealer_seat)+'</span>';}
-    if(h.straddle)meta.innerHTML+='<span style="color:var(--gold)">STR</span>';
+    if(h.dealer_seat){
+      var ds=getSeated().find(function(p){return p.seat===h.dealer_seat;});
+      var dealerInfo=document.createElement('span');
+      dealerInfo.textContent='Dealer: '+(ds?ds.name:'Seat '+h.dealer_seat);
+      meta.appendChild(dealerInfo);
+    }
+    if(h.straddle){
+      var straddleInfo=document.createElement('span');straddleInfo.style.color='var(--gold)';
+      straddleInfo.textContent='STR';meta.appendChild(straddleInfo);
+    }
     var actCount=(h.actions||[]).filter(function(a){return a.action!=='post'&&a.action!=='straddle';}).length;
-    if(actCount>0)meta.innerHTML+='<span>'+actCount+' actions</span>';
+    if(actCount>0){
+      var actionInfo=document.createElement('span');
+      actionInfo.textContent=actCount+' actions';meta.appendChild(actionInfo);
+    }
     row.appendChild(meta);
     if(h.board&&h.board.length){var br=document.createElement('div');br.style.cssText='display:flex;gap:3px;margin-top:4px';h.board.forEach(function(c){br.appendChild(cDiv(c,true));});row.appendChild(br);}
     var playerNames=[];
