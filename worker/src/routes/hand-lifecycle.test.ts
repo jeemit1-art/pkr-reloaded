@@ -188,6 +188,52 @@ describe('replay-safe hands and history preserving void',()=>{
     expect(valid.status).toBe(200);
     expect(f.getResult()).toBeNull();
   });
+  it('refuses three-way dealer/small blind overlap and reversed blinds',async()=>{
+    const f=fixture();
+    for(const positions of [
+      {...newHand,sb_seat:1},
+      {...newHand,sb_seat:3,bb_seat:4},
+      {...newHand,dealer_seat:2},
+    ]){
+      const res=await hands.request(base,post(positions),f.env,exec);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({code:'HAND_SEATING_INVALID'});
+    }
+    expect(f.getInserts()).toBe(0);
+  });
+  it('supports valid heads-up dealer-as-SB and rejects heads-up straddles',async()=>{
+    const f=fixture();
+    f.roster.splice(2,2);
+    const positions={dealer_seat:1,sb_seat:1,bb_seat:4,straddle:0,mode:'full'};
+    const bad=await hands.request(base,post({...positions,straddle:1}),f.env,exec);
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toMatchObject({code:'INVALID_BLIND'});
+    const good=await hands.request(base,post(positions),f.env,exec);
+    expect(good.status).toBe(201);
+    expect(f.getInserts()).toBe(1);
+  });
+  it('requires the game and registered seating to be ready',async()=>{
+    const f=fixture();
+    f.game.status='scheduled';
+    const early=await hands.request(base,post(newHand),f.env,exec);
+    expect(early.status).toBe(409);
+    expect(await early.json()).toMatchObject({code:'GAME_NOT_ACTIVE'});
+    f.game.status='active';
+    f.roster.splice(1);
+    const sparse=await hands.request(base,post(newHand),f.env,exec);
+    expect(sparse.status).toBe(409);
+    expect(await sparse.json()).toMatchObject({code:'HAND_ROSTER_UNSYNCED'});
+    expect(f.getInserts()).toBe(0);
+  });
+  it('rejects a same-count seat swap between validation and atomic insertion',async()=>{
+    const f=fixture();
+    f.swapSeatsBeforeInsert();
+    const response=await hands.request(base,post(newHand),f.env,exec);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({code:'HAND_START_CONFLICT'});
+    expect(f.records).toHaveLength(0);
+    expect(f.getInserts()).toBe(0);
+  });
   it('rejects invalid hand seating without entering the write transaction',async()=>{
     const f=fixture();
     const invalid=await hands.request(base,post({...newHand,dealer_seat:0}),f.env,exec);
