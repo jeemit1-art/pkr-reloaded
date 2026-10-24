@@ -144,7 +144,7 @@ export default function PlayPage() {
       <style>{getTableCSS()}</style>
 
       {/* ── GAME SCREEN ── */}
-      <div id="gameScreen" className="screen">
+      <div id="gameScreen" className="screen pkr-casino-live-table">
         <div className="topbar">
           <button className="tb-back" id="backBtn" onClick={() => {
             try {
@@ -166,7 +166,9 @@ export default function PlayPage() {
         </div>
 
         {/* Bank Bar */}
-        <div className="bank-bar" id="bankBar" onClick={() => (window as any).toggleBank?.()}>
+        <div className="bank-bar" id="bankBar" role="button" tabIndex={0}
+          aria-label="Toggle bank summary" onClick={() => (window as any).toggleBank?.()}
+          onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="bank-left">
             <div className="bank-icon">💳</div>
             <span className="bank-label">Bank Summary</span>

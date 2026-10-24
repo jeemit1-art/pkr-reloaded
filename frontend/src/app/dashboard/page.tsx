@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
+import CasinoArtwork from '@/components/CasinoArtwork';
 
 function DashboardInner() {
   const router = useRouter();
@@ -245,7 +246,7 @@ function DashboardInner() {
   );
 
   return (
-    <div className="pkr-app pkr-dashboard" style={{minHeight:'100vh',paddingBottom:80}}>
+    <div className="pkr-app pkr-dashboard pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
@@ -350,6 +351,7 @@ function DashboardInner() {
         </div>
 
         <section className="pkr-hero" aria-label={featuredRoom ? 'Your featured poker room' : 'Create your first poker room'}>
+          <CasinoArtwork variant="lounge" />
           <div className="pkr-hero-top">
             <span className="pkr-hero-tag"><span className="pkr-status-dot" />{featuredRoom ? 'YOUR POKER ROOM' : 'WELCOME TO PKR'}</span>
             {featuredRoom && (featuredRoom as any).status === 'ended' && <span className="badge badge-settled">Ended</span>}

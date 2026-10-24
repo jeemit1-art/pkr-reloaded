@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Playfair_Display, DM_Sans } from 'next/font/google';
 import './globals.css';
 import './pkr-app.css';
+import './pkr-casino.css';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],

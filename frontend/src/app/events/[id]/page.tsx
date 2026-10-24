@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
+import CasinoArtwork from '@/components/CasinoArtwork';
 
 type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
@@ -161,7 +162,7 @@ export default function EventPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   return (
-    <div className="pkr-app pkr-event" style={{minHeight:'100vh',paddingBottom:80}}>
+    <div className="pkr-app pkr-event pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
       {/* Header */}
@@ -194,6 +195,7 @@ export default function EventPage() {
       {/* Room overview; all figures come from the existing event record. */}
       <section className="pkr-event-overview" aria-label="Poker room overview">
         <div className="pkr-event-overview-inner">
+          <CasinoArtwork variant="room" />
           <span className="pkr-eyebrow">Your poker room</span>
           <h1>{event.name}</h1>
           <p>Manage upcoming games, player standings and results from this room.</p>

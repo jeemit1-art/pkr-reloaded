@@ -82,7 +82,7 @@ export default function GamePage() {
   const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null);
 
   return (
-    <div className="pkr-app pkr-game-detail" style={{minHeight:'100vh',paddingBottom:80}}>
+    <div className="pkr-app pkr-game-detail pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
@@ -112,7 +112,7 @@ export default function GamePage() {
       <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
 
         {/* Game info card */}
-        <div className="card-gold pkr-game-summary" style={{padding:'20px',marginBottom:16}}>
+        <div className="card-gold pkr-game-summary pkr-casino-game-summary" style={{padding:'20px',marginBottom:16}}>
           <div className="pkr-eyebrow" style={{marginBottom:8}}>Game night</div>
           <div className="display" style={{fontSize:22,color:'var(--white)',fontWeight:500,marginBottom:4}}>
             {fmtDate(game.scheduled_at)}
