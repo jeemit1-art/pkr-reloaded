@@ -60,11 +60,11 @@ describe('durable staging game sync journal',()=>{
     storage.clear();
     const {frame}=harness(false,async()=>({}));
     const path='/games/synthetic-game/buyin/test_player';
-    frame.queueAction(path,{method:'PUT',body:'{"count":1,"total":2000}'});
-    frame.queueAction(path,{method:'PUT',body:'{"count":2,"total":4000}'});
+    frame.queueAction(path,{method:'PUT',body:JSON.stringify({count:1,total:2000,expected_count:0,expected_total:0})});
+    frame.queueAction(path,{method:'PUT',body:JSON.stringify({count:2,total:4000,expected_count:1,expected_total:2000})});
     const journal=JSON.parse(storage.get(key)||'[]');
     expect(journal).toHaveLength(1);
-    expect(JSON.parse(journal[0].options.body)).toEqual({count:2,total:4000});
+    expect(JSON.parse(journal[0].options.body)).toEqual({count:2,total:4000,expected_count:0,expected_total:0});
     expect(journal[0].options.method).toBe('PUT');
     expect(journal[0].options).not.toHaveProperty('headers');
   });
@@ -80,7 +80,7 @@ describe('durable staging game sync journal',()=>{
     await frame.flushOfflineQueue();
     expect(sent.filter(x=>x.options?.method==='PUT')).toHaveLength(1);
     expect(JSON.parse(sent.find(x=>x.options?.method==='PUT').options.body))
-      .toEqual({count:2,total:4000});
+      .toEqual({count:2,total:4000,expected_count:0,expected_total:0});
     expect(frame._offlineQueue).toHaveLength(0);
     expect(storage.has(key)).toBe(false);
   });
@@ -125,8 +125,8 @@ describe('durable staging game sync journal',()=>{
       '/games/synthetic-game/buyin/alex_remote',
       '/games/synthetic-game/cashout/alex_remote',
     ]);
-    expect(JSON.parse(mut[0].options.body)).toEqual({count:2,total:4000});
-    expect(JSON.parse(mut[1].options.body)).toEqual({cashout:3500});
+    expect(JSON.parse(mut[0].options.body)).toEqual({count:2,total:4000,expected_count:0,expected_total:0});
+    expect(JSON.parse(mut[1].options.body)).toEqual({cashout:3500,expected_cashout:null});
     expect(replay.frame._offlineQueue).toHaveLength(0);
     expect(storage.has(key)).toBe(false);
   });
@@ -135,7 +135,7 @@ describe('durable staging game sync journal',()=>{
     storage.clear();
     const first=harness(false,async()=>({}));
     first.frame.queueAction('/games/synthetic-game/cashout/alex_remote',{
-      method:'PUT',body:'{"cashout":3500}',
+      method:'PUT',body:JSON.stringify({cashout:3500,expected_cashout:null}),
     });
     const replay=harness(true,async(path)=>{
       if(path==='/games/synthetic-game')return {status:'active'};
@@ -145,6 +145,29 @@ describe('durable staging game sync journal',()=>{
     expect(replay.frame._offlineQueue).toHaveLength(1);
     expect(JSON.parse(storage.get(key)||'[]')).toHaveLength(1);
     expect(replay.frame._syncError).toMatch(/paused/);
+  });
+
+  it('retains a conflicting edit and blocks automatic repeat attempts',async()=>{
+    storage.clear();
+    const first=harness(false,async()=>({}));
+    first.frame.queueAction('/games/synthetic-game/cashout/alex_remote',{
+      method:'PUT',body:JSON.stringify({cashout:3500,expected_cashout:null}),
+    });
+    let attempted=0;
+    const replay=harness(true,async(path)=>{
+      if(path==='/games/synthetic-game')return {status:'active'};
+      attempted++;
+      const err:any=new Error('Another host changed the cash-out');
+      err.code='EDIT_CONFLICT';err.status=409;
+      throw err;
+    });
+    await replay.frame.flushOfflineQueue();
+    expect(attempted).toBe(1);
+    expect(replay.frame._offlineQueue).toHaveLength(1);
+    expect(replay.frame._syncError).toMatch(/CONFLICT/);
+    await replay.frame.flushOfflineQueue();
+    expect(attempted).toBe(1);
+    expect(storage.has(key)).toBe(true);
   });
 
   it('never queues settlement requests or cross-game mutations',()=>{

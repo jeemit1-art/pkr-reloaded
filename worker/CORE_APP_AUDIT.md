@@ -17,6 +17,7 @@ User successfully completed a staging Google login, synthetic table, game, three
 | Access permissions | Co-host/host-only financial mutations, authenticated transfer changes, restrict generic status transitions | Route-level mocked-D1 tests |
 | Client data exposure | Omit event PIN hashes and game passwords; redact WhatsApp contacts from unauthenticated RSVP/lobby responses | Client response tests and public RSVP tests |
 | Cash game settlement | Reject unbalanced outcomes and invalid cents, scope idempotency to game, prevent duplicate paid status changes | Settlement conservation/property tests and API-level tests |
+| Concurrent money edits | Atomic value-based guards for buy-ins and cash-outs, conflict responses, retained local journal and paused replay | Staging Worker concurrent route tests and browser journal tests |
 | Hand actions | Atomic action insert/undo and pot recalculation, deterministic same-second action ordering, protect finished hands and games | Hand action transaction and undo tests |
 | Betting order | Prevent repeated big-blind option after checking; assert preflop/postflop actor sequence | Real shipped JavaScript action-order tests |
 | Side pots | Use the same accounting function for winner selection and display, include folded contributions | Chip conservation and side-pot fixture tests |
@@ -29,7 +30,7 @@ Run logs are available in GitHub Actions; test count grows with each change.
 
 ## Important unresolved blockers — do not release yet
 
-1. **Multi-device concurrent editing.** Absolute write reconciliation is retry-safe but is not yet conflict-safe across two hosts/tabs changing the same cash-out or seat. Add server-side revisions/optimistic concurrency and conflict UI before relying on arbitrary multi-host offline sync.
+1. **Multi-device concurrent editing.** Buy-in and cash-out updates now compare the original value in the same SQL write and return `409 EDIT_CONFLICT` rather than overwriting different values. Offline retries are retained and paused for review. **Still open:** monotonic revisions (value-based checks cannot detect ABA), concurrent seat/removal changes, a clear manual conflict-resolution UI and full end-to-end mobile verification. Do not release until these are addressed.
 2. **Offline browser lifecycle.** Journal uses localStorage, not a guaranteed durable offline database. Browser storage can be cleared or unavailable; page reload while offline may require connectivity to load the app. Validate realistic mobile/PWA recovery, storage exceptions, and network interruptions before release.
 3. **Complex poker hand rules.** Need focused tests and design decisions for uncalled overbets returned to the bettor, short all-in minimum-raise rules, odd-chip division in split pots and tournament payout/clock edge cases. The current side-pot tests verify contribution accounting, not exhaustive poker rule compliance.
 4. **Hand server validation.** The server validates street/action/chips, but complete legal-turn and stack-limit validation is not implemented. The UI computes turn order; a malicious client can still submit legal-shaped but strategically illegal hand actions.

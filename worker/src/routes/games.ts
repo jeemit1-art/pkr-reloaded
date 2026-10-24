@@ -301,60 +301,111 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
   return c.json({ok:true, players:players.results});
 });
 
-/* ── Set exact buy-in count and total ── */
+/* ── Exact buy-in update with an atomic expected-value guard ── */
 games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
-  const { count, total } = await c.req.json<{count:number, total?:number}>();
-  if (!Number.isSafeInteger(count) || count < 0 || (total !== undefined && (!Number.isSafeInteger(total) || total < 0))) return c.json({error:'Invalid buy-in amounts'},400);
+  const body = await c.req.json().catch(() => null) as {
+    count:number;total:number;expected_count:number;expected_total:number;
+  } | null;
+  if (!body || typeof body !== 'object') return c.json({error:'Invalid buy-in request'},400);
+  if (!Object.prototype.hasOwnProperty.call(body,'expected_count') ||
+      !Object.prototype.hasOwnProperty.call(body,'expected_total')) {
+    return c.json({error:'Original buy-in amounts required. Reload and review before editing.',code:'PRECONDITION_REQUIRED'},428);
+  }
+  const {count,total,expected_count,expected_total} = body;
+  if (![count,total,expected_count,expected_total].every(v => Number.isSafeInteger(v) && v >= 0) ||
+      (count === 0 && total !== 0)) {
+    return c.json({error:'Buy-in amounts must be non-negative integer cents'},400);
+  }
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
-  if (!game) return c.json({error:'Not found'},404);
-  if (game.status==='settled' || game.status==='cancelled') {
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  if (game.status==='settled'||game.status==='cancelled') {
     return c.json({error:'Cannot edit a settled or cancelled game'},409);
   }
-  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  const prev = await c.env.DB.prepare('SELECT display_name, buy_in_total FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,userId).first<any>();
-  const prevTotal = prev?.buy_in_total ?? 0;
-  await c.env.DB.prepare(
-    'UPDATE game_players SET buy_ins=?, buy_in_total=? WHERE game_id=? AND user_id=?'
-  ).bind(count, total ?? 0, gameId, userId).run();
-  const player = prev;
-  if (player && count > 0) {
-    const evData = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string;buy_in:number}>();
-    const totalAmt = total ?? 0;
-    const thisAmt = totalAmt - prevTotal;
-    const body = count > 1
-      ? `Buy-in recorded — $${(thisAmt/100).toFixed(0)} ($${(totalAmt/100).toFixed(0)} total)`
-      : `Buy-in recorded — you're in for $${(thisAmt/100).toFixed(0)}`;
-    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
-      title: `${evData?.name||'PKR'}`,
-      body,
-      data: { gameId, eventId: game.event_id, type: 'buyin' },
+  // The write checks prior money and open-game status in ONE D1 statement.
+  // A stale browser cannot overwrite another host's distinct edit.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET buy_ins=?,buy_in_total=? ' +
+    'WHERE game_id=? AND user_id=? AND buy_ins=? AND buy_in_total=? ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(count,total,gameId,userId,expected_count,expected_total,gameId).run();
+  const current = await c.env.DB.prepare(
+    'SELECT user_id,display_name,buy_ins,buy_in_total,cashout FROM game_players WHERE game_id=? AND user_id=?'
+  ).bind(gameId,userId).first<any>();
+  if (!current) return c.json({error:'Player no longer exists in this game'},404);
+  if (result.meta.changes === 0) {
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game closed before the change could be saved',code:'GAME_CLOSED'},409);
+    if (current.buy_ins===count&&current.buy_in_total===total)
+      return c.json({ok:true,already_applied:true,buy_ins:count,buy_in_total:total});
+    return c.json({
+      error:'Another host changed these buy-ins. Review both amounts before retrying.',
+      code:'EDIT_CONFLICT',current:{buy_ins:current.buy_ins,buy_in_total:current.buy_in_total},
+    },409);
+  }
+  if (count > 0 && total > expected_total) {
+    const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
+      .bind(game.event_id).first<{name:string}>();
+    const added = '$'+((total-expected_total)/100).toFixed(0);
+    const message = count > 1
+      ? 'Buy-in recorded — '+added+' ($'+(total/100).toFixed(0)+' total)'
+      : "Buy-in recorded — you're in for "+added;
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env,game.event_id,current.display_name,{
+      title:event?.name||'PKR',body:message,
+      data:{gameId,eventId:game.event_id,type:'buyin'},
     }));
   }
-  return c.json({ok:true, buy_ins:count, buy_in_total: total ?? 0});
+  return c.json({ok:true,buy_ins:count,buy_in_total:total});
 });
 
-/* ── Set exact cashout amount ── */
+/* ── Exact cash-out update using null-safe compare-and-swap ── */
 games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
-  const { cashout } = await c.req.json<{cashout:number|null}>();
-  // A null value explicitly clears a previously-entered cash-out on an
-  // unsettled game, for example when the host undoes an erroneous cash-out.
-  if (cashout !== null && (!Number.isSafeInteger(cashout) || (cashout as number) < 0)) {
-    return c.json({error:'Invalid cashout'},400);
+  const body = await c.req.json().catch(() => null) as {
+    cashout:number|null;expected_cashout:number|null;
+  } | null;
+  if (!body || typeof body !== 'object' ||
+      !Object.prototype.hasOwnProperty.call(body,'cashout')) {
+    return c.json({error:'Invalid cash-out request'},400);
   }
-  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<{event_id:string;status:string}>();
+  if (!Object.prototype.hasOwnProperty.call(body,'expected_cashout')) {
+    return c.json({error:'Original cash-out amount required. Reload and review before editing.',code:'PRECONDITION_REQUIRED'},428);
+  }
+  const {cashout,expected_cashout} = body;
+  if ((cashout!==null&&(!Number.isSafeInteger(cashout)||cashout<0)) ||
+      (expected_cashout!==null&&(!Number.isSafeInteger(expected_cashout)||expected_cashout<0))) {
+    return c.json({error:'Cash-out must be null or non-negative integer cents'},400);
+  }
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?')
+    .bind(gameId).first<{event_id:string;status:string}>();
   if (!game) return c.json({error:'Game not found'},404);
-  if (game.status==='settled' || game.status==='cancelled') {
-    return c.json({error:'Cannot edit a settled or cancelled game'},409);
-  }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  await c.env.DB.prepare(
-    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=?'
-  ).bind(cashout, gameId, userId).run();
-  return c.json({ok:true, cashout});
+  if (game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+
+  // IS ? makes both NULL -> NULL and cents -> cents comparisons atomic.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS ? ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(cashout,gameId,userId,expected_cashout,gameId).run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare('SELECT cashout FROM game_players WHERE game_id=? AND user_id=?')
+      .bind(gameId,userId).first<{cashout:number|null}>();
+    if (!current) return c.json({error:'Player no longer exists in this game'},404);
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game closed before the change could be saved',code:'GAME_CLOSED'},409);
+    if (current.cashout===cashout) return c.json({ok:true,already_applied:true,cashout});
+    return c.json({
+      error:'Another host changed this cash-out. Review both amounts before retrying.',
+      code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+    },409);
+  }
+  return c.json({ok:true,cashout});
 });
 
 games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {

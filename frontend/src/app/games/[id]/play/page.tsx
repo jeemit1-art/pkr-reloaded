@@ -591,7 +591,14 @@ async function pkrApi(path, opts) {
       (opts && opts.headers) ? opts.headers : {}
     ),
   }));
-  if (!res.ok) { var e = await res.json().catch(function(){ return {}; }); throw new Error(e.error || String(res.status)); }
+  if (!res.ok) {
+    var e = await res.json().catch(function(){ return {}; });
+    var err = new Error(e.error || String(res.status));
+    err.status = res.status;
+    err.code = e.code || null;
+    err.current = e.current || null;
+    throw err;
+  }
   return res.json();
 }
 window.pkrApi = pkrApi;
@@ -617,6 +624,8 @@ function restorePendingActions() {
 var _offlineQueue = restorePendingActions();
 var _isOnline = navigator.onLine;
 var _flushingQueue = false;
+var _activeQueueId = null;
+var _syncConflict = false;
 var _syncError = '';
 
 function savePendingActions() {
@@ -655,18 +664,40 @@ function queueAction(url, options, seatSid, seatName) {
     throw new Error('Only game-specific, retry-safe changes can be queued');
   }
   var key = method + ':' + url + (seatSid ? ':' + seatSid : '');
-  _offlineQueue = _offlineQueue.filter(function(a){ return a.key !== key; });
-  _offlineQueue.push({
-    id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
-    key: key, url: url,
-    options: {method:method, body:options.body},
-    seatSid:seatSid || null, seatName:seatName || null,
+  var pending = _offlineQueue.find(function(a){return a.key===key && a.id!==_activeQueueId;});
+  var active = _offlineQueue.find(function(a){return a.key===key && a.id===_activeQueueId;});
+  var body = options.body || null;
+  if (method === 'PUT' && /\/(buyin|cashout)\//.test(url) && body) {
+    var next = JSON.parse(body);
+    var predecessor = pending || active;
+    if (predecessor) {
+      var prior = JSON.parse(predecessor.options.body);
+      // Preserve the original expected balance when coalescing offline edits.
+      // If the earlier write is in-flight, its successor expects its new value.
+      if (url.indexOf('/buyin/') >= 0) {
+        next.expected_count = pending ? prior.expected_count : prior.count;
+        next.expected_total = pending ? prior.expected_total : prior.total;
+      } else {
+        next.expected_cashout = pending ? prior.expected_cashout : prior.cashout;
+      }
+      body = JSON.stringify(next);
+    }
+  }
+  var action = {
+    id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
+    key:key,url:url,options:{method:method,body:body},
+    seatSid:seatSid||null,seatName:seatName||null,
+  };
+  _offlineQueue = _offlineQueue.filter(function(a){
+    return a.key !== key || a.id===_activeQueueId;
   });
+  _offlineQueue.push(action);
   savePendingActions();
   showConnBanner();
+  return action;
 }
 
-function queueLatestSeatAmounts(sid, playerId, expectedName) {
+function queueLatestSeatAmounts(sid, playerId, expectedName, serverPlayer) {
   var current = _pkrSnapshotPlayers()[sid];
   if (!current || current.name !== expectedName) return;
   var base = '/games/' + _ctx.gameId;
@@ -674,17 +705,20 @@ function queueLatestSeatAmounts(sid, playerId, expectedName) {
     method:'PUT', body:JSON.stringify({
       count: current.buyins,
       total: Math.round(current.biTotal * 100),
+      expected_count: serverPlayer && Number.isSafeInteger(serverPlayer.buy_ins) ? serverPlayer.buy_ins : 0,
+      expected_total: serverPlayer && Number.isSafeInteger(serverPlayer.buy_in_total) ? serverPlayer.buy_in_total : 0,
     }),
   });
   queueAction(base + '/cashout/' + playerId, {
     method:'PUT', body:JSON.stringify({
       cashout: current.hadCashout ? Math.round(current.cashout * 100) : null,
+      expected_cashout: serverPlayer && serverPlayer.cashout != null ? serverPlayer.cashout : null,
     }),
   });
 }
 
 async function flushOfflineQueue() {
-  if (_flushingQueue || _offlineQueue.length === 0 || !navigator.onLine) return;
+  if (_flushingQueue || _syncConflict || _offlineQueue.length === 0 || !navigator.onLine) return;
   _flushingQueue = true;
   _syncError = '';
   try {
@@ -704,7 +738,9 @@ async function flushOfflineQueue() {
           continue;
         }
       }
+      _activeQueueId = action.id;
       var response = await pkrApi(action.url, action.options);
+      _activeQueueId = null;
       _offlineQueue = _offlineQueue.filter(function(x){return x.id !== action.id;});
       savePendingActions();
       // The seat has its real server-generated user ID now. Reconcile the
@@ -717,15 +753,21 @@ async function flushOfflineQueue() {
           _pkrSeatedPlayers[action.seatSid] = {
             user_id:player.user_id, name:action.seatName,
           };
-          queueLatestSeatAmounts(action.seatSid, player.user_id, action.seatName);
+          queueLatestSeatAmounts(action.seatSid, player.user_id, action.seatName, player);
         }
       }
     }
     if (_offlineQueue.length === 0) loadGameFromPkr();
   } catch(e) {
     console.warn('Pending game sync failed; edits are retained locally:', e);
-    _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
+    if (e && (e.code === 'EDIT_CONFLICT' || e.code === 'PRECONDITION_REQUIRED')) {
+      _syncConflict = true;
+      _syncError = 'CONFLICT: Another host changed these figures. Your edit is retained; do not settle until you review both records.';
+    } else {
+      _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
+    }
   } finally {
+    _activeQueueId = null;
     _flushingQueue = false;
     showConnBanner();
   }
@@ -741,22 +783,26 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
   // Persist BEFORE dispatching the request, not only on network errors.
   // A tab closing while the HTTP request is in flight must leave a recoverable
   // journal entry. Exact PUTs and idempotent seat retries are replay-safe.
-  queueAction(url, options, seatSid, seatName);
-  var inflight = _offlineQueue[_offlineQueue.length - 1];
+  var inflight = queueAction(url, options, seatSid, seatName);
+  _activeQueueId = inflight.id;
   _flushingQueue = true;
   var acknowledged = false;
   var result = null;
   try {
-    result = await pkrApi(url, options);
+    result = await pkrApi(inflight.url, inflight.options);
     _offlineQueue = _offlineQueue.filter(function(a){return a.id !== inflight.id;});
     savePendingActions();
     acknowledged = true;
   } catch(e) {
     if (!navigator.onLine || e instanceof TypeError) _isOnline = false;
-    else _syncError = 'Change not saved to server: review the sync warning before settling.';
+    else if (e && (e.code === 'EDIT_CONFLICT' || e.code === 'PRECONDITION_REQUIRED')) {
+      _syncConflict = true;
+      _syncError = 'CONFLICT: Another host changed these figures. Your edit is retained; do not settle until you review both records.';
+    } else _syncError = 'Change not saved to server: review the sync warning before settling.';
     // Keep the persisted entry for a safe retry or manual conflict resolution.
     console.warn('Game change retained for retry:',e);
   } finally {
+    _activeQueueId = null;
     _flushingQueue = false;
     showConnBanner();
     if (acknowledged && _isOnline && _offlineQueue.length) flushOfflineQueue();
@@ -766,7 +812,7 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
 
 window.addEventListener('online', function() {
   _isOnline = true;
-  _syncError = '';
+  if (!_syncConflict) _syncError = '';
   showConnBanner();
   flushOfflineQueue();
 });
@@ -817,7 +863,10 @@ async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
     if (res && Array.isArray(res.players)) {
       var player = res.players.find(function(p){ return p.display_name === name; });
       if (player) {
-        _pkrSeatedPlayers[sid] = {user_id:player.user_id,name:name};
+        _pkrSeatedPlayers[sid] = {
+          user_id:player.user_id,name:name,buy_ins:player.buy_ins,
+          buy_in_total:player.buy_in_total,cashout:player.cashout,
+        };
         return _pkrSeatedPlayers[sid];
       }
     }
@@ -865,7 +914,7 @@ window.saveState = function() {
         var created = await pkrSeatPlayer(sid,cur.name,cur.phone);
         if (created && created.user_id) {
           // The player may already have bought in by the time seating finished.
-          queueLatestSeatAmounts(sid,created.user_id,cur.name);
+          queueLatestSeatAmounts(sid,created.user_id,cur.name,created);
           if (_isOnline) flushOfflineQueue();
         }
         return;
@@ -885,7 +934,10 @@ window.saveState = function() {
         // accidentally charging the same buy-in twice.
         await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, {
           method:'PUT',
-          body:JSON.stringify({count:cur.buyins,total:Math.round(cur.biTotal*100)}),
+          body:JSON.stringify({
+            count:cur.buyins,total:Math.round(cur.biTotal*100),
+            expected_count:previous.buyins,expected_total:Math.round(previous.biTotal*100),
+          }),
         });
       }
       if (cur.hadCashout !== previous.hadCashout ||
@@ -894,6 +946,7 @@ window.saveState = function() {
           method:'PUT',
           body:JSON.stringify({
             cashout:cur.hadCashout ? Math.round(cur.cashout*100) : null,
+            expected_cashout:previous.hadCashout ? Math.round(previous.cashout*100) : null,
           }),
         });
       }
@@ -2103,7 +2156,9 @@ if (ctx && ctx.gameId) {
         // Cache user_id for PKR syncing
         if (p.user_id) _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: p.display_name };
       });
-      saveState();
+      // Hydrating server state must not create new money/seat writes.
+      _origSaveState();
+      _pkrLastSnapshot = _pkrSnapshotPlayers();
     }
     // Update topbar title
     var titleEl = document.getElementById('topbarTitle');
