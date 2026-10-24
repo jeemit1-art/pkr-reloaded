@@ -564,6 +564,52 @@ window.htUndoAction = function(){
   });
 };
 
+// Read-only check of actual chip balances. The host must enter the opening
+// stacks they physically counted; buy-in dollar values are NOT chip stacks.
+window.htAuditStacks = function(){
+  if(!hs.hand){toast('Start or load a hand before auditing stacks.');return;}
+  var seated=getSeated();
+  var unique={};
+  seated.forEach(function(p){unique[p.name]=true;});
+  var allPresent=hs.actions.every(function(a){return unique[a.display_name];});
+  if(!allPresent||seated.length<2){
+    toast('Full historical player seating is unavailable. Do not guess a stack baseline.');
+    return;
+  }
+  var opening=[];
+  for(var i=0;i<seated.length;i++){
+    var p=seated[i];
+    var entered=window.prompt(
+      'Verified opening stack for '+p.name+' (actual chips at start of hand, whole chips):',
+      '');
+    if(entered===null)return;
+    if(!/^\d+$/.test(entered.trim())||
+       !Number.isSafeInteger(Number(entered.trim()))){
+      toast('Audit cancelled: enter actual whole-chip counts for every player.');
+      return;
+    }
+    opening.push({display_name:p.name,seat_number:p.seat,
+      opening_chips:Number(entered.trim())});
+  }
+  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/audit-stacks',{
+    method:'POST',body:JSON.stringify({opening_stacks:opening}),
+  }).then(function(response){
+    var audit=response.audit;
+    var lines=['Opening chips: '+audit.opening_total,
+      'Hand pot: '+audit.recorded_pot_chips,
+      'Unallocated pot: '+audit.unsettled_pot_chips,
+      'Player balances:'];
+    audit.stacks.forEach(function(p){
+      lines.push(p.display_name+': '+p.closing_chips+
+        ' (paid '+p.contributed_chips+
+        ', returned '+p.returned_chips+', won '+p.won_chips+')');
+    });
+    window.alert(lines.join('\n'));
+  }).catch(function(error){
+    toast('Chip-stack audit found an issue: '+error.message);
+  });
+};
+
 window.htAct = function(action, playerName) {
   if (!hs.hand) return;
 
@@ -1790,6 +1836,7 @@ function renderMain(body){
   var btm=document.createElement('div');btm.style.cssText='display:flex;gap:6px;margin-top:8px';
   btm.appendChild(mkB('+ Player','padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',function(){hs.view='add_player';renderBody();}));
   btm.appendChild(mkB('Chips'+(hs._chipConfig?' \u25CF':''),'padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:'+(hs._chipConfig?'var(--gold)':'var(--muted)')+';border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',function(){hs.view='chip_settings';renderBody();}));
+  btm.appendChild(mkB('Audit stacks','padding:9px 10px;background:rgba(201,168,76,0.05);border:1px solid var(--border);color:var(--gold);border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',window.htAuditStacks));
   btm.appendChild(mkB('\u2715 Void','padding:9px 12px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);color:var(--red);border-radius:7px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif',window.htVoidHand));
   btm.appendChild(mkB('\uD83C\uDFC6 Winner','flex:1;padding:9px;background:rgba(46,204,113,0.08);color:var(--green);border:1px solid rgba(46,204,113,0.25);border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:700;font-family:DM Sans,sans-serif',function(){hs.view='winner';renderBody();}));
   body.appendChild(btm);
