@@ -737,18 +737,31 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
     if (_isOnline && !_flushingQueue) flushOfflineQueue();
     return null;
   }
+
+  // Persist BEFORE dispatching the request, not only on network errors.
+  // A tab closing while the HTTP request is in flight must leave a recoverable
+  // journal entry. Exact PUTs and idempotent seat retries are replay-safe.
+  queueAction(url, options, seatSid, seatName);
+  var inflight = _offlineQueue[_offlineQueue.length - 1];
+  _flushingQueue = true;
+  var acknowledged = false;
+  var result = null;
   try {
-    return await pkrApi(url, options);
+    result = await pkrApi(url, options);
+    _offlineQueue = _offlineQueue.filter(function(a){return a.id !== inflight.id;});
+    savePendingActions();
+    acknowledged = true;
   } catch(e) {
-    // Even a server failure must not silently discard a locally recorded
-    // money change. Retain the absolute PUT or idempotent seat request so the
-    // host can retry or resolve a conflict, without claiming it synced.
-    queueAction(url, options, seatSid, seatName);
     if (!navigator.onLine || e instanceof TypeError) _isOnline = false;
     else _syncError = 'Change not saved to server: review the sync warning before settling.';
+    // Keep the persisted entry for a safe retry or manual conflict resolution.
+    console.warn('Game change retained for retry:',e);
+  } finally {
+    _flushingQueue = false;
     showConnBanner();
-    return null;
+    if (acknowledged && _isOnline && _offlineQueue.length) flushOfflineQueue();
   }
+  return result;
 }
 
 window.addEventListener('online', function() {
