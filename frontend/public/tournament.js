@@ -107,13 +107,13 @@ window.openTournament=function(){var s=document.getElementById('tournamentSheet'
 window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');stopLocalTimer();};
 window.tStart=function(){
   tApi('/games/'+getGameId()+'/tournament/start',{method:'POST'}).then(function(r){
-    ts.state.status='running';ts.state.current_level=1;ts.state.level_started_at=Math.floor(Date.now()/1000);ts.state.total_chips_in_play=r.total_chips_in_play;
+    ts.state.status='running';ts.state.current_level=1;ts.state.level_started_at=r.level_started_at;ts.state.total_chips_in_play=r.total_chips_in_play;
     startLocalTimer();toast('\ud83c\udfc6 Tournament started!');renderBody();
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 window.tNextLevel=function(){
   tApi('/games/'+getGameId()+'/tournament/next-level',{method:'POST'}).then(function(r){
-    ts.state.current_level=r.current_level;ts.state.level_started_at=Math.floor(Date.now()/1000);
+    ts.state.current_level=r.current_level;ts.state.level_started_at=r.level_started_at;
     ts.secsRemaining=(r.level&&r.level.duration_secs)||900;ts._lastNotifiedLevel=null;
     ts.voiceWarningDone=false;
     if(r.level){var nv=ts.levels.find(function(l){return l.level_num===r.current_level+1;});speak(buildAnn(r.level,nv));}
@@ -121,10 +121,18 @@ window.tNextLevel=function(){
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 window.tPause=function(){
-  var lv=ts.state?ts.levels.find(function(l){return l.level_num===ts.state.current_level;}):null;
-  var elapsed=lv?(lv.duration_secs-ts.secsRemaining):0;
-  tApi('/games/'+getGameId()+'/tournament/pause',{method:'POST',body:JSON.stringify({paused_elapsed:elapsed})}).then(function(r){
-    ts.state.status=r.status;if(r.status==='paused')stopLocalTimer();else startLocalTimer();renderBody();
+  // The Worker decides elapsed time from its own clock, never the device.
+  tApi('/games/'+getGameId()+'/tournament/pause',{method:'POST'}).then(function(r){
+    ts.state.status=r.status;
+    if(r.status==='paused'){
+      ts.state.paused_elapsed=r.paused_elapsed;
+      stopLocalTimer();
+    }else{
+      ts.state.level_started_at=r.level_started_at;
+      ts.state.paused_elapsed=0;
+      startLocalTimer();
+    }
+    renderBody();
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 var pendingRebuys={};
