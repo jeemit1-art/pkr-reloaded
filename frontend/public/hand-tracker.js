@@ -579,11 +579,13 @@ window.htResumeBlindPosts=function(){
       toast('Straddle position could not be verified. Check seats before posting.');
       hs._awaitingStackGate=true;renderBody();return;
     }
-    hs._awaitingStackGate=false;
+    // Keep betting disabled until all blinds are confirmed on the server.
+    hs._awaitingStackGate=true;
     hs._autoPosting=true;
     renderBody();
     autoPost(hand,seated,straddleSeat,function(){
-      hs._autoPosting=false;renderBody();renderBoardOnFelt();
+      hs._autoPosting=false;hs._awaitingStackGate=false;
+      renderBody();renderBoardOnFelt();
     });
   });
 };
@@ -1683,6 +1685,9 @@ function renderMain(body){
       window.htResumeBlindPosts);
     resume.disabled=!!hs._stackConfirming||!!hs._autoPosting;
     body.appendChild(resume);
+    body.appendChild(mkB('Void unfinished hand',
+      'width:100%;padding:8px;margin-bottom:12px;background:none;border:1px solid rgba(231,76,60,0.35);color:var(--red);border-radius:8px',
+      window.htVoidHand));
     return;
   }
 
