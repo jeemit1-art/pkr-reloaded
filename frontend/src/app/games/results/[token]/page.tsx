@@ -111,6 +111,11 @@ export default function ResultsPage() {
           </a>
         </div>
 
+        {(game.variance||0)!==0 && (
+          <div className="card" style={{marginBottom:14,padding:'12px 16px',fontSize:12,color:'var(--amber)'}}>
+            ⚠ Bank variance of {fmt(Math.abs(game.variance||0))}: chips cashed out did not match chips bought in. Transfers below are scaled pro-rata so they balance.
+          </div>
+        )}
         {/* Results */}
         <div className="card" style={{marginBottom:14}}>
           <div className="section-header">Results · {players.length} Players</div>

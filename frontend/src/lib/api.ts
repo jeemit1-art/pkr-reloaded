@@ -159,7 +159,7 @@ export interface EventPlayer { id:string; event_id:string; display_name:string; 
 export interface Game {
   id:string; event_id:string; scheduled_at:number; location:string|null; notes:string|null;
   seats:number; game_password:string|null; status:string; live_token:string|null;
-  results_token:string|null; created_at:number; player_count?:number;
+  results_token:string|null; created_at:number; player_count?:number; variance?:number|null;
 }
 export interface Rsvp { id:string; game_id:string; display_name:string; whatsapp:string|null; status:string; created_at:number; }
 export interface GamePlayer {

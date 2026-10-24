@@ -385,6 +385,15 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   const { idempotency_key, results } = body;
   if (!idempotency_key) return c.json({error:'idempotency_key required'},400);
   if (!results?.length)  return c.json({error:'results required'},400);
+  const seen = new Set<string>();
+  for (const r of results as any[]) {
+    const nm = String(r.display_name||'').trim().toLowerCase();
+    if (!nm || seen.has(nm)) return c.json({error:`Duplicate or missing player name: ${r.display_name||'(blank)'}`},400);
+    seen.add(nm);
+    r.cashout = Math.round(r.cashout||0);
+    if (r.buy_in_total != null) r.buy_in_total = Math.round(r.buy_in_total);
+    if (r.cashout < 0 || (r.buy_in_total != null && r.buy_in_total < 0)) return c.json({error:`Negative amount for ${r.display_name}`},400);
+  }
 
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);
@@ -408,30 +417,35 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   const eventBuyIn = eventData?.buy_in || 0;
   const positions = results.map((p:any) => ({
     ...p,
-    net: p.buy_in_total != null ? (p.cashout||0) - p.buy_in_total : ((p.cashout||0) - (p.buy_ins * eventBuyIn)),
+    net: (p.buy_in_total != null && p.buy_in_total > 0) ? (p.cashout||0) - p.buy_in_total : ((p.cashout||0) - (p.buy_ins * eventBuyIn)),
   }));
   const transfers  = minimumTransfers(positions);
   const sid = generateId();
   const now = Math.floor(Date.now()/1000);
   const resultsToken = generateId();
-  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, settled_at:now, results_token:resultsToken };
+  const variance = positions.reduce((s:number,p:any)=>s+Math.round(p.net||0),0);
+  const carried = (await c.env.DB.prepare('SELECT from_user,to_user,amount,paid_at FROM paid_carryover WHERE game_id=?').bind(gameId).all<any>()).results;
+  const paidAt = (t:any) => { const m = carried.find((x:any)=>x.from_user===t.from && x.to_user===t.to && x.amount===t.amount); return m ? (m.paid_at||now) : null; };
+  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, variance, settled_at:now, results_token:resultsToken };
 
   try {
   await c.env.DB.batch([
     c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
       .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
-    c.env.DB.prepare("UPDATE games SET status='settled',results_token=? WHERE id=?").bind(resultsToken,gameId),
+    c.env.DB.prepare("UPDATE games SET status='settled',results_token=?,variance=? WHERE id=?").bind(resultsToken,variance,gameId),
     ...positions.map((p:any) => c.env.DB.prepare(`
       INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net,settled_at,created_at)
       VALUES(?,?,?,?,?,?,?,?,unixepoch())
       ON CONFLICT(game_id,display_name) DO UPDATE SET
         user_id=excluded.user_id, buy_ins=excluded.buy_ins, buy_in_total=excluded.buy_in_total, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
     `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.buy_in_total??0,p.cashout??0,p.net,now)),
-    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount,from_name,to_name) VALUES(?,?,?,?,?,?,?)')
-      .bind(generateId(),gameId,t.from,t.to,t.amount,t.from_name||null,t.to_name||null)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount,from_name,to_name,status,paid_at) VALUES(?,?,?,?,?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.amount,t.from_name||null,t.to_name||null,paidAt(t)?'paid':'owed',paidAt(t))),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
   ]);
   } catch(batchErr:any) {
     console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
+    if (/settlements\.game_id/i.test(batchErr?.message||'')) return c.json({error:'Game already settled', already_settled:true}, 409);
     return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
   }
 
@@ -476,6 +490,8 @@ games.post('/games/:id/unsettle', authMiddleware, async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("INSERT INTO paid_carryover(game_id,from_user,to_user,amount,paid_at) SELECT game_id,from_user,to_user,amount,paid_at FROM settlement_transfers WHERE game_id=? AND status='paid'").bind(gameId),
     c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
     c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
     c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
@@ -540,6 +556,17 @@ async function rebuildLeaderboard(db: D1Database, eventId: string) {
    MINIMUM TRANSFERS ALGORITHM
 ═══════════════════════════════════════════ */
 
+// Scale balances down pro-rata so they sum to `target` (integer cents, largest-remainder rounding)
+function scaleDown(list: Array<{bal:number}>, target: number) {
+  const total = list.reduce((s,p)=>s+p.bal,0);
+  if (total <= 0 || target >= total) return;
+  const raw = list.map(p => p.bal * target / total);
+  const floors = raw.map(Math.floor);
+  const rem = target - floors.reduce((s,n)=>s+n,0);
+  raw.map((r,i)=>({i,f:r-Math.floor(r)})).sort((a,b)=>b.f-a.f).slice(0,rem).forEach(x=>{ floors[x.i]++; });
+  list.forEach((p,i)=>{ p.bal = floors[i]; });
+}
+
 function minimumTransfers(
   positions: Array<{user_id:string; display_name:string; net:number}>
 ): Transfer[] {
@@ -552,7 +579,8 @@ function minimumTransfers(
   const totalDebt = debts.reduce((s,p)=>s+p.bal,0);
   const totalCred = creds.reduce((s,p)=>s+p.bal,0);
   const drift = totalCred - totalDebt;
-  if (drift !== 0 && creds.length > 0) creds[0].bal -= drift;
+  if (drift > 0) scaleDown(creds, totalCred - drift);   // winners owed more than losers can pay: shrink winners pro-rata
+  else if (drift < 0) scaleDown(debts, totalCred);      // losers owe more than winners are owed: shrink losers pro-rata
   const out: Transfer[] = [];
   let i=0,j=0;
   while (i<debts.length && j<creds.length) {
