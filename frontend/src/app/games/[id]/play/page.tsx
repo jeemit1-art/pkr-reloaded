@@ -784,20 +784,28 @@ async function loadGameFromPkr() {
 async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
   var ctx = getPkrCtx();
   if (!ctx || !ctx.gameId) return null;
-  if (_pkrSeatedPlayers[sid] && _pkrSeatedPlayers[sid].name === name) return _pkrSeatedPlayers[sid];
+  if (_pkrSeatedPlayers[sid] && _pkrSeatedPlayers[sid].name === name) {
+    return _pkrSeatedPlayers[sid];
+  }
   try {
     var seatNum = parseInt((sid || '').replace('seat','')) || null;
-    var body = { display_name: name, whatsapp: phone||null, seat_number: seatNum, buy_ins: 0 };
+    var body = { display_name:name, whatsapp:phone || null, seat_number:seatNum, buy_ins:0 };
     if (linkedUserId) body.user_id = linkedUserId;
-    var res = await pkrApi('/games/' + ctx.gameId + '/seat', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    if (res && res.players) {
-      var pkrPlayer = res.players.find(function(p){ return p.display_name === name; });
-      if (pkrPlayer) { _pkrSeatedPlayers[sid] = { user_id: pkrPlayer.user_id, name: name }; return _pkrSeatedPlayers[sid]; }
+    var res = await pkrApiQueued('/games/' + ctx.gameId + '/seat', {
+      method:'POST', body:JSON.stringify(body),
+    }, sid, name);
+    if (res && Array.isArray(res.players)) {
+      var player = res.players.find(function(p){ return p.display_name === name; });
+      if (player) {
+        _pkrSeatedPlayers[sid] = {user_id:player.user_id,name:name};
+        return _pkrSeatedPlayers[sid];
+      }
     }
-  } catch(e) { console.warn('PKR seat failed:', e.message); }
+  } catch(e) {
+    console.warn('PKR seat sync failed; local state retained:', e);
+    _syncError = 'Player seating could not sync. Do not save results until resolved.';
+    showConnBanner();
+  }
   return null;
 }
 
@@ -807,10 +815,17 @@ function _pkrSnapshotPlayers() {
   Object.keys(state.players).forEach(function(sid) {
     var p = state.players[sid];
     if (!p || !p.name) return;
-    var buyins = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).length;
-    var cashoutAmt = (p.transactions||[]).filter(function(t){ return t.type === 'cashout'; }).reduce(function(s,t){ return s+(t.amount||0); }, 0);
-    var biTotal = (p.transactions||[]).filter(function(t){ return t.type !== 'cashout'; }).reduce(function(s,t){ return s+(t.amount||0); }, 0);
-    snap[sid] = { name: p.name, phone: p.phone||'', buyins: buyins, cashout: cashoutAmt, biTotal: biTotal };
+    var txs = p.transactions || [];
+    var buyins = txs.filter(function(t){return t.type !== 'cashout';}).length;
+    var cashoutAmt = txs.filter(function(t){return t.type === 'cashout';})
+      .reduce(function(s,t){return s+(t.amount||0);},0);
+    var biTotal = txs.filter(function(t){return t.type !== 'cashout';})
+      .reduce(function(s,t){return s+(t.amount||0);},0);
+    snap[sid] = {
+      name:p.name, phone:p.phone||'', buyins:buyins,
+      cashout:cashoutAmt, hadCashout:txs.some(function(t){return t.type === 'cashout';}),
+      biTotal:biTotal,
+    };
   });
   return snap;
 }
@@ -824,33 +839,69 @@ window.saveState = function() {
   Object.keys(after).forEach(async function(sid) {
     var ctx = getPkrCtx();
     if (!ctx || !ctx.gameId) return;
-    var cur = after[sid], prev = before[sid];
-    if (!prev && cur.name) { await pkrSeatPlayer(sid, cur.name, cur.phone); return; }
-    if (!prev || !cur) return;
-    if (prev.name !== cur.name) { await pkrSeatPlayer(sid, cur.name, cur.phone); return; }
-    var seated = _pkrSeatedPlayers[sid];
-    if (!seated) { seated = await pkrSeatPlayer(sid, cur.name, cur.phone); }
-    if (!seated) return;
-    if (cur.buyins > prev.buyins) {
-      var newBuyins = cur.buyins - prev.buyins;
-      for (var i = 0; i < newBuyins; i++) {
-        try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'POST' }); } catch(e) {}
+    var cur = after[sid], previous = before[sid];
+    try {
+      if (!previous || previous.name !== cur.name) {
+        var created = await pkrSeatPlayer(sid,cur.name,cur.phone);
+        if (created && created.user_id) {
+          // The player may already have bought in by the time seating finished.
+          queueLatestSeatAmounts(sid,created.user_id,cur.name);
+          if (_isOnline) flushOfflineQueue();
+        }
+        return;
       }
-      var biTotal2 = Math.round((cur.biTotal||0)*100);
-      try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal2}) }); } catch(e) {}
-    } else if (cur.buyins < prev.buyins || Math.abs((cur.biTotal||0) - (prev.biTotal||0)) > 0.001) {
-      var biTotal3 = Math.round((cur.biTotal||0)*100);
-      var retries = 0; var syncBuyin = async function() { try { await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, { method: 'PUT', body: JSON.stringify({count: cur.buyins, total: biTotal3}) }); } catch(e) { if (retries++ < 3) setTimeout(syncBuyin, 2000); } }; syncBuyin();
-    }
-    if (cur.cashout != null && (prev.cashout == null || Math.abs(cur.cashout - (prev.cashout||0)) > 0.005)) {
-      var cashoutCents = Math.round(cur.cashout * 100);
-      try {
-        await pkrApi('/games/' + ctx.gameId + '/cashout/' + seated.user_id, {
-          method: 'POST', body: JSON.stringify({ cashout: cashoutCents }),
+      if (previous.buyins === cur.buyins &&
+          Math.abs(previous.biTotal - cur.biTotal) < 0.001 &&
+          previous.hadCashout === cur.hadCashout &&
+          Math.abs(previous.cashout - cur.cashout) < 0.001) {
+        return; // A nonfinancial UI save does not create additional transactions.
+      }
+      var seated = _pkrSeatedPlayers[sid];
+      if (!seated) seated = await pkrSeatPlayer(sid,cur.name,cur.phone);
+      if (!seated || !seated.user_id) return; // A pending seat replay handles latest totals.
+
+      if (cur.buyins !== previous.buyins || Math.abs(cur.biTotal - previous.biTotal) >= 0.001) {
+        // Absolute PUT instead of incremental POST: safe to retry without
+        // accidentally charging the same buy-in twice.
+        await pkrApiQueued('/games/' + ctx.gameId + '/buyin/' + seated.user_id, {
+          method:'PUT',
+          body:JSON.stringify({count:cur.buyins,total:Math.round(cur.biTotal*100)}),
         });
-      } catch(e) {}
+      }
+      if (cur.hadCashout !== previous.hadCashout ||
+          Math.abs(cur.cashout - previous.cashout) >= 0.001) {
+        await pkrApiQueued('/games/' + ctx.gameId + '/cashout/' + seated.user_id, {
+          method:'PUT',
+          body:JSON.stringify({
+            cashout:cur.hadCashout ? Math.round(cur.cashout*100) : null,
+          }),
+        });
+      }
+    } catch(e) {
+      console.warn('Game sync needs attention; local state retained:',e);
+      _syncError = 'An edit has not synced. Check your connection before saving results.';
+      showConnBanner();
     }
   });
+
+  // Removed seats must also be removed from the server, unless the game has
+  // already been saved as a final settlement.
+  if (!window._pkrResultsSaved) {
+    Object.keys(before).forEach(function(sid) {
+      if (after[sid]) return;
+      var seated = _pkrSeatedPlayers[sid];
+      var ctx = getPkrCtx();
+      if (!ctx || !ctx.gameId || !seated || !seated.user_id) return;
+      pkrApiQueued('/games/' + ctx.gameId + '/seat/' + seated.user_id, {
+        method:'DELETE',
+      }).catch(function(e){
+        console.warn('Could not remove player remotely:',e);
+        _syncError = 'A seat removal has not synced. Check before saving results.';
+        showConnBanner();
+      });
+      delete _pkrSeatedPlayers[sid];
+    });
+  }
 };
 // reassign alias
 var saveState = window.saveState;
@@ -1851,6 +1902,11 @@ window.saveResultsToPkr = async function() {
   var btn = document.getElementById('saveResultsBtn');
   if (btn) { btn.innerHTML = '<span class="game-tab-icon">⏳</span>Saving…'; btn.disabled = true; }
   try {
+    if (!navigator.onLine) throw new Error('You are offline. Reconnect before saving results.');
+    await window.pkrSyncPendingActions();
+    if (window.pkrHasPendingActions() || _syncError) {
+      throw new Error('Some table changes are still unsynced. Please resolve the sync warning first.');
+    }
     var ok = await window.syncSettleToPkr();
     if (ok) {
       if (btn) btn.innerHTML = '<span class="game-tab-icon">✅</span>Saved!';
