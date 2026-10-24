@@ -976,7 +976,7 @@ async function flushOfflineQueue() {
     if (_offlineQueue.length === 0) loadGameFromPkr();
   } catch(e) {
     console.warn('Pending game sync failed; edits are retained locally:', e);
-    if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
+    if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY','HAND_ACTIVE'].indexOf(e.code) >= 0) {
       markSyncConflict(e,_activeQueueId || (typeof inflight !== 'undefined' && inflight && inflight.id));
     } else if (e && e.code === 'LOCAL_STORAGE_UNAVAILABLE') {
       _syncError = 'Browser storage unavailable. Pending edits are not safe to retry. Keep this tab open.';
@@ -1012,7 +1012,7 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
     acknowledged = true;
   } catch(e) {
     if (!navigator.onLine || e instanceof TypeError) _isOnline = false;
-    else if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
+    else if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY','HAND_ACTIVE'].indexOf(e.code) >= 0) {
       _syncConflict = true;
       _syncError = 'CONFLICT: A seat or amount changed elsewhere, or this player has recorded history. Your edit is retained. Review before settling.';
     } else _syncError = 'Change not saved to server: review the sync warning before settling.';
