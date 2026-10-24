@@ -46,19 +46,85 @@ tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const { starting_chips, buy_in_amount, rebuy_allowed, rebuy_levels, addon_allowed, addon_chips, payout_structure, levels } = await c.req.json() as any;
-  if (!levels?.length) return c.json({ error: 'levels required' }, 400);
-  await c.env.DB.prepare(`INSERT INTO tournament_state (game_id,status,current_level,starting_chips,buy_in_amount,rebuy_allowed,rebuy_levels,addon_allowed,addon_chips,payout_structure,total_chips_in_play) VALUES (?,?,?,?,?,?,?,?,?,?,0) ON CONFLICT(game_id) DO UPDATE SET status='setup',current_level=1,starting_chips=excluded.starting_chips,buy_in_amount=excluded.buy_in_amount,rebuy_allowed=excluded.rebuy_allowed,rebuy_levels=excluded.rebuy_levels,addon_allowed=excluded.addon_allowed,addon_chips=excluded.addon_chips,payout_structure=excluded.payout_structure`)
-    .bind(gameId,'setup',1,starting_chips||10000,buy_in_amount||0,rebuy_allowed?1:0,rebuy_levels||4,addon_allowed?1:0,addon_chips||0,JSON.stringify(payout_structure||[{place:1,pct:50},{place:2,pct:30},{place:3,pct:20}])).run();
-  await c.env.DB.prepare('DELETE FROM tournament_levels WHERE game_id=?').bind(gameId).run();
-  for (const lv of levels) {
-    await c.env.DB.prepare('INSERT INTO tournament_levels(id,game_id,level_num,small_blind,big_blind,ante,duration_secs,is_break) VALUES(?,?,?,?,?,?,?,?)')
-      .bind(generateId(),gameId,lv.level_num,lv.small_blind,lv.big_blind,lv.ante||0,lv.duration_secs||900,lv.is_break?1:0).run();
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const current=await c.env.DB.prepare(
+    'SELECT status FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<{status:string}>();
+  if(current&&current.status!=='setup')
+    return c.json({error:'Cannot reconfigure a tournament already in progress.',
+      code:'TOURNAMENT_STATE_CONFLICT'},409);
+  const input=await c.req.json().catch(()=>null) as any;
+  const starting=input?.starting_chips??10000;
+  const fee=input?.buy_in_amount??0;
+  const rebuyLevels=input?.rebuy_levels??4;
+  const addonChips=input?.addon_chips??0;
+  const levels=input?.levels;
+  const payouts=input?.payout_structure??[
+    {place:1,pct:50},{place:2,pct:30},{place:3,pct:20},
+  ];
+  if(!Number.isSafeInteger(starting)||starting<=0||
+     !Number.isSafeInteger(fee)||fee<0||
+     !Number.isSafeInteger(rebuyLevels)||rebuyLevels<1||
+     !Number.isSafeInteger(addonChips)||addonChips<0||
+     !Array.isArray(levels)||levels.length<1||levels.length>100||
+     !Array.isArray(payouts)||payouts.length<1||payouts.length>20)
+    return c.json({error:'Invalid tournament setup values'},400);
+  if(input?.addon_allowed&&addonChips<=0)
+    return c.json({error:'Configured add-ons require a positive chip amount'},400);
+  if(payouts.some((row:any,i:number)=>
+       !row||row.place!==i+1||typeof row.pct!=='number'||
+       !Number.isFinite(row.pct)||row.pct<=0||row.pct>100||
+       Math.abs(row.pct*100-Math.round(row.pct*100))>1e-7)||
+     payouts.reduce((a:number,b:any)=>a+Math.round(b.pct*100),0)!==10000)
+    return c.json({error:'Payout places must be ordered and total exactly 100%'},400);
+  for(let i=0;i<levels.length;i++){
+    const lv=levels[i],breakLevel=!!lv?.is_break;
+    if(!lv||lv.level_num!==i+1||
+       !Number.isSafeInteger(lv.duration_secs)||lv.duration_secs<30||lv.duration_secs>7200||
+       !Number.isSafeInteger(lv.small_blind)||lv.small_blind<0||
+       !Number.isSafeInteger(lv.big_blind)||lv.big_blind<0||
+       !Number.isSafeInteger(lv.ante??0)||lv.ante<0||
+       (!breakLevel&&(lv.small_blind<1||lv.big_blind<=lv.small_blind)))
+      return c.json({error:'Blind levels must be consecutive with valid stacks and durations'},400);
   }
-  return c.json({ ok: true });
+  const statements=[
+    c.env.DB.prepare(`
+      INSERT INTO tournament_state
+      (game_id,status,current_level,starting_chips,buy_in_amount,rebuy_allowed,
+       rebuy_levels,addon_allowed,addon_chips,payout_structure,total_chips_in_play)
+      VALUES (?,?,?,?,?,?,?,?,?,?,0)
+      ON CONFLICT(game_id) DO UPDATE SET
+        status='setup',current_level=1,starting_chips=excluded.starting_chips,
+        buy_in_amount=excluded.buy_in_amount,rebuy_allowed=excluded.rebuy_allowed,
+        rebuy_levels=excluded.rebuy_levels,addon_allowed=excluded.addon_allowed,
+        addon_chips=excluded.addon_chips,payout_structure=excluded.payout_structure
+      WHERE tournament_state.status='setup'
+    `).bind(gameId,'setup',1,starting,fee,input?.rebuy_allowed?1:0,
+       rebuyLevels,input?.addon_allowed?1:0,addonChips,JSON.stringify(payouts)),
+    c.env.DB.prepare(`
+      DELETE FROM tournament_levels WHERE game_id=?
+      AND EXISTS (SELECT 1 FROM tournament_state WHERE game_id=? AND status='setup')
+    `).bind(gameId,gameId),
+  ];
+  for(const lv of levels){
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO tournament_levels
+      (id,game_id,level_num,small_blind,big_blind,ante,duration_secs,is_break)
+      SELECT ?,?,?,?,?,?,?,?
+      WHERE EXISTS (SELECT 1 FROM tournament_state WHERE game_id=? AND status='setup')
+    `).bind(generateId(),gameId,lv.level_num,lv.small_blind,lv.big_blind,
+      lv.ante??0,lv.duration_secs,lv.is_break?1:0,gameId));
+  }
+  const result=await c.env.DB.batch(statements);
+  if(!result[0]?.meta?.changes)return c.json({
+    error:'Another host changed the tournament while it was being configured.',
+    code:'TOURNAMENT_STATE_CONFLICT',
+  },409);
+  return c.json({ok:true,levels:levels.length});
 });
 
 tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
