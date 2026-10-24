@@ -250,15 +250,25 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     const knownPlayer = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game2.event_id, display_name.trim()).first<any>();
     if (knownPlayer?.user_id) userId = knownPlayer.user_id;
   }
-  await c.env.DB.prepare(`
-    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
-    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp),games_played=games_played+1
-  `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
-  const existing = await c.env.DB.prepare('SELECT user_id FROM game_players WHERE game_id=? AND display_name=?').bind(gameId,display_name.trim()).first<any>();
+  const existing = await c.env.DB.prepare(
+    'SELECT user_id FROM game_players WHERE game_id=? AND display_name=?'
+  ).bind(gameId,display_name.trim()).first<any>();
   if (existing) { userId = existing.user_id; }
+  // Retrying a seat request (for example after an offline reconnect) must not
+  // increment games_played a second time or reset recorded buy-ins.
+  if (!existing) {
+    await c.env.DB.prepare(`
+      INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
+      ON CONFLICT(event_id,display_name) DO UPDATE SET
+        whatsapp=COALESCE(excluded.whatsapp,whatsapp)
+    `).bind(generateId(),game.event_id,display_name.trim(),whatsapp||null).run();
+  }
   await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) VALUES(?,?,?,?,?,?,unixepoch())
-    ON CONFLICT(game_id,display_name) DO UPDATE SET user_id=excluded.user_id,buy_ins=excluded.buy_ins,seat_number=COALESCE(excluded.seat_number,seat_number)
+    ON CONFLICT(game_id,display_name) DO UPDATE SET
+      user_id=excluded.user_id,
+      whatsapp=COALESCE(excluded.whatsapp,whatsapp),
+      seat_number=COALESCE(excluded.seat_number,seat_number)
   `).bind(gameId,userId,display_name.trim(),whatsapp||null,seat_number||null,buy_ins||0).run();
   const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
   return c.json({ok:true, players:players.results});
@@ -316,8 +326,12 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
 games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const userId = c.req.param('userId');
-  const { cashout } = await c.req.json<{cashout:number}>();
-  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Invalid cashout'},400);
+  const { cashout } = await c.req.json<{cashout:number|null}>();
+  // A null value explicitly clears a previously-entered cash-out on an
+  // unsettled game, for example when the host undoes an erroneous cash-out.
+  if (cashout !== null && (!Number.isSafeInteger(cashout) || (cashout as number) < 0)) {
+    return c.json({error:'Invalid cashout'},400);
+  }
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<{event_id:string;status:string}>();
   if (!game) return c.json({error:'Game not found'},404);
   if (game.status==='settled') return c.json({error:'Game settled. Unsettle to modify.'},400);
