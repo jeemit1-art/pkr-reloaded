@@ -62,6 +62,42 @@ Do not share customer data, auth secrets or SQL dumps in GitHub. Record differen
 
 Stop the release if any item is unverified. No staging code change is an approval to alter production.
 
+## Read-only restore-preflight hardening
+
+The local restore verifier now detects **missing UNIQUE constraints**, including
+ones that prevent duplicate hand numbers, plus missing or changed migration
+audit triggers when the staging integrity upgrade is required. The reference
+indexes must not be treated as equivalent to these required UNIQUE keys.
+
+It also supports comparison against a **separately supplied local baseline
+summary** of row counts and financial totals. A one-cent mismatch fails the
+preflight. No private player identities are included in this report.
+
+These are sample local commands only; no Cloudflare operations occur:
+
+~~~sh
+# Create a summary from a separately obtained, trusted source copy.
+python3 worker/scripts/verify-restored-d1.py \
+  --restore /secure/private/source.sqlite \
+  > /secure/private/source-summary.json
+
+# Compare the independently restored local copy against that source summary.
+python3 worker/scripts/verify-restored-d1.py \
+  --restore /secure/private/restored.sqlite \
+  --baseline-report /secure/private/source-summary.json
+
+# STAGING ONLY: inspect a restored copy after the independently authorised
+# optional integrity migration and confirm all required tables/triggers exist.
+python3 worker/scripts/verify-restored-d1.py \
+  --restore /secure/private/staging-after-upgrade.sqlite \
+  --require-integrity-upgrade
+~~~
+
+**This does not verify the authenticity of source data or replace the real
+production backup/restore rehearsal.** A reviewer must independently confirm
+the export source, source row counts, financial aggregates, target database ID,
+and rollback ownership. Do not commit private exports or reports to GitHub.
+
 ## Restored-copy verification procedure
 
 Cloudflare modern D1 supports Time Travel bookmarks and read-only SQL exports.

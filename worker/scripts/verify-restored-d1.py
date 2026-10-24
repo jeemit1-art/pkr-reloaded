@@ -42,6 +42,62 @@ def inventory(db):
     }
     return tables, columns, indexes, foreign_keys
 
+def unique_constraints(db, tables):
+    """Inspect enforced UNIQUE keys including implicit constraint indexes."""
+    result = {}
+    for table in sorted(tables):
+        signatures = set()
+        for entry in db.execute("PRAGMA index_list(" + q(table) + ")"):
+            if not entry[2]:
+                continue
+            key = tuple(
+                (str(part[2]), bool(part[3]), str(part[4] or "BINARY").upper())
+                for part in db.execute("PRAGMA index_xinfo(" + q(entry[1]) + ")")
+                if part[5]
+            )
+            signatures.add((key, bool(entry[4])))
+        result[table] = signatures
+    return result
+
+def unique_label(table, item):
+    key, partial = item
+    columns = [
+        name + (" DESC" if descending else "") +
+        (" COLLATE " + collation if collation != "BINARY" else "")
+        for name, descending, collation in key
+    ]
+    return table + "(" + ",".join(columns) + ")" + (" [partial]" if partial else "")
+
+def triggers(db):
+    return {
+        name: " ".join((sql or "").lower().split())
+        for name, sql in db.execute(
+            "SELECT name,sql FROM sqlite_master WHERE type='trigger'"
+        )
+    }
+
+def compare_financial_baseline(actual, prior_report):
+    if not isinstance(prior_report, dict) or prior_report.get("schema_compatible") is not True:
+        return ["baseline.invalid_or_incompatible"]
+    previous = prior_report.get("aggregate_reconciliation_baseline")
+    if not isinstance(previous, dict) or not previous:
+        return ["baseline.missing_aggregates"]
+    mismatches = []
+    for table in sorted(set(actual) | set(previous)):
+        if table not in actual or table not in previous:
+            mismatches.append(table + ".missing_in_one_report")
+            continue
+        if actual[table].get("rows") != previous[table].get("rows"):
+            mismatches.append(table + ".rows")
+        a, b = actual[table].get("totals"), previous[table].get("totals")
+        if not isinstance(a, dict) or not isinstance(b, dict):
+            mismatches.append(table + ".invalid_totals")
+            continue
+        for key in sorted(set(a) | set(b)):
+            if key not in a or key not in b or a[key] != b[key]:
+                mismatches.append(table + ".totals." + key)
+    return mismatches
+
 def aggregate(db, tables, columns, table, fields):
     if table not in tables:
         return None
@@ -56,12 +112,20 @@ def aggregate(db, tables, columns, table, fields):
             "totals": {field: result[index + 1]
                        for index, field in enumerate(available)}}
 
-def assess(restored, expected_schema=EXPECTED):
+def assess(restored, expected_schema=EXPECTED, require_integrity_upgrade=False,
+           baseline_report=None):
     reference = sqlite3.connect(":memory:")
     reference.executescript(Path(expected_schema).read_text(encoding="utf-8"))
+    if require_integrity_upgrade:
+        migration = HERE.parent / "migrations" / "20261024_staging_integrity.sql"
+        reference.executescript(migration.read_text(encoding="utf-8"))
     expected_tables, expected_columns, expected_indexes, expected_fks = inventory(reference)
+    expected_unique = unique_constraints(reference, expected_tables)
+    expected_triggers = triggers(reference)
     reference.close()
     actual_tables, actual_columns, actual_indexes, actual_fks = inventory(restored)
+    actual_unique = unique_constraints(restored, actual_tables)
+    actual_triggers = triggers(restored)
     missing_tables = sorted(expected_tables - actual_tables)
     extra_tables = sorted(actual_tables - expected_tables)
     missing_columns = []
@@ -79,6 +143,16 @@ def assess(restored, expected_schema=EXPECTED):
     incompatible_foreign_keys = sorted(
         table for table in expected_tables & actual_tables
         if expected_fks[table] != actual_fks[table]
+    )
+    missing_unique_constraints = sorted(
+        unique_label(table, signature)
+        for table in expected_tables & actual_tables
+        for signature in expected_unique[table] - actual_unique[table]
+    )
+    missing_required_triggers = sorted(set(expected_triggers) - set(actual_triggers))
+    incompatible_triggers = sorted(
+        name for name in set(expected_triggers) & set(actual_triggers)
+        if expected_triggers[name] != actual_triggers[name]
     )
     check = restored.execute("PRAGMA quick_check").fetchone()
     integrity = str(check[0]) if check else "no response"
@@ -104,24 +178,39 @@ def assess(restored, expected_schema=EXPECTED):
         summary = aggregate(restored, actual_tables, actual_columns, table, fields)
         if summary is not None:
             financial[table] = summary
-    issues = bool(missing_tables or missing_columns or
-                  incompatible_columns or incompatible_foreign_keys or integrity != "ok" or
-                  foreign_key_violations or foreign_key_check_error)
+    schema_issues = bool(missing_tables or missing_columns or
+                         incompatible_columns or incompatible_foreign_keys or
+                         missing_unique_constraints or missing_required_triggers or
+                         incompatible_triggers or integrity != "ok" or
+                         foreign_key_violations or foreign_key_check_error)
+    baseline_differences = (compare_financial_baseline(financial, baseline_report)
+                            if baseline_report is not None else [])
+    release_ok = not schema_issues and not baseline_differences
     return {
         "restored_integrity_check": integrity,
         "foreign_key_violations_by_table": dict(sorted(foreign_key_violations.items())),
         "foreign_key_violation_count": sum(foreign_key_violations.values()),
         "foreign_key_check_error": foreign_key_check_error,
-        "schema_compatible": not issues,
+        "schema_compatible": not schema_issues,
+        "require_integrity_upgrade": require_integrity_upgrade,
         "missing_tables": missing_tables,
         "additional_tables_not_an_error": extra_tables,
         "missing_columns": missing_columns,
         "incompatible_columns": incompatible_columns,
         "incompatible_foreign_keys": incompatible_foreign_keys,
+        "missing_unique_constraints": missing_unique_constraints,
+        "missing_required_triggers": missing_required_triggers,
+        "incompatible_triggers": incompatible_triggers,
         "missing_reference_indexes": sorted(expected_indexes - actual_indexes),
         "aggregate_reconciliation_baseline": financial,
-        "disclaimer": ("This is a read-only local restore preflight, not proof "
-                       "of a verified production backup, migration or release."),
+        "baseline_report_compared": baseline_report is not None,
+        "baseline_reconciliation_ok": (not baseline_differences
+                                       if baseline_report is not None else None),
+        "baseline_reconciliation_mismatches": baseline_differences,
+        "preflight_passed": release_ok,
+        "disclaimer": ("Read-only local preflight; a supplied baseline is "
+                       "not authenticated evidence of Cloudflare source data, "
+                       "a successful migration, or a production release."),
     }
 
 def main():
@@ -129,6 +218,10 @@ def main():
     parser.add_argument("--restore", type=Path, required=True,
                         help="Private path to an independently restored SQLite copy")
     parser.add_argument("--expected-schema", type=Path, default=EXPECTED)
+    parser.add_argument("--require-integrity-upgrade", action="store_true",
+                        help="Require staging-only integrity tables and audit triggers")
+    parser.add_argument("--baseline-report", type=Path,
+                        help="Private JSON summary from independent local source export")
     args = parser.parse_args()
     if not args.restore.is_file():
         parser.error("Restored database file does not exist")
@@ -139,9 +232,13 @@ def main():
     db = sqlite3.connect(uri, uri=True)
     try:
         db.execute("PRAGMA query_only=ON")
-        report = assess(db, args.expected_schema)
+        baseline = (json.loads(args.baseline_report.read_text(encoding="utf-8"))
+                    if args.baseline_report else None)
+        report = assess(db, args.expected_schema,
+                        require_integrity_upgrade=args.require_integrity_upgrade,
+                        baseline_report=baseline)
         print(json.dumps(report, indent=2))
-        return 0 if report["schema_compatible"] else 2
+        return 0 if report["preflight_passed"] else 2
     finally:
         db.close()
 
