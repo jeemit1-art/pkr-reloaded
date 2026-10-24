@@ -49,6 +49,26 @@ with tempfile.TemporaryDirectory() as tmp:
     assert broken_report["foreign_key_violation_count"] == 1
     assert broken_report["foreign_key_violations_by_table"] == {"game_players": 1}
 
+    # All expected columns can exist while a relationship has been silently
+    # dropped during a schema rebuild. That must also fail the release gate.
+    unconstrained = Path(tmp) / "missing_foreign_key.sqlite"
+    original_schema = SCHEMA.read_text(encoding="utf-8")
+    relation = "CREATE TABLE game_players (\n  game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,"
+    replacement = "CREATE TABLE game_players (\n  game_id TEXT NOT NULL,"
+    assert original_schema.count(relation) == 1
+    db = sqlite3.connect(unconstrained)
+    db.executescript(original_schema.replace(relation, replacement, 1))
+    db.close()
+    missing_fk = subprocess.run(
+        [sys.executable, str(CHECK), "--restore", str(unconstrained)],
+        capture_output=True, text=True, check=False,
+    )
+    assert missing_fk.returncode == 2, missing_fk.stderr + missing_fk.stdout
+    foreign_key_report = json.loads(missing_fk.stdout)
+    assert foreign_key_report["schema_compatible"] is False
+    assert foreign_key_report["missing_columns"] == []
+    assert foreign_key_report["foreign_key_violation_count"] == 0
+    assert foreign_key_report["incompatible_foreign_keys"] == ["game_players"]
     bad = Path(tmp) / "incomplete_copy.sqlite"
     db = sqlite3.connect(bad)
     db.execute("CREATE TABLE game_players(id TEXT)")
@@ -62,4 +82,4 @@ with tempfile.TemporaryDirectory() as tmp:
     assert problems["schema_compatible"] is False
     assert "hands" in problems["missing_tables"]
     assert "game_players.user_id" in problems["missing_columns"]
-print("PASS: read-only restored-copy verifier rejects missing schema and orphaned foreign keys")
+print("PASS: read-only restore preflight rejects missing schema, lost foreign keys and orphaned records")
