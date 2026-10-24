@@ -34,7 +34,7 @@ function fixture(status='active'){
           return {results:[]};
         },
         async run():Promise<any>{
-          if(sql.startsWith('INSERT INTO game_players')){
+          if(sql.trimStart().startsWith('INSERT INTO game_players')){
             const [gameId,userId,name,whatsapp,seat,checkGame,checkSeatGame,checkSeat]=args;
             if(game.status==='settled'||game.status==='cancelled'||gameId!=='g'||
               checkGame!=='g'||checkSeatGame!=='g'||seat!==checkSeat||
@@ -44,7 +44,7 @@ function fixture(status='active'){
               buy_ins:0,buy_in_total:0,cashout:null,net:null,settled_at:null});
             return {meta:{changes:1}};
           }
-          if(sql.startsWith('UPDATE game_players SET seat_number=')){
+          if(sql.trimStart().startsWith('UPDATE game_players SET seat_number=')){
             const [seat,whatsapp,gameId,userId,expected,openGame,checkGame,checkSeat,checkUser]=args;
             const p=players.find(p=>p.user_id===userId);
             if(!p||game.status==='settled'||game.status==='cancelled'||
@@ -54,7 +54,7 @@ function fixture(status='active'){
             p.seat_number=seat;if(whatsapp)p.whatsapp=whatsapp;
             return {meta:{changes:1}};
           }
-          if(sql.startsWith('DELETE FROM game_players')){
+          if(sql.trimStart().startsWith('DELETE FROM game_players')){
             const [gameId,userId,expected,openGame,actionGame,actionUser,resultGame,resultUser]=args;
             const index=players.findIndex(p=>p.user_id===userId);
             const p=players[index];
@@ -65,7 +65,7 @@ function fixture(status='active'){
               handHistory.has(userId))return {meta:{changes:0}};
             players.splice(index,1);return {meta:{changes:1}};
           }
-          if(sql.startsWith('INSERT INTO event_players')){eventWrites++;return {meta:{changes:1}};}
+          if(sql.trimStart().startsWith('INSERT INTO event_players')){eventWrites++;return {meta:{changes:1}};}
           return {meta:{changes:0}};
         },
       };
