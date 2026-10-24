@@ -44,6 +44,7 @@ export interface SettleRequest {
     display_name: string;
     whatsapp?: string;
     buy_ins: number;
+    buy_in_total?: number; // cents; optional only for legacy default-buy-in clients
     cashout: number;
   }>;
 }
