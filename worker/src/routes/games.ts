@@ -308,6 +308,16 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   const existing=await c.env.DB.prepare(
     'SELECT user_id,seat_number,display_name,buy_ins,buy_in_total,cashout FROM game_players WHERE game_id=? AND display_name=?'
   ).bind(gameId,name).first<any>();
+  // A hand's live roster must not silently change between recorded actions.
+  // Unassigned RSVP registrations remain possible; a physical seat cannot
+  // be changed while an unfinished, non-voided hand is being recorded.
+  const openHand=await c.env.DB.prepare(
+    'SELECT h.id FROM hands h WHERE h.game_id=? AND h.voided=0 '+
+    'AND NOT EXISTS (SELECT 1 FROM hand_results r WHERE r.hand_id=h.id) LIMIT 1'
+  ).bind(gameId).first<{id:string}>();
+  if(openHand && desired!==null && (!existing || existing.seat_number!==desired))
+    return c.json({error:'Finish or void the current hand before changing seats.',
+      code:'HAND_ACTIVE'},409);
   if (existing) {
     if (existing.seat_number===desired) {
       const players=await list();
@@ -322,7 +332,11 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
       WHERE game_id=? AND user_id=? AND seat_number IS ?
       AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
       AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND user_id<>?)
-    `).bind(desired,phone,gameId,existing.user_id,expected,gameId,gameId,desired,existing.user_id).run();
+      AND NOT EXISTS (SELECT 1 FROM hands h WHERE h.game_id=?
+        AND h.voided=0 AND NOT EXISTS(
+          SELECT 1 FROM hand_results r WHERE r.hand_id=h.id))
+    `).bind(desired,phone,gameId,existing.user_id,expected,
+      gameId,gameId,desired,existing.user_id,gameId).run();
     if (moved.meta.changes===0) {
       const current=await c.env.DB.prepare(
         'SELECT seat_number FROM game_players WHERE game_id=? AND user_id=?'
@@ -351,8 +365,12 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     SELECT ?,?,?,?,?,0,unixepoch()
     WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
     AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)
+    AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM hands h WHERE h.game_id=?
+      AND h.voided=0 AND NOT EXISTS(
+        SELECT 1 FROM hand_results r WHERE r.hand_id=h.id)))
     ON CONFLICT DO NOTHING
-  `).bind(gameId,userId,name,phone,desired,gameId,gameId,desired).run();
+  `).bind(gameId,userId,name,phone,desired,gameId,gameId,desired,
+    desired,gameId).run();
   if (inserted.meta.changes===0) {
     const same=await c.env.DB.prepare(
       'SELECT seat_number FROM game_players WHERE game_id=? AND display_name=?'
@@ -399,7 +417,10 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
       AND (user_id=? OR display_name=game_players.display_name COLLATE NOCASE))
     AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=?
       AND (winner_user_id=? OR winner_name=game_players.display_name COLLATE NOCASE))
-  `).bind(gameId,userId,expected,gameId,gameId,userId,gameId,userId).run();
+    AND NOT EXISTS (SELECT 1 FROM hands h WHERE h.game_id=?
+      AND h.voided=0 AND NOT EXISTS(
+        SELECT 1 FROM hand_results r WHERE r.hand_id=h.id))
+  `).bind(gameId,userId,expected,gameId,gameId,userId,gameId,userId,gameId).run();
   if (result.meta.changes===0) {
     const current=await c.env.DB.prepare(
       'SELECT seat_number,buy_ins,buy_in_total,cashout,net,settled_at FROM game_players WHERE game_id=? AND user_id=?'
