@@ -4,6 +4,8 @@ export interface Env {
   DB: D1Database;
   FRONTEND_URL: string;
   PKR_ENV?: 'production' | 'staging';
+  // Disabled by default; only enable after verifying optional D1 migration.
+  PKR_INTEGRITY_REVISIONS?: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   JWT_SECRET: string;
