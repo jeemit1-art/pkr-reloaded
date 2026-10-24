@@ -154,7 +154,11 @@ games.get('/games/:id/lobby', async (c) => {
   ).bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   const event   = await c.env.DB.prepare('SELECT id,name FROM events WHERE id=?').bind(game.event_id).first();
-  const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  // RSVP invite links are shareable. Never disclose phone numbers through
+  // an unauthenticated game link.
+  const rsvps   = await c.env.DB.prepare(
+    'SELECT id,game_id,display_name,status,created_at FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC'
+  ).bind(gameId).all();
   const players = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
   return c.json({ game, event, rsvps:rsvps.results, players:players.results });
 });
@@ -196,7 +200,10 @@ games.post('/games/:id/rsvp', async (c) => {
     INSERT INTO game_rsvps(id,game_id,display_name,whatsapp,status) VALUES(?,?,?,?,?)
     ON CONFLICT(game_id,display_name) DO UPDATE SET status=excluded.status,whatsapp=COALESCE(excluded.whatsapp,whatsapp)
   `).bind(generateId(),gameId,display_name.trim(),whatsapp||null,status||'yes').run();
-  const rsvps = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  // Public RSVP acknowledgements must not enumerate other players' contacts.
+  const rsvps = await c.env.DB.prepare(
+    'SELECT id,game_id,display_name,status,created_at FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC'
+  ).bind(gameId).all();
   return c.json({ok:true, rsvps:rsvps.results});
 });
 
