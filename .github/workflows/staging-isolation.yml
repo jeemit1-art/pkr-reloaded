@@ -40,3 +40,7 @@ jobs:
       - name: Run Worker unit tests
         working-directory: worker
         run: npm test
+      - name: Smoke test live staging Worker and preview (read-only)
+        run: |
+          node --check worker/scripts/smoke-staging.mjs
+          node worker/scripts/smoke-staging.mjs
