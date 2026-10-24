@@ -307,14 +307,58 @@ tournament.post('/games/:id/tournament/rebuy', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/eliminate', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden' }, 403);
-  const { player_name, finishing_position } = await c.req.json() as any;
-  const now = Math.floor(Date.now() / 1000);
-  await c.env.DB.prepare('INSERT INTO tournament_eliminations(id,game_id,player_name,finishing_position,eliminated_at) VALUES(?,?,?,?,?) ON CONFLICT(game_id,player_name) DO UPDATE SET finishing_position=excluded.finishing_position,eliminated_at=excluded.eliminated_at')
-    .bind(generateId(),gameId,player_name,finishing_position,now).run();
-  return c.json({ ok: true });
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const input=await c.req.json().catch(()=>null) as {player_name?:unknown}|null;
+  const playerName=typeof input?.player_name==='string'?input.player_name.trim():'';
+  if(!playerName||playerName.length>120)
+    return c.json({error:'Valid player name required'},400);
+  const state=await c.env.DB.prepare(
+    'SELECT status FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<{status:string}>();
+  if(!state||!['running','paused'].includes(state.status))
+    return c.json({error:'Tournament must be in progress to eliminate a player.'},409);
+  const player=await c.env.DB.prepare(
+    'SELECT user_id FROM game_players WHERE game_id=? AND display_name=? AND buy_ins>0'
+  ).bind(gameId,playerName).first<{user_id:string}>();
+  if(!player)return c.json({error:'Registered player not found'},404);
+  const previous=await c.env.DB.prepare(
+    'SELECT finishing_position FROM tournament_eliminations WHERE game_id=? AND player_name=?'
+  ).bind(gameId,playerName).first<{finishing_position:number}>();
+  if(previous)return c.json({ok:true,already_applied:true,finishing_position:previous.finishing_position});
+  const now=Math.floor(Date.now()/1000);
+  // All position counts live IN THIS INSERT; two hosts cannot assign the same
+  // place based on a stale browser count. The unique player constraint prevents
+  // duplicate eliminations even if the browser retries.
+  const written=await c.env.DB.prepare(`
+    INSERT INTO tournament_eliminations
+      (id,game_id,player_name,finishing_position,eliminated_at)
+    SELECT ?,?,?,(
+      (SELECT COUNT(*) FROM game_players WHERE game_id=? AND buy_ins>0)
+      -(SELECT COUNT(*) FROM tournament_eliminations WHERE game_id=?)
+    ),?
+    WHERE (SELECT COUNT(*) FROM game_players WHERE game_id=? AND buy_ins>0)
+       -(SELECT COUNT(*) FROM tournament_eliminations WHERE game_id=?)>1
+    AND NOT EXISTS (SELECT 1 FROM tournament_eliminations
+      WHERE game_id=? AND player_name=?)
+    AND EXISTS (SELECT 1 FROM tournament_state
+      WHERE game_id=? AND status IN ('running','paused'))
+    ON CONFLICT(game_id,player_name) DO NOTHING
+  `).bind(generateId(),gameId,playerName,gameId,gameId,now,
+    gameId,gameId,gameId,playerName,gameId).run();
+  const recorded=await c.env.DB.prepare(
+    'SELECT finishing_position FROM tournament_eliminations WHERE game_id=? AND player_name=?'
+  ).bind(gameId,playerName).first<{finishing_position:number}>();
+  if(!written.meta.changes){
+    if(recorded)return c.json({ok:true,already_applied:true,
+      finishing_position:recorded.finishing_position});
+    return c.json({error:'No more players can be eliminated, or the tournament changed.',
+      code:'TOURNAMENT_STATE_CONFLICT'},409);
+  }
+  return c.json({ok:true,finishing_position:recorded?.finishing_position});
 });
 
 tournament.get('/games/live/:token/tournament', async (c) => {

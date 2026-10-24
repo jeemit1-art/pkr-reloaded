@@ -171,9 +171,11 @@ window.tAddRebuy=function(playerName,type){
   }).finally(function(){delete pendingRebuys[key];});
 };
 window.tEliminate=function(playerName){
-  var pos=getActivePlayers().length;
-  tApi('/games/'+getGameId()+'/tournament/eliminate',{method:'POST',body:JSON.stringify({player_name:playerName,finishing_position:pos})}).then(function(){
-    ts.eliminations.push({player_name:playerName,finishing_position:pos});toast('\ud83d\udc80 '+playerName+' out in '+ordinal(pos)+' place');renderBody();
+  tApi('/games/'+getGameId()+'/tournament/eliminate',{
+    method:'POST',body:JSON.stringify({player_name:playerName}),
+  }).then(function(r){
+    toast(playerName+' placed '+ordinal(r.finishing_position));
+    loadTournament(); // Refresh server records rather than guessing an elimination place.
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 window.tSetup=function(){
