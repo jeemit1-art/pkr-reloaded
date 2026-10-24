@@ -1311,7 +1311,7 @@ function renderSummary(body){
     +'<div style="font-size:1.1rem;font-weight:700;color:var(--green);margin-bottom:4px"></div>'
     +'<div style="font-size:0.85rem;color:var(--muted)"></div>';
   card.children[1].textContent=s.winner+' wins!';
-  card.children[2].textContent='Hand #'+s.handNo+' \u00B7 '+s.pot+' chips'+(s.potDollar?' = 
+  card.children[2].textContent='Hand #' + s.handNo + ' - ' + s.pot + ' chips' + (s.potDollar ? ' = ' + String.fromCharCode(36) + s.potDollar : '');
   body.appendChild(card);
   if(s.nextDealer){
     var nd=document.createElement('div');
