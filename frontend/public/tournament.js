@@ -250,7 +250,9 @@ function renderMain(body){
     var eh=document.createElement('div');eh.style.cssText='padding:6px 12px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);font-weight:600;border-top:1px solid var(--border)';eh.textContent='Eliminated';ps.appendChild(eh);
     elims.slice().reverse().forEach(function(e){
       var er=document.createElement('div');er.style.cssText='display:flex;justify-content:space-between;padding:6px 12px;border-top:1px solid rgba(255,255,255,0.02);opacity:0.5';
-      er.innerHTML='<span style="font-size:0.8rem;color:var(--muted)">'+e.player_name+'</span><span style="font-size:0.75rem;color:var(--muted)">'+ordinal(e.finishing_position)+'</span>';ps.appendChild(er);
+      var nm=document.createElement('span');nm.style.cssText='font-size:0.8rem;color:var(--muted)';nm.textContent=e.player_name;
+      var pos=document.createElement('span');pos.style.cssText='font-size:0.75rem;color:var(--muted)';pos.textContent=ordinal(e.finishing_position);
+      er.appendChild(nm);er.appendChild(pos);ps.appendChild(er);
     });
   }
   body.appendChild(ps);
