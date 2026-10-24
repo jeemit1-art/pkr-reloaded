@@ -3,7 +3,7 @@ import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
 import { serializeHandCards, revealHandPotAllocations, HandResultError } from '../hand-result-pots';
 import { validateBettingAction } from '../poker-betting-rules';
-import { calculateHandPots, PokerPotError } from '../poker-pot-accounting';
+import { calculateHandPots, distributeTiedPot, PokerPotError } from '../poker-pot-accounting';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -382,21 +382,58 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
           code:'POT_ALLOCATION_INVALID',
         },422);
       }
+      const calculated=[];
       for(let i=0;i<accounting.pots.length;i++){
-        const pot=accounting.pots[i];
-        const row=allocations[i];
-        if(!row||row.potIdx!==i||row.chips!==pot.chips||
-           !pot.eligible.includes(row.winnerName)){
+        const pot=accounting.pots[i],row=allocations[i];
+        if(!row||row.potIdx!==i||row.chips!==pot.chips){
           return c.json({
-            error:'Pot allocation does not match the eligible players and chip total.',
+            error:'Pot allocations do not match the recorded chip totals.',
             code:'POT_ALLOCATION_INVALID',
           },422);
         }
+        if(Array.isArray(row.split_winners)){
+          const names=row.split_winners.map((item:any)=>item?.winnerName);
+          if(names.length<2||!names.every((name:unknown)=>
+               typeof name==='string'&&pot.eligible.includes(name))){
+            return c.json({error:'Only eligible players can tie for this pot.',
+              code:'POT_ALLOCATION_INVALID'},422);
+          }
+          let distributed;
+          try{
+            distributed=distributeTiedPot(pot,names,roster,
+              hand.dealer_seat,game.seats);
+          }catch(err){
+            if(err instanceof PokerPotError)return c.json({
+              error:err.message,code:'POT_ALLOCATION_INVALID',
+            },422);
+            throw err;
+          }
+          const savedShares=new Map(
+            row.split_winners.map((item:any)=>[item.winnerName,item.chips])
+          );
+          if(distributed.some(item=>savedShares.get(item.display_name)!==item.chips))
+            return c.json({
+              error:'Tied-pot chip amounts do not follow the button odd-chip rule.',
+              code:'POT_ALLOCATION_INVALID',
+            },422);
+          calculated.push({
+            potIdx:i,winnerName:names.join(', '),chips:pot.chips,label:pot.label,
+            split_winners:distributed.map(d=>({
+              winnerName:d.display_name,chips:d.chips,
+            })),
+          });
+        }else{
+          if(!pot.eligible.includes(row.winnerName))
+            return c.json({
+              error:'The declared winner is not eligible for this pot.',
+              code:'POT_ALLOCATION_INVALID',
+            },422);
+          calculated.push({
+            potIdx:i,winnerName:row.winnerName,chips:pot.chips,label:pot.label,
+          });
+        }
       }
-      allocations=accounting.pots.map((pot,i)=>({
-        potIdx:i,winnerName:allocations[i].winnerName,
-        chips:pot.chips,label:pot.label,
-      }));
+      allocations=calculated;
     }
     storedCards=serializeHandCards(hole_cards,allocations,hand.pot_chips,refunds);
   } catch(e) {
