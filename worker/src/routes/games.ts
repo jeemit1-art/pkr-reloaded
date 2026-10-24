@@ -257,10 +257,11 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   }|null;
   const name=typeof body?.display_name==='string'?body.display_name.trim():'';
   if (!name||name.length>160) return c.json({error:'Valid player name required'},400);
+  // Quick-seat registration may leave the physical seat unassigned (NULL).
   const seat=body?.seat_number;
-  if (!Number.isSafeInteger(seat)||Number(seat)<1||Number(seat)>game.seats)
+  const desired=seat == null ? null : Number(seat);
+  if (desired!==null && (!Number.isSafeInteger(seat)||desired<1||desired>game.seats))
     return c.json({error:'Seat must be an available number in this game'},400);
-  const desired=Number(seat);
   const phone=typeof body?.whatsapp==='string'&&body.whatsapp.trim()?body.whatsapp.trim():null;
   const hasExpected=!!body&&Object.prototype.hasOwnProperty.call(body,'expected_seat_number');
   const expected=body?.expected_seat_number;
@@ -281,12 +282,12 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
       error:'Original seat required before moving a player.',
       code:'PRECONDITION_REQUIRED',current:{seat_number:existing.seat_number},
     },428);
-    const moved=await c.env.DB.prepare(
-      'UPDATE game_players SET seat_number=?,whatsapp=COALESCE(?,whatsapp) '+
-      'WHERE game_id=? AND user_id=? AND seat_number IS ? '+
-      "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled')) "+
-      'AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND user_id<>?)'
-    ).bind(desired,phone,gameId,existing.user_id,expected,gameId,gameId,desired,existing.user_id).run();
+    const moved=await c.env.DB.prepare(`
+      UPDATE game_players SET seat_number=?,whatsapp=COALESCE(?,whatsapp)
+      WHERE game_id=? AND user_id=? AND seat_number IS ?
+      AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+      AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND user_id<>?)
+    `).bind(desired,phone,gameId,existing.user_id,expected,gameId,gameId,desired,existing.user_id).run();
     if (moved.meta.changes===0) {
       const current=await c.env.DB.prepare(
         'SELECT seat_number FROM game_players WHERE game_id=? AND user_id=?'
@@ -310,13 +311,13 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     'SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL'
   ).bind(game.event_id,name).first<{user_id:string}>();
   const userId=known?.user_id||'manual_'+generateId();
-  const inserted=await c.env.DB.prepare(
-    'INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) '+
-    'SELECT ?,?,?,?,?,0,unixepoch() WHERE '+
-    "EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled')) "+
-    'AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) '+
-    'ON CONFLICT DO NOTHING'
-  ).bind(gameId,userId,name,phone,desired,gameId,gameId,desired).run();
+  const inserted=await c.env.DB.prepare(`
+    INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
+    SELECT ?,?,?,?,?,0,unixepoch()
+    WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+    AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)
+    ON CONFLICT DO NOTHING
+  `).bind(gameId,userId,name,phone,desired,gameId,gameId,desired).run();
   if (inserted.meta.changes===0) {
     const same=await c.env.DB.prepare(
       'SELECT seat_number FROM game_players WHERE game_id=? AND display_name=?'
@@ -331,10 +332,10 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     },409);
   }
   // Register in the event only after a real new seat was inserted.
-  await c.env.DB.prepare(
-    'INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1) '+
-    'ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp)'
-  ).bind(generateId(),game.event_id,name,phone).run();
+  await c.env.DB.prepare(`
+    INSERT INTO event_players(id,event_id,display_name,whatsapp,games_played) VALUES(?,?,?,?,1)
+    ON CONFLICT(event_id,display_name) DO UPDATE SET whatsapp=COALESCE(excluded.whatsapp,whatsapp)
+  `).bind(generateId(),game.event_id,name,phone).run();
   const players=await list();
   return c.json({ok:true,players:players.results});
 });
@@ -355,13 +356,13 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
   const expected=body.expected_seat_number;
   if (expected!==null&&(!Number.isSafeInteger(expected)||Number(expected)<1))
     return c.json({error:'Invalid original seat number'},400);
-  const result=await c.env.DB.prepare(
-    'DELETE FROM game_players WHERE game_id=? AND user_id=? AND seat_number IS ? '+
-    'AND buy_ins=0 AND buy_in_total=0 AND cashout IS NULL AND net IS NULL AND settled_at IS NULL '+
-    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled')) "+
-    'AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=? AND user_id=?) '+
-    'AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=? AND winner_user_id=?)'
-  ).bind(gameId,userId,expected,gameId,gameId,userId,gameId,userId).run();
+  const result=await c.env.DB.prepare(`
+    DELETE FROM game_players WHERE game_id=? AND user_id=? AND seat_number IS ?
+    AND buy_ins=0 AND buy_in_total=0 AND cashout IS NULL AND net IS NULL AND settled_at IS NULL
+    AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+    AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=? AND user_id=?)
+    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=? AND winner_user_id=?)
+  `).bind(gameId,userId,expected,gameId,gameId,userId,gameId,userId).run();
   if (result.meta.changes===0) {
     const current=await c.env.DB.prepare(
       'SELECT seat_number,buy_ins,buy_in_total,cashout,net,settled_at FROM game_players WHERE game_id=? AND user_id=?'

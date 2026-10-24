@@ -38,7 +38,7 @@ function fixture(status='active'){
             const [gameId,userId,name,whatsapp,seat,checkGame,checkSeatGame,checkSeat]=args;
             if(game.status==='settled'||game.status==='cancelled'||gameId!=='g'||
               checkGame!=='g'||checkSeatGame!=='g'||seat!==checkSeat||
-              players.some(p=>p.seat_number===seat||p.display_name===name||p.user_id===userId))
+              players.some(p=>(seat!==null&&p.seat_number===seat)||p.display_name===name||p.user_id===userId))
               return {meta:{changes:0}};
             players.push({user_id:userId,display_name:name,whatsapp,seat_number:seat,
               buy_ins:0,buy_in_total:0,cashout:null,net:null,settled_at:null});
@@ -91,6 +91,19 @@ describe('seat changes reject stale edits and protect history',()=>{
     expect([a.status,b.status].sort()).toEqual([200,409]);
     expect(f.players).toHaveLength(1);
     expect(f.eventWrites()).toBe(1);
+  });
+  it('quick-seat registration supports multiple players without seat numbers',async()=>{
+    const f=fixture();
+    const a=await games.request(url,req('POST',{display_name:'Alex'}),f.env,execution);
+    const b=await games.request(url,req('POST',{display_name:'Ben'}),f.env,execution);
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    expect(f.players.map(p=>p.seat_number)).toEqual([null,null]);
+    const move=await games.request(url,req('POST',{
+      display_name:'Alex',seat_number:1,expected_seat_number:null,
+    }),f.env,execution);
+    expect(move.status).toBe(200);
+    expect(f.players.map(p=>p.seat_number)).toEqual([1,null]);
   });
   it('idempotent seat replay preserves buy-ins and event-player count',async()=>{
     const f=fixture();
