@@ -35,6 +35,19 @@ describe('server no-limit betting rules',()=>{
     assertDenied(posts,posts[1],'INVALID_BLIND');
     assertDenied([...posts,action('UTG','call',2)],action('Dealer','straddle',4),'INVALID_BLIND');
   });
+  it('prevents voluntary betting before both blinds and configured UTG straddle',()=>{
+    assertDenied([posts[1]],action('UTG','call',2),'HAND_BLINDS_INCOMPLETE');
+    assertDenied([posts[0]],action('UTG','call',2),'HAND_BLINDS_INCOMPLETE');
+    expect(assess(posts,action('UTG','call',2),{hand:{...hand,straddle:1}}))
+      .toMatchObject({ok:false,code:'HAND_BLINDS_INCOMPLETE'});
+    expect(assess(posts,action('Dealer','straddle',4),{hand:{...hand,straddle:1}}))
+      .toMatchObject({ok:false,code:'INVALID_BLIND'});
+    expect(assess(posts,action('UTG','straddle',4),{hand:{...hand,straddle:1}}))
+      .toMatchObject({ok:true});
+    const complete=[...posts,action('UTG','straddle',4)];
+    expect(assess(complete,action('Dealer','call',4),{hand:{...hand,straddle:1}}))
+      .toMatchObject({ok:true});
+  });
   it('treats a live straddle as the opening blind for minimum raises',()=>{
     const withStraddle=[...posts,action('UTG','straddle',4)];
     const opts={hand:{...hand,straddle:1}};
