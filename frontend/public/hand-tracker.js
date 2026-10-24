@@ -326,8 +326,8 @@ function computeNextPlayer(street, actions, hand) {
 }function loadCurrentHand() {
   return htApi('/games/'+getGameId()+'/hands').then(function(hands){
     hs.history=hands||[];
-    if (hands&&hands.length>0) {
-      var h=hands[0];
+    var h=(hands||[]).find(function(item){return !item.voided;});
+    if (h) {
       hs.hand=h; hs.actions=h.actions||[]; hs.pot=h.pot_chips||0; hs.board=h.board||[];
       hs.straddleSeat=null;
       if (h.straddle) {
@@ -336,6 +336,7 @@ function computeNextPlayer(street, actions, hand) {
       }
       try { hs.holes=h.result&&h.result.hole_cards?JSON.parse(typeof h.result.hole_cards==='string'?h.result.hole_cards:JSON.stringify(h.result.hole_cards)):{};} catch(e){hs.holes={};}
     }
+    if(!h){hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};}
     renderBoardOnFelt();
   }).catch(function(e){console.warn('loadCurrentHand:',e.message);});
 }
@@ -526,7 +527,10 @@ function autoPost(hand,seated,straddleSeat,cb) {
     var po=posts[i];
     htApi('/games/'+getGameId()+'/hands/'+hand.id+'/actions',{method:'POST',
       body:JSON.stringify({user_id:po.userId||null,display_name:po.name,street:'pre',action:po.action,chips:po.chips}),
-    }).then(function(r){hs.actions=r.actions;hs.pot=r.pot_chips;doPost(i+1);}).catch(function(){doPost(i+1);});
+    }).then(function(r){hs.actions=r.actions;hs.pot=r.pot_chips;doPost(i+1);}).catch(function(e){
+      toast('Blind post was not saved: '+e.message+'. Review the hand before betting.');
+      loadCurrentHand().then(function(){renderBody();renderBoardOnFelt();});
+    });
   }
   doPost(0);
 }
@@ -538,16 +542,26 @@ window.htVoidHand = function(){
     hs.hand=null;hs.actions=[];hs.pot=0;hs.board=[];hs.holes={};hs.straddleSeat=null;hs._lastHandSummary=null;saveSession();
     return htApi('/games/'+getGameId()+'/hands');
   }).then(function(hands){
-    hs.history=hands||[]; if(hands&&hands.length>0)hs.hand=hands[0];
-    renderBody();renderBoardOnFelt();toast('Hand voided');
+    hs.history=hands||[];hs.hand=(hands||[]).find(function(item){return !item.voided;})||null;
+    if(hs.hand){hs.actions=hs.hand.actions||[];hs.pot=hs.hand.pot_chips||0;hs.board=hs.hand.board||[];}
+    renderBody();renderBoardOnFelt();toast('Hand voided (history retained)');
   }).catch(function(e){toast('\u26A0 '+e.message);});
 };
 
 window.htUndoAction = function(){
-  if(!hs.hand)return;
-  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions/last',{method:'DELETE'}).then(function(r){
+  if(!hs.hand||!hs.actions.length)return;
+  var observed=hs.actions[hs.actions.length-1];
+  if(!observed||!observed.id){
+    toast('Last recorded action must be loaded before undo.');return;
+  }
+  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/actions/last',{
+    method:'DELETE',body:JSON.stringify({expected_action_id:observed.id}),
+  }).then(function(r){
     hs.actions=r.actions;hs.pot=r.pot_chips;renderBody();renderBoardOnFelt();
-  }).catch(function(e){toast('\u26A0 '+e.message);});
+  }).catch(function(e){
+    toast('Undo blocked: '+e.message);
+    loadCurrentHand().then(function(){renderBody();renderBoardOnFelt();});
+  });
 };
 
 window.htAct = function(action, playerName) {
@@ -751,7 +765,7 @@ window.htAssignPotWinner = function(potIdx, winnerName){
     var potWinnersForApi=hs.potWinners.slice();
     htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/result',{method:'POST',
       body:JSON.stringify({winner_user_id:pE?pE.userId:null,winner_name:hs.potWinners.map(function(pw){return pw.winnerName;}).join(', '),hole_cards:hs.holes,split_pot:hs.potWinners.length>1,pot_winners:hs.potWinners}),
-    }).then(function(){
+    }).then(function(saved){
       var cv2=gameInfo().chip_value||0;
       hs._lastHandSummary={
         handNo: hs.hand.hand_no,
@@ -760,7 +774,7 @@ window.htAssignPotWinner = function(potIdx, winnerName){
         potDollar: cv2?(hs.pot*cv2/100).toFixed(2):null,
         nextDealer: nextDealerName(),
       };
-      hs.hand.result={winner_name:potWinnersForApi.map(function(pw){return pw.winnerName;}).join(', '),pot_chips:hs.pot,pot_winners:potWinnersForApi};
+      hs.hand.result=saved.result;
       hs.view='summary'; hs.potWinners=[]; hs.currentPotIndex=0;
       renderBody(); renderBoardOnFelt();
       return htApi('/games/'+getGameId()+'/hands');
@@ -783,7 +797,7 @@ window.htDeclareWinner = function(name){
   var pE=null;Object.values(window.state.players).forEach(function(p){if(p&&p.name===name)pE=p;});
   htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/result',{method:'POST',
     body:JSON.stringify({winner_user_id:pE?pE.userId:null,winner_name:name,hole_cards:hs.holes,split_pot:false}),
-  }).then(function(){
+  }).then(function(saved){
     hs._lastHandSummary={
       handNo: hs.hand.hand_no,
       winner: name,
@@ -791,7 +805,7 @@ window.htDeclareWinner = function(name){
       potDollar: cv2?(hs.pot*cv2/100).toFixed(2):null,
       nextDealer: nextDealerName(),
     };
-    hs.hand.result={winner_name:name,pot_chips:hs.pot};
+    hs.hand.result=saved.result;
     hs.view='summary';
     renderBody(); renderBoardOnFelt();
     return htApi('/games/'+getGameId()+'/hands');
@@ -801,11 +815,20 @@ window.htDeclareWinner = function(name){
 
 window.htUndoWinner = function(){
   if(!hs.hand||!hs.hand.result)return;
-  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/result',{method:'DELETE'}).then(function(h){
+  var winner=hs.hand.result;
+  if(!winner.id){
+    toast('Reload the saved winner before undoing.');loadCurrentHand();return;
+  }
+  htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/result',{
+    method:'DELETE',body:JSON.stringify({expected_result_id:winner.id}),
+  }).then(function(h){
     hs.hand=h;hs.actions=h.actions||[];hs.pot=h.pot_chips||0;hs.board=h.board||[];
     hs.potWinners=[]; hs.currentPotIndex=0; hs._lastHandSummary=null;
     hs.view='main';renderBody();renderBoardOnFelt();toast('Winner undone');
-  }).catch(function(e){toast('\u26A0 '+e.message);});
+  }).catch(function(e){
+    toast('Winner undo blocked: '+e.message);
+    loadCurrentHand().then(function(){renderBody();renderBoardOnFelt();});
+  });
 };
 
 function nextDealerName(){
