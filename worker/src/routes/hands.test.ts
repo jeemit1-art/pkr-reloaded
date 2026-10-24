@@ -53,7 +53,7 @@ function fixture(status = 'active', hasWinner = false) {
           },
           async run():Promise<any> {
             statements.push(sql);
-            if (sql.startsWith('INSERT INTO hand_actions')) {
+            if (sql.trimStart().startsWith('INSERT INTO hand_actions')) {
               const [id, hand_id, game_id, user_id, display_name, street, action, chips] = params;
               actions.push({id,hand_id,game_id,user_id,display_name,street,action,chips,created_at:123});
             }
