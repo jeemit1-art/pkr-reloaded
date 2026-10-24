@@ -5,6 +5,7 @@ import { serializeHandCards, revealHandPotAllocations, HandResultError } from '.
 import { validateBettingAction } from '../poker-betting-rules';
 import { calculateHandPots, distributeTiedPot, PokerPotError } from '../poker-pot-accounting';
 import {auditHandStacks,StackAuditError} from '../poker-stack-audit';
+import {validateHandStartLayout} from '../hand-start-layout';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -73,6 +74,28 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
   }
   if(big===small||dealer===big)
     return c.json({error:'Blind seats cannot duplicate the dealer or one another.'},400);
+  const straddle=input?.straddle??0;
+  if(straddle!==0&&straddle!==1&&straddle!==true&&straddle!==false)
+    return c.json({error:'Straddle must be 0 or 1.'},400);
+  let registeredSeats:Array<{user_id:string;display_name:string;seat_number:number}>=[];
+  if(mode==='full'){
+    if(game.status!=='active')
+      return c.json({error:'Start the game before recording a full hand.',
+        code:'GAME_NOT_ACTIVE'},409);
+    const roster=(await c.env.DB.prepare(
+      'SELECT user_id,display_name,seat_number FROM game_players '+
+      'WHERE game_id=? AND seat_number IS NOT NULL AND buy_ins>0'
+    ).bind(gameId).all<{
+      user_id:string;display_name:string;seat_number:number
+    }>()).results;
+    const decision=validateHandStartLayout(game.seats,roster,{
+      dealer_seat:dealer as number,sb_seat:small as number,
+      bb_seat:big as number,straddle:Boolean(straddle),
+    });
+    if(!decision.ok)return c.json({error:decision.error,code:decision.code},
+      decision.code==='HAND_ROSTER_UNSYNCED'?409:400);
+    registeredSeats=decision.seats;
+  }
   const currentNo=game.current_hand_no||0;
   if(!Number.isSafeInteger(currentNo)||currentNo<0||currentNo>=1000000)
     return c.json({error:'Game hand counter needs review.'},409);
