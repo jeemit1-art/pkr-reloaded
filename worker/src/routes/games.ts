@@ -4,6 +4,7 @@ import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../
 import { sendPushToEvent, sendPushToPlayer } from '../push';
 import { minimumTransfers, prepareSettlementPositions, SettlementValidationError } from '../settle';
 import { clientSafeGame } from '../public-data';
+import {planStartSeating, type ExistingGameSeat, type ConfirmedRsvp} from '../game-start-seating';
 
 const games = new Hono<{ Bindings: Env }>();
 
@@ -212,33 +213,65 @@ games.post('/games/:id/rsvp', async (c) => {
 ═══════════════════════════════════════════ */
 
 games.post('/games/:id/start', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId=c.req.param('id');
   try {
-    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
-    if (!game) return c.json({error:'Not found'},404);
+    const game=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!game) return c.json({error:'Game not found'},404);
     if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-    if (game.status==='settled' || game.status==='cancelled') return c.json({error:'Cannot start a settled or cancelled game'},409);
-    if (game.status==='active')  return c.json({error:'Game already active'},400);
-    const { password } = await c.req.json().catch(()=>({password:''}));
-    if (game.game_password && game.game_password !== password) return c.json({error:'Wrong password'},401);
+    if (game.status==='settled'||game.status==='cancelled')
+      return c.json({error:'Cannot start a settled or cancelled game'},409);
+    if (game.status==='active') return c.json({error:'Game already active'},409);
+    const body=await c.req.json().catch(()=>({password:''}));
+    if (game.game_password && game.game_password !== body.password)
+      return c.json({error:'Wrong password'},401);
 
-    try {
-      const rsvps = await c.env.DB.prepare("SELECT * FROM game_rsvps WHERE game_id=? AND status='yes'").bind(gameId).all<any>();
-      let seatNum = 1;
-      for (const r of rsvps.results) {
-        const knownRsvp = await c.env.DB.prepare('SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL').bind(game.event_id,r.display_name).first<any>();
-        const rsvpUserId = knownRsvp?.user_id || `rsvp_${r.id}`;
-        await c.env.DB.prepare(`INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
-          VALUES(?,?,?,?,?,0,unixepoch()) ON CONFLICT(game_id,user_id) DO NOTHING`)
-          .bind(gameId,rsvpUserId,r.display_name,r.whatsapp||null,seatNum++).run();
-      }
-    } catch(_) { /* game_rsvps may not exist yet */ }
+    const existing=(await c.env.DB.prepare(
+      'SELECT user_id,display_name,seat_number FROM game_players WHERE game_id=? ORDER BY created_at ASC'
+    ).bind(gameId).all<ExistingGameSeat>()).results;
+    const rsvps=(await c.env.DB.prepare(
+      "SELECT id,display_name,whatsapp FROM game_rsvps WHERE game_id=? AND status='yes' ORDER BY created_at ASC,id ASC"
+    ).bind(gameId).all<ConfirmedRsvp>()).results;
+    const plan=planStartSeating(game.seats,existing,rsvps);
+    const statements=[
+      c.env.DB.prepare(
+        "UPDATE games SET status='active' WHERE id=? AND status NOT IN ('active','settled','cancelled')"
+      ).bind(gameId),
+    ];
 
-    await c.env.DB.prepare("UPDATE games SET status='active' WHERE id=?").bind(gameId).run();
-    const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
-    return c.json({ok:true, players:players.results});
-  } catch(e:any) {
-    return c.json({error: e.message||'Internal error'}, 500);
+    // Existing unassigned Quick Seat players have first option on vacant seats.
+    for(const move of plan.existingMoves){
+      statements.push(c.env.DB.prepare(
+        "UPDATE game_players SET seat_number=? WHERE game_id=? AND user_id=? AND seat_number IS NULL AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) AND EXISTS (SELECT 1 FROM games WHERE id=? AND status='active')"
+      ).bind(move.seat_number,gameId,move.user_id,gameId,move.seat_number,gameId));
+    }
+    for(const player of plan.newPlayers){
+      const known=await c.env.DB.prepare(
+        'SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL'
+      ).bind(game.event_id,player.display_name).first<{user_id:string}>();
+      const userId=known?.user_id||'rsvp_'+player.id;
+      // A late seat collision retains the RSVP with NULL seat, never displacing another player.
+      statements.push(c.env.DB.prepare(
+        "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status='active') AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=?)) ON CONFLICT DO NOTHING"
+      ).bind(gameId,userId,player.display_name,player.whatsapp,
+        player.seat_number,gameId,player.seat_number,player.seat_number,
+        gameId,gameId,userId,player.display_name));
+    }
+
+    // D1 batch runs the status transition and all seating in one transaction.
+    const outcome=await c.env.DB.batch(statements);
+    if(!outcome[0]?.meta?.changes) return c.json({
+      error:'Game already started or closed on another device',code:'GAME_STATE_CONFLICT',
+    },409);
+    const players=(await c.env.DB.prepare(
+      'SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC'
+    ).bind(gameId).all<any>()).results;
+    return c.json({
+      ok:true,players,
+      unseated:players.filter((p:any)=>p.seat_number==null).map((p:any)=>p.display_name),
+    });
+  } catch(error) {
+    console.error('Safe game start failed:',error);
+    return c.json({error:'Could not start the game safely. No changes were committed.'},500);
   }
 });
 
