@@ -8,6 +8,8 @@
 - GitHub Actions independently build the Next.js frontend with `VERCEL_ENV=preview`, `NEXT_PUBLIC_PKR_ENV=staging` and a public, isolated staging Worker URL. These checks deploy nothing.
 - The separate Cloudflare staging Worker is configured to use `wrangler.staging.toml`, the dedicated staging D1 and KV. The original production config `wrangler.toml` must remain untouched.
 - No production financial or player records have been imported into staging.
+- A read-only restored-copy preflight is tested using **synthetic local SQLite files**. It checks reference schema, declared foreign keys, foreign-key violations, basic integrity and aggregate financial totals. Passing synthetic tests does **not** establish that a real production backup has been restored or verified.
+
 
 ## Features deliberately disabled pending database sign-off
 
