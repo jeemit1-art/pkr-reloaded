@@ -1,7 +1,8 @@
 -- PKR staging-only schema, derived from API routes as of October 2026.
 -- TEST DATA ONLY. Never run against production; this is NOT a production migration.
 -- This schema is deliberately created on an empty, independent staging database.
-PRAGMA foreign_keys = ON;
+-- Cloudflare D1 enforces foreign keys automatically. Do not change PRAGMA foreign_keys.
+-- D1 executes imports in implicit transactions, so toggling it is unsupported.
 
 CREATE TABLE users (
   id TEXT PRIMARY KEY,

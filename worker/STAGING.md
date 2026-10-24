@@ -4,7 +4,7 @@
 
 | Component | Stage | Status |
 | --- | --- | --- |
-| Cloudflare D1 | `pkr-reloaded-db-staging`, ID `03577857-fc94-49ed-bd1b-5cd658aa0978` | Owner supplied; not initialised by this PR |
+| Cloudflare D1 | `pkr-reloaded-db-staging`, ID `03577857-fc94-49ed-bd1b-5cd658aa0978` | Owner supplied; schema NOT yet initialised |
 | Cloudflare KV | `pkr-reloaded-kv-staging`, ID `9e86adbcfb5d4817a32dfd4482d3dbf9` | Owner supplied |
 | Cloudflare Worker | `pkr-reloaded-worker-staging` | GitHub-connected. Check Cloudflare Build History for current deploy status |
 | Vercel frontend | `https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app` | Dedicated branch Preview deployed; live backend not used |
@@ -24,6 +24,51 @@ The existing frontend project is hosted on **Vercel**, confirmed via GitHub depl
 7. Confirm staging Worker `GET /health` includes `environment: "staging"`. After that, test signing in, creating games, seating players, cash-outs, settlements, tournaments and hand tracking with synthetic data.
 8. The staging Worker has no cron trigger, disables outbound push notifications, blocks Stripe checkout/portal/webhooks, and blocks paid AI calls. The production runtime is unchanged unless code is separately merged and deployed with approval.
 
+
+## Staging D1 schema initialization (once only; isolated database)
+
+**Do not use `worker/schema.sql`, `npm run db:migrate`, or the production database name.**
+
+The isolated staging Worker is healthy and GitHub Actions now compile 222 literal route SQL statements against `worker/staging.schema.sql`. This is an in-memory static compatibility test, **not** a completed D1 remote initialization.
+
+1. In **Cloudflare Dashboard → D1 SQL Database**, select exactly **`pkr-reloaded-db-staging`** (ID `03577857-fc94-49ed-bd1b-5cd658aa0978`). In the SQL console run:
+
+   ```sql
+   SELECT name FROM sqlite_master
+    WHERE type = 'table'
+      AND name NOT LIKE 'sqlite_%'
+      AND name NOT LIKE '_cf_%'
+    ORDER BY name;
+   ```
+
+   **Stop if there are already application tables.** This import is only for an empty staging D1; no destructive reset is allowed.
+
+2. From a local checkout of this **staging branch**, inside the `worker` directory, authenticate to Cloudflare with `npx wrangler login` if needed and run:
+
+   ```sh
+   npm ci
+   npm run check:staging
+   npx wrangler d1 execute pkr-reloaded-db-staging --config wrangler.staging.toml --remote --file ./staging.schema.sql
+   ```
+
+   Verify the Wrangler prompt identifies database `pkr-reloaded-db-staging` and ID `03577857-fc94-49ed-bd1b-5cd658aa0978` before accepting. **Cancel** if it displays any other name or ID. This is a remote operation that writes only staging schema; no production data is copied.
+
+3. Use that staging D1 SQL console again to confirm the expected tables:
+
+   ```sql
+   SELECT COUNT(*) AS app_tables FROM sqlite_master
+    WHERE type = 'table'
+      AND name IN ('users','events','event_members','event_players','games',
+        'game_rsvps','game_players','push_subscriptions','settlements',
+        'settlement_transfers','paid_carryover','leaderboard',
+        'hands','hand_actions','hand_results','hand_analyses',
+        'tournament_state','tournament_levels','tournament_rebuys',
+        'tournament_eliminations');
+   ```
+
+   Expected `app_tables = 20`. Never import real player or financial data into staging.
+
+Cloudflare D1 automatically enforces foreign keys, so the staging schema intentionally omits the `PRAGMA foreign_keys` statement (which cannot be changed inside a D1 transaction).
 
 ## Cloudflare Git deployment safeguards
 
