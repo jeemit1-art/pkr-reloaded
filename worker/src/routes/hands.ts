@@ -4,6 +4,15 @@ import { authMiddleware, requireEventRole, generateId } from '../middleware';
 
 const hands = new Hono<{ Bindings: Env }>();
 
+const legalStreets = new Set(['pre', 'flop', 'turn', 'river']);
+const legalActions = new Set(['post', 'straddle', 'fold', 'check', 'call', 'bet', 'raise', 'allin']);
+
+function isLocked(game: {status?:string}): boolean {
+  return game.status === 'settled' || game.status === 'cancelled';
+}
+
+const lockedMessage = 'Hand history is locked on settled or cancelled games';
+
 // ── Helper: get game and verify cohost ──────────────────────────────────────
 async function getGameAndVerify(c: any, gameId: string) {
   try {
@@ -110,21 +119,39 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
-  const { user_id, display_name, street, action: actionType, chips } = await c.req.json();
-  const action = actionType;
-  if (!display_name || !street || !action) return c.json({ error: 'display_name, street, action required' }, 400);
+  const input = await c.req.json().catch(() => null) as {
+    user_id?:unknown;display_name?:unknown;street?:unknown;action?:unknown;chips?:unknown
+  } | null;
+  const display_name = typeof input?.display_name === 'string' ? input.display_name.trim() : '';
+  const street = input?.street;
+  const action = input?.action;
+  const chips = input?.chips === undefined ? 0 : input.chips;
+  if (!display_name || display_name.length > 120 ||
+      typeof street !== 'string' || !legalStreets.has(street) ||
+      typeof action !== 'string' || !legalActions.has(action)) {
+    return c.json({ error: 'Invalid player, street, or action' }, 400);
+  }
+  if (!Number.isSafeInteger(chips) || (chips as number) < 0 ||
+      (['fold','check'].includes(action) && chips !== 0) ||
+      (!['fold','check'].includes(action) && (chips as number) === 0)) {
+    return c.json({ error: 'Action chips must be a valid nonnegative integer, with zero for fold/check' }, 400);
+  }
+  const user_id = typeof input?.user_id === 'string' ? input.user_id : null;
 
   const id = generateId();
-  await c.env.DB.prepare(
-    'INSERT INTO hand_actions(id,hand_id,game_id,user_id,display_name,street,action,chips) VALUES(?,?,?,?,?,?,?,?)'
-  ).bind(id, handId, gameId, user_id||null, display_name, street, action, chips||0).run();
+  // Both statements are in one D1 transaction: no recorded action without
+  // a corresponding pot update. Recalculate from the source action log.
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      'INSERT INTO hand_actions(id,hand_id,game_id,user_id,display_name,street,action,chips) VALUES(?,?,?,?,?,?,?,?)'
+    ).bind(id, handId, gameId, user_id, display_name, street, action, chips),
+    c.env.DB.prepare(`UPDATE hands SET pot_chips=(
+      SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips > 0 THEN chips ELSE 0 END),0)
+      FROM hand_actions WHERE hand_id=?
+    ) WHERE id=? AND game_id=?`).bind(handId,handId,gameId),
+  ]);
 
-  // Update pot_chips if chips > 0 and action is not fold
-  if (chips > 0 && action !== 'fold') {
-    await c.env.DB.prepare('UPDATE hands SET pot_chips=pot_chips+? WHERE id=?').bind(chips, handId).run();
-  }
-
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(handId).all();
+  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
   const hand = await c.env.DB.prepare('SELECT pot_chips FROM hands WHERE id=?').bind(handId).first() as any;
   return c.json({ ok: true, actions: actions.results, pot_chips: hand?.pot_chips || 0 });
 });
@@ -138,18 +165,20 @@ hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) 
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const last = await c.env.DB.prepare(
-    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC LIMIT 1'
+    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1'
   ).bind(handId).first() as any;
 
   if (!last) return c.json({ error: 'No actions to undo' }, 400);
 
-  await c.env.DB.prepare('DELETE FROM hand_actions WHERE id=?').bind(last.id).run();
-  // Reverse pot chips
-  if (last.chips > 0 && last.action !== 'fold') {
-    await c.env.DB.prepare('UPDATE hands SET pot_chips=MAX(0,pot_chips-?) WHERE id=?').bind(last.chips, handId).run();
-  }
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM hand_actions WHERE id=? AND hand_id=?').bind(last.id,handId),
+    c.env.DB.prepare(`UPDATE hands SET pot_chips=(
+      SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips > 0 THEN chips ELSE 0 END),0)
+      FROM hand_actions WHERE hand_id=?
+    ) WHERE id=? AND game_id=?`).bind(handId,handId,gameId),
+  ]);
 
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at').bind(handId).all();
+  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
   const hand = await c.env.DB.prepare('SELECT pot_chips FROM hands WHERE id=?').bind(handId).first() as any;
   return c.json({ ok: true, actions: actions.results, pot_chips: hand?.pot_chips || 0 });
 });
@@ -213,7 +242,7 @@ hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
     c.env.DB.prepare('DELETE FROM hand_actions WHERE hand_id=?').bind(handId),
     c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId),
     c.env.DB.prepare('DELETE FROM hands WHERE id=? AND game_id=?').bind(handId, gameId),
-    c.env.DB.prepare('UPDATE games SET current_hand_no=MAX(0,current_hand_no-1) WHERE id=?').bind(gameId),
+    c.env.DB.prepare('UPDATE games SET current_hand_no=(SELECT COALESCE(MAX(hand_no),0) FROM hands WHERE game_id=?) WHERE id=?').bind(gameId,gameId),
   ]);
   return c.json({ ok: true });
 });
