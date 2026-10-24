@@ -288,7 +288,10 @@ function computeNextPlayer(street, actions, hand) {
     var bbPlayer = playerBySeat[bbSeat];
     var strPlayer = strSeat ? playerBySeat[strSeat] : null;
     var optionPlayer = strPlayer || bbPlayer;
-    if (optionPlayer && canActSeats.indexOf(optionPlayer.seat) >= 0 && street === 'pre') {
+    // BB/straddle gets a free option only if it has NOT already checked or
+    // raised. Otherwise the pre-flop round must end, not repeat the actor.
+    if (optionPlayer && !voluntaryActed[optionPlayer.name] &&
+        canActSeats.indexOf(optionPlayer.seat) >= 0 && street === 'pre') {
       return optionPlayer.name;
     }
     return null;
