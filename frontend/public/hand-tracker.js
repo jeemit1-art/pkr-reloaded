@@ -2114,7 +2114,9 @@ function renderSidePots(body, actions, seated) {
 }
 
 // --- SESSION PERSISTENCE ---
-var SESSION_KEY = 'pkr_ht_session';
+// Each game needs its own recoverable session. Previously a single global
+// key meant opening a second game overwrote the first game's in-progress hand.
+var SESSION_KEY = 'pkr_ht_session_' + getGameId();
 function saveSession() {
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify({
@@ -2131,6 +2133,19 @@ function saveSession() {
 function restoreSession() {
   try {
     var raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) {
+      // One-time migration: only move the old shared key when it actually
+      // belongs to this game, without deleting other game histories.
+      var legacy = localStorage.getItem('pkr_ht_session');
+      if (legacy) {
+        var legacySnap = JSON.parse(legacy);
+        if (legacySnap && legacySnap.gameId === getGameId()) {
+          raw = legacy;
+          localStorage.setItem(SESSION_KEY, legacy);
+          localStorage.removeItem('pkr_ht_session');
+        }
+      }
+    }
     if (!raw) return false;
     var snap = JSON.parse(raw);
     if (!snap || snap.gameId !== getGameId()) return false;
