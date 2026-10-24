@@ -5,6 +5,7 @@
  * all normal hole-card API responses.
  */
 const allocationKey = '__pkr_hand_pot_allocations_v1';
+const refundsKey = '__pkr_uncalled_bet_returns_v1';
 
 export interface HandPotAllocation {
   potIdx: number;
@@ -24,14 +25,27 @@ export function serializeHandCards(
   holeCards: unknown,
   rawAllocations: unknown,
   handPotChips: number,
+  uncalledReturns: unknown = [],
 ): string {
   if (!holeCards || typeof holeCards !== 'object' || Array.isArray(holeCards)) {
     holeCards = {};
   }
   const cards = {...(holeCards as Record<string,unknown>)};
-  if (Object.prototype.hasOwnProperty.call(cards, allocationKey)) {
+  if (Object.prototype.hasOwnProperty.call(cards, allocationKey) ||
+      Object.prototype.hasOwnProperty.call(cards, refundsKey)) {
     throw new HandResultError('Reserved hand metadata field cannot appear in hole cards');
   }
+  if(!Array.isArray(uncalledReturns)||uncalledReturns.length>1 ||
+     uncalledReturns.some(row=>
+       !row||typeof row!=='object'||
+       typeof row.display_name!=='string'||!row.display_name.trim()||
+       !Number.isSafeInteger(row.chips)||row.chips<=0))
+    throw new HandResultError('Uncalled-bet returns must be derived from verified hand actions');
+  const refunds=uncalledReturns as Array<{display_name:string;chips:number}>;
+  const refunded=refunds.reduce((n,r)=>n+r.chips,0);
+  if(!Number.isSafeInteger(refunded)||refunded>handPotChips)
+    throw new HandResultError('Uncalled-bet refund is greater than the recorded pot');
+  if (refunds.length) cards[refundsKey]=refunds;
   if (rawAllocations === undefined) return JSON.stringify(cards);
 
   if (!Array.isArray(rawAllocations) ||
@@ -70,8 +84,8 @@ export function serializeHandCards(
   if (allocations.some((p,i)=>p.potIdx!==i)) {
     throw new HandResultError('Side-pot allocations must have consecutive indices');
   }
-  if (total !== handPotChips) {
-    throw new HandResultError('Side-pot winners must account for the entire recorded pot');
+  if (total + refunded !== handPotChips) {
+    throw new HandResultError('Pot winners plus uncalled-bet refunds must account for every recorded chip');
   }
 
   cards[allocationKey] = allocations;
@@ -83,13 +97,19 @@ export function revealHandPotAllocations<T extends Record<string, any> | null>(r
   try {
     const cards: unknown = JSON.parse(row.hole_cards);
     if (!cards || typeof cards !== 'object' || Array.isArray(cards) ||
-        !Object.prototype.hasOwnProperty.call(cards,allocationKey)) {
+        (!Object.prototype.hasOwnProperty.call(cards,allocationKey) &&
+         !Object.prototype.hasOwnProperty.call(cards,refundsKey))) {
       return row;
     }
     const data = {...(cards as Record<string,unknown>)};
     const allocations = data[allocationKey];
+    const refunds = data[refundsKey];
     delete data[allocationKey];
-    return {...row,hole_cards:JSON.stringify(data),pot_winners:Array.isArray(allocations)?allocations:[]} as T;
+    delete data[refundsKey];
+    return {...row,hole_cards:JSON.stringify(data),
+      ...(Array.isArray(allocations)?{pot_winners:allocations}:{}),
+      ...(Array.isArray(refunds)?{uncalled_returns:refunds}:{}),
+    } as T;
   } catch {
     // Legacy records can contain imperfect JSON; never break the hand history.
     return row;

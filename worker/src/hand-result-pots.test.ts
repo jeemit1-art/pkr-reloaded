@@ -46,6 +46,19 @@ describe('hand result pot winner persistence',()=>{
     expect(()=>serializeHandCards(raw,winningPots,350)).toThrow(/Reserved/);
   });
 
+  it('conserves payouts plus an uncalled bet and displays the returned chips',()=>{
+    const winners=[{potIdx:0,winnerName:'Alex',chips:120,label:'Main Pot'}];
+    const refunds=[{display_name:'Alex',chips:40}];
+    const stored=serializeHandCards(cards,winners,160,refunds);
+    const result=revealHandPotAllocations({hole_cards:stored,winner_name:'Alex'}) as any;
+    expect(result.pot_winners).toEqual(winners);
+    expect(result.uncalled_returns).toEqual(refunds);
+    expect(JSON.parse(result.hole_cards)).toEqual(cards);
+    expect(()=>serializeHandCards(cards,winners,161,refunds)).toThrow(/account/);
+    expect(()=>serializeHandCards({'__pkr_uncalled_bet_returns_v1':[]},winners,160,refunds))
+      .toThrow(/Reserved/);
+  });
+
   it('continues to read historical records with imperfect or null hole card data',()=>{
     expect(revealHandPotAllocations({hole_cards:'{bad json'})).toEqual({hole_cards:'{bad json'});
     expect(revealHandPotAllocations(null)).toBeNull();
