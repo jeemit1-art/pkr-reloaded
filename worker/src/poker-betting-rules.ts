@@ -59,8 +59,8 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
   const ring=order.filter(seat=>seatsSeen.has(seat));
   const occupied=(seat:number|null|undefined)=>Number.isSafeInteger(seat)&&
     ring.includes(seat as number);
-  if(!occupied(hand.dealer_seat)||!occupied(hand.bb_seat))
-    return invalid('BETTING_STATE_UNAVAILABLE','Dealer and big blind must be seated.');
+  if(!occupied(hand.dealer_seat)||!occupied(hand.sb_seat)||!occupied(hand.bb_seat))
+    return invalid('BETTING_STATE_UNAVAILABLE','Dealer and both blinds must be seated.');
   const incomingIndex=STREETS.indexOf(proposed.street as typeof STREETS[number]);
   if(incomingIndex<0||!VOLUNTARY.has(proposed.action)&&
     proposed.action!=='post'&&proposed.action!=='straddle')
@@ -84,7 +84,12 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
   const lastStreet=STREETS[previousIndex];
 
   const bigBlindName=players.find(p=>p.seat_number===hand.bb_seat)?.display_name;
+  const smallBlindName=players.find(p=>p.seat_number===hand.sb_seat)?.display_name;
+  const straddleSeat=ring[(ring.indexOf(hand.bb_seat)+1)%ring.length];
+  const straddlerName=players.find(p=>p.seat_number===straddleSeat)?.display_name;
   const bbPost=actions.find(a=>a.street==='pre'&&a.action==='post'&&a.display_name===bigBlindName);
+  const sbPost=actions.find(a=>a.street==='pre'&&a.action==='post'&&a.display_name===smallBlindName);
+  const recordedStraddle=actions.find(a=>a.street==='pre'&&a.action==='straddle');
   const bigBlind=bbPost?.chips||0;
   const currentPost=actions.filter(a=>a.street==='pre'&&(a.action==='post'||a.action==='straddle'));
   const baseRaise=Math.max(1,bigBlind);
@@ -157,8 +162,10 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
     const seat=playerMap.get(proposed.display_name)!.seat_number;
     if(proposed.action==='post'&&seat!==hand.sb_seat&&seat!==hand.bb_seat)
       return invalid('INVALID_BLIND','Only the designated small or big blind may post.');
-    if(proposed.action==='straddle'&&(!hand.straddle||seat===hand.bb_seat||seat===hand.sb_seat))
-      return invalid('INVALID_BLIND','This hand has no eligible straddler.');
+    if(proposed.action==='straddle'&&(!hand.straddle||seat!==straddleSeat||ring.length<3))
+      return invalid('INVALID_BLIND','Only the next seat after the big blind may straddle.');
+    if(proposed.action==='straddle'&&(!sbPost||!bbPost))
+      return invalid('HAND_BLINDS_INCOMPLETE','Post both blinds before the straddle.');
     if(actions.some(a=>a.street==='pre'&&a.display_name===proposed.display_name&&
       (a.action==='post'||a.action==='straddle')))
       return invalid('INVALID_BLIND','The blind or straddle is already recorded.');
@@ -167,8 +174,10 @@ export function validateBettingAction(req:BettingRequest):BettingDecision{
     return {ok:true,nextActor:null,toCall:0,minimumRaise:baseRaise,lastFullRaise:baseRaise};
   }
 
-  if(!bbPost)
-    return invalid('HAND_BLINDS_INCOMPLETE','Post the big blind before recording betting actions.');
+  if(!sbPost||!bbPost)
+    return invalid('HAND_BLINDS_INCOMPLETE','Post both blinds before recording betting actions.');
+  if(hand.straddle&&(!recordedStraddle||recordedStraddle.display_name!==straddlerName))
+    return invalid('HAND_BLINDS_INCOMPLETE','Post the nominated UTG straddle before betting.');
   if(incomingIndex>previousIndex){
     const prior=status(lastStreet);
     if(prior.invalid)return invalid('HAND_HISTORY_INVALID','Recorded chip totals exceed safe integer precision.');
