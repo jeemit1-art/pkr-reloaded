@@ -44,8 +44,37 @@ try:
     raise AssertionError("Duplicate seat was accepted")
 except sqlite3.IntegrityError:
     pass
+# DELETE + REINSERT with an identical ID must never revive revision 2.
+db.execute("DELETE FROM game_players WHERE game_id='g' AND user_id='u'")
+assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='u'").fetchone()==(3,)
+deleted = db.execute(
+    "SELECT revision,old_buy_ins,new_buy_ins,old_seat_number,new_seat_number "
+    "FROM game_financial_audit WHERE game_id='g' AND user_id='u' ORDER BY id DESC LIMIT 1"
+).fetchone()
+assert deleted==(3,1,None,2,None), deleted
+
+db.execute(
+    "INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,seat_number) "
+    "VALUES(?,?,?,?,?,?)",("g","u","Alex",0,0,1)
+)
+assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='u'").fetchone()==(4,)
+recreated=db.execute(
+    "SELECT revision,old_buy_ins,new_buy_ins,old_seat_number,new_seat_number "
+    "FROM game_financial_audit WHERE game_id='g' AND user_id='u' ORDER BY id DESC LIMIT 1"
+).fetchone()
+assert recreated==(4,None,0,None,1),recreated
+db.execute("UPDATE game_players SET seat_number=1 WHERE game_id='g' AND user_id='u'")
+assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='u'").fetchone()==(4,)
+db.execute(
+    "INSERT INTO game_players(game_id,user_id,display_name) VALUES(?,?,?)",
+    ("g","new","Charlie")
+)
+assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='new'").fetchone()==(1,)
+assert db.execute("SELECT COUNT(*) FROM game_financial_audit").fetchone()[0]==5
+
+# Reapplying the same optional migration must not reset versions or duplicate triggers.
 db.executescript(migration)
-assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='u'").fetchone()==(2,)
-assert db.execute("SELECT COUNT(*) FROM game_financial_audit").fetchone()[0]==2
+assert db.execute("SELECT revision FROM game_player_revisions WHERE game_id='g' AND user_id='u'").fetchone()==(4,)
+assert db.execute("SELECT COUNT(*) FROM game_financial_audit").fetchone()[0]==5
 assert db.execute("SELECT COUNT(*) FROM hand_stack_baselines").fetchone()[0]==2
-print("PASS: disposable SQLite migration, revisions, audited old/new changes, and verified stacks")
+print("PASS: disposable SQLite migration, monotonic create/update/delete/recreate, audited financial changes, and verified stacks")
