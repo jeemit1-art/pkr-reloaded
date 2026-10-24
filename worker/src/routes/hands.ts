@@ -184,21 +184,46 @@ hands.get('/games/:id/hands/:handId', authMiddleware, async (c) => {
   return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result:revealHandPotAllocations(result) });
 });
 
-// ── Update board cards ───────────────────────────────────────────────────────
+// ── Update board cards, rejecting stale edits and finished hands ──────────────
 hands.put('/games/:id/hands/:handId/board', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
-  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
-  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
-  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
-
-  const { board } = await c.req.json<{ board: string[] }>();
-  if (!Array.isArray(board) || board.length > 5 || board.some(card => typeof card !== 'string' || !/^[2-9TJQKA][♠♥♦♣]$/.test(card)) || new Set(board).size !== board.length) return c.json({error:'Invalid board cards'},400);
-  await c.env.DB.prepare('UPDATE hands SET board=? WHERE id=? AND game_id=?')
-    .bind(JSON.stringify(board || []), handId, gameId).run();
-  return c.json({ ok: true, board });
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  if(!await verifyHandInGame(c,gameId,handId))
+    return c.json({error:'Hand not found in this game'},404);
+  const input=await c.req.json().catch(()=>null) as {
+    board?:unknown;expected_board?:unknown
+  }|null;
+  if(!input||!Object.prototype.hasOwnProperty.call(input,'expected_board'))
+    return c.json({
+      error:'Original board cards are required. Reload before changing cards.',
+      code:'PRECONDITION_REQUIRED',
+    },428);
+  const valid=(cards:unknown):cards is string[]=>
+    Array.isArray(cards)&&cards.length<=5&&
+    cards.every(card=>typeof card==='string'&&/^[2-9TJQKA][♠♥♦♣]$/.test(card))&&
+    new Set(cards).size===cards.length;
+  if(!valid(input.board)||!valid(input.expected_board))
+    return c.json({error:'Board and original board must contain unique valid cards.'},400);
+  const wanted=JSON.stringify(input.board),original=JSON.stringify(input.expected_board);
+  // Both winner and game status are checked in the SAME conditional SQL write.
+  const update=await c.env.DB.prepare(`
+    UPDATE hands SET board=? WHERE id=? AND game_id=? AND board=? AND voided=0
+    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE hand_id=?)
+    AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+  `).bind(wanted,handId,gameId,original,handId,gameId).run();
+  if(!update.meta.changes){
+    const saved=await c.env.DB.prepare(
+      'SELECT board,voided FROM hands WHERE id=? AND game_id=?'
+    ).bind(handId,gameId).first<{board:string;voided:number}>();
+    if(!saved)return c.json({error:'Hand not found in game'},404);
+    return c.json({
+      error:'Another host changed the board, or the hand was finished or voided. Reload the saved hand.',
+      code:'BOARD_CONFLICT',current_board:JSON.parse(saved.board||'[]'),
+    },409);
+  }
+  return c.json({ok:true,board:input.board});
 });
 
 // ── Record a player action ───────────────────────────────────────────────────
