@@ -54,25 +54,60 @@ hands.post('/games/:id/tracking/toggle', authMiddleware, async (c) => {
 
 // ── Start a new hand ────────────────────────────────────────────────────────
 hands.post('/games/:id/hands', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
-  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
-
-  const { dealer_seat, sb_seat, bb_seat, straddle, mode } = await c.req.json();
-  const handNo = (game.current_hand_no || 0) + 1;
-  const id = generateId();
-
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      'INSERT INTO hands(id,game_id,hand_no,dealer_seat,sb_seat,bb_seat,straddle,board,pot_chips,mode) VALUES(?,?,?,?,?,?,?,?,?,?)'
-    ).bind(id, gameId, handNo, dealer_seat||1, sb_seat||null, bb_seat||null, straddle?1:0, '[]', 0, mode||'full'),
-    c.env.DB.prepare('UPDATE games SET current_hand_no=?, current_dealer_seat=? WHERE id=?')
-      .bind(handNo, dealer_seat||1, gameId),
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  const input=await c.req.json().catch(()=>null) as {
+    dealer_seat?:unknown;sb_seat?:unknown;bb_seat?:unknown;
+    straddle?:unknown;mode?:unknown
+  }|null;
+  const dealer=input?.dealer_seat,small=input?.sb_seat,big=input?.bb_seat;
+  const mode=input?.mode==='manual'?'manual':input?.mode===undefined||
+    input?.mode==='full'?'full':null;
+  const inRange=(seat:unknown)=>Number.isSafeInteger(seat)&&
+    Number(seat)>=1&&Number(seat)<=game.seats;
+  if(!mode||!inRange(dealer)||!inRange(big)||!inRange(small)){
+    return c.json({error:'Select valid dealer, small blind and big blind seats.'},400);
+  }
+  if(big===small||dealer===big)
+    return c.json({error:'Blind seats cannot duplicate the dealer or one another.'},400);
+  const currentNo=game.current_hand_no||0;
+  if(!Number.isSafeInteger(currentNo)||currentNo<0||currentNo>=1000000)
+    return c.json({error:'Game hand counter needs review.'},409);
+  const nextNo=currentNo+1;
+  const id=generateId();
+  // An unfinished non-voided hand must be resolved before the next one.
+  // The conditional INSERT and matching game counter run in a single
+  // D1 transaction; stale second hosts cannot start the same hand twice.
+  const results=await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO hands
+      (id,game_id,hand_no,dealer_seat,sb_seat,bb_seat,straddle,board,pot_chips,mode)
+      SELECT ?,?,?,?,?,?,?,?,?,?
+      WHERE EXISTS(
+        SELECT 1 FROM games WHERE id=? AND current_hand_no=?
+          AND status NOT IN ('settled','cancelled')
+      )
+      AND NOT EXISTS(
+        SELECT 1 FROM hands h WHERE h.game_id=? AND h.voided=0
+          AND NOT EXISTS(SELECT 1 FROM hand_results r WHERE r.hand_id=h.id)
+      )
+      ON CONFLICT(game_id,hand_no) DO NOTHING
+    `).bind(id,gameId,nextNo,dealer,small,big,input?.straddle?1:0,
+      '[]',0,mode,gameId,currentNo,gameId),
+    c.env.DB.prepare(`
+      UPDATE games SET current_hand_no=?,current_dealer_seat=?
+      WHERE id=? AND current_hand_no=? AND status NOT IN ('settled','cancelled')
+      AND changes()=1
+    `).bind(nextNo,dealer,gameId,currentNo),
   ]);
-
-  const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(id).first();
-  return c.json(hand, 201);
+  if(!results[0]?.meta?.changes||!results[1]?.meta?.changes){
+    return c.json({error:'Another host started a hand, or the previous hand is unfinished. Refresh the hand tracker.',
+      code:'HAND_START_CONFLICT'},409);
+  }
+  const hand=await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(id).first();
+  return c.json(hand,201);
 });
 
 // ── Get all hands for a game ─────────────────────────────────────────────────
@@ -247,33 +282,46 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   return c.json({ok:true,actions:actions.results,pot_chips:hand?.pot_chips||0});
 });
 
-// ── Delete last action (undo) ────────────────────────────────────────────────
+// ── Delete the observed last action, never a different newer action ───────
 hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
-  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
-  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
-  if (await hasDeclaredWinner(c, handId)) return c.json({ error: 'Hand has a declared winner. Undo the winner first.' }, 409);
-
-  const last = await c.env.DB.prepare(
-    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1'
-  ).bind(handId).first() as any;
-
-  if (!last) return c.json({ error: 'No actions to undo' }, 400);
-
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM hand_actions WHERE id=? AND hand_id=?').bind(last.id,handId),
-    c.env.DB.prepare(`UPDATE hands SET pot_chips=(
-      SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips > 0 THEN chips ELSE 0 END),0)
-      FROM hand_actions WHERE hand_id=?
-    ) WHERE id=? AND game_id=?`).bind(handId,handId,gameId),
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  if(!await verifyHandInGame(c,gameId,handId))
+    return c.json({error:'Hand not found in game'},404);
+  const body=await c.req.json().catch(()=>null) as {expected_action_id?:unknown}|null;
+  if(typeof body?.expected_action_id!=='string'||!body.expected_action_id)
+    return c.json({error:'Original action ID required before undo.',
+      code:'PRECONDITION_REQUIRED'},428);
+  const result=await c.env.DB.batch([
+    c.env.DB.prepare(`
+      DELETE FROM hand_actions
+      WHERE id=? AND hand_id=? AND game_id=?
+      AND id=(SELECT id FROM hand_actions WHERE hand_id=?
+        ORDER BY created_at DESC,rowid DESC LIMIT 1)
+      AND EXISTS(SELECT 1 FROM hands WHERE id=? AND game_id=? AND voided=0)
+      AND EXISTS(SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+      AND NOT EXISTS(SELECT 1 FROM hand_results WHERE hand_id=?)
+    `).bind(body.expected_action_id,handId,gameId,handId,
+      handId,gameId,gameId,handId),
+    c.env.DB.prepare(`
+      UPDATE hands SET pot_chips=(
+        SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips>0 THEN chips ELSE 0 END),0)
+        FROM hand_actions WHERE hand_id=?
+      ) WHERE id=? AND game_id=? AND voided=0
+    `).bind(handId,handId,gameId),
   ]);
-
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
-  const hand = await c.env.DB.prepare('SELECT pot_chips FROM hands WHERE id=?').bind(handId).first() as any;
-  return c.json({ ok: true, actions: actions.results, pot_chips: hand?.pot_chips || 0 });
+  if(!result[0]?.meta?.changes)
+    return c.json({error:'This action is no longer the last recorded move. Reload before undo.',
+      code:'HAND_ACTION_CONFLICT'},409);
+  const actions=await c.env.DB.prepare(
+    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+  ).bind(handId).all();
+  const hand=await c.env.DB.prepare(
+    'SELECT pot_chips FROM hands WHERE id=?'
+  ).bind(handId).first<{pot_chips:number}>();
+  return c.json({ok:true,actions:actions.results,pot_chips:hand?.pot_chips||0});
 });
 
 // ── Declare winner ───────────────────────────────────────────────────────────
@@ -416,38 +464,59 @@ hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
   return c.json({ ...hand, board: JSON.parse(hand.board || '[]') });
 });
 
-// ── Void hand ────────────────────────────────────────────────────────────────
+// ── Void hand without destroying recorded evidence ───────────────────────
 hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
-  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
-  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
-
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM hand_actions WHERE hand_id=?').bind(handId),
-    c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId),
-    c.env.DB.prepare('DELETE FROM hands WHERE id=? AND game_id=?').bind(handId, gameId),
-    c.env.DB.prepare('UPDATE games SET current_hand_no=(SELECT COALESCE(MAX(hand_no),0) FROM hands WHERE game_id=?) WHERE id=?').bind(gameId,gameId),
-  ]);
-  return c.json({ ok: true });
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  const written=await c.env.DB.prepare(`
+    UPDATE hands SET voided=1
+    WHERE id=? AND game_id=? AND voided=0
+    AND EXISTS(SELECT 1 FROM games
+      WHERE id=? AND status NOT IN ('settled','cancelled'))
+  `).bind(handId,gameId,gameId).run();
+  if(!written.meta.changes){
+    const hand=await c.env.DB.prepare(
+      'SELECT voided FROM hands WHERE id=? AND game_id=?'
+    ).bind(handId,gameId).first<{voided:number}>();
+    if(!hand)return c.json({error:'Hand not found'},404);
+    if(hand.voided)return c.json({ok:true,already_voided:true});
+    return c.json({error:'Hand changed before it could be voided.',
+      code:'HAND_STATE_CONFLICT'},409);
+  }
+  // Keep hands, actions and winner records for review. The hand counter
+  // remains monotonic; never recycle an already recorded hand number.
+  return c.json({ok:true,voided:true});
 });
 
-// ── Undo winner ───────────────────────────────────────────────────────────────
+// ── Undo the specific winner result the host actually reviewed ────────────
 hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
-  const game = await getGameAndVerify(c, gameId);
-  if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
-  if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
-  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
-
-  await c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId).run();
-  const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(handId).first() as any;
-  if (!hand) return c.json({ error: 'Hand not found' }, 404);
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
-  return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result: null });
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  if(isLocked(game))return c.json({error:lockedMessage},409);
+  const body=await c.req.json().catch(()=>null) as {expected_result_id?:unknown}|null;
+  if(typeof body?.expected_result_id!=='string'||!body.expected_result_id)
+    return c.json({error:'Original winner result ID required to undo.',
+      code:'PRECONDITION_REQUIRED'},428);
+  const removed=await c.env.DB.prepare(`
+    DELETE FROM hand_results WHERE hand_id=? AND game_id=? AND id=?
+    AND EXISTS(SELECT 1 FROM hands WHERE id=? AND game_id=? AND voided=0)
+    AND EXISTS(SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+  `).bind(handId,gameId,body.expected_result_id,handId,gameId,gameId).run();
+  if(!removed.meta.changes)return c.json({
+    error:'Winner result changed on another device. Reload before undoing.',
+    code:'HAND_RESULT_CONFLICT',
+  },409);
+  const hand=await c.env.DB.prepare(
+    'SELECT * FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<any>();
+  if(!hand)return c.json({error:'Hand not found'},404);
+  const actions=await c.env.DB.prepare(
+    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+  ).bind(handId).all();
+  return c.json({...hand,board:JSON.parse(hand.board||'[]'),actions:actions.results,result:null});
 });
 
 // ── Toggle live card submission ──────────────────────────────────────────────
