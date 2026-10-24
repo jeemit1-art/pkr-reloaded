@@ -104,7 +104,9 @@ export const api = {
     start:    (id:string,password?:string) => req(`/games/${id}/start`,{method:'POST',body:JSON.stringify({password:password||''})}),
     rsvp:     (id:string,d:any)   => pub<{ok:boolean;rsvps:Rsvp[]}>(`/games/${id}/rsvp`,{method:'POST',body:JSON.stringify(d)}),
     seat:     (id:string,d:any)   => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat`,{method:'POST',body:JSON.stringify(d)}),
-    removeSeat:(id:string,userId:string) => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{method:'DELETE'}),
+    removeSeat:(id:string,userId:string,expectedSeatNumber:number|null) =>
+      req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{
+        method:'DELETE',body:JSON.stringify({expected_seat_number:expectedSeatNumber})}),
     buyin:    (id:string,userId:string)  => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/buyin/${userId}`,{method:'POST'}),
     cashout:  (id:string,userId:string,cashout:number) =>
       req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/cashout/${userId}`,{method:'POST',body:JSON.stringify({cashout})}),

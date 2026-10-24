@@ -170,6 +170,28 @@ describe('durable staging game sync journal',()=>{
     expect(storage.has(key)).toBe(true);
   });
 
+  it('retains a rejected player removal and does not retry until reviewed',async()=>{
+    storage.clear();
+    const first=harness(false,async()=>({}));
+    first.frame.queueAction('/games/synthetic-game/seat/alex_remote',{
+      method:'DELETE',body:JSON.stringify({expected_seat_number:1}),
+    });
+    let writes=0;
+    const replay=harness(true,async(path)=>{
+      if(path==='/games/synthetic-game')return {status:'active'};
+      writes++;
+      const err:any=new Error('Player has recorded money or hands');
+      err.code='PLAYER_HAS_HISTORY';err.status=409;
+      throw err;
+    });
+    await replay.frame.flushOfflineQueue();
+    expect(writes).toBe(1);
+    expect(replay.frame._offlineQueue).toHaveLength(1);
+    expect(replay.frame._syncError).toMatch(/CONFLICT/);
+    await replay.frame.flushOfflineQueue();
+    expect(writes).toBe(1);
+  });
+
   it('never queues settlement requests or cross-game mutations',()=>{
     storage.clear();
     const {frame}=harness(false,async()=>({}));

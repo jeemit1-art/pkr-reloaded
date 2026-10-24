@@ -751,7 +751,8 @@ async function flushOfflineQueue() {
         });
         if (player && player.user_id) {
           _pkrSeatedPlayers[action.seatSid] = {
-            user_id:player.user_id, name:action.seatName,
+            user_id:player.user_id,name:action.seatName,seat_number:player.seat_number,
+            buy_ins:player.buy_ins,buy_in_total:player.buy_in_total,cashout:player.cashout,
           };
           queueLatestSeatAmounts(action.seatSid, player.user_id, action.seatName, player);
         }
@@ -760,9 +761,9 @@ async function flushOfflineQueue() {
     if (_offlineQueue.length === 0) loadGameFromPkr();
   } catch(e) {
     console.warn('Pending game sync failed; edits are retained locally:', e);
-    if (e && (e.code === 'EDIT_CONFLICT' || e.code === 'PRECONDITION_REQUIRED')) {
+    if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
       _syncConflict = true;
-      _syncError = 'CONFLICT: Another host changed these figures. Your edit is retained; do not settle until you review both records.';
+      _syncError = 'CONFLICT: A seat or amount changed elsewhere, or this player has recorded history. Your edit is retained. Review before settling.';
     } else {
       _syncError = 'Sync paused. Changes remain on this device. Check your connection or reload the game status.';
     }
@@ -795,9 +796,9 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
     acknowledged = true;
   } catch(e) {
     if (!navigator.onLine || e instanceof TypeError) _isOnline = false;
-    else if (e && (e.code === 'EDIT_CONFLICT' || e.code === 'PRECONDITION_REQUIRED')) {
+    else if (e && ['EDIT_CONFLICT','PRECONDITION_REQUIRED','SEAT_CONFLICT','PLAYER_HAS_HISTORY'].indexOf(e.code) >= 0) {
       _syncConflict = true;
-      _syncError = 'CONFLICT: Another host changed these figures. Your edit is retained; do not settle until you review both records.';
+      _syncError = 'CONFLICT: A seat or amount changed elsewhere, or this player has recorded history. Your edit is retained. Review before settling.';
     } else _syncError = 'Change not saved to server: review the sync warning before settling.';
     // Keep the persisted entry for a safe retry or manual conflict resolution.
     console.warn('Game change retained for retry:',e);
@@ -841,7 +842,8 @@ async function loadGameFromPkr() {
     if (game && game.players) {
       game.players.forEach(function(p) {
         var sid = 'seat' + p.seat_number;
-        if (p.user_id) _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: p.display_name };
+        if (p.user_id) _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
+          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
       });
     }
   } catch(e) { console.warn('Could not reload game:', e); }
@@ -857,15 +859,34 @@ async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
     var seatNum = parseInt((sid || '').replace('seat','')) || null;
     var body = { display_name:name, whatsapp:phone || null, seat_number:seatNum, buy_ins:0 };
     if (linkedUserId) body.user_id = linkedUserId;
+    // An existing player being moved must send their last observed seat.
+    // Never infer a new seat as the old seat to bypass a server conflict.
+    var prior = Object.keys(_pkrSeatedPlayers).map(function(oldSid) {
+      return {sid:oldSid,player:_pkrSeatedPlayers[oldSid]};
+    }).find(function(item) {
+      return item.sid !== sid && item.player && item.player.name === name;
+    });
+    var known = prior && prior.player;
+    if (!known && Array.isArray(ctx.dbPlayers)) {
+      known = ctx.dbPlayers.find(function(player){return player.display_name === name;});
+    }
+    if (known && known.seat_number !== seatNum) {
+      body.expected_seat_number = known.seat_number === undefined ? null : known.seat_number;
+    }
     var res = await pkrApiQueued('/games/' + ctx.gameId + '/seat', {
       method:'POST', body:JSON.stringify(body),
     }, sid, name);
     if (res && Array.isArray(res.players)) {
       var player = res.players.find(function(p){ return p.display_name === name; });
       if (player) {
+        Object.keys(_pkrSeatedPlayers).forEach(function(oldSid) {
+          if (oldSid !== sid && _pkrSeatedPlayers[oldSid].user_id === player.user_id) {
+            delete _pkrSeatedPlayers[oldSid];
+          }
+        });
         _pkrSeatedPlayers[sid] = {
-          user_id:player.user_id,name:name,buy_ins:player.buy_ins,
-          buy_in_total:player.buy_in_total,cashout:player.cashout,
+          user_id:player.user_id,name:name,seat_number:player.seat_number,
+          buy_ins:player.buy_ins,buy_in_total:player.buy_in_total,cashout:player.cashout,
         };
         return _pkrSeatedPlayers[sid];
       }
@@ -962,17 +983,25 @@ window.saveState = function() {
   if (!window._pkrResultsSaved) {
     Object.keys(before).forEach(function(sid) {
       if (after[sid]) return;
+      // A player's move is an update to their existing seat, not a deletion.
+      if (Object.keys(after).some(function(otherSid) {
+        return after[otherSid].name.toLowerCase() === before[sid].name.toLowerCase();
+      })) return;
       var seated = _pkrSeatedPlayers[sid];
       var ctx = getPkrCtx();
       if (!ctx || !ctx.gameId || !seated || !seated.user_id) return;
+      var expectedSeat = seated.seat_number == null
+        ? (parseInt(sid.replace('seat','')) || null)
+        : seated.seat_number;
       pkrApiQueued('/games/' + ctx.gameId + '/seat/' + seated.user_id, {
-        method:'DELETE',
+        method:'DELETE',body:JSON.stringify({expected_seat_number:expectedSeat}),
+      }).then(function(response){
+        if (response && response.ok) delete _pkrSeatedPlayers[sid];
       }).catch(function(e){
         console.warn('Could not remove player remotely:',e);
-        _syncError = 'A seat removal has not synced. Check before saving results.';
+        _syncError = 'Player removal has not synced. Check before saving results.';
         showConnBanner();
       });
-      delete _pkrSeatedPlayers[sid];
     });
   }
 };
@@ -990,7 +1019,8 @@ setTimeout(async function() {
         Object.keys(state.players || {}).forEach(function(sid) {
           var sp = state.players[sid];
           if (sp && sp.name && sp.name.toLowerCase() === p.display_name.toLowerCase()) {
-            _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: sp.name };
+            _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:sp.name,
+              seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
           }
         });
       });
@@ -2154,7 +2184,8 @@ if (ctx && ctx.gameId) {
           state.players[sid] = { name: p.display_name, userId: p.user_id, transactions: txns };
         }
         // Cache user_id for PKR syncing
-        if (p.user_id) _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: p.display_name };
+        if (p.user_id) _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
+          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
       });
       // Hydrating server state must not create new money/seat writes.
       _origSaveState();
@@ -2191,7 +2222,8 @@ var _pollInterval = setInterval(function() {
       var existing = state.players[sid];
       if (!existing || !existing.name) return;
       // Update PKR cache
-      _pkrSeatedPlayers[sid] = { user_id: p.user_id, name: p.display_name };
+      _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
+        seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
     });
     // Update results token
     if (game.results_token) {
