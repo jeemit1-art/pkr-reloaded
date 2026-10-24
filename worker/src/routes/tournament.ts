@@ -66,8 +66,7 @@ tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
     return c.json({error:'At least two registered players and valid chip totals are required.'},400);
   const now=Math.floor(Date.now()/1000);
   const result=await c.env.DB.prepare(
-    "UPDATE tournament_state SET status='running',started_at=?,level_started_at=?,"+
-    "current_level=1,total_chips_in_play=? WHERE game_id=? AND status='setup'"
+    "UPDATE tournament_state SET status='running',started_at=?,level_started_at=?,current_level=1,total_chips_in_play=? WHERE game_id=? AND status='setup'"
   ).bind(now,now,chips,gameId).run();
   if(!result.meta.changes)return c.json({
     error:'Another host started the tournament first.',code:'TOURNAMENT_STATE_CONFLICT',
