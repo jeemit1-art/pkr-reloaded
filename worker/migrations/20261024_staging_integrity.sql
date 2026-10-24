@@ -48,6 +48,9 @@ INSERT INTO game_player_revisions(game_id,user_id,revision,updated_at)
 SELECT game_id,user_id,0,unixepoch() FROM game_players WHERE 1
 ON CONFLICT(game_id,user_id) DO NOTHING;
 
+-- Replace the earlier staging-only trigger definition if this migration was
+-- already applied before insert/deletion audit support was introduced.
+DROP TRIGGER IF EXISTS trg_pkr_player_revision_insert;
 CREATE TRIGGER IF NOT EXISTS trg_pkr_player_revision_insert
 AFTER INSERT ON game_players
 BEGIN
