@@ -43,15 +43,6 @@ export default function ResultsPage() {
     setData(d => d ? {...d, transfers:d.transfers.map(x => x.id===id ? {...x,...p} : x)} : d);
   }
 
-  async function markPaid(t: Transfer) {
-    if (!t.id) return;
-    if (!confirm(`Confirm: you paid ${t.to_name} ${fmt(t.amount)}?`)) return;
-    setBusy(t.id);
-    try { await api.games.markPaid(token as string, t.id); patchTransfer(t.id, {status:'paid', paid_at:Math.floor(Date.now()/1000)}); }
-    catch(e:any) { alert(e.message || 'Could not update'); }
-    setBusy(null);
-  }
-
   async function bankerSet(t: Transfer, status:'owed'|'paid'|'not_received') {
     if (!t.id) return;
     setBusy(t.id);
@@ -168,9 +159,8 @@ export default function ResultsPage() {
                         color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
                         {t.status==='paid'?'✓ Paid':t.status==='not_received'?'⚠ Not received':'Owed'}
                       </span>
-                      {t.status!=='paid' && (
-                        <button className="btn btn-primary" disabled={busy===t.id} onClick={()=>markPaid(t)}
-                          style={{fontSize:11,padding:'5px 12px'}}>I&apos;ve paid</button>
+                      {!isBanker && t.status!=='paid' && (
+                        <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
                       )}
                       {t.status!=='paid' && (canUsePush() || isIOS()) && (
                         <button className="btn btn-ghost" onClick={()=>enableReminders(t)}
