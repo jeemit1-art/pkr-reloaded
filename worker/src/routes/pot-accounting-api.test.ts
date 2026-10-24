@@ -9,7 +9,7 @@ import hands from './hands';
 
 function fixture(actions:Array<{display_name:string;action:string;chips:number}>,pot:number){
   const game={id:'g',event_id:'e',status:'active',seats:4};
-  const hand={id:'h',game_id:'g',hand_no:1,mode:'full',pot_chips:pot,voided:0};
+  const hand={id:'h',game_id:'g',hand_no:1,mode:'full',pot_chips:pot,voided:0,dealer_seat:1};
   const players=[
     {display_name:'Alex',seat_number:1},
     {display_name:'Ben',seat_number:2},
@@ -100,6 +100,33 @@ describe('server-authoritative pot/refund validation',()=>{
     expect(await bad.json()).toMatchObject({code:'POT_RECONCILIATION_REQUIRED'});
     expect(f.getWrites()).toBe(0);
   });
+  it('awards the odd chip to the first tied player clockwise after the button',async()=>{
+    const actions=[
+      {display_name:'Alex',action:'allin',chips:50},
+      {display_name:'Ben',action:'call',chips:50},
+      {display_name:'Charlie',action:'post',chips:1},
+      {display_name:'Charlie',action:'fold',chips:0},
+    ];
+    const f=fixture(actions,101);
+    const wrong=await hands.request(url,post({
+      winner_name:'Alex, Ben',hole_cards:{},split_pot:true,
+      pot_winners:[{potIdx:0,winnerName:'Alex, Ben',chips:101,label:'Main Pot',
+        split_winners:[{winnerName:'Alex',chips:51},{winnerName:'Ben',chips:50}]}],
+    }),f.env);
+    expect(wrong.status).toBe(422);
+    expect(await wrong.json()).toMatchObject({code:'POT_ALLOCATION_INVALID'});
+    const correct=await hands.request(url,post({
+      winner_name:'Alex, Ben',hole_cards:{},split_pot:true,
+      pot_winners:[{potIdx:0,winnerName:'Alex, Ben',chips:101,label:'Main Pot',
+        split_winners:[{winnerName:'Alex',chips:50},{winnerName:'Ben',chips:51}]}],
+    }),f.env);
+    expect(correct.status).toBe(200);
+    const data=await correct.json() as any;
+    expect(data.result.pot_winners[0].split_winners)
+      .toEqual([{winnerName:'Ben',chips:51},{winnerName:'Alex',chips:50}]);
+    expect(f.getWrites()).toBe(1);
+  });
+
   it('rejects client-altered allocation amount even if the total is otherwise plausible',async()=>{
     const f=fixture([
       {display_name:'Alex',action:'allin',chips:100},
