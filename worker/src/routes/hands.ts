@@ -4,6 +4,7 @@ import { authMiddleware, requireEventRole, generateId } from '../middleware';
 import { serializeHandCards, revealHandPotAllocations, HandResultError } from '../hand-result-pots';
 import { validateBettingAction } from '../poker-betting-rules';
 import { calculateHandPots, distributeTiedPot, PokerPotError } from '../poker-pot-accounting';
+import {auditHandStacks,StackAuditError} from '../poker-stack-audit';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -108,6 +109,47 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
   }
   const hand=await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(id).first();
   return c.json(hand,201);
+});
+
+// ── Read-only audit from host-confirmed opening chips; never guesses stacks ─
+hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) => {
+  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden or not found'},403);
+  const hand=await c.env.DB.prepare(
+    'SELECT * FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<any>();
+  if(!hand)return c.json({error:'Hand not found'},404);
+  if(hand.voided)return c.json({error:'Voided hands cannot be used as live stack baselines.'},409);
+  const body=await c.req.json().catch(()=>null) as {opening_stacks?:unknown}|null;
+  if(!Array.isArray(body?.opening_stacks))
+    return c.json({error:'Provide the physically verified opening chips for each seated player.'},400);
+  const actions=(await c.env.DB.prepare(
+    'SELECT display_name,action,chips FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+  ).bind(handId).all<{display_name:string;action:string;chips:number}>()).results;
+  const savedResult=await c.env.DB.prepare(
+    'SELECT * FROM hand_results WHERE hand_id=?'
+  ).bind(handId).first<any>();
+  const revealed=revealHandPotAllocations(savedResult) as any;
+  try{
+    const audit=auditHandStacks(body.opening_stacks,actions,
+      revealed?{
+        pot_winners:revealed.pot_winners||[],
+        uncalled_returns:revealed.uncalled_returns||[],
+      }:null,
+      hand.dealer_seat,game.seats);
+    if(audit.recorded_pot_chips!==hand.pot_chips)
+      return c.json({
+        error:'Recorded action contributions do not equal the saved pot.',
+        code:'STACK_AUDIT_FAILED',
+      },409);
+    return c.json({ok:true,verified_input_only:true,audit});
+  }catch(err){
+    if(err instanceof StackAuditError)return c.json({
+      error:err.message,code:'STACK_AUDIT_FAILED',
+    },409);
+    throw err;
+  }
 });
 
 // ── Get all hands for a game ─────────────────────────────────────────────────
