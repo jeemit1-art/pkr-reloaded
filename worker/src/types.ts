@@ -6,6 +6,8 @@ export interface Env {
   PKR_ENV?: 'production' | 'staging';
   // Disabled by default; only enable after verifying optional D1 migration.
   PKR_INTEGRITY_REVISIONS?: string;
+  // Disabled until verified hand_stack_baselines migration and host confirmation.
+  PKR_INTEGRITY_STACKS?: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   JWT_SECRET: string;
