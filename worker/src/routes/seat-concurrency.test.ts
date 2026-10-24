@@ -15,6 +15,7 @@ function fixture(status='active'){
   const game={id:'g',event_id:'e',status,seats:9};
   const players:Player[]=[];
   const handHistory=new Set<string>();
+  const namedHandHistory=new Set<string>();
   let eventWrites=0;
   const db={prepare(sql:string){
     return {bind(...args:any[]){
@@ -62,7 +63,7 @@ function fixture(status='active'){
               openGame!=='g'||actionGame!=='g'||resultGame!=='g'||actionUser!==userId||
               resultUser!==userId||p.seat_number!==expected||p.buy_ins!==0||
               p.buy_in_total!==0||p.cashout!==null||p.net!==null||p.settled_at!==null||
-              handHistory.has(userId))return {meta:{changes:0}};
+              handHistory.has(userId)||namedHandHistory.has(p.display_name))return {meta:{changes:0}};
             players.splice(index,1);return {meta:{changes:1}};
           }
           if(sql.trimStart().startsWith('INSERT INTO event_players')){eventWrites++;return {meta:{changes:1}};}
@@ -72,7 +73,7 @@ function fixture(status='active'){
     }};
   }};
   const env:any={DB:db,KV:{get:async()=>null,put:async()=>{}},JWT_SECRET:'fixture',PKR_ENV:'staging'};
-  return {env,players,game,handHistory,eventWrites:()=>eventWrites};
+  return {env,players,game,handHistory,namedHandHistory,eventWrites:()=>eventWrites};
 }
 function req(method:'POST'|'DELETE',body:unknown):RequestInit{
   return {method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
@@ -142,6 +143,15 @@ describe('seat changes reject stale edits and protect history',()=>{
     f.players[0].cashout=null;f.handHistory.add(id);
     response=await games.request(remove(id),req('DELETE',{expected_seat_number:1}),f.env,execution);
     expect(response.status).toBe(409);expect(f.players).toHaveLength(1);
+  });
+  it('blocks removal when older hand history has a player name but no user ID',async()=>{
+    const f=fixture();
+    await games.request(url,req('POST',{display_name:'Alex',seat_number:1}),f.env,execution);
+    f.namedHandHistory.add('Alex');
+    const response=await games.request(remove(f.players[0].user_id),
+      req('DELETE',{expected_seat_number:1}),f.env,execution);
+    expect(response.status).toBe(409);
+    expect(f.players).toHaveLength(1);
   });
   it('requires a matching original seat before removal; retries do not delete twice',async()=>{
     const f=fixture();

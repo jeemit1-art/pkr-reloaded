@@ -360,8 +360,10 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
     DELETE FROM game_players WHERE game_id=? AND user_id=? AND seat_number IS ?
     AND buy_ins=0 AND buy_in_total=0 AND cashout IS NULL AND net IS NULL AND settled_at IS NULL
     AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
-    AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=? AND user_id=?)
-    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=? AND winner_user_id=?)
+    AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=?
+      AND (user_id=? OR display_name=game_players.display_name COLLATE NOCASE))
+    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=?
+      AND (winner_user_id=? OR winner_name=game_players.display_name COLLATE NOCASE))
   `).bind(gameId,userId,expected,gameId,gameId,userId,gameId,userId).run();
   if (result.meta.changes===0) {
     const current=await c.env.DB.prepare(
