@@ -606,6 +606,33 @@ window.pkrApi = pkrApi;
 // ── Sync to PKR: seat + buyin + cashout ──
 var _pkrSeatedPlayers = {};
 var _pkrLastSnapshot = {};
+function pkrVersioned(body,player){
+  if(player && Number.isSafeInteger(player.revision))
+    body.expected_revision=player.revision;
+  return body;
+}
+// A successful financial request advances its player's D1 revision.
+// Update any remaining queued edit to use that new baseline BEFORE journaling.
+function pkrApplyAckRevision(action,response){
+  if(!action||!response||!Number.isSafeInteger(response.revision))return;
+  var match=action.url.match(/\/(?:buyin|cashout)\/([^/]+)$/);
+  if(!match)return;
+  var uid=decodeURIComponent(match[1]);
+  Object.keys(_pkrSeatedPlayers).forEach(function(sid){
+    if(_pkrSeatedPlayers[sid].user_id===uid)
+      _pkrSeatedPlayers[sid].revision=response.revision;
+  });
+  _offlineQueue.forEach(function(next){
+    if(next.id===action.id||!next.url.endsWith('/'+uid)||
+       !/\/(?:buyin|cashout)\//.test(next.url)||!next.options.body)return;
+    try{
+      var body=JSON.parse(next.options.body);
+      body.expected_revision=response.revision;
+      next.options.body=JSON.stringify(body);
+    }catch(e){ /* malformed edits remain pending for review */ }
+  });
+}
+
 
 // ── Offline action queue ──
 var OFFLINE_Q_KEY = 'pkr_pending_v2_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
@@ -720,6 +747,8 @@ function queueAction(url, options, seatSid, seatName) {
       } else {
         next.expected_cashout = pending ? prior.expected_cashout : prior.cashout;
       }
+      if(pending&&Number.isSafeInteger(prior.expected_revision))
+        next.expected_revision=prior.expected_revision;
       body = JSON.stringify(next);
     }
   }
@@ -957,6 +986,7 @@ async function flushOfflineQueue() {
       var response = await pkrApi(action.url, action.options);
       _activeQueueId = null;
       _offlineQueue = _offlineQueue.filter(function(x){return x.id !== action.id;});
+      pkrApplyAckRevision(action,response);
       savePendingActions();
       // The seat has its real server-generated user ID now. Reconcile the
       // CURRENT local amounts, including changes made after the seat was queued.
@@ -968,6 +998,7 @@ async function flushOfflineQueue() {
           _pkrSeatedPlayers[action.seatSid] = {
             user_id:player.user_id,name:action.seatName,seat_number:player.seat_number,
             buy_ins:player.buy_ins,buy_in_total:player.buy_in_total,cashout:player.cashout,
+          revision:player.revision,
           };
           queueLatestSeatAmounts(action.seatSid, player.user_id, action.seatName, player);
         }
@@ -1008,6 +1039,7 @@ async function pkrApiQueued(url, options, seatSid, seatName) {
   try {
     result = await pkrApi(inflight.url, inflight.options);
     _offlineQueue = _offlineQueue.filter(function(a){return a.id !== inflight.id;});
+    pkrApplyAckRevision(inflight,result);
     savePendingActions();
     acknowledged = true;
   } catch(e) {
@@ -1180,6 +1212,7 @@ async function pkrSeatPlayer(sid, name, phone, linkedUserId) {
         _pkrSeatedPlayers[sid] = {
           user_id:player.user_id,name:name,seat_number:player.seat_number,
           buy_ins:player.buy_ins,buy_in_total:player.buy_in_total,cashout:player.cashout,
+          revision:player.revision,
         };
         return _pkrSeatedPlayers[sid];
       }
@@ -1315,7 +1348,8 @@ setTimeout(async function() {
           var sp = state.players[sid];
           if (sp && sp.name && sp.name.toLowerCase() === p.display_name.toLowerCase()) {
             _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:sp.name,
-              seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
+              seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout,
+           revision:p.revision };
           }
         });
       });
