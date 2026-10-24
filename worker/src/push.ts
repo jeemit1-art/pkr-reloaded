@@ -42,9 +42,9 @@ async function encryptPayload(
   ) as CryptoKeyPair;
 
   // Export server public key (uncompressed, 65 bytes)
-  const serverPublicKeyRaw = new Uint8Array(
-    await crypto.subtle.exportKey('raw', serverKeyPair.publicKey)
-  );
+  // Web Crypto returns an ArrayBuffer for the "raw" export format (not a JWK).
+  const exportedPublicKey = await crypto.subtle.exportKey('raw', serverKeyPair.publicKey) as ArrayBuffer;
+  const serverPublicKeyRaw = new Uint8Array(exportedPublicKey);
 
   // Import subscriber's public key
   const subscriberKey = await crypto.subtle.importKey(
