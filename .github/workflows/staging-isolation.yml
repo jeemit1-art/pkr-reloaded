@@ -40,6 +40,9 @@ jobs:
       - name: Run Worker unit tests
         working-directory: worker
         run: npm test
+      - name: Parse browser and inlined poker scripts (no execution)
+        run: node worker/scripts/check-browser-scripts.mjs
+
       - name: Smoke test live staging Worker and preview (read-only)
         run: |
           node --check worker/scripts/smoke-staging.mjs
