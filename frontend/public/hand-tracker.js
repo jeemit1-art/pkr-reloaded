@@ -761,42 +761,63 @@ window.htOpenCards = function(target){
   if(typeof window.openCardPicker==='function') window.openCardPicker();
   else renderBody();
 };
-window.htPickCard  = function(card){
+window.htPickCard = function(card){
   if(typeof hs.cardTarget==='number'){
-    var b=hs.board.slice(),ex=b.indexOf(card);
-    if(ex!==-1)b.splice(ex,1);else b[hs.cardTarget]=card;
-    hs.board=b.filter(Boolean);
-    if(hs.hand)htApi('/games/'+getGameId()+'/hands/'+hs.hand.id+'/board',{method:'PUT',body:JSON.stringify({board:hs.board})}).catch(function(){});
-    renderBoardOnFelt();
-
-    if(hs._autoCardMode==='flop'){
-      var nextSlot=null;
-      for(var fsi=0;fsi<3;fsi++){
-        if(!hs.board[fsi]){ nextSlot=fsi; break; }
+    if(hs._boardSaving){toast('Board update is still saving.');return;}
+    var previous=hs.board.slice(),target=hs.cardTarget;
+    var desired=previous.slice(),existing=desired.indexOf(card);
+    if(existing!==-1)desired.splice(existing,1);
+    else desired[target]=card;
+    desired=desired.filter(Boolean);
+    var handId=hs.hand&&hs.hand.id;
+    function saved(board){
+      if(handId&&(!hs.hand||hs.hand.id!==handId))return;
+      hs.board=board.slice();
+      renderBoardOnFelt();
+      if(hs._autoCardMode==='flop'){
+        var nextSlot=null;
+        for(var index=0;index<3;index++){
+          if(!hs.board[index]){nextSlot=index;break;}
+        }
+        if(nextSlot!==null){
+          hs.cardTarget=nextSlot;hs.view='cards';
+          if(typeof window.openCardPicker==='function')window.openCardPicker();
+          else renderBody();
+          return;
+        }
+        hs._autoCardMode=null;
       }
-      if(nextSlot!==null){
-        hs.cardTarget=nextSlot;
-        hs.view='cards';
-        if(typeof window.openCardPicker==='function') window.openCardPicker();
-        else renderBody();
-        return;
-      } else {
+      hs.view='main';
+      renderBody();
+      if(typeof window.closeCardPicker==='function')window.closeCardPicker();
+    }
+    // Never advance auto-flop or persist a local board before the server accepts it.
+    if(handId){
+      hs._boardSaving=true;
+      htApi('/games/'+getGameId()+'/hands/'+handId+'/board',{
+        method:'PUT',body:JSON.stringify({board:desired,expected_board:previous}),
+      }).then(function(response){
+        saved(response.board);
+      }).catch(function(error){
+        toast('Board change not saved: '+error.message);
         hs._autoCardMode=null;
         hs.view='main';
-        renderBody();
-        if(typeof window.closeCardPicker==='function') window.closeCardPicker();
-        return;
-      }
+        loadCurrentHand().then(function(){
+          renderBody();renderBoardOnFelt();
+          if(typeof window.closeCardPicker==='function')window.closeCardPicker();
+        });
+      }).finally(function(){hs._boardSaving=false;});
+      return;
     }
-  } else {
-    var hc=(hs.holes[hs.cardTarget]||[]).slice(),ix=hc.indexOf(card);
-    if(ix!==-1)hc.splice(ix,1);else if(hc.length<2)hc.push(card);
-    hs.holes[hs.cardTarget]=hc;
+    saved(desired);
+    return;
   }
-
-  hs.view='main';
-  renderBody();
-  if(typeof window.closeCardPicker==='function') window.closeCardPicker();
+  var held=(hs.holes[hs.cardTarget]||[]).slice(),position=held.indexOf(card);
+  if(position!==-1)held.splice(position,1);
+  else if(held.length<2)held.push(card);
+  hs.holes[hs.cardTarget]=held;
+  hs.view='main';renderBody();
+  if(typeof window.closeCardPicker==='function')window.closeCardPicker();
 };
 
 window.htAssignPotWinner = function(potIdx, winnerName){
