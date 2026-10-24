@@ -44,6 +44,10 @@ def main():
     connection = sqlite3.connect(":memory:")
     connection.execute("PRAGMA foreign_keys=ON")
     connection.executescript(SCHEMA.read_text(encoding="utf-8"))
+    # Optional revision SQL is compiled against an upgraded, disposable schema.
+    # This does NOT execute the migration on staging or production Cloudflare D1.
+    migration = ROOT / "migrations/20261024_staging_integrity.sql"
+    connection.executescript(migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []
@@ -65,7 +69,7 @@ def main():
                 checked += 1
             except sqlite3.Error as exc:
                 problems.append((location, str(exc), query[:140].replace("\n", " ")))
-    print(f"Audited {checked} literal SQL statements against staging schema (in-memory only).")
+    print(f"Audited {checked} literal SQL statements against staging + optional integrity schema (in-memory only).")
     for item in dynamic:
         print(f"SKIPPED dynamic SQL: {item}")
     for location, error, sql in problems:
