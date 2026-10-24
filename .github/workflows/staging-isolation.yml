@@ -1,24 +1,40 @@
-name: PKR staging isolation and test-only schema
+name: PKR staging isolation and Worker tests
+
 on:
   pull_request:
     paths:
-      - 'worker/wrangler.staging.toml'
-      - 'worker/wrangler.toml'
-      - 'worker/scripts/check-staging-config.mjs'
-      - 'worker/staging.schema.sql'
-      - 'worker/scripts/check-staging-schema.py'
+      - 'worker/**'
+      - 'frontend/next.config.js'
       - '.github/workflows/staging-isolation.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  verify:
+  staging-isolation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: node --check worker/scripts/check-staging-config.mjs
-      - run: node worker/scripts/check-staging-config.mjs
-      - run: python3 worker/scripts/check-staging-schema.py
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Check staging configuration
+        run: |
+          node --check worker/scripts/check-staging-config.mjs
+          node worker/scripts/check-staging-config.mjs
+      - name: Check test-only staging schema (in-memory)
+        run: python3 worker/scripts/check-staging-schema.py
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci
+      - name: Check Worker TypeScript
+        working-directory: worker
+        run: npm run typecheck
+      - name: Run Worker unit tests
+        working-directory: worker
+        run: npm test
