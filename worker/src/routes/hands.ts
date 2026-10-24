@@ -18,6 +18,11 @@ async function getGameAndVerify(c: any, gameId: string) {
   }
 }
 
+async function verifyHandInGame(c: any, gameId: string, handId: string): Promise<boolean> {
+  const hand = await c.env.DB.prepare('SELECT id FROM hands WHERE id=? AND game_id=?').bind(handId, gameId).first();
+  return !!hand;
+}
+
 // ── Toggle hand tracking on/off ─────────────────────────────────────────────
 hands.post('/games/:id/tracking/toggle', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
@@ -88,8 +93,10 @@ hands.put('/games/:id/hands/:handId/board', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { board } = await c.req.json<{ board: string[] }>();
+  if (!Array.isArray(board) || board.length > 5 || board.some(card => typeof card !== 'string' || !/^[2-9TJQKA][♠♥♦♣]$/.test(card)) || new Set(board).size !== board.length) return c.json({error:'Invalid board cards'},400);
   await c.env.DB.prepare('UPDATE hands SET board=? WHERE id=? AND game_id=?')
     .bind(JSON.stringify(board || []), handId, gameId).run();
   return c.json({ ok: true, board });
@@ -101,6 +108,7 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { user_id, display_name, street, action: actionType, chips } = await c.req.json();
   const action = actionType;
@@ -127,6 +135,7 @@ hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) 
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const last = await c.env.DB.prepare(
     'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC LIMIT 1'
@@ -151,6 +160,7 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { winner_user_id, winner_name, hole_cards, split_pot } = await c.req.json();
   if (!winner_name) return c.json({ error: 'winner_name required' }, 400);
@@ -180,6 +190,7 @@ hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   const { dealer_seat, sb_seat, bb_seat } = await c.req.json();
   await c.env.DB.prepare(
@@ -196,6 +207,7 @@ hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM hand_actions WHERE hand_id=?').bind(handId),
@@ -212,6 +224,7 @@ hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   const handId = c.req.param('handId');
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
+  if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
   await c.env.DB.prepare('DELETE FROM hand_results WHERE hand_id=?').bind(handId).run();
   const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=?').bind(handId).first() as any;
