@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { serializeHandCards, revealHandPotAllocations, HandResultError } from '../hand-result-pots';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -84,7 +85,7 @@ hands.get('/games/:id/hands', authMiddleware, async (c) => {
   for (const h of handRows.results) {
     const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(h.id).all<any>();
     const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(h.id).first() as any;
-    results.push({ ...h, board: JSON.parse(h.board || '[]'), actions: actions.results, result });
+    results.push({ ...h, board: JSON.parse(h.board || '[]'), actions: actions.results, result:revealHandPotAllocations(result) });
   }
   return c.json(results);
 });
@@ -101,7 +102,7 @@ hands.get('/games/:id/hands/:handId', authMiddleware, async (c) => {
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
   const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all<any>();
   const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(handId).first() as any;
-  return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result });
+  return c.json({ ...hand, board: JSON.parse(hand.board || '[]'), actions: actions.results, result:revealHandPotAllocations(result) });
 });
 
 // ── Update board cards ───────────────────────────────────────────────────────
@@ -206,26 +207,34 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
   if (!await verifyHandInGame(c, gameId, handId)) return c.json({ error: 'Hand not found in this game' }, 404);
 
-  const { winner_user_id, winner_name, hole_cards, split_pot } = await c.req.json();
+  const { winner_user_id, winner_name, hole_cards, split_pot, pot_winners } = await c.req.json();
   if (!winner_name) return c.json({ error: 'winner_name required' }, 400);
 
   const hand = await c.env.DB.prepare('SELECT * FROM hands WHERE id=? AND game_id=?').bind(handId, gameId).first() as any;
   if (!hand) return c.json({ error: 'Hand not found' }, 404);
+
+  let storedCards:string;
+  try {
+    storedCards = serializeHandCards(hole_cards,pot_winners,hand.pot_chips);
+  } catch(e) {
+    if (e instanceof HandResultError) return c.json({ error:e.message },422);
+    throw e;
+  }
 
   // Upsert result
   const existing = await c.env.DB.prepare('SELECT id FROM hand_results WHERE hand_id=?').bind(handId).first() as any;
   if (existing) {
     await c.env.DB.prepare(
       'UPDATE hand_results SET winner_user_id=?,winner_name=?,pot_chips=?,hole_cards=?,split_pot=? WHERE hand_id=?'
-    ).bind(winner_user_id||null, winner_name, hand.pot_chips, JSON.stringify(hole_cards||{}), split_pot?1:0, handId).run();
+    ).bind(winner_user_id||null, winner_name, hand.pot_chips, storedCards, split_pot?1:0, handId).run();
   } else {
     await c.env.DB.prepare(
       'INSERT INTO hand_results(id,hand_id,game_id,winner_user_id,winner_name,pot_chips,hole_cards,split_pot) VALUES(?,?,?,?,?,?,?,?)'
-    ).bind(generateId(), handId, gameId, winner_user_id||null, winner_name, hand.pot_chips, JSON.stringify(hole_cards||{}), split_pot?1:0).run();
+    ).bind(generateId(), handId, gameId, winner_user_id||null, winner_name, hand.pot_chips, storedCards, split_pot?1:0).run();
   }
 
   const result = await c.env.DB.prepare('SELECT * FROM hand_results WHERE hand_id=?').bind(handId).first();
-  return c.json({ ok: true, result });
+  return c.json({ ok: true, result:revealHandPotAllocations(result) });
 });
 
 // ── Update D/SB/BB assignments ──────────────────────────────────────────────────
@@ -334,7 +343,7 @@ hands.get('/games/live/:token/hand', async (c) => {
       ...hand,
       board: JSON.parse(hand.board || '[]'),
       actions: actions.results,
-      result: result || null,
+      result: revealHandPotAllocations(result) || null,
     },
   });
 });
