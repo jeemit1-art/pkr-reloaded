@@ -149,7 +149,7 @@ export interface User {
 }
 
 export interface Event {
-  id:string; name:string; description:string|null; buy_in:number; master_password:string|null;
+  id:string; name:string; description:string|null; buy_in:number;
   host_id:string; created_at:number; role?:string; member_count?:number; game_count?:number;
   status?: string;
 }
@@ -158,7 +158,7 @@ export interface EventDetail extends Event { members:EventMember[]; }
 export interface EventPlayer { id:string; event_id:string; display_name:string; whatsapp:string|null; games_played:number; }
 export interface Game {
   id:string; event_id:string; scheduled_at:number; location:string|null; notes:string|null;
-  seats:number; game_password:string|null; status:string; live_token:string|null;
+  seats:number; status:string; live_token:string|null;
   results_token:string|null; created_at:number; player_count?:number; variance?:number|null;
 }
 export interface Rsvp { id:string; game_id:string; display_name:string; whatsapp:string|null; status:string; created_at:number; }
