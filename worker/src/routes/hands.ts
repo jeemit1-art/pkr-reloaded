@@ -229,13 +229,13 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
   const winnerId=typeof winner_user_id==='string' && winner_user_id ? winner_user_id : null;
   const winner=winner_name.trim();
   const split=split_pot?1:0;
-  const written=await c.env.DB.prepare(
-    "INSERT INTO hand_results(id,hand_id,game_id,winner_user_id,winner_name,pot_chips,hole_cards,split_pot) "+
-    "SELECT ?,?,?,?,?,?,?,? WHERE "+
-    "EXISTS (SELECT 1 FROM hands WHERE id=? AND game_id=? AND pot_chips=? AND voided=0) "+
-    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled')) "+
-    "ON CONFLICT(hand_id) DO NOTHING"
-  ).bind(resultId,handId,gameId,winnerId,winner,hand.pot_chips,storedCards,split,
+  const written=await c.env.DB.prepare(`
+    INSERT INTO hand_results(id,hand_id,game_id,winner_user_id,winner_name,pot_chips,hole_cards,split_pot)
+    SELECT ?,?,?,?,?,?,?,? WHERE
+    EXISTS (SELECT 1 FROM hands WHERE id=? AND game_id=? AND pot_chips=? AND voided=0)
+    AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+    ON CONFLICT(hand_id) DO NOTHING
+  `).bind(resultId,handId,gameId,winnerId,winner,hand.pot_chips,storedCards,split,
     handId,gameId,hand.pot_chips,gameId).run();
 
   const result=await c.env.DB.prepare(

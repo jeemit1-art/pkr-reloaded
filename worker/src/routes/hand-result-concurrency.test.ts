@@ -26,7 +26,7 @@ function fixture(options?:{potChange?:boolean;closeOnInsert?:boolean}){
             return null;
           },
           async run():Promise<any>{
-            if(!sql.startsWith('INSERT INTO hand_results'))return {meta:{changes:0}};
+            if(!sql.trimStart().startsWith('INSERT INTO hand_results'))return {meta:{changes:0}};
             if(options?.potChange)hand.pot_chips++;
             if(options?.closeOnInsert)game.status='settled';
             const [id,handId,gameId,userId,winner,pot,cards,split,
