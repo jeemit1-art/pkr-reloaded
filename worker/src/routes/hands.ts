@@ -395,6 +395,33 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
         ...(decision.minimumRaise===undefined?{}:{minimum_raise:decision.minimumRaise}),
       },409);
     }
+    if(c.env.PKR_INTEGRITY_STACKS==='1'){
+      const confirmed=(await c.env.DB.prepare(
+        'SELECT user_id,display_name,seat_number,opening_chips FROM hand_stack_baselines WHERE hand_id=?'
+      ).bind(handId).all<{
+        user_id:string;display_name:string;seat_number:number;opening_chips:number
+      }>()).results;
+      if(confirmed.length!==roster.length||
+         !roster.every(p=>confirmed.some(row=>row.user_id===p.user_id&&
+           row.display_name===p.display_name&&row.seat_number===p.seat_number))){
+        return c.json({
+          error:'Host-confirmed opening stacks are required for every active player.',
+          code:'STACK_BASELINE_REQUIRED',
+        },428);
+      }
+      try{
+        auditHandStacks(
+          confirmed,
+          historyRows.concat([{id:'pending',display_name,street,action,
+            chips:chips as number}]),
+          null,handMeta.dealer_seat as number,game.seats,
+        );
+      }catch(err){
+        if(err instanceof StackAuditError)
+          return c.json({error:err.message,code:'STACK_LIMIT_CONFLICT'},409);
+        throw err;
+      }
+    }
   }
 
   // Compare the previously observed last action within the INSERT itself:
