@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'worker/**'
-      - 'frontend/next.config.js'
+      - 'frontend/**'
       - '.github/workflows/staging-isolation.yml'
   workflow_dispatch:
 
@@ -49,3 +49,29 @@ jobs:
         run: |
           node --check worker/scripts/smoke-staging.mjs
           node worker/scripts/smoke-staging.mjs
+
+  frontend-preview-build:
+    # GitHub build verification is independent of Vercel plan build limits.
+    # These PUBLIC staging-only values are deliberately not production URLs.
+    # The build creates no deployment and cannot access Cloudflare D1.
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_PKR_ENV: staging
+      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Verify frontend Preview production build
+        working-directory: frontend
+        run: npm run build
