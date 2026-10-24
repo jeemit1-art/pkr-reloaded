@@ -555,7 +555,7 @@ hands.get('/games/live/:token/hand', async (c) => {
 
   // Get current (latest) hand
   const hand = await c.env.DB.prepare(
-    'SELECT * FROM hands WHERE game_id=? ORDER BY hand_no DESC LIMIT 1'
+    'SELECT * FROM hands WHERE game_id=? AND voided=0 ORDER BY hand_no DESC LIMIT 1'
   ).bind(game.id).first() as any;
   if (!hand) return c.json({ hand_tracking: true, hand: null });
 
