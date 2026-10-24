@@ -7,6 +7,16 @@ import { signJWT, verifyJWT } from '../jwt';
 
 const auth = new Hono<{ Bindings: Env }>();
 
+// Bind OAuth state to the initiating browser. Lax allows Google's top-level redirect.
+const oauthCookieName = '__Host-pkr_oauth_state';
+const clearOauthCookie = oauthCookieName + '=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
+function rejectOauth(front: string) {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: front + '/?error=oauth_denied', 'Set-Cookie': clearOauthCookie },
+  });
+}
+
 auth.get('/google', async (c) => {
   const state = generateId();
   const params = new URLSearchParams({
@@ -18,13 +28,19 @@ auth.get('/google', async (c) => {
     access_type:  'offline',
     prompt:       'select_account',
   });
-  return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  const response = c.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params);
+  response.headers.append('Set-Cookie',
+    oauthCookieName + '=' + state + '; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600');
+  return response;
 });
 
 auth.get('/callback', async (c) => {
   const { code, state, error } = c.req.query();
   const front = c.env.FRONTEND_URL;
-  if (error || !code || !state) return c.redirect(`${front}/?error=oauth_denied`);
+  const stateCookie = (c.req.header('Cookie') || '').split(';').map(x => x.trim())
+    .find(x => x.startsWith(oauthCookieName + '='));
+  const expectedState = stateCookie?.slice(oauthCookieName.length + 1);
+  if (error || !code || !state || !expectedState || state !== expectedState) return rejectOauth(front);
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method:'POST',
@@ -73,7 +89,12 @@ auth.get('/callback', async (c) => {
   const cookie = [`pkr_token=${jwt}`,'Path=/','HttpOnly','SameSite=None','Secure',`Max-Age=${60*60*24*7}`].join('; ');
   return new Response(null, {
     status: 302,
-    headers: { Location:`${front}/dashboard?code=${loginCode}`, 'Set-Cookie': cookie },
+    headers: (() => {
+      const h = new Headers({ Location: front + '/dashboard?code=' + loginCode });
+      h.append('Set-Cookie', cookie);
+      h.append('Set-Cookie', clearOauthCookie);
+      return h;
+    })(),
   });
 });
 
