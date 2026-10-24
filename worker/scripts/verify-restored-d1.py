@@ -35,7 +35,12 @@ def inventory(db):
             "AND name NOT LIKE 'sqlite_%'"
         )
     }
-    return tables, columns, indexes
+    foreign_keys = {
+        name: sorted((row[2], row[3], row[4], row[5], row[6], row[7])
+                     for row in db.execute("PRAGMA foreign_key_list(" + q(name) + ")"))
+        for name in sorted(tables)
+    }
+    return tables, columns, indexes, foreign_keys
 
 def aggregate(db, tables, columns, table, fields):
     if table not in tables:
@@ -54,9 +59,9 @@ def aggregate(db, tables, columns, table, fields):
 def assess(restored, expected_schema=EXPECTED):
     reference = sqlite3.connect(":memory:")
     reference.executescript(Path(expected_schema).read_text(encoding="utf-8"))
-    expected_tables, expected_columns, expected_indexes = inventory(reference)
+    expected_tables, expected_columns, expected_indexes, expected_fks = inventory(reference)
     reference.close()
-    actual_tables, actual_columns, actual_indexes = inventory(restored)
+    actual_tables, actual_columns, actual_indexes, actual_fks = inventory(restored)
     missing_tables = sorted(expected_tables - actual_tables)
     extra_tables = sorted(actual_tables - expected_tables)
     missing_columns = []
@@ -71,6 +76,10 @@ def assess(restored, expected_schema=EXPECTED):
                     "expected_type_notnull_pk": spec,
                     "restored_type_notnull_pk": actual_columns[table][col],
                 })
+    incompatible_foreign_keys = sorted(
+        table for table in expected_tables & actual_tables
+        if expected_fks[table] != actual_fks[table]
+    )
     check = restored.execute("PRAGMA quick_check").fetchone()
     integrity = str(check[0]) if check else "no response"
     # quick_check does NOT validate foreign-key references. Check them
@@ -96,7 +105,7 @@ def assess(restored, expected_schema=EXPECTED):
         if summary is not None:
             financial[table] = summary
     issues = bool(missing_tables or missing_columns or
-                  incompatible_columns or integrity != "ok" or
+                  incompatible_columns or incompatible_foreign_keys or integrity != "ok" or
                   foreign_key_violations or foreign_key_check_error)
     return {
         "restored_integrity_check": integrity,
@@ -108,6 +117,7 @@ def assess(restored, expected_schema=EXPECTED):
         "additional_tables_not_an_error": extra_tables,
         "missing_columns": missing_columns,
         "incompatible_columns": incompatible_columns,
+        "incompatible_foreign_keys": incompatible_foreign_keys,
         "missing_reference_indexes": sorted(expected_indexes - actual_indexes),
         "aggregate_reconciliation_baseline": financial,
         "disclaimer": ("This is a read-only local restore preflight, not proof "
