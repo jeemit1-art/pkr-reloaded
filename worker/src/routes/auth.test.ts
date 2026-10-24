@@ -9,7 +9,10 @@ const env = {
   FRONTEND_URL: front,
 } as any;
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 async function begin() {
   const res = await auth.request(origin + '/google', {}, env);
@@ -64,6 +67,53 @@ describe('Google OAuth browser state validation', () => {
     }, env);
     expect(mockFetch).toHaveBeenCalledOnce();
     expect(res.status).toBe(302);
-    expect(res.headers.get('location')).toBe(front + '/?error=token_failed');
+    expect(res.headers.get('location')).toBe(front + '/?error=token_failed&reason=unknown');
+    expect(res.headers.get('set-cookie')).toContain('Max-Age=0');
+  });
+
+  it('returns a safe reason when Google rejects staging OAuth credentials', async () => {
+    const { state, cookie } = await begin();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockFetch = vi.fn(async () => new Response(JSON.stringify({
+      error: 'invalid_client',
+      error_description: 'Sensitive details are not included in redirects or logs',
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', mockFetch);
+    const res = await auth.request(origin + '/callback?code=dummy&state=' + state, {
+      headers: { Cookie: cookie },
+    }, env);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe(front + '/?error=token_failed&reason=invalid_client');
+    expect(warn).toHaveBeenCalledWith('Google OAuth token exchange rejected', {
+      status: 401,
+      reason: 'invalid_client',
+    });
+    expect(res.headers.get('set-cookie')).toContain('Max-Age=0');
+  });
+
+  it('does not send an OAuth request if the staging client secret is missing', async () => {
+    const { state, cookie } = await begin();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+    const res = await auth.request(origin + '/callback?code=dummy&state=' + state, {
+      headers: { Cookie: cookie },
+    }, { ...env, GOOGLE_CLIENT_SECRET: undefined });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe(front + '/?error=token_failed&reason=missing_client_secret');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('does not reflect unexpected Google errors or response details to the browser', async () => {
+    const { state, cookie } = await begin();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      error: 'internal_debug_123',
+      error_description: 'Secret or private Google response',
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } })));
+    const res = await auth.request(origin + '/callback?code=dummy&state=' + state, {
+      headers: { Cookie: cookie },
+    }, env);
+    expect(res.headers.get('location')).toBe(front + '/?error=token_failed&reason=unknown');
   });
 });
