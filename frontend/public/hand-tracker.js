@@ -1495,7 +1495,7 @@ function renderSummary(body){
   nextBtn.textContent='\u25B6\uFE0F Start Hand #'+(s.handNo+1);
   nextBtn.onclick=function(){hs.view='main';hs._lastHandSummary=null;renderBody();setTimeout(function(){window.htStartHand();},50);};
   body.appendChild(nextBtn);
-  if(hs.history.filter(function(h){return h.result;}).length>=2){
+  if(hs.history.filter(function(h){return h.result&&!h.voided;}).length>=2){
     var shareBtn=document.createElement('button');
     shareBtn.style.cssText='width:100%;padding:11px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);border-radius:9px;cursor:pointer;font-size:0.8rem;font-family:DM Sans,sans-serif;margin-top:8px';
     shareBtn.textContent='Share session recap';
@@ -1913,14 +1913,14 @@ function renderWinner(body){
 function renderHistory(body){
   var hdrRow=document.createElement('div');hdrRow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px';
   hdrRow.appendChild(mkB('\u2190 Back','background:none;border:none;color:var(--gold);cursor:pointer;font-size:0.85rem;padding:0;font-family:DM Sans,sans-serif',function(){hs.view='main';renderBody();}));
-  var settled2=hs.history.filter(function(h){return h.result;});
+  var settled2=hs.history.filter(function(h){return h.result&&!h.voided;});
   if(settled2.length>=2){
     hdrRow.appendChild(mkB('Share recap','background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.78rem;padding:0;font-family:DM Sans,sans-serif;text-decoration:underline',exportSession));
   }
   body.appendChild(hdrRow);
   if(!hs.history.length){var em=document.createElement('div');em.style.cssText='text-align:center;color:var(--muted);padding:30px 0;font-size:0.85rem';em.textContent='No hands yet';body.appendChild(em);return;}
   var cv=gameInfo().chip_value||0;
-  var settled=hs.history.filter(function(h){return h.result;});
+  var settled=hs.history.filter(function(h){return h.result&&!h.voided;});
   if(settled.length>0){
     var totalPot=settled.reduce(function(s,h){return s+(h.result.pot_chips||0);},0);
     var winners={};
@@ -1939,6 +1939,7 @@ function renderHistory(body){
     var row=document.createElement('div');row.style.cssText='background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px';
     var top=document.createElement('div');top.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px';
     var num=document.createElement('span');num.style.cssText='color:var(--gold);font-weight:700;font-size:0.9rem';num.textContent='Hand #'+h.hand_no;
+    if(h.voided){num.textContent+=' (VOID)';num.style.color='var(--muted)';}
     var res=document.createElement('div');res.style.cssText='text-align:right';
     if(h.result){
       var winnerSpan=document.createElement('div');winnerSpan.style.cssText='font-size:0.8rem;color:var(--green);font-weight:700';winnerSpan.textContent='\uD83C\uDFC6 '+(h.result.winner_name||'');
@@ -2098,7 +2099,7 @@ function _promptPostAndAdd(name, body) {
 // --- SESSION EXPORT ---
 function buildSessionRecap() {
   var cv = getChipValue();
-  var settled = hs.history.filter(function(h){ return h.result; });
+  var settled = hs.history.filter(function(h){ return h.result&&!h.voided; });
   var totalPot = settled.reduce(function(s,h){ return s+(h.result.pot_chips||0); }, 0);
   var winners = {};
   settled.forEach(function(h){ var w = h.result.winner_name||''; winners[w] = (winners[w]||0) + 1; });
@@ -2150,7 +2151,7 @@ function _fallbackCopy(text) {
 
 // --- PER-PLAYER STATS ---
 function buildPlayerStats(name) {
-  var settled = hs.history.filter(function(h){ return h.result; });
+  var settled = hs.history.filter(function(h){ return h.result&&!h.voided; });
   var handsDealt = settled.filter(function(h){
     return (h.actions||[]).some(function(a){ return a.display_name===name; }) ||
            h.dealer_name===name || h.sb_name===name || h.bb_name===name;
