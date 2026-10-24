@@ -8,6 +8,23 @@ import {planStartSeating, type ExistingGameSeat, type ConfirmedRsvp} from '../ga
 
 const games = new Hono<{ Bindings: Env }>();
 
+// Revision enforcement remains disabled until the optional staging D1 migration
+// and client retry handling are verified. Legacy mode never queries these tables.
+const revisionMode=(env:Env)=>env.PKR_INTEGRITY_REVISIONS==='1';
+async function getPlayers(db:D1Database,gameId:string,enabled:boolean){
+  if(!enabled)return db.prepare(
+    'SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC'
+  ).bind(gameId).all<any>();
+  return db.prepare(`
+    SELECT gp.*,rev.revision FROM game_players gp
+    LEFT JOIN game_player_revisions rev
+      ON rev.game_id=gp.game_id AND rev.user_id=gp.user_id
+    WHERE gp.game_id=?
+    ORDER BY gp.seat_number ASC NULLS LAST,gp.created_at ASC
+  `).bind(gameId).all<any>();
+}
+
+
 /* ═══════════════════════════════════════════
    CORE GAME CRUD
 ═══════════════════════════════════════════ */
@@ -79,7 +96,9 @@ games.get('/games/:id', authMiddleware, async (c) => {
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
-  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  const players = await getPlayers(c.env.DB,gameId,revisionMode(c.env));
+  if(revisionMode(c.env)&&players.results.some(p=>!Number.isSafeInteger(p.revision)))
+    return c.json({error:'Financial revision records are not initialised.',code:'REVISION_UNAVAILABLE'},503);
   const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too
@@ -302,9 +321,7 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   const expected=body?.expected_seat_number;
   if (hasExpected&&expected!==null&&(!Number.isSafeInteger(expected)||Number(expected)<1))
     return c.json({error:'Invalid original seat number'},400);
-  const list=()=>c.env.DB.prepare(
-    'SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC'
-  ).bind(gameId).all();
+  const list=()=>getPlayers(c.env.DB,gameId,revisionMode(c.env));
   const existing=await c.env.DB.prepare(
     'SELECT user_id,seat_number,display_name,buy_ins,buy_in_total,cashout FROM game_players WHERE game_id=? AND display_name=?'
   ).bind(gameId,name).first<any>();
