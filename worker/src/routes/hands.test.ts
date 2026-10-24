@@ -78,11 +78,12 @@ function fixture(status = 'active', hasWinner = false) {
       const oldPot = hand.pot_chips;
       batchCalls++;
       try {
-        for (const stmt of requests) await stmt.run();
+        const results=[];
+        for(const stmt of requests) results.push(await stmt.run());
+        return results;
       } catch (error) {
         actions=oldActions;hand.pot_chips=oldPot;throw error;
       }
-      return [];
     },
   };
   const env:any = { DB: db, PKR_ENV:'staging',JWT_SECRET:'test-only' };

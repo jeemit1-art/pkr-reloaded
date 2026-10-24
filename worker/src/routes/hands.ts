@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
 import { serializeHandCards, revealHandPotAllocations, HandResultError } from '../hand-result-pots';
+import { validateBettingAction } from '../poker-betting-rules';
 
 const hands = new Hono<{ Bindings: Env }>();
 
@@ -151,22 +152,96 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   }
   const user_id = typeof input?.user_id === 'string' ? input.user_id : null;
 
-  const id = generateId();
-  // Both statements are in one D1 transaction: no recorded action without
-  // a corresponding pot update. Recalculate from the source action log.
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      'INSERT INTO hand_actions(id,hand_id,game_id,user_id,display_name,street,action,chips) VALUES(?,?,?,?,?,?,?,?)'
-    ).bind(id, handId, gameId, user_id, display_name, street, action, chips),
+  // Validate complete full-hand betting history from the server, rather than
+  // trusting the browser's predicted actor or submitted chip amounts.
+  // Remaining stacks cannot be certified without a server chip-stack ledger.
+  const handMeta=await c.env.DB.prepare(
+    'SELECT dealer_seat,sb_seat,bb_seat,straddle,mode FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<{
+    dealer_seat:number|null;sb_seat:number|null;bb_seat:number|null;
+    straddle:number|null;mode:string
+  }>();
+  if(handMeta?.mode==='full'){
+    if(!Number.isSafeInteger(handMeta.dealer_seat)||!Number.isSafeInteger(handMeta.bb_seat)){
+      return c.json({error:'Dealer/blind positions are missing from this hand.',
+        code:'BETTING_STATE_UNAVAILABLE'},409);
+    }
+    const roster=(await c.env.DB.prepare(
+      'SELECT user_id,display_name,seat_number FROM game_players '+
+      'WHERE game_id=? AND seat_number IS NOT NULL AND buy_ins>0 ORDER BY seat_number'
+    ).bind(gameId).all<{user_id:string;display_name:string;seat_number:number}>()).results;
+    if(roster.length<2){
+      return c.json({error:'At least two seated players with recorded buy-ins are required.',
+        code:'BETTING_STATE_UNAVAILABLE'},409);
+    }
+    const matching=roster.find(p=>p.display_name===display_name);
+    if(user_id&&matching&&matching.user_id!==user_id)
+      return c.json({error:'Player identity does not match the seat.',
+        code:'INVALID_PLAYER_IDENTITY'},409);
+    const history=(await c.env.DB.prepare(
+      'SELECT display_name,street,action,chips FROM hand_actions '+
+      'WHERE hand_id=? ORDER BY created_at,rowid'
+    ).bind(handId).all<{
+      display_name:string;street:string;action:string;chips:number
+    }>()).results;
+    const decision=validateBettingAction({
+      seats:game.seats,
+      players:roster,
+      hand:{
+        dealer_seat:handMeta.dealer_seat as number,
+        sb_seat:handMeta.sb_seat,
+        bb_seat:handMeta.bb_seat as number,
+        straddle:handMeta.straddle,
+      },
+      actions:history,
+      proposed:{display_name,street,action,chips:chips as number},
+    });
+    if(!decision.ok){
+      return c.json({
+        error:decision.error,code:decision.code,
+        ...(decision.nextActor===undefined?{}:{next_actor:decision.nextActor}),
+        ...(decision.toCall===undefined?{}:{to_call:decision.toCall}),
+        ...(decision.minimumRaise===undefined?{}:{minimum_raise:decision.minimumRaise}),
+      },409);
+    }
+  }
+
+  // Compare the previously observed last action within the INSERT itself:
+  // two hosts cannot both append moves based on the same stale turn. Winner
+  // publication and game closure are also checked inside the write.
+  const last=await c.env.DB.prepare(
+    'SELECT id FROM hand_actions WHERE hand_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1'
+  ).bind(handId).first<{id:string}>();
+  const id=generateId();
+  const outcome=await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO hand_actions(id,hand_id,game_id,user_id,display_name,street,action,chips)
+      SELECT ?,?,?,?,?,?,?,? WHERE
+      EXISTS (SELECT 1 FROM hands WHERE id=? AND game_id=? AND voided=0)
+      AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))
+      AND NOT EXISTS (SELECT 1 FROM hand_results WHERE hand_id=?)
+      AND (SELECT id FROM hand_actions WHERE hand_id=?
+        ORDER BY created_at DESC,rowid DESC LIMIT 1) IS ?
+    `).bind(id,handId,gameId,user_id,display_name,street,action,chips,
+      handId,gameId,gameId,handId,handId,last?.id||null),
     c.env.DB.prepare(`UPDATE hands SET pot_chips=(
       SELECT COALESCE(SUM(CASE WHEN action <> 'fold' AND chips > 0 THEN chips ELSE 0 END),0)
       FROM hand_actions WHERE hand_id=?
     ) WHERE id=? AND game_id=?`).bind(handId,handId,gameId),
   ]);
-
-  const actions = await c.env.DB.prepare('SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at, rowid').bind(handId).all();
-  const hand = await c.env.DB.prepare('SELECT pot_chips FROM hands WHERE id=?').bind(handId).first() as any;
-  return c.json({ ok: true, actions: actions.results, pot_chips: hand?.pot_chips || 0 });
+  if(!outcome[0]?.meta?.changes){
+    return c.json({
+      error:'Another host changed this hand, or the game was closed. Reload before retrying.',
+      code:'HAND_ACTION_CONFLICT',
+    },409);
+  }
+  const actions=await c.env.DB.prepare(
+    'SELECT * FROM hand_actions WHERE hand_id=? ORDER BY created_at,rowid'
+  ).bind(handId).all();
+  const hand=await c.env.DB.prepare(
+    'SELECT pot_chips FROM hands WHERE id=?'
+  ).bind(handId).first<{pot_chips:number}>();
+  return c.json({ok:true,actions:actions.results,pot_chips:hand?.pot_chips||0});
 });
 
 // ── Delete last action (undo) ────────────────────────────────────────────────
