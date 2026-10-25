@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 export default function PlayPage() {
@@ -8,6 +8,7 @@ export default function PlayPage() {
   const router = useRouter();
   const gameId = params?.id as string;
   const initialized = useRef(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -158,11 +159,21 @@ export default function PlayPage() {
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
           <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
-          <button onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
-          <button onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
-          <button onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
-          <button onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
+          <button className="pkr-toolbar-secondary" onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
+          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
+          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
+          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
           <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
+          <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
+            aria-controls="pkr-table-tools" aria-label={toolsOpen?'Close table tools':'Open table tools'}
+            onClick={() => setToolsOpen(v=>!v)}>☰ <span>Tools</span></button>
+        </div>
+
+        <div id="pkr-table-tools" className={'pkr-mobile-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openTournament?.();}}>🏆 Tournament</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
         </div>
 
         {/* Bank Bar */}
@@ -174,9 +185,9 @@ export default function PlayPage() {
             <span className="bank-label">Bank Summary</span>
           </div>
           <div className="bank-right">
-            <span className="bank-pill g" id="bbIn">$0 in</span>
-            <span className="bank-pill" style={{opacity:0.4}}>·</span>
-            <span className="bank-pill" id="bbBank">$0 bank</span>
+            <span className="bank-pill g"><small>IN</small><b id="bbIn">$0</b></span>
+            <span className="bank-pill pkr-bank-out"><small>OUT</small><b id="bbOut">$0</b></span>
+            <span className="bank-pill pkr-bank-current"><small>BANK</small><b id="bbBank">$0</b></span>
             <span className="bank-caret">▼</span>
           </div>
         </div>
@@ -1558,8 +1569,9 @@ function updateBank() {
   var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   var cashed = players.filter(function(p){ return pCash(p) > 0; }).length;
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
-  set('bbIn', fmtB(totalIn) + ' in');
-  set('bbBank', fmtB(inBank) + ' bank');
+  set('bbIn', fmtB(totalIn));
+  set('bbOut', fmtB(totalOut));
+  set('bbBank', fmtB(inBank));
   set('bcIn', fmtB(totalIn));
   set('bcOut', fmtB(totalOut));
   set('bcBank', fmtB(inBank));
@@ -1575,8 +1587,9 @@ function renderTable() {
   if (!wrap) return;
   var W = wrap.offsetWidth, H = wrap.offsetHeight;
   if (!W || !H) { setTimeout(renderTable, 80); return; }
-  var tH = Math.min(H * 0.72, 480);
-  var tW = Math.min(W * 0.42, tH * 0.52);
+  // Leave enough room for seat labels and balances around the padded rail.
+  var tH = Math.min(H * (W < 530 ? 0.64 : 0.72), 480);
+  var tW = Math.min(W * (W < 530 ? 0.48 : 0.46), tH * 0.58);
   var cx = W / 2, cy = H / 2;
   var pad = 14;
   var outer = document.getElementById('tableOuter');
@@ -1622,6 +1635,9 @@ function buildSeats(count, tW, tH, cx, cy) {
     var p = state.players[sid];
     var seat = document.createElement('div');
     seat.className = 'seat';
+    seat.setAttribute('role','button');
+    seat.setAttribute('tabindex','0');
+    seat.setAttribute('aria-label',p && p.name ? 'Open player '+p.name : 'Assign player to seat '+(i+1));
     seat.id = sid;
     seat.style.left = pos.x + 'px';
     seat.style.top = pos.y + 'px';
@@ -1646,6 +1662,7 @@ function buildSeats(count, tW, tH, cx, cy) {
     }
     var capturedSid = sid;
     seat.addEventListener('click', function(){ onSeatClick(capturedSid); });
+    seat.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();onSeatClick(capturedSid);}});
     cont.appendChild(seat);
   });
 }

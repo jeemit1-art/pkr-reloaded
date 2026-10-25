@@ -103,8 +103,11 @@ export default function GamePage() {
           <div style={{display:'flex',alignItems:'center',gap:6}}>
             <span style={{width:7,height:7,borderRadius:'50%',
               background:statusColor[game.status]||'var(--faint)',display:'inline-block'}}/>
-            <span style={{fontSize:11,color:statusColor[game.status]||'var(--faint)',
-              fontFamily:'var(--font-body),sans-serif',textTransform:'capitalize'}}>{game.status}</span>
+            <span className={game.status==='active' ? 'pkr-live-chip' : ''}
+              style={{fontSize:11,color:statusColor[game.status]||'var(--faint)',
+              fontFamily:'var(--font-body),sans-serif',textTransform:game.status==='active'?'uppercase':'capitalize'}}>
+              {game.status==='active'?'LIVE NOW':game.status}
+            </span>
           </div>
         </div>
       </div>
@@ -149,6 +152,16 @@ export default function GamePage() {
             ))}
           </div>
         </div>
+
+        {/* Live financial totals are calculated in the table from recorded transactions.
+            Here we show confirmed activity counts, not inferred money balances. */}
+        {(game.players||[]).length>0 && (
+          <div className="pkr-player-activity" aria-label="Player activity">
+            <div><strong>{seated.length}</strong><span>Players bought in</span></div>
+            <div><strong>{cashedOut.length}</strong><span>Players cashed out</span></div>
+            <div><strong>{(game.players||[]).length}</strong><span>Total players</span></div>
+          </div>
+        )}
 
         {/* ── Primary actions ── */}
 

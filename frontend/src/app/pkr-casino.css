@@ -467,3 +467,151 @@
 @media(prefers-reduced-motion:reduce) {
   .pkr-casino *,#gameScreen.pkr-casino-live-table * {transition-duration:.01ms !important;animation-duration:.01ms !important}
 }
+
+/* Casino Edition usability refinement: compact mobile home, live states,
+   table shortcuts, and transaction totals. No data routes or rules changed. */
+.pkr-casino .pkr-live-chip {
+ display:inline-flex;align-items:center;gap:8px;width:max-content;
+ padding:6px 10px;margin-bottom:9px;border-radius:99px;
+ background:rgba(61,229,151,.15);border:1px solid rgba(91,237,166,.38);
+ color:#79f1b7 !important;font-family:var(--font-body),sans-serif;
+ font-size:10px;font-weight:800;letter-spacing:.12em;line-height:1;
+ text-transform:uppercase;
+}
+.pkr-casino .pkr-live-dot {
+ width:8px;height:8px;display:inline-block;border-radius:50%;background:#50f8a0;
+ box-shadow:0 0 0 4px rgba(56,235,140,.14);
+}
+.pkr-casino .pkr-games-heading {
+ display:flex;align-items:end;justify-content:space-between;gap:10px;
+ padding:3px 4px 14px;color:var(--ivory);
+}
+.pkr-casino .pkr-games-heading h2 {font-size:23px;font-family:var(--font-display),Georgia,serif;color:var(--white);margin-top:4px}
+.pkr-casino .pkr-games-heading > span {color:#6deda9;font-size:12px;font-weight:700;white-space:nowrap}
+.pkr-casino .pkr-open-table {
+ padding:8px 16px !important;min-height:44px !important;font-size:13px !important;
+}
+.pkr-casino .pkr-game-card.is-live {border-width:2px;box-shadow:0 0 0 1px rgba(58,226,137,.08),0 13px 30px rgba(0,0,0,.25)}
+.pkr-casino .pkr-game-card .pkr-game-actions {align-items:center}
+.pkr-casino .pkr-player-activity {
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 18px;
+}
+.pkr-casino .pkr-player-activity > div {
+ min-width:0;padding:13px 9px;border:1px solid var(--border-sub);
+ border-radius:13px;background:var(--bg2);text-align:center;
+}
+.pkr-casino .pkr-player-activity strong {display:block;font:600 24px/1.2 Georgia,serif;color:var(--gold)}
+.pkr-casino .pkr-player-activity span {display:block;font-size:11px;color:var(--muted);margin-top:6px}
+#gameScreen.pkr-casino-live-table .pkr-tools-toggle {
+ display:none;align-items:center;justify-content:center;gap:6px;flex-shrink:0;
+ border:1px solid rgba(232,190,112,.5);background:#1e2b20;color:#f3d89e;
+ border-radius:10px;padding:7px 11px;cursor:pointer;min-height:43px;font-size:12px;font-weight:700;
+}
+#gameScreen.pkr-casino-live-table .pkr-mobile-tools {display:none}
+#gameScreen.pkr-casino-live-table .bank-right {
+ display:flex;align-items:center;justify-content:flex-end;gap:11px;flex-wrap:nowrap;min-width:0;
+}
+#gameScreen.pkr-casino-live-table .bank-right .bank-pill {
+ display:flex;flex-direction:column;align-items:flex-end;gap:3px;line-height:1.1;
+ padding-right:9px;border-right:1px solid rgba(224,183,107,.17);
+}
+#gameScreen.pkr-casino-live-table .bank-right .bank-pill small {
+ color:#c2b89e;letter-spacing:.10em;font-weight:700;font-size:9px;
+}
+#gameScreen.pkr-casino-live-table .bank-right .bank-pill b {
+ font-size:14px;color:#f3e8d0;font-weight:800;white-space:nowrap;
+}
+#gameScreen.pkr-casino-live-table .bank-right .bank-pill.g b {color:#75edb3}
+#gameScreen.pkr-casino-live-table .bank-right .pkr-bank-out b {color:#ffaaa2}
+#gameScreen.pkr-casino-live-table .bank-right .pkr-bank-current {border-right:none}
+#gameScreen.pkr-casino-live-table .bank-right .pkr-bank-current b {color:#f6d187}
+#gameScreen.pkr-casino-live-table #tableFelt {
+ border-radius:43% / 24% !important;
+}
+#gameScreen.pkr-casino-live-table #tableOuter {
+ border-radius:43% / 24% !important;
+}
+#gameScreen.pkr-casino-live-table .seat-chip.seated::before {
+ content:"";position:absolute;width:75%;height:75%;border-radius:50%;
+ border:1px dashed rgba(255,218,137,.55);pointer-events:none;
+}
+#gameScreen.pkr-casino-live-table .seat-chip {position:relative}
+#gameScreen.pkr-casino-live-table .seat-chip.empty {
+ border-style:dashed;box-shadow:none;background:rgba(11,30,22,.7);
+}
+#gameScreen.pkr-casino-live-table .seat:focus-visible {
+ outline:2px solid #f0cc83;outline-offset:5px;border-radius:9px;
+}
+#gameScreen.pkr-casino-live-table .seat-net {
+ padding:2px 6px;background:rgba(5,16,12,.84);border-radius:7px;
+ border:1px solid rgba(230,190,112,.16);
+}
+#gameScreen.pkr-casino-live-table .side-panel .p-sum {flex-wrap:wrap}
+#gameScreen.pkr-casino-live-table .side-panel .p-net {font-size:1.25rem}
+#gameScreen.pkr-casino-live-table .side-panel .p-meta {color:#e1d8bd}
+#gameScreen.pkr-casino-live-table .side-panel .psec {
+ border-color:rgba(222,184,106,.22);color:#e6c789;font-size:.72rem;
+}
+#gameScreen.pkr-casino-live-table .side-panel .add-row {
+ padding:10px;border-radius:12px;background:rgba(2,14,9,.36);
+ border:1px solid rgba(224,183,107,.14);
+}
+#gameScreen.pkr-casino-live-table .side-panel .add-btn.g {
+ background:linear-gradient(180deg,#72efb3,#23aa70);color:#07241a;
+}
+#gameScreen.pkr-casino-live-table .bank-panel.open {max-height:330px}
+@media(max-width:700px) {
+ .pkr-casino .pkr-content {padding-top:16px !important}
+ .pkr-casino .pkr-compact-intro {margin-bottom:12px}
+ .pkr-casino .pkr-compact-intro h1 {font-size:26px;margin:4px 0}
+ .pkr-casino .pkr-compact-intro p {font-size:12px;line-height:1.4;max-width:36ch}
+ .pkr-casino .pkr-hero {padding:103px 19px 18px; margin-bottom:18px}
+ .pkr-casino .pkr-hero h2 {font-size:25px}
+ .pkr-casino .pkr-hero p {font-size:12px;line-height:1.4;margin-bottom:12px}
+ .pkr-casino .pkr-hero-metrics {margin-bottom:12px}
+ .pkr-casino .pkr-hero-metric {padding:9px 13px}
+ .pkr-casino .pkr-hero-metric strong {font-size:20px}
+ .pkr-casino .pkr-hero-metric small {font-size:10px}
+ .pkr-casino .pkr-hero-action {min-height:45px}
+ .pkr-casino .pkr-casino-art {height:166px}
+ .pkr-casino .pkr-casino-art-table {height:160px;top:13px}
+ .pkr-casino .pkr-casino-art-chips {top:27px !important}
+ .pkr-casino .pkr-casino-art-cards {top:26px}
+ .pkr-casino .pkr-event-overview-inner {padding-top:124px}
+ .pkr-casino .pkr-event-overview .pkr-casino-art {height:185px}
+ .pkr-casino .pkr-list-head {margin-bottom:11px}
+ .pkr-casino .pkr-list-head h2 {font-size:19px}
+ .pkr-casino .pkr-games-heading h2 {font-size:19px}
+ #gameScreen.pkr-casino-live-table .pkr-toolbar-secondary {display:none !important}
+ #gameScreen.pkr-casino-live-table .pkr-tools-toggle {display:inline-flex}
+ #gameScreen.pkr-casino-live-table .pkr-mobile-tools.is-open {
+  position:absolute;top:61px;right:9px;z-index:100;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  width:min(345px,calc(100vw - 20px));padding:12px;
+  background:linear-gradient(145deg,#263324,#101b16);
+  border:1px solid rgba(238,195,109,.45);border-radius:15px;
+  box-shadow:0 13px 40px rgba(0,0,0,.65);
+ }
+ #gameScreen.pkr-casino-live-table .pkr-mobile-tools button {
+  min-height:47px;padding:8px 7px;border:1px solid rgba(222,185,115,.25);
+  background:#17281d;color:#f2dfb7;border-radius:10px;
+  font-size:12px;font-weight:700;
+ }
+ #gameScreen.pkr-casino-live-table .topbar {overflow:visible}
+ #gameScreen.pkr-casino-live-table .tb-title {font-size:.78rem;min-width:0}
+ #gameScreen.pkr-casino-live-table .bank-bar {padding-inline:10px;gap:5px}
+ #gameScreen.pkr-casino-live-table .bank-label {display:block;font-size:11px}
+ #gameScreen.pkr-casino-live-table .bank-right {gap:4px}
+ #gameScreen.pkr-casino-live-table .bank-right .bank-pill {padding-right:5px}
+ #gameScreen.pkr-casino-live-table .bank-right .bank-pill small {font-size:8px}
+ #gameScreen.pkr-casino-live-table .bank-right .bank-pill b {font-size:11px}
+ #gameScreen.pkr-casino-live-table .bank-icon {display:none}
+}
+@media(max-width:390px) {
+ .pkr-casino .pkr-intro h1 {font-size:23px}
+ .pkr-casino .pkr-hero {padding-top:95px}
+ #gameScreen.pkr-casino-live-table .bank-label {display:none}
+ #gameScreen.pkr-casino-live-table .bank-right .bank-pill b {font-size:11px}
+ #gameScreen.pkr-casino-live-table .bank-right .bank-pill {padding-right:6px}
+ #gameScreen.pkr-casino-live-table .pkr-tools-toggle span {display:none}
+}

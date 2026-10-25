@@ -237,8 +237,19 @@ export default function EventPage() {
                 {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
               </div>
             )}
+            {upcoming.length>0 && (
+              <div className="pkr-games-heading">
+                <div><span className="pkr-eyebrow">Game nights</span><h2>Upcoming &amp; live</h2></div>
+                <span>{upcoming.filter(g=>g.status==='active').length} live</span>
+              </div>
+            )}
             {upcoming.map(g=>(
-              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} onClick={()=>router.push(`/games/${g.id}`)} onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}} onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost}
+                onClick={()=>router.push(`/games/${g.id}`)}
+                onOpenTable={()=>router.push(`/games/${g.id}/play`)}
+                onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
+                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
+                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
             ))}
             {settled.length>0 && (
               <>
@@ -818,10 +829,11 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onDelete}:any) {
+function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
+  const isLive = game.status === 'active';
   const statusBg:Record<string,string> = {
     scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
     lobby:'rgba(201,168,76,0.12)', settled:'transparent',
@@ -831,12 +843,13 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
   };
   return (
     <div className={"card pkr-game-card " + (game.status === "active" ? "is-live" : "")} style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
-      <div role="button" tabIndex={0} aria-label={'Open game scheduled ' + fmtDate(game.scheduled_at)}
+      <div role="button" tabIndex={0} aria-label={'Open game ' + fmtDate(game.scheduled_at)}
           style={{padding:'18px 20px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}}
           onClick={onClick} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}}}>
-        <div style={{flex:1}}>
+        <div style={{flex:1,minWidth:0}}>
+          {isLive && <div className="pkr-live-chip" aria-label="Game currently live"><span className="pkr-live-dot" />LIVE NOW</div>}
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-            <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>
+            {!isLive && <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>}
             <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{fmtDate(game.scheduled_at)}</div>
           </div>
           {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>📍 {game.location}</div>}
@@ -850,7 +863,9 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
             <span className={`badge badge-${game.status}`}>{game.status}</span>
-            <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>{game.seats||9} seats</span>
+            <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>
+              {typeof game.player_count === 'number' ? `${game.player_count} players · ` : ''}{game.seats||9} seats
+            </span>
           </div>
         </div>
         <span style={{color:'var(--faint)',fontSize:16,marginTop:2}}>›</span>
@@ -858,8 +873,24 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onQuickSeat,onCancel,onD
       {/* Quick share row */}
       {(game.status==='scheduled'||game.status==='lobby'||game.status==='active') && (
         <div className="pkr-game-actions" style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
-          <button type="button" className="btn btn-ghost" onClick={(e)=>{e.stopPropagation();onClick();}}
-            style={{fontSize:11,padding:'5px 11px',color:'var(--green)'}}>Open game →</button>
+          {isLive && isHost ? (
+            <button type="button" className="btn btn-primary pkr-open-table" onClick={(e)=>{e.stopPropagation();onOpenTable();}}>
+              ▶ Open Table
+            </button>
+          ) : isLive && liveUrl ? (
+            <button type="button" className="btn btn-primary pkr-open-table" onClick={(e)=>{e.stopPropagation();onWatchLive();}}>
+              ● Watch Live
+            </button>
+          ) : (
+            <button type="button" className="btn btn-outline" onClick={(e)=>{e.stopPropagation();onClick();}}>
+              Game details →
+            </button>
+          )}
+          {isLive && (
+            <button type="button" className="btn btn-ghost" onClick={(e)=>{e.stopPropagation();onClick();}}>
+              Details
+            </button>
+          )}
           {isHost && (game.status==='scheduled'||game.status==='lobby') && (
             <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>

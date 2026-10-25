@@ -233,6 +233,8 @@ function DashboardInner() {
   const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
   const activeRooms = events.filter(evt => (evt as any).status !== 'ended');
   const featuredRoom = activeRooms[0] || events[0] || null;
+  // Keep active rooms ahead of archived rooms without altering source state.
+  const visibleRooms = [...activeRooms, ...events.filter(evt => (evt as any).status === 'ended')];
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
   const openCreate = () => {
     setShowCreate(true);
@@ -344,7 +346,7 @@ function DashboardInner() {
 
       <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'38px 20px 45px',position:'relative',zIndex:1}}>
         {/* App-style introduction and featured room. No inferred 'live' status. */}
-        <div className="pkr-intro">
+        <div className="pkr-intro pkr-compact-intro">
           <span className="pkr-eyebrow">Your poker night starts here</span>
           <h1>Welcome back{user?.name ? ', ' + user.name.split(' ')[0] : ''}.</h1>
           <p>Keep your poker rooms, players and results together — without losing track of a buy-in.</p>
@@ -465,7 +467,7 @@ function DashboardInner() {
         )}
 
         <div className="pkr-room-grid">
-          {events.map(evt => (
+          {visibleRooms.map(evt => (
             <article key={evt.id} className="pkr-room-card">
               <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
                 aria-label={'Open poker room ' + evt.name}>
