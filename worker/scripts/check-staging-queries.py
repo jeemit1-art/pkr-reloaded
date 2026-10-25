@@ -52,6 +52,9 @@ def main():
     # interpret this as approval to migrate staging or production remotely.
     rsvp_migration = ROOT / "migrations/20261025_staging_rsvp_board.sql"
     connection.executescript(rsvp_migration.read_text(encoding="utf-8"))
+    # Private mobile roster is optional until verified on STAGING.
+    phone_migration = ROOT / "migrations/20261025_staging_phone_members.sql"
+    connection.executescript(phone_migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []
