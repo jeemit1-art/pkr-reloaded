@@ -34,6 +34,14 @@ export default function EventPage() {
   const [mergeMsg, setMergeMsg] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
+  const [isGroupOwner,setIsGroupOwner]=useState(false);
+  const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
+  const [phoneName,setPhoneName]=useState('');
+  const [phoneNumber,setPhoneNumber]=useState('');
+  const [phoneRole,setPhoneRole]=useState<'member'|'cohost'>('member');
+  const [phoneBusy,setPhoneBusy]=useState(false);
+  const [phoneError,setPhoneError]=useState('');
+  const [phoneShare,setPhoneShare]=useState<{whatsapp_url:string;url:string;name:string}|null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
   const [saving, setSaving] = useState(false);
@@ -50,6 +58,7 @@ export default function EventPage() {
       setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
+      setIsGroupOwner(me?.role==='host');
     }).catch(()=>router.push('/dashboard'));
     api.games.list(id).then(setGames);
     api.events.leaderboard(id).then(setLeaders);
@@ -59,6 +68,12 @@ export default function EventPage() {
   useEffect(()=>{
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
+
+  useEffect(()=>{
+    if(tab!=='members'||!isGroupOwner)return;
+    api.events.phoneContacts(id).then(r=>{setPhoneContacts(r.contacts);setPhoneError('');})
+      .catch(e=>setPhoneError(e.message||'The private contact list is unavailable.'));
+  },[tab,id,isGroupOwner]);
 
   useEffect(()=>{
     if(!(window as any).QRCode) {
@@ -114,6 +129,33 @@ export default function EventPage() {
       const r = await api.events.invite(id, role,email);
       setInviteUrl(r.url); setInviteRole(role);setInviteEmail(r.recipient_email); setShowInvite(true);
     } catch(e:any){ alert(e.message); }
+  }
+
+  async function inviteMobile(name=phoneName, phone=phoneNumber, role=phoneRole){
+    if(!name.trim()||!phone.trim()){setPhoneError('Enter a member name and mobile number.');return;}
+    setPhoneBusy(true);setPhoneError('');
+    try{
+      const result=await api.events.inviteByPhone(id,{display_name:name.trim(),phone:phone.trim(),role});
+      setPhoneContacts(list=>[...list.filter(x=>x.id!==result.contact.id),result.contact]);
+      setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.invite.url,name:name.trim()});
+      setPhoneName('');setPhoneNumber('');setPhoneRole('member');
+    }catch(e:any){setPhoneError(e.message||'Unable to prepare the private invitation.');}
+    finally{setPhoneBusy(false);}
+  }
+  async function removeMobileContact(contactId:string,name:string){
+    if(!window.confirm('Remove '+name+' from this group? Their group membership and pending invitations will be revoked.'))return;
+    setPhoneBusy(true);
+    try{
+      await api.events.removePhoneContact(id,contactId);
+      setPhoneContacts(list=>list.filter(x=>x.id!==contactId));
+    }catch(e:any){setPhoneError(e.message||'Could not remove the contact.');}
+    finally{setPhoneBusy(false);}
+  }
+  function gameWhatsAppLink(phone:string,gameId:string){
+    const url=appUrl+'/games/'+gameId+'/rsvp';
+    const message='♠ '+event.name+' poker night\nPrivate group RSVP: '+url+
+      '\nOnly verified members of this group can access this game.';
+    return 'https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent(message);
   }
 
   async function togglePush() {
@@ -229,8 +271,8 @@ export default function EventPage() {
           <div>
             {isHost && (
               <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('cohost')}>+ Co-host</button>
-                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>generateInvite('member')}>+ Member</button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('cohost');}}>+ Co-host</button>
+                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('member');}}>+ Member</button>
               </div>
             )}
             {upcoming.length===0 && settled.length===0 && (
@@ -319,6 +361,68 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div>
+            {isGroupOwner&&<section style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
+              borderRadius:10,marginBottom:16}}>
+              <div style={{fontSize:11,color:'var(--gold)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:7}}>
+                Private members · Mobile first
+              </div>
+              <h2 style={{fontFamily:'var(--font-display),serif',fontSize:21,marginBottom:6}}>Invite by WhatsApp number</h2>
+              <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:15}}>
+                The number identifies this member privately in your group. Only the invited number can verify and join.
+                Other groups cannot see your contacts.
+              </p>
+              <div style={{display:'grid',gap:9,marginBottom:12}}>
+                <input id="pkr-mobile-name" aria-label="Player name" value={phoneName} maxLength={60}
+                  onChange={e=>setPhoneName(e.target.value)} placeholder="Player name"
+                  style={{width:'100%',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-hi)',padding:'12px',borderRadius:5}}/>
+                <input type="tel" aria-label="WhatsApp mobile number" value={phoneNumber}
+                  onChange={e=>setPhoneNumber(e.target.value)} placeholder="WhatsApp mobile · 04xx xxx xxx or +61…"
+                  style={{width:'100%',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-hi)',padding:'12px',borderRadius:5}}/>
+                <select aria-label="Member role" value={phoneRole} onChange={e=>setPhoneRole(e.target.value as 'member'|'cohost')}
+                  style={{width:'100%',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-hi)',padding:'12px',borderRadius:5}}>
+                  <option value="member">Player / member</option><option value="cohost">Co-host</option>
+                </select>
+              </div>
+              <button className="btn btn-primary" disabled={phoneBusy||!phoneName.trim()||!phoneNumber.trim()}
+                style={{width:'100%',padding:'12px'}} onClick={()=>void inviteMobile()}>
+                {phoneBusy?'Creating invite…':'Create private WhatsApp invitation'}
+              </button>
+              {phoneError&&<p role="alert" style={{fontSize:12,marginTop:12,color:'var(--amber)'}}>{phoneError}</p>}
+              {phoneContacts.length>0&&<div style={{marginTop:20}}>
+                <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>
+                  Your private contacts · {phoneContacts.length}
+                </div>
+                {phoneContacts.map(contact=><div key={contact.id} style={{padding:'12px 0',borderTop:'1px solid var(--border-sub)',
+                  display:'flex',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                  <div style={{flex:1,minWidth:140}}>
+                    <div style={{fontSize:14}}>{contact.display_name}</div>
+                    <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Verified member':'Invitation pending'}</div>
+                  </div>
+                  {contact.status==='joined'&&upcoming[0]&&
+                    <a href={gameWhatsAppLink(contact.phone,upcoming[0].id)} target="_blank" rel="noreferrer"
+                      className="btn btn-outline" style={{textDecoration:'none',fontSize:10,padding:'7px 9px'}}>WhatsApp game</a>}
+                  {contact.status!=='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy}
+                    onClick={()=>void inviteMobile(contact.display_name,contact.phone,'member')}>Invite again</button>}
+                  <button className="btn btn-ghost" style={{fontSize:10,padding:'7px 9px',color:'var(--red)'}} disabled={phoneBusy}
+                    onClick={()=>void removeMobileContact(contact.id,contact.display_name)}>Remove</button>
+                </div>)}
+              </div>}
+              <p style={{fontSize:11,color:'var(--muted)',lineHeight:1.6,marginTop:12}}>
+                WhatsApp opens on your device; PKR does not automatically send messages to contacts.
+              </p>
+            </section>}
+            {phoneShare&&<div className="modal-overlay" onClick={e=>{if(e.currentTarget===e.target)setPhoneShare(null);}}>
+              <div className="modal-sheet">
+                <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
+                <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
+                  The recipient must verify their own number before joining.</p>
+                <a href={phoneShare.whatsapp_url} rel="noreferrer" target="_blank" className="btn btn-primary"
+                  style={{display:'block',textAlign:'center',padding:'13px',textDecoration:'none'}}>Open WhatsApp for this member</a>
+                <button className="btn btn-outline" style={{width:'100%',marginTop:9}}
+                  onClick={()=>navigator.clipboard.writeText(phoneShare.url)}>Copy personal invitation link</button>
+                <button className="btn btn-ghost" style={{width:'100%',marginTop:9}} onClick={()=>setPhoneShare(null)}>Done</button>
+              </div>
+            </div>}
             {/* Confirm remove modal */}
             {confirmRemoveMember && (
               <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
@@ -377,10 +481,10 @@ export default function EventPage() {
                 ))}
               </div>
             )}
-            {isHost && (
+            {isGroupOwner && (
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>generateInvite('member')}>+ Invite Member</button>
-                <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>generateInvite('cohost')}>+ Invite Co-host</button>
+                <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');document.getElementById('pkr-mobile-name')?.focus();}}>+ Invite Member by Mobile</button>
+                <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('cohost');document.getElementById('pkr-mobile-name')?.focus();}}>+ Co-host by Mobile</button>
                 {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}} onClick={()=>{setMergeFrom('');setMergeTo('');setMergeMsg('');setShowMerge(true);}}>⟳ Merge Duplicate Players</button>}
               </div>
             )}
