@@ -22,9 +22,7 @@ async function getInvite(env:Env,token:string):Promise<Invite|null>{
   if(!/^[0-9a-f]{64}$/.test(token))return null;
   const hash=await phoneLookup(env,'invite',token);
   return env.DB.prepare(
-    'SELECT i.*,c.display_name,c.phone_cipher,e.name AS event_name FROM group_phone_invites i '+
-    'JOIN group_phone_contacts c ON c.id=i.contact_id AND c.event_id=i.event_id '+
-    'JOIN events e ON e.id=i.event_id WHERE i.token_hash=? AND i.consumed_at IS NULL AND i.expires_at>unixepoch()'
+    'SELECT i.*,c.display_name,c.phone_cipher,e.name AS event_name FROM group_phone_invites i JOIN group_phone_contacts c ON c.id=i.contact_id AND c.event_id=i.event_id JOIN events e ON e.id=i.event_id WHERE i.token_hash=? AND i.consumed_at IS NULL AND i.expires_at>unixepoch()'
   ).bind(hash).first<Invite>();
 }
 function privateHeaders(c:any){
