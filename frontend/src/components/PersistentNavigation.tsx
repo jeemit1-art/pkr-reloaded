@@ -54,13 +54,13 @@ export default function PersistentNavigation(){
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
  const selected=(href:string)=>href==='room'?(pathname.startsWith('/events/')&&roomTab!=='members')||pathname.startsWith('/games/'):href==='members'?pathname.startsWith('/events/')&&roomTab==='members':href.startsWith('/insights#')?pathname==='/insights'&&typeof window!=='undefined'&&window.location.hash==='#pkr-settlement':pathname===href||pathname.startsWith(href+'/');
  function visit(destination:string){
-  if(destination==='room'||destination==='members'){
+  if(destination==='room'||destination==='members'||destination==='leaderboard'){
    if(!eventId){router.push('/dashboard');return;}
-   if(destination==='members'&&pathname==='/events/'+eventId){
-    setRoomTab('members');
-    window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:'members'}));
+   if((destination==='members'||destination==='leaderboard')&&pathname==='/events/'+eventId){
+    setRoomTab(destination);
+    window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:destination}));
    }else{
-    router.push(roomPath+(destination==='members'?'?tab=members':''));
+    router.push(roomPath+(destination==='room'?'':'?tab='+encodeURIComponent(destination)));
    }
   } else if(destination==='/install' && eventId){
    router.push('/install?group='+encodeURIComponent(eventId));
@@ -69,7 +69,10 @@ export default function PersistentNavigation(){
  return <><aside className="pkr-persistent-nav" aria-label="PKR navigation">
   <div className="pkr-persistent-brand"><span>♠</span> PKR</div>
   <div className="pkr-persistent-room"><span>YOUR POKER CLUB</span><strong>{rooms.find(r=>r.id===eventId)?.name||'Poker rooms'}</strong></div>
-  <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={selected(item.href)?'page':undefined} className={selected(item.href)?'active':''}><PkrGlyph name={item.icon}/>{item.name}</button>)}</nav>
+  <nav>{navigation.map(item=>{
+   const active=item.name==='Players'?pathname.startsWith('/events/')&&roomTab==='leaderboard':item.name==='Members'?pathname.startsWith('/events/')&&roomTab==='members':selected(item.href);
+   return <button key={item.name} type="button" onClick={()=>visit(item.name==='Players'?'leaderboard':item.href)} aria-current={active?'page':undefined} className={active?'active':''}><PkrGlyph name={item.icon}/>{item.name}</button>;
+  })}</nav>
   <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
  </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{mobileNavigation.map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
 }

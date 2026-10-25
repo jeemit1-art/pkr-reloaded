@@ -94,7 +94,9 @@ async function test(){
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
      if(['dashboard','room','insights'].includes(item.id)){
-       const heroSelector=item.id==='dashboard'?'.pkr-pro-hero':item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
+       const heroSelector=item.id==='dashboard'?
+         (size.width<=700&&await page.locator('.pkr-mobile-featured').count()?'.pkr-mobile-featured':'.pkr-pro-hero')
+         :item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};

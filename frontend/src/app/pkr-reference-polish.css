@@ -1,7 +1,6 @@
 /* PKR reference-design alignment — staged presentation only.
    Layered LAST after legacy styles. No state, betting, auth, payment or API changes.
-   The HD photo is licensed for free use by Vitezslav Vylicil / Pexels (photo 5412324).
-   The bundled SVG is a self-contained crisp fallback; no blurry bitmap scaling. */
+   The hero is a bundled crisp vector with no external image dependency or pixelation. */
 :root{
   --pkr-ink:#061310;
   --pkr-panel:#0a1e19;
@@ -12,7 +11,8 @@
   --pkr-border:rgba(224,182,91,.2);
   --pkr-copy:#f4f3ed;
   --pkr-dim:#aab8b2;
-  --pkr-photo:url("https://images.pexels.com/photos/5412324/pexels-photo-5412324.jpeg?auto=compress&cs=tinysrgb&w=2200");
+  /* Sharp, bundled casino art is the definitive hero asset. Never enlarge an unsuitable stock-photo crop. */
+  --pkr-photo:linear-gradient(125deg,rgba(3,21,16,.27),rgba(5,32,22,.02));
   --pkr-hero-fallback:url("/images/pkr-hero-premium.svg");
 }
 body{background:#061310}
@@ -128,7 +128,7 @@ body:has(.pkr-persistent-nav){background:radial-gradient(circle at 72% -25%,#123
 .pkr-guest-hero,
 .pkr-schedule-hero{
  background-image:
-  linear-gradient(90deg,#041510 0%,rgba(4,21,16,.98) 29%,rgba(4,21,16,.87) 47%,rgba(4,21,16,.23) 78%,rgba(4,21,16,.14) 100%),
+  linear-gradient(90deg,#041510 0%,rgba(4,21,16,.98) 29%,rgba(4,21,16,.87) 47%,rgba(4,21,16,.08) 78%,rgba(4,21,16,.02) 100%),
   var(--pkr-photo),
   var(--pkr-hero-fallback)!important;
  background-position:center,right 51%,right center!important;
