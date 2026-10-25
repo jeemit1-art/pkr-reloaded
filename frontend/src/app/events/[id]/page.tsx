@@ -183,7 +183,7 @@ export default function EventPage() {
   function gameWhatsAppLink(phone:string,gameId:string){
     const url=appUrl+'/games/'+gameId+'/rsvp';
     const message='♠ '+event.name+' poker night\nPrivate group RSVP: '+url+
-      '\nOnly verified members of this group can access this game.';
+      '\nOnly authorised members of this group can access this game.';
     return 'https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent(message);
   }
 

@@ -32,7 +32,7 @@ function makeFixture(){
   },
  });
  const env:any={
-  PKR_PHONE_MEMBERS_V1:'1',PKR_CONTACT_KEY:fakeKey,PKR_HOST_APPROVAL_FALLBACK:'1',JWT_SECRET:jwtSecret,
+  PKR_PHONE_MEMBERS_V1:'1',PKR_CONTACT_KEY:fakeKey,JWT_SECRET:jwtSecret,
   KV:{
    get:async(k:string)=>kvMap.get(k)||null,
    put:async(k:string,v:string)=>{kvMap.set(k,v)},
