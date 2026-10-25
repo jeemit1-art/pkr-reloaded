@@ -18,6 +18,18 @@ export default function EventPage() {
   const [history, setHistory] = useState([] as any[]);
   const [leaders, setLeaders] = useState([] as any[]);
   const [tab, setTab]         = useState<Tab>('games');
+  // Global navigation can switch tabs without a full page reload.
+  useEffect(()=>{
+    const open=(e:globalThis.Event)=>{
+      const next=(e as CustomEvent<string>).detail;
+      if(next==='games'||next==='leaderboard'||next==='history'||next==='members'){
+        setTab(next);
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
+    };
+    window.addEventListener('pkr:select-room-tab',open);
+    return()=>window.removeEventListener('pkr:select-room-tab',open);
+  },[]);
   const [isHost, setIsHost]   = useState(false);
   const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);

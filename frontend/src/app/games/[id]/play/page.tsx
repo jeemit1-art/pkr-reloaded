@@ -28,7 +28,8 @@ export default function PlayPage() {
       ? (localStorage.getItem('pkr_token') || document.cookie.match(/pkr_token=([^;]+)/)?.[1] || '')
       : '';
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://pkr-reloaded-worker.jeemit1.workers.dev';
+    // Never fall through to the production Worker from a preview build.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
     // Set pkrCtx for all legacy table.html code to use
     const existingCtx = (() => { try { return JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) { return null; } })();
