@@ -7,6 +7,7 @@ root=Path(__file__).resolve().parents[1]
 db=sqlite3.connect(':memory:')
 db.execute("PRAGMA foreign_keys=ON")
 db.executescript((root/'staging.schema.sql').read_text())
+db.executescript((root/'migrations/20261025_staging_rsvp_board.sql').read_text())
 migration=(root/'migrations/20261025_staging_phone_members.sql').read_text()
 db.executescript(migration)
 db.executescript(migration)
