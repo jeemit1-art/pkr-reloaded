@@ -34,6 +34,7 @@ export default function EventPage() {
   const [mergeMsg, setMergeMsg] = useState('');
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
@@ -107,9 +108,11 @@ export default function EventPage() {
   }
 
   async function generateInvite(role='cohost') {
+    const email=window.prompt('Enter the member’s email address (they must sign in with this address to accept):','')?.trim();
+    if(!email)return;
     try {
-      const r = await api.events.invite(id, role);
-      setInviteUrl(r.url); setInviteRole(role); setShowInvite(true);
+      const r = await api.events.invite(id, role,email);
+      setInviteUrl(r.url); setInviteRole(role);setInviteEmail(r.recipient_email); setShowInvite(true);
     } catch(e:any){ alert(e.message); }
   }
 
@@ -663,7 +666,7 @@ export default function EventPage() {
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
-            <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>Single-use · expires in 48 hours</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>For {inviteEmail} only · single-use · expires in 48 hours. Send through WhatsApp or email; only the invited account can accept.</div>
             {/* QR Code */}
             <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
               <div style={{background:'#fff',padding:12,borderRadius:4,display:'inline-block'}}

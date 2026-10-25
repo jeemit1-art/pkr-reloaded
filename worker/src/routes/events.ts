@@ -74,8 +74,12 @@ events.get('/invite/:token', authMiddleware, async (c) => {
   const token = c.req.param('token');
   const raw = await c.env.KV.get(`invite:${token}`);
   if (!raw) return c.json({error:'This invite link has expired or already been used. Ask the host to generate a new one.'},404);
-  const { eventId, role } = JSON.parse(raw);
+  const { eventId, role, email } = JSON.parse(raw);
+  if(!email)return c.json({error:'This unrestricted invitation is no longer valid. Ask the host for a personal invitation.'},403);
   const userId = c.get('userId');
+  const claimant=await c.env.DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{email:string}>();
+  if(!claimant?.email||claimant.email.trim().toLowerCase()!==email)
+    return c.json({error:'This invitation is for a different email address. Sign in with the invited account.'},403);
   const existing = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
     .bind(eventId,userId).first<{role:string}>();
   if (!existing) {
@@ -142,12 +146,14 @@ events.post('/:id/verify-password', authMiddleware, async (c) => {
 events.post('/:id/invite', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'host')) return c.json({error:'Only host can invite'},403);
-  const body = await c.req.json().catch(()=>({})) as {role?:string};
+  const body = await c.req.json().catch(()=>({})) as {role?:string;email?:string};
+  const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
+  if(email.length>254||!/^\S+@\S+\.\S+$/.test(email))return c.json({error:'Enter the intended member’s email address before generating an invite'},400);
   const role = body.role === 'member' ? 'member' : 'cohost';
   const token = generateId();
   const expiresAt = Date.now() + 48*60*60*1000;
-  await c.env.KV.put(`invite:${token}`, JSON.stringify({eventId,role,expiresAt}), {expirationTtl:60*60*48});
-  return c.json({ token, url:`${c.env.FRONTEND_URL}/invite/${token}`, expires_in:'48h', expires_at:expiresAt, role });
+  await c.env.KV.put(`invite:${token}`, JSON.stringify({eventId,role,email,expiresAt}), {expirationTtl:60*60*48});
+  return c.json({ token, url:`${c.env.FRONTEND_URL}/invite/${token}`, expires_in:'48h', expires_at:expiresAt, role, recipient_email:email });
 });
 
 // Member PIN join — player enters event PIN to access leaderboard/results without Google login
