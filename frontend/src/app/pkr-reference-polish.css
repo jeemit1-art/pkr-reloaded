@@ -514,3 +514,25 @@ body:has(.pkr-persistent-nav){background:radial-gradient(circle at 72% -25%,#123
 .pkr-event .pkr-event-tabs-inner .tab:not(.active):hover{
  color:#f4d392!important;background:rgba(215,177,105,.07)!important;
 }
+
+/* Dashboard member portraits: use the existing room member avatar_url from
+   /events/:id and reveal the initial only if no photo exists or loading fails. */
+.pkr-dashboard .pkr-pro-member>.pkr-pro-member-avatar{
+  position:relative;
+  overflow:hidden;
+  width:34px!important;
+  height:34px!important;
+  flex:0 0 34px!important;
+  padding:0;
+  border-radius:50%;
+}
+.pkr-dashboard .pkr-pro-member>.pkr-pro-member-avatar>img{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  border-radius:inherit;
+}
