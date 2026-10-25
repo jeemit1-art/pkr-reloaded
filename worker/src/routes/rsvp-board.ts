@@ -63,10 +63,11 @@ function failed(c:any,e:unknown) {
 }
 
 /** Safe public projection: never reveal edit token hashes or contact data. */
-board.get('/games/:id/rsvp-board',async(c)=>{
+board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
   if(!flagOn(c.env))return notReady(c);
   const game=await gameFor(c.env,c.req.param('id'));
   if(!game)return c.json({error:'Game not found'},404);
+  if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   try {
     const [settings,guests,legacy,players]=await Promise.all([
       c.env.DB.prepare('SELECT options_json FROM game_rsvp_arrivals WHERE game_id=?')
@@ -126,10 +127,11 @@ board.put('/games/:id/rsvp-arrivals',authMiddleware,async(c)=>{
 });
 
 /** A guest can create a response once and then edit ONLY with their edit token. */
-board.post('/games/:id/rsvp-board',async(c)=>{
+board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
   if(!flagOn(c.env))return notReady(c);
   const game=await gameFor(c.env,c.req.param('id'));
   if(!game)return c.json({error:'Game not found'},404);
+  if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   if(closed(game))return c.json({error:'RSVPs are closed for this game'},409);
   const body=await c.req.json().catch(()=>null) as {
     display_name?:unknown; arrival_option?:unknown; seat_number?:unknown;

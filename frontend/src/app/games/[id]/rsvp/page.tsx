@@ -83,7 +83,7 @@ export default function RsvpPage(){
         ?{id:result.id,token:result.edit_token,name:name.trim()}
         :guest?{...guest,name:name.trim()}:null;
       if(saved){localStorage.setItem(guestKey(id),JSON.stringify(saved));setGuest(saved);}
-      setNotice(arrival==='not-coming'?'Your absence has been recorded.':'RSVP saved. Your group can now see the update.');
+      setNotice(arrival==='not-coming'?'Your absence has been recorded.':'RSVP saved. Members of this group can see the update.');
       await load();
     }catch(e:any){setError(e.message||'Could not save your RSVP.');await load();}
     finally{setSaving(false);}
@@ -166,7 +166,7 @@ export default function RsvpPage(){
           <div className="pkr-guest-card-head">
             <span className="pkr-guest-kicker">01 · YOUR PLAN</span>
             <h2>{guest?'Update your RSVP':'Are you coming?'}</h2>
-            <p>Choose your arrival time and a seat if you have a preference. No account required.</p>
+            <p>Only verified members of this group can respond. Choose your arrival time and a seat.</p>
           </div>
           <label className="pkr-guest-label" htmlFor="pkr-rsvp-name">Your name</label>
           <input className="pkr-guest-input" id="pkr-rsvp-name" maxLength={60} autoComplete="name"
@@ -212,7 +212,7 @@ export default function RsvpPage(){
           <section className="pkr-guest-card">
             <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">02 · THE GROUP</span>
               <h2>Who's coming</h2><p>Updates automatically every five seconds while open.</p></div>
-            {board.guests.length===0&&<p className="pkr-guest-none">No responses yet. Send the link to your WhatsApp group.</p>}
+            {board.guests.length===0&&<p className="pkr-guest-none">No responses yet. Share the link only with members of this group.</p>}
             {board.guests.map(r=><div className="pkr-guest-person" key={r.id}>
               <span className={'pkr-guest-avatar '+(r.status==='no'?'out':'')}>{r.display_name.slice(0,1).toUpperCase()}</span>
               <div className="pkr-guest-person-info"><strong>{r.display_name}{guest?.id===r.id?' · You':''}</strong>
@@ -229,7 +229,7 @@ export default function RsvpPage(){
                 onClick={()=>navigator.clipboard.writeText(link).then(()=>setNotice('Invite link copied.'))}>Copy invitation link</button>
               <button className="pkr-guest-outline" type="button" onClick={allowAlerts}>Enable browser alerts</button>
             </div>
-            <p className="pkr-guest-footnote">Anyone with the link can view names and arrival choices. Edit keys and contact details are never displayed. Browser alerts require permission and the page to remain open.</p>
+            <p className="pkr-guest-footnote">Only signed-in members of this group can view RSVP names and arrival choices. Forwarding the link does not grant access. Browser alerts require permission.</p>
           </section>
           {isHost&&<section className="pkr-guest-card">
             <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">HOST CONTROLS</span>
