@@ -33,7 +33,8 @@ export default function PersistentNavigation(){
    window.addEventListener('pkr:select-room-tab',onRoomTab);
    return()=>window.removeEventListener('pkr:select-room-tab',onRoomTab);
  },[]);
- const allowed=/^\/(dashboard|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname);
+ const isActiveGameplay=/^\/games\/[^/]+\/play\/?$/.test(pathname);
+ const allowed=/^\/(dashboard|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname) && !isActiveGameplay;
  useEffect(()=>{setHasSession(Boolean(getToken()));},[pathname]);
  useEffect(()=>{if(!allowed||!hasSession)return;let live=true;api.events.list().then(r=>{if(live)setRooms(r)}).catch(()=>{});return()=>{live=false};},[allowed,hasSession]);
  // A game belongs to its own room: never silently navigate to the first room.

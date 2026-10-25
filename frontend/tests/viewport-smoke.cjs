@@ -93,7 +93,20 @@ async function test(){
        const sidebar=await page.locator('.pkr-persistent-nav').boundingBox();
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
-     if(item.id==='live-table'){const box=await page.locator('#gameScreen').boundingBox();if(box&&size.width>=1100&&box.x<210)errors.push(size.name+' live table overlaps sidebar');}
+     if(item.id==='live-table'){
+       // Gameplay uses the entire viewport, without the global desktop sidebar or mobile bottom navigation.
+       const navCount=await page.locator('.pkr-persistent-nav, .pkr-universal-bottom-nav').count();
+       if(navCount!==0)errors.push(size.name+' live table includes '+navCount+' global navigation elements');
+       const geometry=await page.locator('#gameScreen').evaluate(node=>{
+         const r=node.getBoundingClientRect();
+         return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight};
+       });
+       if(Math.abs(geometry.left)>2||Math.abs(geometry.top)>2||
+          Math.abs(geometry.right-geometry.width)>2||Math.abs(geometry.bottom-geometry.height)>2)
+         errors.push(size.name+' live table is not full-viewport: '+JSON.stringify(geometry));
+       if(!await page.locator('#gameScreen #backBtn').isVisible())
+         errors.push(size.name+' gameplay back-to-room control unavailable');
+     }
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
      }
