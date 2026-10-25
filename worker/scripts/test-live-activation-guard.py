@@ -97,3 +97,40 @@ try:
 finally:
     a.command=saved_command
     db.close()
+
+# Recovery drill: health/status probes must use curl, never Python urllib.
+# This test has no real network, credentials, Worker deployment, or D1 access.
+original_git=a.git
+a.git=lambda *args: ""
+def fake_live_http(*cmd,cwd=None):
+    if cmd[0]=="curl" and cmd[-1]==a.URL+"/health":
+        return json.dumps({"ok":True,"service":"pkr-reloaded-worker","environment":"production"})
+    if cmd[0]=="curl" and cmd[-1]==a.URL+"/auth/mobile/start":
+        assert "--request" in cmd and "POST" in cmd
+        return "404"
+    if cmd[0]=="curl" and cmd[-1]==a.URL+"/phone-invites/not-a-valid-token":
+        return "404"
+    if cmd[:4]==("npx","--no-install","wrangler","deployments"):
+        return ("Created: 2026-10-25T13:03:54.487Z\\n"
+                "Version(s): (100%) 06118fa5-eaaa-4ef9-bb4d-cd4416c16ffb\\n")
+    raise AssertionError("Unexpected external call: "+repr(cmd))
+a.command=fake_live_http
+try:
+    a.health()
+    a.assert_manual_worker()
+    a.assert_deployed_version()
+    assert a.curl_status("GET","/phone-invites/not-a-valid-token")==404
+    assert 'command("npx","--no-install","wrangler","deploy",' not in source.read_text()
+    expected_version=a.DEPLOYED_WORKER_VERSION
+    a.DEPLOYED_WORKER_VERSION="ffffffff-ffff-ffff-ffff-ffffffffffff"
+    try:
+        a.assert_deployed_version()
+        raise AssertionError("Wrong Worker version accepted")
+    except a.Stop:
+        pass
+    finally:
+        a.DEPLOYED_WORKER_VERSION=expected_version
+    print("PASS: curl health, OTP gate, verified deployed version; no redeployment.")
+finally:
+    a.command=saved_command
+    a.git=original_git
