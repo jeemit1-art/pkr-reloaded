@@ -49,7 +49,19 @@ async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<
   }
 
   if (!res.ok) { const e = await res.json().catch(()=>({error:'Request failed'})); throw new Error(e.error||`HTTP ${res.status}`); }
-  return res.json();
+  const result = await res.json();
+  // Foreground financial confirmations are based on a successful server write.
+  // They never imply that a payment has been transferred.
+  if(typeof window!=='undefined' && (opts?.method==='PUT'||opts?.method==='POST')){
+    const gameId=path.match(/^\/games\/([^/]+)/)?.[1];
+    const kind= /\/buyin\//.test(path)?'buyin':
+      /\/cashout\//.test(path)?'cashout':
+      /\/settle$/.test(path)?'settlement':null;
+    if(kind&&gameId)window.dispatchEvent(new CustomEvent('pkr:financial-update',{
+      detail:{kind,gameId,at:Date.now()}
+    }));
+  }
+  return result;
 }
 
 // Public fetch — no auth token
