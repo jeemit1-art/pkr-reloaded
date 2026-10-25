@@ -294,3 +294,24 @@
  .pkr-game-detail .pkr-casino-game-summary>.display{font-size:30px!important}
  .pkr-game-detail .pkr-player-activity>div{padding:12px!important}
 }
+
+/* On phones, outside-column seat labels from laptop CSS were clipped.
+   Keep labels centred under their seat chips on narrow gameplay screens. */
+@media(max-width:1099px){
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-label,
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-net{
+   position:static!important;
+   left:auto!important;right:auto!important;
+   min-width:0!important;max-width:68px!important;
+   margin:2px 0 0!important;text-align:center!important;
+   line-height:1.15!important;
+ }
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-label{
+   font-size:10px!important;padding:2px 3px!important;
+ }
+}
+/* Keep small-screen overlays in view without changing any click actions. */
+@media(max-width:430px){
+ #gameScreen .game-tab .game-tab-icon{font-size:16px!important}
+ #gameScreen .seat-chip{box-shadow:0 3px 9px #000b}
+}

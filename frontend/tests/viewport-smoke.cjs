@@ -156,6 +156,12 @@ async function test(){
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
        if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
+       if(size.width<=700){
+         const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
+           nodes.filter(node=>{const r=node.getBoundingClientRect();return r.left<-1||r.right>innerWidth+1;}).length
+         );
+         if(clipped)errors.push(size.name+' '+clipped+' live game seat labels clipped outside viewport');
+       }
        if(size.width>=1100){
          await page.waitForFunction(()=>{
            const felt=document.querySelector('#tableFelt');
@@ -192,6 +198,8 @@ async function test(){
        }
       }
      }
+     // Interactions may scroll the page: capture consistently at its top.
+     if(item.id!=='live-table')await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
      await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
     }catch(e){errors.push(size.name+' '+item.id+': '+(e?.message||e));}
    }
