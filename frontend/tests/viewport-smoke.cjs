@@ -29,6 +29,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/games/'+upcoming.id)return {...upcoming,players:[],rsvps:[]};
   if(pathname==='/games/'+finished.id)return {...finished,players:[],rsvps:[]};
   if(pathname==='/games/results/synthetic-results')return results;
+  if(pathname==='/games/test-finished/transfers/synthetic-transfer/status'&&method==='PUT')return {ok:true,status:'paid'};
   if(pathname==='/games/'+upcoming.id+'/rsvp-board')return {event:room,game:upcoming,players:[],guests:[],options:['19:00','20:00']};
   if(pathname==='/push/vapid-key')return {key:'test-not-a-real-vapid-key'};
   return {error:'Synthetic fixture not provided: '+pathname};
@@ -130,6 +131,25 @@ async function test(){
        await page.getByRole('tab',{name:'Who Pays Who'}).click();
        const settlement=page.locator('#pkr-settlement');
        if(!await settlement.isVisible())errors.push(size.name+' settlement centre disappeared');
+       const paymentSelect=page.locator('.pkr-payment-status-select').first();
+       if(await paymentSelect.count()){
+         page.once('dialog',dialog=>dialog.accept());
+         await paymentSelect.selectOption('paid');
+         await page.waitForTimeout(120);
+         if(await paymentSelect.inputValue()!=='paid')errors.push(size.name+' payment status did not update to paid');
+         if(!await settlement.getByText('Payment status updated to Paid.').count())errors.push(size.name+' payment update confirmation missing');
+       }else errors.push(size.name+' host cannot select payment status in Insights');
+       if(size.width>=1100){
+         const nav=page.locator('.pkr-persistent-nav button');
+         const settle=nav.getByText('Settle',{exact:true});
+         if(await settle.count()){
+           await settle.click();
+           await page.waitForTimeout(180);
+           const active=page.locator('.pkr-persistent-nav button.active');
+           if(await active.count()!==1||!(await active.first().textContent())?.includes('Settle'))
+             errors.push(size.name+' Insights and Settle are highlighted together');
+         }
+       }
      }
      if(item.id==='rsvp'){
        const arrival=page.locator('.pkr-guest-options button').first();
@@ -188,6 +208,24 @@ async function test(){
        const contrast=await page.locator('.pkr-event-tabs .tab.active').evaluate(node=>getComputedStyle(node).color);
        if(contrast==='rgb(252, 209, 130)')errors.push(size.name+' selected room tab has low-contrast gold text');
        if(!await page.locator('.pkr-member-summary').isVisible())errors.push(size.name+' members summary missing after navigation');
+       if(size.width>=1100){
+         const nav=page.locator('.pkr-persistent-nav button');
+         const active=page.locator('.pkr-persistent-nav button.active');
+         if(await active.count()!==1||!(await active.first().textContent())?.includes('Members'))
+           errors.push(size.name+' Games and Members highlighted at once');
+         await nav.filter({hasText:'Players'}).first().click();
+         await page.waitForTimeout(130);
+         const playersActive=page.locator('.pkr-persistent-nav button.active');
+         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Players'))
+           errors.push(size.name+' Games and Players highlighted at once');
+         await nav.filter({hasText:'Games'}).first().click();
+         await page.waitForTimeout(130);
+         const gamesActive=page.locator('.pkr-persistent-nav button.active');
+         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Games'))
+           errors.push(size.name+' Games is not the sole active menu after return');
+         await nav.filter({hasText:'Members'}).first().click();
+         await page.waitForTimeout(130);
+       }
        const search=page.locator('#pkr-member-search');
        if(await search.count()){
          await search.fill('Demo');
@@ -200,6 +238,10 @@ async function test(){
      }
      // Interactions may scroll the page: capture consistently at its top.
      if(item.id!=='live-table')await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+     if(size.width>=1100&&['dashboard','insights','schedule','room','game-detail','install'].includes(item.id)){
+       const number=await page.locator('.pkr-persistent-nav button.active').count();
+       if(number!==1)errors.push(size.name+' '+item.id+' has '+number+' selected sidebar items');
+     }
      await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
     }catch(e){errors.push(size.name+' '+item.id+': '+(e?.message||e));}
    }

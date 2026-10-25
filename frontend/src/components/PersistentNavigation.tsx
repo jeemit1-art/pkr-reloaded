@@ -25,6 +25,14 @@ export default function PersistentNavigation(){
  const [hasSession,setHasSession]=useState(false);
  const [gameEventId,setGameEventId]=useState<string|null>(null);
  const [roomTab,setRoomTab]=useState('games');
+ const [insightsHash,setInsightsHash]=useState('');
+ useEffect(()=>{
+   const sync=()=>setInsightsHash(window.location.hash);
+   sync();
+   window.addEventListener('hashchange',sync);
+   window.addEventListener('popstate',sync);
+   return()=>{window.removeEventListener('hashchange',sync);window.removeEventListener('popstate',sync);};
+ },[pathname]);
  useEffect(()=>{
    setRoomTab(typeof window==='undefined'?'games':new URLSearchParams(window.location.search).get('tab')||'games');
  },[pathname]);
@@ -52,27 +60,47 @@ export default function PersistentNavigation(){
  if(!allowed||!hasSession)return null;
  const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]||gameEventId||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
- const selected=(href:string)=>href==='room'?(pathname.startsWith('/events/')&&roomTab!=='members')||pathname.startsWith('/games/'):href==='members'?pathname.startsWith('/events/')&&roomTab==='members':href.startsWith('/insights#')?pathname==='/insights'&&typeof window!=='undefined'&&window.location.hash==='#pkr-settlement':pathname===href||pathname.startsWith(href+'/');
+ // Exactly one active item per navigation; room tabs and Insights sections are mutually exclusive.
+ const inRoom=pathname.startsWith('/events/');
+ const inGame=pathname.startsWith('/games/');
+ const isSettlement=pathname==='/insights'&&insightsHash==='#pkr-settlement';
+ const selected=(name:string,mobile=false)=>{
+   switch(name){
+     case 'Home':return pathname==='/dashboard';
+     case 'Games':return inGame||(inRoom&&(mobile?roomTab!=='members':roomTab==='games'||roomTab==='history'));
+     case 'Players':return inRoom&&roomTab==='leaderboard';
+     case 'Members':return inRoom&&roomTab==='members';
+     case 'Insights':return pathname==='/insights'&&(mobile||!isSettlement);
+     case 'Settle':return isSettlement;
+     case 'Schedule':return pathname==='/schedule';
+     case 'Install':case 'Install PKR':return pathname==='/install';
+     default:return false;
+   }
+ };
  function visit(destination:string){
   if(destination==='room'||destination==='members'||destination==='leaderboard'){
    if(!eventId){router.push('/dashboard');return;}
-   if((destination==='members'||destination==='leaderboard')&&pathname==='/events/'+eventId){
-    setRoomTab(destination);
-    window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:destination}));
+   if(pathname==='/events/'+eventId){
+     const next=destination==='room'?'games':destination;
+     setRoomTab(next);
+     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
    }else{
-    router.push(roomPath+(destination==='room'?'':'?tab='+encodeURIComponent(destination)));
+     router.push(roomPath+(destination==='room'?'':'?tab='+encodeURIComponent(destination)));
    }
   } else if(destination==='/install' && eventId){
    router.push('/install?group='+encodeURIComponent(eventId));
-  } else router.push(destination);
+  } else {
+    if(destination.startsWith('/insights'))setInsightsHash(destination.includes('#pkr-settlement')?'#pkr-settlement':'');
+    router.push(destination);
+  }
  }
  return <><aside className="pkr-persistent-nav" aria-label="PKR navigation">
   <div className="pkr-persistent-brand"><span>♠</span> PKR</div>
   <div className="pkr-persistent-room"><span>YOUR POKER CLUB</span><strong>{rooms.find(r=>r.id===eventId)?.name||'Poker rooms'}</strong></div>
   <nav>{navigation.map(item=>{
-   const active=item.name==='Players'?pathname.startsWith('/events/')&&roomTab==='leaderboard':item.name==='Members'?pathname.startsWith('/events/')&&roomTab==='members':selected(item.href);
+   const active=selected(item.name);
    return <button key={item.name} type="button" onClick={()=>visit(item.name==='Players'?'leaderboard':item.href)} aria-current={active?'page':undefined} className={active?'active':''}><PkrGlyph name={item.icon}/>{item.name}</button>;
   })}</nav>
   <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
- </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{mobileNavigation.map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
+ </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{mobileNavigation.map(item=><button key={item.name} type="button" className={selected(item.name,true)?'active':''} aria-current={selected(item.name,true)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
 }

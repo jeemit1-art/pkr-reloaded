@@ -10,9 +10,20 @@ export default function ResultsPage() {
   const [error, setError]     = useState('');
   const [copied, setCopied]   = useState<number|null>(null);
   const [busy, setBusy]       = useState<string|null>(null);
-  const isBanker = typeof window !== 'undefined' && !!getToken();
+  const [isBanker,setIsBanker]=useState(false);
 
   useEffect(()=>{ api.games.results(token as string).then(setData).catch(()=>setError('Results not found')); },[token]);
+  useEffect(()=>{
+    if(!data?.game?.event_id||!getToken()){setIsBanker(false);return;}
+    let active=true;
+    api.events.list().then(events=>{
+      if(active){
+        const role=events.find(e=>e.id===data.game.event_id)?.role;
+        setIsBanker(role==='host'||role==='cohost');
+      }
+    }).catch(()=>{if(active)setIsBanker(false);});
+    return()=>{active=false};
+  },[data?.game?.event_id]);
 
   if (error) return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -168,11 +179,11 @@ export default function ResultsPage() {
                       )}
                       {isBanker && t.status!=='paid' && (
                         <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'paid')}
-                          style={{fontSize:11,padding:'5px 10px'}}>✓ Received</button>
+                          style={{fontSize:11,padding:'5px 10px'}}>✓ Mark paid</button>
                       )}
                       {isBanker && t.status==='paid' && (
                         <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'not_received')}
-                          style={{fontSize:11,padding:'5px 10px'}}>✗ Not received</button>
+                          style={{fontSize:11,padding:'5px 10px'}}>↶ Mark not received</button>
                       )}
                       {isBanker && !!t.reminder_count && (
                         <span style={{fontSize:10,color:'var(--faint)'}}>reminded ×{t.reminder_count}</span>

@@ -315,3 +315,29 @@
  #gameScreen .game-tab .game-tab-icon{font-size:16px!important}
  #gameScreen .seat-chip{box-shadow:0 3px 9px #000b}
 }
+
+/* Room desktop layout: use available space instead of a narrow centre column. */
+@media(min-width:1100px){
+ .pkr-event .pkr-event-overview,
+ .pkr-event .pkr-event-tabs{
+   width:calc(100% - 48px)!important;max-width:1360px!important;margin-left:auto!important;margin-right:auto!important;
+ }
+ .pkr-event .pkr-content{width:calc(100% - 48px)!important;max-width:1360px!important;padding-left:0!important;padding-right:0!important}
+ .pkr-event .pkr-topbar>div{width:calc(100% - 48px)!important;max-width:1360px!important;margin-inline:auto!important}
+ .pkr-event .pkr-topbar .display{font-size:19px!important}
+}
+.pkr-insights-refresh .pkr-payment-status-select{
+  min-width:126px;height:36px;padding:6px 29px 6px 10px;
+  border-radius:9px;border:1px solid #9e814b;
+  background:#302a19;color:#fce1a7;font:750 12px var(--font-body),sans-serif;
+  cursor:pointer;
+}
+.pkr-insights-refresh .pkr-payment-status-select.paid{background:#0a3626;border-color:#338b63;color:#74f1ae}
+.pkr-insights-refresh .pkr-payment-status-select.not-received{background:#402021;border-color:#a94d4c;color:#ffa1a1}
+.pkr-insights-refresh .pkr-payment-status-select:disabled{opacity:.65;cursor:wait}
+.pkr-insights-refresh .pkr-payment-status-select:focus-visible{outline:2px solid #f0ca7a;outline-offset:2px}
+.pkr-insights-payment-help{color:#b6c5bc;font-size:11px;line-height:1.6;margin:-5px 0 13px}
+.pkr-insights-payment-notice{padding:10px 12px;background:#16372a;border:1px solid #416f54;color:#d6e9df;border-radius:10px;margin-bottom:13px;font-size:12px}
+@media(max-width:700px){
+ .pkr-insights-refresh .pkr-payment-status-select{min-width:118px}
+}

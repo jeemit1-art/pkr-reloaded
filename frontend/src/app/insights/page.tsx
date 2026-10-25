@@ -18,6 +18,8 @@ export default function InsightsPage(){
  const [transfers,setTransfers]=useState<SettlementRow[]>([]);
  const [transfersPartial,setTransfersPartial]=useState(false);
  const [settlementView,setSettlementView]=useState<SettlementView>('transfers');
+ const [paymentBusy,setPaymentBusy]=useState<string|null>(null);
+ const [paymentNotice,setPaymentNotice]=useState('');
 
  useEffect(()=>{
   let live=true;
@@ -30,6 +32,7 @@ export default function InsightsPage(){
  useEffect(()=>{
   if(!selected)return;
   let live=true;
+  setPaymentNotice('');setPaymentBusy(null);
   setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setTransfersPartial(false);setSettlementView('transfers');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
@@ -46,6 +49,7 @@ export default function InsightsPage(){
  },[selected]);
 
  const room=rooms.find(x=>x.id===selected);
+ const canManagePayments=room?.role==='host'||room?.role==='cohost';
  const played=games.filter(g=>g.status==='settled');
  const upcoming=games.filter(g=>['scheduled','lobby','active'].includes(g.status));
  const recent=played.slice().sort((a,b)=>b.scheduled_at-a.scheduled_at);
@@ -82,6 +86,36 @@ export default function InsightsPage(){
  },[games]);
  const maxMonth=Math.max(1,...months.map(x=>x.count));
  const roomUrl=(tab:string)=>'/events/'+encodeURIComponent(selected)+'?tab='+tab;
+ useEffect(()=>{
+   if(loadingRooms||!rooms.length)return;
+   if(window.location.hash==='#pkr-settlement'){
+     const id=window.setTimeout(()=>document.getElementById('pkr-settlement')?.scrollIntoView({block:'start'}),80);
+     return()=>window.clearTimeout(id);
+   }
+ },[loadingRooms,rooms.length]);
+ async function setPaymentStatus(row:SettlementRow,status:'owed'|'paid'|'not_received'){
+   if(!canManagePayments||!row.transfer.id||row.game.status!=='settled')return;
+   const current=row.transfer.status==='paid'?'paid':row.transfer.status==='not_received'?'not_received':'owed';
+   if(status===current)return;
+   const verb=status==='paid'?'Paid':status==='not_received'?'Not received':'Pending';
+   const confirmed=window.confirm(
+     'Change the payment from '+row.transfer.from_name+' to '+row.transfer.to_name+
+     ' ('+fmt(row.transfer.amount)+') to '+verb+'?\\n\\nThis updates the PKR record only. It does not transfer money.'
+   );
+   if(!confirmed)return;
+   const key=row.game.id+':'+row.transfer.id;
+   setPaymentBusy(key);setPaymentNotice('');
+   try{
+     await api.games.setTransferStatus(row.game.id,row.transfer.id,status);
+     setTransfers(previous=>previous.map(item=>
+       item.game.id===row.game.id&&item.transfer.id===row.transfer.id
+       ?{...item,transfer:{...item.transfer,status,paid_at:status==='paid'?Math.floor(Date.now()/1000):null}}:item
+     ));
+     setPaymentNotice('Payment status updated to '+verb+'.');
+   }catch(e){
+     setPaymentNotice('Could not change payment status: '+(e instanceof Error?e.message:'Please try again.'));
+   }finally{setPaymentBusy(null);}
+ }
  return <main className="pkr-vnext-insights pkr-casino pkr-insights-refresh">
   <header className="pkr-vnext-insights-top">
    <div className="pkr-insights-intro"><span className="pkr-eyebrow">▥ INSIGHTS &amp; SETTLEMENT</span>
@@ -133,12 +167,26 @@ export default function InsightsPage(){
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
+     {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
+     <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
      {settlementView==='transfers'&&
       (transfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>
        {transfers.slice(0,20).map((item,i)=><tr key={item.game.id+':'+(item.transfer.id||i)}>
         <td>{item.transfer.from_name}</td><td>{item.transfer.to_name}</td><td>{fmt(item.transfer.amount)}</td>
-        <td><span className={'pkr-vnext-status '+(item.transfer.status==='paid'?'paid':'pending')}>{item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':'Pending'}</span></td>
-        <td><button onClick={()=>router.push('/games/'+item.game.id)}>View game →</button></td>
+        <td>
+          {canManagePayments&&item.transfer.id&&item.transfer.status!=='legacy'?
+           <select className={'pkr-payment-status-select '+(item.transfer.status==='paid'?'paid':item.transfer.status==='not_received'?'not-received':'pending')}
+             aria-label={'Payment status for '+item.transfer.from_name+' to '+item.transfer.to_name}
+             value={item.transfer.status==='paid'?'paid':item.transfer.status==='not_received'?'not_received':'owed'}
+             disabled={paymentBusy!==null||loadingDetails}
+             onChange={e=>void setPaymentStatus(item,e.target.value as 'owed'|'paid'|'not_received')}>
+             <option value="owed">Pending</option><option value="paid">Paid</option><option value="not_received">Not received</option>
+           </select>
+           :<span className={'pkr-vnext-status '+(item.transfer.status==='paid'?'paid':'pending')}>
+             {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='legacy'?'Legacy record':'Pending'}
+           </span>}
+         </td>
+        <td><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button></td>
        </tr>)}
       </tbody></table></div>:<p className="pkr-vnext-empty">No transfers recorded for the latest five settled games.</p>)}
      {settlementView==='balances'&&
@@ -150,7 +198,7 @@ export default function InsightsPage(){
       <div><strong>{paid.length}</strong><span>Recorded as paid</span></div>
       <div><strong>{outstanding.length}</strong><span>Still outstanding</span></div>
       <div><strong>{fmt(totalPending)}</strong><span>Total unpaid amount</span></div>
-      <p>Payment labels reflect PKR records only. No money is transferred by this screen. Open the relevant game to review a payment.</p>
+      <p>These figures reflect recorded payment statuses only; no money is transferred by PKR. Use Who Pays Who to update statuses if you are the host or co-host.</p>
      </div>}
     </section>
     <section className="pkr-vnext-card pkr-insights-recent">
