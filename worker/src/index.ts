@@ -6,6 +6,7 @@ import auth    from './routes/auth';
 import events  from './routes/events';
 import games   from './routes/games';
 import rsvpBoard from './routes/rsvp-board';
+import phoneMembers from './routes/phone-members';
 import billing from './routes/billing';
 import hands      from './routes/hands';
 import tournament from './routes/tournament';
@@ -42,6 +43,7 @@ app.use('/games/:id/analysis/*', async (c, next) => {
 app.route('/billing', billing);
 app.route('/',        hands);
 app.route('/',        payments);
+app.route('/',        phoneMembers);
 app.route('/',        rsvpBoard);
 app.route('/',        games);
 app.route('/',        tournament);

@@ -34,7 +34,7 @@ function privateHeaders(c:any){
 router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
   const eventId=c.req.param('id');
-  if(!await requireEventRole(c,eventId,'cohost'))return c.json({error:'Only hosts may view group contacts'},403);
+  if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Only the group host may view private contacts'},403);
   try{
     const result=await c.env.DB.prepare(
       'SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts WHERE event_id=? ORDER BY display_name'

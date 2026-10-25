@@ -108,17 +108,12 @@ events.get('/:id', authMiddleware, async (c) => {
   `).bind(eventId).first();
   if (!event) return c.json({error:'Not found'},404);
   const members = await c.env.DB.prepare(`
-    SELECT u.id,u.name,u.avatar_url,u.email,em.role,em.joined_at
+    SELECT u.id,u.name,u.avatar_url,em.role,em.joined_at
     FROM event_members em JOIN users u ON u.id=em.user_id WHERE em.event_id=?
     ORDER BY CASE em.role WHEN 'host' THEN 0 WHEN 'cohost' THEN 1 ELSE 2 END,em.joined_at
   `).bind(eventId).all();
-  // Ordinary members see display names/roles only. Email addresses are private
-  // and never appear in room/member API payloads.
-  const isHost=await requireEventRole(c,eventId,'cohost');
-  return c.json({...clientSafeEvent(event), members:members.results.map(m=>({
-    id:m.id,name:m.name,avatar_url:m.avatar_url,role:m.role,joined_at:m.joined_at,
-    ...(isHost?{email:m.email}:{})
-  }))});
+  // Membership projection never contains email or mobile contact information.
+  return c.json({...clientSafeEvent(event),members:members.results});
 });
 
 events.put('/:id', authMiddleware, async (c) => {

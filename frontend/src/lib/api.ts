@@ -62,7 +62,14 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
+
 export const api = {
+  phoneInvites: {
+    preview: (token:string)=>pub<{event_name:string;masked_phone:string;role:string;verification_ready:boolean}>(`/phone-invites/${encodeURIComponent(token)}`),
+    sendCode:(token:string)=>pub<{ok:boolean;message:string}>(`/phone-invites/${encodeURIComponent(token)}/send-code`,{method:'POST'}),
+    confirm: (token:string,code:string)=>pub<{ok:boolean;token:string;event_id:string;event_name:string}>(`/phone-invites/${encodeURIComponent(token)}/confirm`,{method:'POST',body:JSON.stringify({code})}),
+  },
   auth: {
     me:       () => req<User>('/auth/me'),
     logout:   () => req('/auth/logout',{method:'POST'}),
@@ -77,6 +84,10 @@ export const api = {
     end:            (id:string)      => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
     reopen:         (id:string)      => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
+    phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
+    inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>
+      req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),
+    removePhoneContact:(id:string,contactId:string)=>req<{ok:boolean}>(`/events/${id}/phone-contacts/${contactId}`,{method:'DELETE'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
     subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
       pub(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
