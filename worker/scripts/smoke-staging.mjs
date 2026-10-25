@@ -38,6 +38,27 @@ async function main() {
   assert.equal(payload.environment, 'staging');
   console.log('PASS worker /health: 200, environment=staging');
 
+  // Live RSVP v2 activation: a deliberately nonexistent game is a safe read-only
+  // probe. 404 means the feature is enabled and the lookup reached the route;
+  // 503 means the feature flag is still off. Never create test records here.
+  const rsvp = await request('/games/pkr-rsvp-v2-smoke-nonexistent/rsvp-board');
+  const rsvpBody = await rsvp.json().catch(() => ({}));
+  assert.equal(rsvp.status, 404,
+    'RSVP v2 is not active (expected 404 for nonexistent game, got ' + rsvp.status +
+    ', code=' + (rsvpBody.code || 'n/a') + ')');
+  assert.equal(rsvpBody.error, 'Game not found');
+  console.log('PASS RSVP v2 route and feature flag active (nonexistent game returns 404)');
+
+  const legacy = await request('/games/pkr-rsvp-v2-smoke-nonexistent/rsvp', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ display_name:'Smoke Test',status:'yes' }),
+  });
+  assert.equal(legacy.status, 409, 'Legacy anonymous name-only RSVP must be disabled in v2');
+  const legacyBody = await legacy.json();
+  assert.equal(legacyBody.code, 'RSVP_V2_REQUIRED');
+  console.log('PASS legacy name-only RSVP editing blocked; no database writes');
+
   const login = await request('/auth/google');
   assert.equal(login.status, 302, 'Google login must redirect');
   const location = new URL(login.headers.get('location') || '');
