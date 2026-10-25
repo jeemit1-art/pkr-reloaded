@@ -445,3 +445,59 @@ body:has(.pkr-persistent-nav){background:radial-gradient(circle at 72% -25%,#123
  .pkr-event .pkr-event-metric strong{font-size:18px!important}
  .pkr-universal-bottom-nav small{font-size:9px!important}
 }
+
+/* Member screens — real roster, privacy-preserving invitation workflow. */
+.pkr-member-summary{
+ display:grid;grid-template-columns:minmax(0,1fr) 135px 135px;
+ align-items:stretch;gap:12px;margin-bottom:18px;min-width:0;
+}
+.pkr-member-summary-copy{
+ display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;
+ padding:20px 22px;border-radius:14px;border:1px solid rgba(234,193,109,.22);
+ background:linear-gradient(125deg,#0c3025,#081c17);
+}
+.pkr-member-summary-copy .pkr-eyebrow{color:#facb72!important;font-weight:750}
+.pkr-member-summary-copy h2{
+ font:650 clamp(24px,2.7vw,34px)/1.12 var(--font-display),Georgia,serif;
+ color:#fdf4df;letter-spacing:-.025em;
+}
+.pkr-member-summary-copy p{font-size:12px;color:#b6c9bf;line-height:1.45}
+.pkr-member-summary-metric{
+ display:flex;flex-direction:column;justify-content:center;
+ gap:7px;padding:17px;border:1px solid rgba(226,196,132,.22);
+ border-radius:14px;background:linear-gradient(145deg,#102b22,#081c17);
+}
+.pkr-member-summary-metric strong{font-size:clamp(27px,3vw,39px);color:#f9f3e4;font-weight:750}
+.pkr-member-summary-metric small{color:#bdcbc0;font-size:11px}
+.pkr-event .pkr-member-request-card,
+.pkr-event .pkr-member-invite,
+.pkr-event .pkr-member-roster{
+ border:1px solid rgba(230,194,114,.26)!important;
+ background:linear-gradient(145deg,#0d2920,#071a15)!important;
+ border-radius:15px!important;box-shadow:0 10px 26px #0003;
+}
+.pkr-event .pkr-member-request-card{border-left:4px solid #ebbd68!important}
+.pkr-event .pkr-member-invite input,
+.pkr-event .pkr-member-invite select{
+ min-height:44px;border-radius:9px!important;background:#081c17!important;
+ border-color:rgba(207,191,135,.27)!important;color:#fff7e8!important;
+}
+.pkr-event .pkr-member-invite input:focus-visible,
+.pkr-event .pkr-member-invite select:focus-visible{
+ outline:2px solid #e6bd6a;outline-offset:1px;
+}
+.pkr-event .pkr-member-roster{overflow:hidden}
+.pkr-event .pkr-member-roster>div{min-height:75px;padding:14px 17px!important}
+.pkr-event .pkr-member-roster>div:hover{background:rgba(29,83,56,.2)}
+.pkr-event .pkr-member-roster>div>div:first-child{
+ width:43px!important;height:43px!important;border:2px solid rgba(246,202,111,.56)!important;
+ background:#103a2b!important;box-shadow:0 3px 14px #0005;
+}
+.pkr-event .pkr-member-roster [class*="btn"]{border-radius:9px!important}
+@media(max-width:700px){
+ .pkr-member-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .pkr-member-summary-copy{grid-column:1/-1;padding:18px}
+ .pkr-member-summary-metric{min-height:95px}
+ .pkr-event .pkr-member-invite{padding:16px!important}
+ .pkr-event .pkr-member-roster>div{padding:12px!important}
+}

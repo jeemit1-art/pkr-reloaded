@@ -396,9 +396,14 @@ export default function EventPage() {
 
         {/* ── Members tab ── */}
         {tab==='members' && (
-          <div>
-           {isGroupOwner&&joinRequests.length>0&&<section style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
-            {isGroupOwner&&<section style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
+          <div className="pkr-members-panel">
+            <header className="pkr-member-summary">
+              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Members</h2><p>Manage your poker room and the people who play together.</p></div>
+              <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
+              <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
+            </header>
+           {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
+            {isGroupOwner&&<section className="pkr-member-invite" style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
               borderRadius:10,marginBottom:16}}>
               <div style={{fontSize:11,color:'var(--gold)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:7}}>
                 Private members · Mobile first
@@ -492,7 +497,7 @@ export default function EventPage() {
                 <div className="empty-state-text">No members yet. Use the invite button to add co-hosts or members.</div>
               </div>
             ) : (
-              <div className="card" style={{marginBottom:14}}>
+              <div className="card pkr-member-roster" style={{marginBottom:14}}>
                 {event.members.map((m:any, i:number) => (
                   <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
                     borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>

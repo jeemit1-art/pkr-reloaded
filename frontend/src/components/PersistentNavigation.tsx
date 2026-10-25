@@ -5,6 +5,8 @@ import {api,Event} from '@/lib/api';
 import {getToken} from '@/lib/api';
 import PkrGlyph from '@/components/PkrGlyph';
 
+const mobileNavigation=[{name:'Home',icon:'home',href:'/dashboard'},{name:'Games',icon:'games',href:'room'},{name:'Members',icon:'members',href:'members'},{name:'Insights',icon:'insights',href:'/insights'},{name:'Install',icon:'install',href:'/install'}] as const;
+
 const navigation=[
  {name:'Home',icon:'home',href:'/dashboard'},
  {name:'Games',icon:'games',href:'room'},
@@ -69,5 +71,5 @@ export default function PersistentNavigation(){
   <div className="pkr-persistent-room"><span>YOUR POKER CLUB</span><strong>{rooms.find(r=>r.id===eventId)?.name||'Poker rooms'}</strong></div>
   <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={selected(item.href)?'page':undefined} className={selected(item.href)?'active':''}><PkrGlyph name={item.icon}/>{item.name}</button>)}</nav>
   <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
- </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{[{name:'Home',icon:'home',href:'/dashboard'},{name:'Games',icon:'games',href:'room'},{name:'Members',icon:'members',href:'members'},{name:'Insights',icon:'insights',href:'/insights'},{name:'Install',icon:'install',href:'/install'}].map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
+ </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{mobileNavigation.map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
 }
