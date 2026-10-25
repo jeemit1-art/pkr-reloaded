@@ -830,7 +830,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 
 // ─── Game Card with RSVP count + push + links ───
 function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete}:any) {
-  const lobbyUrl = `${appUrl}/games/${game.id}/lobby`;
+  const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
   const isLive = game.status === 'active';
@@ -909,9 +909,9 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
           </>)}
           <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(rsvpUrl).then(()=>alert('RSVP link copied!'));}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
-            📋 RSVP Link
+            📋 Live RSVP Link
           </button>
-          <a onClick={e=>e.stopPropagation()} href={`https://wa.me/?text=${encodeURIComponent(`🃏 *${eventName}*\n${fmtDate(game.scheduled_at)}${game.location?'\n📍 '+game.location:''}\n\nRSVP: ${lobbyUrl}`)}`}
+          <a onClick={e=>e.stopPropagation()} href={`https://wa.me/?text=${encodeURIComponent(`🃏 *${eventName}*\n${fmtDate(game.scheduled_at)}${game.location?'\n📍 '+game.location:''}\n\nChoose an arrival time and seat; see the live RSVP board: ${lobbyUrl}`)}`}
             target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
             style={{fontSize:10,padding:'5px 10px',textDecoration:'none',display:'flex',alignItems:'center'}}>
             📱 WhatsApp

@@ -48,6 +48,10 @@ def main():
     # This does NOT execute the migration on staging or production Cloudflare D1.
     migration = ROOT / "migrations/20261024_staging_integrity.sql"
     connection.executescript(migration.read_text(encoding="utf-8"))
+    # Validate the optional RSVP schema on an in-memory copy too. Do NOT
+    # interpret this as approval to migrate staging or production remotely.
+    rsvp_migration = ROOT / "migrations/20261025_staging_rsvp_board.sql"
+    connection.executescript(rsvp_migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []

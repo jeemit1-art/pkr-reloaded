@@ -70,7 +70,7 @@ export default function GamePage() {
   );
   if (!game) return null;
 
-  const lobbyUrl   = `${appUrl}/games/${game.id}/lobby`;
+  const lobbyUrl   = `${appUrl}/games/${game.id}/rsvp`;
   const resultsUrl = game.results_token ? `${appUrl}/games/results/${game.results_token}` : '';
   const statusColor: any = {
     scheduled:'var(--amber)', lobby:'var(--gold)',
@@ -177,8 +177,8 @@ export default function GamePage() {
           </button>
           <button className="btn btn-ghost"
             style={{width:'100%',fontSize:12,padding:'10px',marginBottom:12}}
-            onClick={()=>router.push(`/games/${id}/lobby`)}>
-            👥 View RSVP Lobby
+            onClick={()=>router.push(`/games/${id}/rsvp`)}>
+            👥 Live RSVP & Arrival Times
           </button>
         </>)}
 
@@ -186,8 +186,8 @@ export default function GamePage() {
         {(game.status==='scheduled'||game.status==='lobby') && !isHost && (
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12}}
-            onClick={()=>router.push(`/games/${id}/lobby`)}>
-            ✋ RSVP for this Game
+            onClick={()=>router.push(`/games/${id}/rsvp`)}>
+            ✋ RSVP & Choose Your Seat
           </button>
         )}
 
@@ -227,7 +227,7 @@ export default function GamePage() {
               onClick={()=>navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'))}>
               📋 Copy RSVP Link
             </button>
-            <a href={`https://wa.me/?text=${encodeURIComponent('🃏 '+game.event_name+'\n'+fmtDate(game.scheduled_at)+(game.location?'\n📍 '+game.location:'')+'\n\nRSVP here: '+lobbyUrl)}`}
+            <a href={`https://wa.me/?text=${encodeURIComponent('🃏 '+game.event_name+'\n'+fmtDate(game.scheduled_at)+(game.location?'\n📍 '+game.location:'')+'\n\nChoose your arrival and seat: '+lobbyUrl)}`}
               target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
               style={{fontSize:11,padding:'7px 12px',textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
               📱 WhatsApp Invite
@@ -274,6 +274,12 @@ export default function GamePage() {
                 <span style={{flex:1,fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>
                   {r.display_name}
                 </span>
+                {(r as any).arrival_option && (
+                  <span style={{fontSize:11,color:'var(--gold)',marginRight:8}}>
+                    {(r as any).arrival_option==='late'?'Late':(r as any).arrival_option}
+                    {(r as any).seat_number?' · Seat '+(r as any).seat_number:''}
+                  </span>
+                )}
                 {r.whatsapp && (
                   <a href={`https://wa.me/${r.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent('Game on — '+fmtDate(game.scheduled_at))}`}
                     target="_blank" rel="noopener noreferrer"

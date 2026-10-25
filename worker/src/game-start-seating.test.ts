@@ -31,6 +31,25 @@ describe('Capacity-safe RSVP plan',()=>{
     expect(p.existingMoves).toEqual([{user_id:'a',seat_number:1}]);
     expect(p.newPlayers.map(x=>[x.display_name,x.seat_number])).toEqual([['Ben',2]]);
   });
+  it('honours booked seats before filling Quick Seat gaps',()=>{
+    const plan=planStartSeating(5,[
+      {user_id:'host',display_name:'Host',seat_number:4},
+      {user_id:'quick',display_name:'Quick',seat_number:null},
+    ],[
+      {id:'rsvp-1',display_name:'Alex',seat_number:1},
+      {id:'rsvp-2',display_name:'Charlie',seat_number:3},
+      {id:'rsvp-3',display_name:'Blair'},
+    ]);
+    expect(plan.existingMoves).toEqual([{user_id:'quick',seat_number:2}]);
+    expect(plan.newPlayers.map(p=>[p.display_name,p.seat_number]))
+      .toEqual([['Alex',1],['Charlie',3],['Blair',5]]);
+  });
+  it('does not displace a host-seated player when a stale RSVP requests their seat',()=>{
+    const plan=planStartSeating(3,[
+      {user_id:'host',display_name:'Host',seat_number:2}
+    ],[{id:'requested',display_name:'Alex',seat_number:2}]);
+    expect(plan.newPlayers[0].seat_number).toBe(1);
+  });
   it('rejects invalid capacities rather than inventing seats',()=>{
     expect(()=>planStartSeating(0,[],[])).toThrow(/capacity/);
     expect(()=>planStartSeating(3.5,[],[])).toThrow(/capacity/);

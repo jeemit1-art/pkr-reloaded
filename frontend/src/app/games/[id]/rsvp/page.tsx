@@ -1,87 +1,244 @@
-"use client";
-import{useEffect,useState}from'react';
-import{useParams}from'next/navigation';
+'use client';
+
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {useParams,useRouter} from 'next/navigation';
+import {api,getToken,type RsvpBoardData} from '@/lib/api';
+import {canUsePush,isPWAInstalled,subscribePush} from '@/lib/push';
+
+const guestKey=(id:string)=>'pkr:rsvp:v2:'+id;
+function timeLabel(t:string){
+  if(t==='late')return 'Running late';
+  if(t==='not-coming')return 'Not coming';
+  if(!/^\d\d:\d\d$/.test(t))return t||'Arrival not set';
+  const [h,m]=t.split(':').map(Number);
+  return new Date(2020,0,1,h,m).toLocaleTimeString('en-AU',{hour:'numeric',minute:m?'2-digit':undefined,hour12:true});
+}
+const gameDate=(t:number)=>new Date(t*1000).toLocaleString('en-AU',{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit'});
+type SavedGuest={id:string;token:string;name:string};
+
 export default function RsvpPage(){
-  const{id:gameId}=useParams<{id:string}>();
-  const[game,setGame]=useState<any>(null);
-  const[players,setPlayers]=useState<any[]>([]);
-  const[seat,setSeat]=useState<number|null>(null);
-  const[form,setForm]=useState({name:'',wa:''});
-  const[step,setStep]=useState<'seats'|'details'|'done'>('seats');
-  const[saving,setSaving]=useState(false);
-  const[err,setErr]=useState('');
-  const[loading,setLoading]=useState(true);
-  const api=process.env.NEXT_PUBLIC_API_URL||'http://localhost:8787';
-  function hdrs():Record<string,string>{const ctx=typeof window!=='undefined'?JSON.parse(localStorage.getItem('pkrCtx')||'null'):null;const h:Record<string,string>={'Content-Type':'application/json'};if(ctx?.token)h.Authorization=`Bearer ${ctx.token}`;return h;}
-  useEffect(()=>{fetch(`${api}/games/${gameId}`,{credentials:'include',headers:hdrs()}).then(r=>r.json()).then(g=>{setGame(g);setPlayers(g.players||[]);}).catch(e=>setErr(e.message)).finally(()=>setLoading(false));},[gameId]);
-  async function confirm(){
-    if(!form.name.trim()){setErr('Please enter your name');return;}
-    setSaving(true);setErr('');
-    try{await fetch(`${api}/games/${gameId}/seat`,{method:'POST',credentials:'include',headers:hdrs(),body:JSON.stringify({display_name:form.name.trim(),whatsapp:form.wa||undefined,seat_number:seat,rsvp:true,buy_ins:0})});setStep('done');}
-    catch(e:any){setErr(e.message);}finally{setSaving(false);}
+  const {id}=useParams<{id:string}>();
+  const router=useRouter();
+  const [board,setBoard]=useState<RsvpBoardData|null>(null);
+  const [guest,setGuest]=useState<SavedGuest|null>(null);
+  const [name,setName]=useState(''),[arrival,setArrival]=useState('');
+  const [seat,setSeat]=useState<number|null>(null);
+  const [saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const [isHost,setIsHost]=useState(false),[times,setTimes]=useState<string[]>([]);
+  const [timesDirty,setTimesDirty]=useState(false),[updatingTimes,setUpdatingTimes]=useState(false);
+  const [alerts,setAlerts]=useState(false);
+  const first=useRef(false),snapshot=useRef('');
+  const alertsRef=useRef(false),timesDirtyRef=useRef(false);
+  useEffect(()=>{alertsRef.current=alerts;timesDirtyRef.current=timesDirty;},[alerts,timesDirty]);
+
+  const load=useCallback(async()=>{
+    try {
+      const data=await api.games.rsvpBoard(id);
+      setBoard(data);
+      if(!timesDirtyRef.current)setTimes(data.options);
+      const next=JSON.stringify(data.guests.map(r=>[r.id,r.status,r.arrival_option,r.seat_number,r.updated_at]));
+      if(snapshot.current&&snapshot.current!==next&&document.visibilityState==='visible'){
+        setNotice('The group RSVP board was updated.');
+        if(alertsRef.current&&typeof Notification!=='undefined'&&Notification.permission==='granted')
+          new Notification('Poker night RSVP update',{body:'Someone updated their arrival or seat.'});
+      }
+      snapshot.current=next;setError('');
+      if(first.current)return;
+      first.current=true;
+      try{
+        const raw=localStorage.getItem(guestKey(id));
+        if(raw){
+          const saved=JSON.parse(raw) as SavedGuest;
+          if(/^[a-f0-9]{64}$/.test(saved.token)){
+            setGuest(saved);setName(saved.name);
+            const mine=data.guests.find(r=>r.id===saved.id);
+            if(mine){setArrival(mine.arrival_option);setSeat(mine.seat_number);}
+          }
+        }
+      }catch{}
+      if(getToken())Promise.all([api.auth.me(),api.events.get(data.event.id)])
+        .then(([user,event])=>setIsHost(event.members.some(m=>m.id===user.id&&(m.role==='host'||m.role==='cohost'))))
+        .catch(()=>{});
+    }catch(e:any){setError(e.message||'Could not load the RSVP board.');}
+  },[id]);
+
+  useEffect(()=>{
+    first.current=false;snapshot.current='';
+    void load();
+    const timer=setInterval(()=>{if(document.visibilityState!=='hidden')void load();},5000);
+    const refresh=()=>void load();
+    window.addEventListener('focus',refresh);
+    return ()=>{clearInterval(timer);window.removeEventListener('focus',refresh);};
+  },[load]);
+
+  async function submit(){
+    if(!board||name.trim().length<2||!arrival){setError('Enter your name and choose an arrival option.');return;}
+    setSaving(true);setError('');setNotice('');
+    try{
+      const result=await api.games.submitRsvpBoard(id,{
+        display_name:name.trim(),arrival_option:arrival,
+        seat_number:arrival==='not-coming'?null:seat,edit_token:guest?.token,
+      });
+      const saved=result.id&&result.edit_token
+        ?{id:result.id,token:result.edit_token,name:name.trim()}
+        :guest?{...guest,name:name.trim()}:null;
+      if(saved){localStorage.setItem(guestKey(id),JSON.stringify(saved));setGuest(saved);}
+      setNotice(arrival==='not-coming'?'Your absence has been recorded.':'RSVP saved. Your group can now see the update.');
+      await load();
+    }catch(e:any){setError(e.message||'Could not save your RSVP.');await load();}
+    finally{setSaving(false);}
   }
-  function fmtD(ts:number){return new Date(ts*1000).toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});}
-  const gold='#c9a84c',green='#2ecc71',bg='#060e07',bdr='rgba(201,168,76,0.15)';
-  const total=game?.seats||9;
-  const taken=new Set(players.filter((p:any)=>p.seat_number).map((p:any)=>p.seat_number));
-  if(loading)return<div style={{minHeight:'100vh',background:bg,display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:gold,opacity:0.6}}>PKR</div></div>;
-  return<div style={{minHeight:'100vh',background:bg,paddingBottom:60,fontFamily:'DM Sans,sans-serif'}}>
-    <div style={{background:'rgba(0,0,0,0.4)',borderBottom:`1px solid ${bdr}`,padding:'16px 20px',textAlign:'center'}}>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:gold,marginBottom:4}}>PKR</div>
-      {game&&<><div style={{fontSize:16,fontWeight:600,color:'#f0e6c8',marginBottom:4}}>{game.event_name||'Poker Night'}</div>
-      <div style={{fontSize:13,color:'#6b8c6e'}}>{game.scheduled_at?fmtD(game.scheduled_at):''}</div>
-      {game.location&&<div style={{fontSize:12,color:'#6b8c6e',marginTop:2}}>📍 {game.location}</div>}
-      <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:10}}>
-        <span style={{padding:'3px 10px',borderRadius:12,background:'rgba(46,204,113,0.1)',border:'1px solid rgba(46,204,113,0.2)',fontSize:12,color:green}}>{players.filter((p:any)=>p.rsvp||p.buy_ins>0).length} confirmed</span>
-        <span style={{padding:'3px 10px',borderRadius:12,background:'rgba(201,168,76,0.08)',border:`1px solid ${bdr}`,fontSize:12,color:gold}}>{total-taken.size} seats left</span>
-      </div></>}
-    </div>
-    <div style={{maxWidth:480,margin:'0 auto',padding:'20px 16px'}}>
-      {step==='done'?<div style={{textAlign:'center',padding:'40px 20px'}}>
-        <div style={{fontSize:'3rem',marginBottom:16}}>✅</div>
-        <div style={{fontSize:20,fontWeight:700,color:'#f0e6c8',marginBottom:8}}>You're in!</div>
-        <div style={{fontSize:14,color:'#6b8c6e',lineHeight:1.6}}>Seat {seat} confirmed for {form.name}.<br/>See you at the table!</div>
-        {game?.location&&<a href={`https://maps.google.com/?q=${encodeURIComponent(game.location)}`} target="_blank" rel="noreferrer" style={{display:'inline-block',marginTop:20,padding:'10px 20px',background:'rgba(201,168,76,0.1)',border:`1px solid ${bdr}`,borderRadius:8,color:gold,fontSize:13,textDecoration:'none'}}>📍 Get directions</a>}
-      </div>:step==='details'?<>
-        <button onClick={()=>setStep('seats')} style={{background:'none',border:'none',color:'#6b8c6e',cursor:'pointer',fontSize:13,marginBottom:16,padding:0}}>← Back to seats</button>
-        <div style={{fontSize:15,fontWeight:700,color:'#f0e6c8',marginBottom:4}}>Your details</div>
-        <div style={{fontSize:13,color:'#6b8c6e',marginBottom:20}}>Seat {seat} selected</div>
-        {['Your name *','WhatsApp (optional)'].map((lbl,i)=><div key={lbl} style={{marginBottom:12}}>
-          <div style={{fontSize:11,textTransform:'uppercase',letterSpacing:'1px',color:'#6b8c6e',marginBottom:6,fontWeight:600}}>{lbl}</div>
-          <input value={i===0?form.name:form.wa} onChange={e=>setForm(f=>i===0?{...f,name:e.target.value}:{...f,wa:e.target.value})} placeholder={i===0?'Enter your name':'04xx xxx xxx'} type={i===1?'tel':'text'}
-            style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.12)',color:'#f0e6c8',padding:'10px 12px',borderRadius:8,fontSize:15,outline:'none',fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}}/>
-        </div>)}
-        {game?.buy_in>0&&<div style={{background:'rgba(201,168,76,0.06)',border:`1px solid ${bdr}`,borderRadius:8,padding:'10px 14px',marginBottom:20}}>
-          <div style={{fontSize:13,color:'#f0e6c8'}}>Buy-in: <span style={{color:gold,fontWeight:700}}>${game.buy_in/100}</span></div>
-          <div style={{fontSize:11,color:'#6b8c6e',marginTop:2}}>Payable on the night</div>
-        </div>}
-        {err&&<div style={{fontSize:12,color:'#e74c3c',marginBottom:12}}>{err}</div>}
-        <button onClick={confirm} disabled={saving} style={{width:'100%',padding:'14px',borderRadius:10,cursor:saving?'wait':'pointer',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,118,30,0.85))',color:'#000',border:'none',fontSize:15,fontWeight:700,fontFamily:'DM Sans,sans-serif'}}>
-          {saving?'Confirming...':`Confirm Seat ${seat}`}
-        </button>
-      </>:<>
-        <div style={{fontSize:15,fontWeight:700,color:'#f0e6c8',marginBottom:4}}>Pick your seat</div>
-        <div style={{fontSize:13,color:'#6b8c6e',marginBottom:20}}>Tap an available seat to claim it</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:24}}>
-          {Array.from({length:total},(_,i)=>{const n=i+1,tk=taken.has(n),pl=players.find((p:any)=>p.seat_number===n),sel=seat===n;
-          return<div key={n} onClick={()=>!tk&&setSeat(sel?null:n)} style={{padding:'14px 10px',borderRadius:12,textAlign:'center',cursor:tk?'default':'pointer',border:`1px solid ${tk?'rgba(46,204,113,0.25)':sel?'rgba(201,168,76,0.6)':'rgba(255,255,255,0.08)'}`,background:tk?'rgba(46,204,113,0.06)':sel?'rgba(201,168,76,0.12)':'rgba(255,255,255,0.02)',transition:'all 0.15s'}}>
-            <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'1px',color:'#6b8c6e',marginBottom:8}}>Seat {n}</div>
-            {tk?<><div style={{width:36,height:36,borderRadius:'50%',background:'rgba(46,204,113,0.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 6px',fontSize:13,fontWeight:700,color:green}}>{(pl?.display_name||'?').slice(0,2).toUpperCase()}</div>
-            <div style={{fontSize:12,color:green,fontWeight:600}}>{pl?.display_name||'Taken'}</div></>
-            :<><div style={{width:36,height:36,borderRadius:'50%',background:sel?'rgba(201,168,76,0.2)':'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 6px',fontSize:20,color:sel?gold:'rgba(255,255,255,0.15)'}}>{sel?'★':'○'}</div>
-            <div style={{fontSize:12,color:sel?gold:'#6b8c6e',fontWeight:sel?600:400}}>{sel?'Selected':'Open'}</div></>}
-          </div>;})}
+  async function saveTimes(){
+    setUpdatingTimes(true);setError('');
+    try{
+      const result=await api.games.setRsvpTimes(id,times);
+      setTimes(result.options);setTimesDirty(false);setNotice('Arrival choices saved.');
+      await load();
+    }catch(e:any){setError(e.message||'Could not save arrival times.');}
+    finally{setUpdatingTimes(false);}
+  }
+  async function allowAlerts(){
+    if(typeof Notification==='undefined'){setNotice('Browser notifications are unavailable here. The live page still updates.');return;}
+    const result=await Notification.requestPermission();
+    setAlerts(result==='granted');
+    if(result==='granted'&&canUsePush()&&isPWAInstalled()&&board){
+      const subscribed=await subscribePush(board.event.id,undefined,name.trim()||undefined);
+      setNotice(subscribed
+        ?'PKR push alerts enabled for this device where supported. WhatsApp group posts are not automatic.'
+        :'Browser alerts enabled while this page stays open. Push registration was unavailable.');
+    }else{
+      setNotice(result==='granted'
+        ?'Browser alerts enabled while this page is open. WhatsApp group posts are not automatic.'
+        :'Alerts declined. The page will still update live.');
+    }
+  }
+  if(!board)return <div className="pkr-guest">
+    <header className="pkr-guest-top"><a href="/" className="pkr-guest-logo">♠ PKR</a><span>Game night RSVP</span></header>
+    <main className="pkr-guest-shell"><div className="pkr-guest-card pkr-guest-empty">
+      <div className="pkr-guest-symbol">♠</div>
+      <h1>{error?'RSVP board unavailable':'Opening your poker night'}</h1>
+      <p>{error||'Checking the latest arrivals and seats…'}</p>
+      {error&&<><button className="pkr-guest-button" onClick={()=>void load()}>Try again</button>
+        <a className="pkr-guest-outline" href={'/games/'+id+'/lobby'}>Legacy lobby</a></>}
+    </div></main>
+  </div>;
+
+  const attending=board.guests.filter(r=>r.status==='yes');
+  const unavailable=new Map<number,string>();
+  board.players.forEach(p=>{if(p.seat_number!=null)unavailable.set(p.seat_number,p.display_name);});
+  board.guests.forEach(r=>{if(r.status==='yes'&&r.seat_number!=null&&r.id!==guest?.id)unavailable.set(r.seat_number,r.display_name);});
+  const link=typeof window!=='undefined'?window.location.origin+'/games/'+id+'/rsvp':'';
+  const message='♠ *'+board.event.name+'*\n'+gameDate(board.game.scheduled_at)
+    +(board.game.location?'\n📍 '+board.game.location:'')
+    +'\n\nChoose an arrival time and seat. See live RSVPs here:\n'+link;
+  const closed=!['scheduled','lobby'].includes(board.game.status);
+  return <div className="pkr-guest">
+    <header className="pkr-guest-top">
+      <a href="/" className="pkr-guest-logo">♠ PKR</a>
+      <span className="pkr-guest-top-right"><span className="pkr-guest-pulse"/> Live RSVP board</span>
+    </header>
+    <main className="pkr-guest-shell">
+      <section className="pkr-guest-hero">
+        <span className="pkr-guest-kicker">YOUR NEXT GAME NIGHT</span>
+        <h1>{board.event.name}</h1>
+        <div className="pkr-guest-subtitle"><span>◷ {gameDate(board.game.scheduled_at)}</span>
+          {board.game.location&&<span>⌖ {board.game.location}</span>}</div>
+        <div className="pkr-guest-stats">
+          <div><strong>{attending.length}</strong><span>Coming</span></div>
+          <div><strong>{board.guests.filter(r=>r.status==='no').length}</strong><span>Not coming</span></div>
+          <div><strong>{Math.max(0,board.game.seats-unavailable.size-(guest?.id&&seat&&!unavailable.has(seat)?1:0))}</strong><span>Seats available</span></div>
         </div>
-        {seat&&<button onClick={()=>setStep('details')} style={{width:'100%',padding:'14px',borderRadius:10,cursor:'pointer',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,118,30,0.85))',color:'#000',border:'none',fontSize:15,fontWeight:700,fontFamily:'DM Sans,sans-serif'}}>Claim Seat {seat} →</button>}
-        {players.filter((p:any)=>p.rsvp||p.buy_ins>0).length>0&&<div style={{marginTop:24}}>
-          <div style={{fontSize:11,textTransform:'uppercase',letterSpacing:'1.5px',color:'#6b8c6e',fontWeight:600,marginBottom:10}}>Confirmed players</div>
-          {players.filter((p:any)=>p.rsvp||p.buy_ins>0).map((p:any)=><div key={p.user_id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-            <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(46,204,113,0.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:green,flexShrink:0}}>{p.display_name.slice(0,2).toUpperCase()}</div>
-            <div style={{fontSize:13,color:'#f0e6c8',fontWeight:500}}>{p.display_name}</div>
-            {p.seat_number&&<div style={{marginLeft:'auto',fontSize:11,color:'#6b8c6e'}}>Seat {p.seat_number}</div>}
-          </div>)}
-        </div>}
-      </>}
-    </div>
+      </section>
+      <div className="pkr-guest-grid">
+        <section className="pkr-guest-card">
+          <div className="pkr-guest-card-head">
+            <span className="pkr-guest-kicker">01 · YOUR PLAN</span>
+            <h2>{guest?'Update your RSVP':'Are you coming?'}</h2>
+            <p>Choose your arrival time and a seat if you have a preference. No account required.</p>
+          </div>
+          <label className="pkr-guest-label" htmlFor="pkr-rsvp-name">Your name</label>
+          <input className="pkr-guest-input" id="pkr-rsvp-name" maxLength={60} autoComplete="name"
+            placeholder="How your friends know you" value={name} disabled={closed}
+            onChange={e=>setName(e.target.value)}/>
+          <div className="pkr-guest-label">When will you arrive?</div>
+          <div className="pkr-guest-options">
+            {[...board.options,'late','not-coming'].map(option=><button type="button" key={option}
+              disabled={closed} aria-pressed={arrival===option}
+              className={'pkr-guest-choice '+(arrival===option?'selected':'')}
+              onClick={()=>{setArrival(option);if(option==='not-coming')setSeat(null);}}>
+              {option==='not-coming'?'✕ ':option==='late'?'◷ ':'✓ '}{timeLabel(option)}
+            </button>)}
+          </div>
+          {arrival&&arrival!=='not-coming'&&<>
+            <div className="pkr-guest-seat-heading">
+              <div><div className="pkr-guest-label">Pick a seat</div><p>Optional — decide on the night if you prefer.</p></div>
+              <button className="pkr-guest-clear" disabled={closed} type="button" onClick={()=>setSeat(null)}>No preference</button>
+            </div>
+            <div className="pkr-guest-seats" aria-label="Available seating">
+              {Array.from({length:board.game.seats},(_,i)=>{
+                const n=i+1,taken=unavailable.get(n),selected=seat===n;
+                return <button key={n} type="button" disabled={closed||Boolean(taken)} aria-pressed={selected}
+                  className={'pkr-guest-seat '+(taken?'taken':selected?'selected':'')}
+                  title={taken?'Reserved by '+taken:'Select seat '+n}
+                  onClick={()=>setSeat(selected?null:n)}>
+                  <strong>{String(n).padStart(2,'0')}</strong>
+                  <span>{taken?(taken.length>10?taken.slice(0,9)+'…':taken):selected?'Yours':'Open'}</span>
+                </button>;
+              })}
+            </div>
+          </>}
+          <div aria-live="polite">
+            {error&&<div className="pkr-guest-message error" role="alert">{error}</div>}
+            {notice&&<div className="pkr-guest-message success">{notice}</div>}
+          </div>
+          {closed?<div className="pkr-guest-message">RSVPs are now closed. You can still see the live board.</div>:
+            <button className="pkr-guest-button" disabled={saving||!arrival||name.trim().length<2}
+              onClick={submit}>{saving?'Saving…':guest?'Save my changes':'Confirm my RSVP'} <span>→</span></button>}
+          {guest&&<p className="pkr-guest-footnote">A private edit key is stored on this device. Keep this browser data to change your response later.</p>}
+        </section>
+        <aside className="pkr-guest-right">
+          <section className="pkr-guest-card">
+            <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">02 · THE GROUP</span>
+              <h2>Who's coming</h2><p>Updates automatically every five seconds while open.</p></div>
+            {board.guests.length===0&&<p className="pkr-guest-none">No responses yet. Send the link to your WhatsApp group.</p>}
+            {board.guests.map(r=><div className="pkr-guest-person" key={r.id}>
+              <span className={'pkr-guest-avatar '+(r.status==='no'?'out':'')}>{r.display_name.slice(0,1).toUpperCase()}</span>
+              <div className="pkr-guest-person-info"><strong>{r.display_name}{guest?.id===r.id?' · You':''}</strong>
+                <small>{r.status==='no'?'Not coming':timeLabel(r.arrival_option)}</small></div>
+              <span className={'pkr-guest-seat-badge '+(r.status==='no'?'out':'')}>
+                {r.status==='no'?'OUT':r.seat_number?'SEAT '+r.seat_number:'IN'}</span>
+            </div>)}
+            <div className="pkr-guest-tools">
+              <a className="pkr-guest-button whats-app" href={'https://wa.me/?text='+encodeURIComponent(message)}
+                target="_blank" rel="noreferrer">Share in WhatsApp</a>
+              <button className="pkr-guest-outline" type="button"
+                onClick={()=>navigator.clipboard.writeText(link).then(()=>setNotice('Invite link copied.'))}>Copy invitation link</button>
+              <button className="pkr-guest-outline" type="button" onClick={allowAlerts}>Enable browser alerts</button>
+            </div>
+            <p className="pkr-guest-footnote">Anyone with the link can view names and arrival choices. Edit keys and contact details are never displayed. Browser alerts require permission and the page to remain open.</p>
+          </section>
+          {isHost&&<section className="pkr-guest-card">
+            <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">HOST CONTROLS</span>
+              <h2>Arrival choices</h2><p>Set times for your group. Late and Not coming remain available.</p></div>
+            <div className="pkr-guest-times">
+              {times.map((time,i)=><div className="pkr-guest-time" key={i}>
+                <input type="time" aria-label={'Arrival option '+(i+1)} className="pkr-guest-input"
+                  value={time} disabled={closed}
+                  onChange={e=>{setTimes(v=>v.map((t,j)=>i===j?e.target.value:t));setTimesDirty(true);}}/>
+                <button type="button" aria-label={'Remove time '+time} disabled={closed||times.length<=1}
+                  onClick={()=>{setTimes(v=>v.filter((_,j)=>j!==i));setTimesDirty(true);}}>×</button>
+              </div>)}
+            </div>
+            <div className="pkr-guest-host-actions">
+              <button className="pkr-guest-outline" disabled={closed||times.length>=8}
+                onClick={()=>{setTimes(v=>[...v,'18:30']);setTimesDirty(true);}}>+ Add time</button>
+              <button className="pkr-guest-button" disabled={closed||updatingTimes||!timesDirty}
+                onClick={saveTimes}>{updatingTimes?'Saving…':'Save times'}</button>
+            </div>
+            <button className="pkr-guest-outline full" onClick={()=>router.push('/games/'+id)}>Game details →</button>
+          </section>}
+        </aside>
+      </div>
+    </main>
   </div>;
 }

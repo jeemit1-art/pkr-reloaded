@@ -5,6 +5,7 @@ import { corsHeaders } from './middleware';
 import auth    from './routes/auth';
 import events  from './routes/events';
 import games   from './routes/games';
+import rsvpBoard from './routes/rsvp-board';
 import billing from './routes/billing';
 import hands      from './routes/hands';
 import tournament from './routes/tournament';
@@ -41,6 +42,7 @@ app.use('/games/:id/analysis/*', async (c, next) => {
 app.route('/billing', billing);
 app.route('/',        hands);
 app.route('/',        payments);
+app.route('/',        rsvpBoard);
 app.route('/',        games);
 app.route('/',        tournament);
 app.route('/',        analysis);

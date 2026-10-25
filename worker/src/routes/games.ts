@@ -100,6 +100,13 @@ games.get('/games/:id', authMiddleware, async (c) => {
   if(revisionMode(c.env)&&players.results.some(p=>!Number.isSafeInteger(p.revision)))
     return c.json({error:'Financial revision records are not initialised.',code:'REVISION_UNAVAILABLE'},503);
   const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  if(c.env.PKR_RSVP_V2==='1'){
+    const arrivals=await c.env.DB.prepare(
+      'SELECT id,game_id,display_name,status,arrival_option,seat_number,created_at,updated_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
+    ).bind(gameId).all<any>();
+    const names=new Set(arrivals.results.map(r=>r.display_name.toLowerCase()));
+    rsvps.results=[...arrivals.results,...rsvps.results.filter((r:any)=>!names.has(r.display_name.toLowerCase()))];
+  }
   const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too
   const transfers = game.status==='settled'
@@ -133,6 +140,13 @@ games.put('/games/:id', authMiddleware, async (c) => {
     ).bind(gameId).first<{highest:number|null}>();
     if ((highest?.highest ?? 0) > seats) {
       return c.json({error:'Cannot remove an occupied seat. Move or unseat players from the highest-numbered seats first.'},409);
+    }
+    if(c.env.PKR_RSVP_V2==='1'){
+      const booked=await c.env.DB.prepare(
+        "SELECT MAX(seat_number) AS highest FROM game_rsvp_guests WHERE game_id=? AND status='yes'"
+      ).bind(gameId).first<{highest:number|null}>();
+      if((booked?.highest??0)>seats)
+        return c.json({error:'An RSVP has reserved one of those seats. Ask the player to change their seat first.'},409);
     }
   }
   const result = await c.env.DB.prepare(`UPDATE games SET

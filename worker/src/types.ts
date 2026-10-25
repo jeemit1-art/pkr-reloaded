@@ -4,6 +4,8 @@ export interface Env {
   DB: D1Database;
   FRONTEND_URL: string;
   PKR_ENV?: 'production' | 'staging';
+  // Activated only after the isolated RSVP schema is verified.
+  PKR_RSVP_V2?: string;
   // Disabled by default; only enable after verifying optional D1 migration.
   PKR_INTEGRITY_REVISIONS?: string;
   // Disabled until verified hand_stack_baselines migration and host confirmation.

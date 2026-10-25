@@ -103,6 +103,11 @@ export const api = {
     settle:   (id:string,d:any)   => req<SettlementResult>(`/games/${id}/settle`,{method:'POST',body:JSON.stringify(d)}),
     start:    (id:string,password?:string) => req(`/games/${id}/start`,{method:'POST',body:JSON.stringify({password:password||''})}),
     rsvp:     (id:string,d:any)   => pub<{ok:boolean;rsvps:Rsvp[]}>(`/games/${id}/rsvp`,{method:'POST',body:JSON.stringify(d)}),
+    rsvpBoard:(id:string)=>pub<RsvpBoardData>('/games/'+id+'/rsvp-board'),
+    submitRsvpBoard:(id:string,body:{display_name:string;arrival_option:string;seat_number:number|null;edit_token?:string})=>
+      pub<RsvpBoardReceipt>('/games/'+id+'/rsvp-board',{method:'POST',body:JSON.stringify(body)}),
+    setRsvpTimes:(id:string,options:string[])=>
+      req<{ok:boolean;options:string[]}>('/games/'+id+'/rsvp-arrivals',{method:'PUT',body:JSON.stringify({options})}),
     seat:     (id:string,d:any)   => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat`,{method:'POST',body:JSON.stringify(d)}),
     removeSeat:(id:string,userId:string,expectedSeatNumber:number|null) =>
       req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{
@@ -194,4 +199,16 @@ export function fmtDate(ts:number):string {
 export function waLink(phone:string,msg:string):string {
   const clean = phone.replace(/\D/g,'');
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+}
+
+export interface RsvpBoardData {
+  game:{id:string;scheduled_at:number;location:string|null;seats:number;status:string};
+  event:{id:string;name:string};
+  options:string[];
+  guests:{id:string;display_name:string;status:'yes'|'no'|'maybe';arrival_option:string;seat_number:number|null;updated_at:number}[];
+  players:{display_name:string;seat_number:number}[];
+  version:number;
+}
+export interface RsvpBoardReceipt {
+  ok:boolean;id?:string;edit_token?:string;status:string;arrival_option:string;seat_number:number|null;
 }
