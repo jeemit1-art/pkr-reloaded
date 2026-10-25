@@ -190,6 +190,103 @@ router.post('/phone-invites/:token/confirm',async c=>{
   }catch{return failed(c);}
 });
 
+// Free, host-approved alternative to paid WhatsApp Verify.
+// The WhatsApp invite is a bearer link; it does NOT verify phone ownership.
+// No membership is granted until the existing group host approves the claim.
+router.post('/phone-invites/:token/request-approval',async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const invite=await getInvite(c.env,c.req.param('token')).catch(()=>null);
+  if(!invite)return c.json({error:'Invitation expired or unavailable'},404);
+  const body=await c.req.json().catch(()=>null) as {display_name?:unknown}|null;
+  const name=typeof body?.display_name==='string'?body.display_name.trim():'';
+  if(name.length<2||name.length>60||/[\\u0000-\\u001f<>]/.test(name))
+    return c.json({error:'Enter the name the host will recognise'},400);
+  const claim=randomToken(),hash=await phoneLookup(c.env,'claim',claim);
+  const existing=await c.env.KV.list({prefix:'join-request:'+invite.event_id+':'});
+  if(existing.keys.length>=100)return c.json({error:'Too many pending requests'},429);
+  await c.env.KV.put('join-request:'+invite.event_id+':'+hash,JSON.stringify({
+    event_id:invite.event_id,invite_id:invite.id,contact_id:invite.contact_id,
+    role:invite.role,display_name:name,claim_hash:hash,requested_at:Date.now()
+  }),{expirationTtl:86400});
+  privateHeaders(c);
+  return c.json({ok:true,claim,status:'pending',message:'The host must approve your request before you can join.'},202);
+});
+router.get('/events/:id/join-requests',authMiddleware,async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const id=c.req.param('id');
+  if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
+  const listed=await c.env.KV.list({prefix:'join-request:'+id+':'});
+  const requests=await Promise.all(listed.keys.slice(0,100).map(async k=>{
+    const raw=await c.env.KV.get(k.name);if(!raw)return null;
+    const r=JSON.parse(raw);
+    const contact=await c.env.DB.prepare(
+      'SELECT display_name,phone_cipher FROM group_phone_contacts WHERE id=? AND event_id=?'
+    ).bind(r.contact_id,id).first<{display_name:string;phone_cipher:string}>();
+    if(!contact)return null;
+    return {id:k.name.slice(('join-request:'+id+':').length),name:r.display_name,
+      expected_member:contact.display_name,phone:maskMobile(await decryptPhone(c.env,contact.phone_cipher)),
+      requested_at:r.requested_at};
+  }));
+  privateHeaders(c);
+  return c.json({requests:requests.filter(Boolean)});
+});
+router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const id=c.req.param('id'),key='join-request:'+id+':'+c.req.param('requestId');
+  if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
+  const body=await c.req.json().catch(()=>null) as {approve?:unknown}|null;
+  const raw=await c.env.KV.get(key);
+  if(!raw)return c.json({error:'Request expired'},404);
+  const state=JSON.parse(raw);
+  if(body?.approve===true){
+    // Final membership is created only when the approved claimant redeems their
+    // own secret; the request ID alone does not authenticate that claimant.
+    const invite=await c.env.DB.prepare(
+      'SELECT id FROM group_phone_invites WHERE id=? AND event_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+    ).bind(state.invite_id,id).first();
+    if(!invite)return c.json({error:'Original invitation expired; resend it'},409);
+    await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify({...state,approved_at:Date.now()}),{expirationTtl:3600});
+  }
+  await c.env.KV.delete(key);
+  return c.json({ok:true,approved:body?.approve===true});
+});
+router.post('/phone-invites/complete-approval',async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const body=await c.req.json().catch(()=>null) as {claim?:unknown}|null;
+  const claim=typeof body?.claim==='string'?body.claim:'';
+  if(!/^[a-f0-9]{64}$/.test(claim))return c.json({error:'Invalid request'},400);
+  const hash=await phoneLookup(c.env,'claim',claim);
+  const raw=await c.env.KV.get('approved-join:'+hash);
+  if(!raw)return c.json({status:'pending'},202);
+  const state=JSON.parse(raw);
+  const invite=await c.env.DB.prepare(
+    'SELECT id FROM group_phone_invites WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+  ).bind(state.invite_id,state.event_id,state.contact_id).first();
+  if(!invite)return c.json({error:'Invitation no longer valid'},409);
+  const contact=await c.env.DB.prepare(
+    'SELECT user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
+  ).bind(state.contact_id,state.event_id).first<{user_id:string|null}>();
+  if(!contact||contact.user_id)return c.json({error:'This invitation was already used'},409);
+  const userId=generateId(),name=state.display_name;
+  await c.env.DB.prepare(
+    'INSERT INTO users(id,google_sub,email,name,plan,trial_started_at) VALUES(?,?,?,?,?,unixepoch())'
+  ).bind(userId,'approval:'+generateId(),'',name,'trial').run();
+  const taken=await c.env.DB.prepare(
+    'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND consumed_at IS NULL'
+  ).bind(state.invite_id).run();
+  if(!taken.meta.changes)return c.json({error:'Invitation already redeemed'},409);
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)')
+      .bind(state.event_id,userId,state.role),
+    c.env.DB.prepare('UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=?')
+      .bind(userId,state.contact_id,state.event_id)
+  ]);
+  await c.env.KV.delete('approved-join:'+hash);
+  privateHeaders(c);
+  return c.json({ok:true,token:await signJWT({sub:userId,email:'',name},c.env.JWT_SECRET),
+    event_id:state.event_id});
+});
+
 // Existing verified members can sign in with only their phone and a fresh OTP.
 // A challenge is opaque, short-lived and never exposes whether a phone is known.
 async function rateLimit(env:Env,value:string,scope:string,max:number):Promise<boolean>{
