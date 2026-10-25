@@ -35,20 +35,22 @@ export default function PersistentNavigation(){
  },[pathname,hasSession]);
  if(!allowed||!hasSession)return null;
  const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]||gameEventId||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
+ const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
+ const selected=(href:string)=>href==='room'?pathname.startsWith('/events/')||pathname.startsWith('/games/'):href==='members'?pathname.startsWith('/events/')&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('tab')==='members':pathname===href||pathname.startsWith(href+'/');
  function visit(destination:string){
   if(destination==='room'||destination==='members'){
    if(!eventId){router.push('/dashboard');return;}
    if(destination==='members'&&pathname==='/events/'+eventId){
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:'members'}));
    }else{
-    router.push('/events/'+encodeURIComponent(eventId)+(destination==='members'?'?tab=members':''));
+    router.push(roomPath+(destination==='members'?'?tab=members':''));
    }
   } else router.push(destination);
  }
  return <><aside className="pkr-persistent-nav" aria-label="PKR navigation">
   <div className="pkr-persistent-brand"><span>♠</span> PKR</div>
   <div className="pkr-persistent-room"><span>YOUR POKER CLUB</span><strong>{rooms.find(r=>r.id===eventId)?.name||'Poker rooms'}</strong></div>
-  <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={item.href.startsWith('/')&&pathname.startsWith(item.href)?'page':undefined} className={item.href.startsWith('/')&&pathname.startsWith(item.href)?'active':''}><span aria-hidden="true">{item.icon}</span>{item.name}</button>)}</nav>
+  <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={selected(item.href)?'page':undefined} className={selected(item.href)?'active':''}><span aria-hidden="true">{item.icon}</span>{item.name}</button>)}</nav>
   <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
- </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{[{name:'Home',icon:'⌂',href:'/dashboard'},{name:'Games',icon:'♧',href:'room'},{name:'Members',icon:'♟',href:'members'},{name:'Insights',icon:'▥',href:'/insights'},{name:'Install',icon:'↗',href:'/install'}].map(item=><button key={item.name} type="button" className={item.href.startsWith('/')&&pathname.startsWith(item.href)?'active':''} onClick={()=>visit(item.href)}><span aria-hidden="true">{item.icon}</span><small>{item.name}</small></button>)}</nav></>;
+ </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{[{name:'Home',icon:'⌂',href:'/dashboard'},{name:'Games',icon:'♧',href:'room'},{name:'Members',icon:'♟',href:'members'},{name:'Insights',icon:'▥',href:'/insights'},{name:'Install',icon:'↗',href:'/install'}].map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><span aria-hidden="true">{item.icon}</span><small>{item.name}</small></button>)}</nav></>;
 }
