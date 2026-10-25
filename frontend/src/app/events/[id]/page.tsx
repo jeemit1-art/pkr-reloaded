@@ -42,6 +42,7 @@ export default function EventPage() {
   const [phoneBusy,setPhoneBusy]=useState(false);
   const [phoneError,setPhoneError]=useState('');
   const [phoneShare,setPhoneShare]=useState<{whatsapp_url:string;url:string;name:string}|null>(null);
+  const [selectedInviteGameId,setSelectedInviteGameId]=useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
   const [saving, setSaving] = useState(false);
@@ -54,6 +55,9 @@ export default function EventPage() {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(()=>{
+    const query=new URLSearchParams(window.location.search);
+    if(query.get('tab')==='members')setTab('members');
+    if(query.get('inviteGame'))setSelectedInviteGameId(query.get('inviteGame')||'');
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
       setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
@@ -191,6 +195,7 @@ export default function EventPage() {
   if (!event) return null;
 
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
+  const selectedGameId=upcoming.some(g=>g.id===selectedInviteGameId)?selectedInviteGameId:upcoming[0]?.id;
   const settled  = games.filter(g=>g.status==='settled');
   const installLink = appUrl;
 
@@ -294,7 +299,8 @@ export default function EventPage() {
                 onOpenTable={()=>router.push(`/games/${g.id}/play`)}
                 onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
                 onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
-                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}/>
+                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);setTab('members');}}/>
             ))}
             {settled.length>0 && (
               <>
@@ -389,6 +395,13 @@ export default function EventPage() {
               </button>
               {phoneError&&<p role="alert" style={{fontSize:12,marginTop:12,color:'var(--amber)'}}>{phoneError}</p>}
               {phoneContacts.length>0&&<div style={{marginTop:20}}>
+                {upcoming.length>0&&<label style={{display:'block',fontSize:11,color:'var(--muted)',marginBottom:10}}>Choose game for WhatsApp invitations:
+                  <select aria-label="Game to invite members to" value={selectedGameId||''}
+                    onChange={e=>setSelectedInviteGameId(e.target.value)}
+                    style={{width:'100%',marginTop:6,padding:'10px',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-hi)'}}>
+                    {upcoming.map(game=><option value={game.id} key={game.id}>{fmtDate(game.scheduled_at)}</option>)}
+                  </select>
+                </label>}
                 <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>
                   Your private contacts · {phoneContacts.length}
                 </div>
@@ -398,8 +411,8 @@ export default function EventPage() {
                     <div style={{fontSize:14}}>{contact.display_name}</div>
                     <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Verified member':'Invitation pending'}</div>
                   </div>
-                  {contact.status==='joined'&&upcoming[0]&&
-                    <a href={gameWhatsAppLink(contact.phone,upcoming[0].id)} target="_blank" rel="noreferrer"
+                  {contact.status==='joined'&&selectedGameId&&
+                    <a href={gameWhatsAppLink(contact.phone,selectedGameId)} target="_blank" rel="noreferrer"
                       className="btn btn-outline" style={{textDecoration:'none',fontSize:10,padding:'7px 9px'}}>WhatsApp game</a>}
                   {contact.status!=='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy}
                     onClick={()=>void inviteMobile(contact.display_name,contact.phone,'member')}>Invite again</button>}
@@ -936,7 +949,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete}:any) {
+function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
@@ -1014,15 +1027,10 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
               Delete
             </button>
           </>)}
-          <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(rsvpUrl).then(()=>alert('RSVP link copied!'));}}
+          {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
-            📋 Live RSVP Link
-          </button>
-          <a onClick={e=>e.stopPropagation()} href={`https://wa.me/?text=${encodeURIComponent(`🃏 *${eventName}*\n${fmtDate(game.scheduled_at)}${game.location?'\n📍 '+game.location:''}\n\nChoose an arrival time and seat; see the live RSVP board: ${lobbyUrl}`)}`}
-            target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
-            style={{fontSize:10,padding:'5px 10px',textDecoration:'none',display:'flex',alignItems:'center'}}>
-            📱 WhatsApp
-          </a>
+            📱 Invite verified group members
+          </button>}
           {liveUrl && game.status==='active' && (
             <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--green)'}}>
