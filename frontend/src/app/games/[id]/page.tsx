@@ -112,7 +112,7 @@ export default function GamePage() {
         </div>
       </div>
 
-      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
+      <div className="pkr-content pkr-game-detail-shell" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
 
         {/* Game info card */}
         <div className="card-gold pkr-game-summary pkr-casino-game-summary" style={{padding:'20px',marginBottom:16}}>

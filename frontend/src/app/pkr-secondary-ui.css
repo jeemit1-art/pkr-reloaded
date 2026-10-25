@@ -243,3 +243,54 @@
 #gameScreen.pkr-wide-table .seat-chip{border-color:#d6ad60!important;background:linear-gradient(135deg,#173e30,#071a14)!important;box-shadow:0 6px 15px #000a}
 #gameScreen.pkr-wide-table .seat-chip.empty{background:#0b2019!important;border:1.5px dashed #ac8b50!important}
 #gameScreen.pkr-wide-table .seat-net{color:#e7d9af}
+
+/* Game detail screen — approved poker club art and reusable stat tiles.
+   Only existing game values and action handlers are displayed. */
+.pkr-game-detail .pkr-topbar{background:rgba(6,22,17,.96)!important;border-bottom:1px solid rgba(238,194,100,.25)!important}
+.pkr-game-detail .pkr-topbar>div{max-width:1210px!important;min-height:61px}
+.pkr-game-detail .pkr-game-detail-shell{width:min(100%,1210px)!important;max-width:1210px!important;padding:24px clamp(14px,2.6vw,30px) 100px!important}
+.pkr-game-detail .pkr-casino-game-summary{
+ min-height:310px;padding:clamp(23px,3vw,34px)!important;
+ border:1px solid rgba(241,195,99,.44)!important;border-radius:17px!important;
+ background-image:linear-gradient(90deg,rgba(3,21,16,.69),rgba(3,21,16,.36) 55%,rgba(3,21,16,.06)),var(--pkr-desktop-banner)!important;
+ background-position:center,right center!important;background-size:cover,cover!important;background-repeat:no-repeat!important;
+ display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;box-shadow:0 18px 42px #0005;
+}
+.pkr-game-detail .pkr-casino-game-summary>.pkr-eyebrow{color:#f5ca77!important;font-size:11px!important;font-weight:800;letter-spacing:.15em!important}
+.pkr-game-detail .pkr-casino-game-summary>.display{
+ font:650 clamp(26px,3vw,42px)/1.12 var(--font-display),Georgia,serif!important;
+ color:#fff6e4!important;max-width:750px;text-shadow:0 3px 20px #000b;
+}
+.pkr-game-detail .pkr-casino-game-summary .pkr-game-metrics{
+ margin-top:28px!important;padding-top:0!important;border-top:0!important;
+ max-width:820px;gap:10px!important;
+}
+.pkr-game-detail .pkr-game-metrics>div{
+ min-width:0;padding:14px 12px;background:#08231db8;border:1px solid rgba(225,199,141,.28);
+ backdrop-filter:blur(8px);border-radius:10px;
+}
+.pkr-game-detail .pkr-game-metrics .display{font:750 clamp(19px,2.3vw,29px)/1.1 var(--font-body),system-ui!important;color:#fff4e3!important}
+.pkr-game-detail .pkr-game-metrics>div>div:last-child{color:#c6d6ca!important;font-size:10px!important;letter-spacing:.04em!important;margin-top:7px!important}
+.pkr-game-detail .pkr-player-activity{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pkr-game-detail .pkr-player-activity>div{min-width:0;border:1px solid rgba(226,196,124,.25)!important;border-radius:12px;background:#0d2b21!important;padding:17px!important}
+.pkr-game-detail .pkr-game-detail-shell>.btn-primary,
+.pkr-game-detail .pkr-game-detail-shell>.btn.btn-primary{
+ min-height:54px;border-radius:11px!important;background:linear-gradient(135deg,#ffe5a0,#d6a24a)!important;color:#152017!important;font-weight:850!important;border:1px solid #ffca70!important;
+}
+.pkr-game-detail .pkr-game-detail-shell>.btn-ghost,
+.pkr-game-detail .pkr-game-detail-shell>.btn.btn-ghost,
+.pkr-game-detail .pkr-game-detail-shell>.btn-outline{min-height:48px;border-radius:11px!important;border-color:rgba(240,194,107,.3)!important;color:#f5e4bd!important;background:#0b241d!important}
+.pkr-game-detail .pkr-game-detail-shell>.card,.pkr-game-detail .pkr-game-detail-shell>.card-gold{border-radius:13px!important}
+.pkr-game-detail .pkr-game-detail-shell>div .card{border-radius:13px!important}
+@media(max-width:700px){
+ .pkr-game-detail .pkr-game-detail-shell{padding:13px 12px 110px!important}
+ .pkr-game-detail .pkr-casino-game-summary{
+  min-height:315px;padding:20px 16px!important;
+  background-image:linear-gradient(180deg,rgba(4,21,16,.1),rgba(4,21,16,.6) 45%,rgba(4,21,16,.98)),var(--pkr-mobile-banner)!important;
+  background-position:center,center top!important;
+ }
+ .pkr-game-detail .pkr-game-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-top:18px!important}
+ .pkr-game-detail .pkr-game-metrics>div{padding:11px!important}
+ .pkr-game-detail .pkr-casino-game-summary>.display{font-size:30px!important}
+ .pkr-game-detail .pkr-player-activity>div{padding:12px!important}
+}

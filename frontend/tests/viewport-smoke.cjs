@@ -88,6 +88,15 @@ async function test(){
        if(!rect)errors.push(size.name+' room missing hero/tabs geometry');
        else if(Math.abs(rect.heroLeft-rect.tabsLeft)>18||Math.abs(rect.heroRight-rect.tabsRight)>18) errors.push(size.name+' room banner and tabs misaligned: '+JSON.stringify(rect));
      }
+     if(item.id==='game-detail'){
+       const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
+         const s=getComputedStyle(el),r=el.getBoundingClientRect();
+         return {height:r.height,image:s.backgroundImage};
+       });
+       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
+       if(summary.height<245||!summary.image.includes(imageName))
+         errors.push(size.name+' game detail hero not matching approved banner: '+JSON.stringify(summary));
+     }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
        const sidebar=await page.locator('.pkr-persistent-nav').boundingBox();
