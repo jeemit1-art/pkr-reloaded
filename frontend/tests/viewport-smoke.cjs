@@ -12,7 +12,8 @@ const past=Math.floor(Date.now()/1000)-86400;
 const room={id:'test-room',name:'Friday Night Test',description:'Private game room',status:'active',role:'host',host_id:'test-user',member_count:4,game_count:2,buy_in:5000,created_at:past};
 const upcoming={id:'test-game',event_id:room.id,scheduled_at:future,status:'scheduled',location:'Test room',notes:'',seats:8,created_at:past,player_count:2,results_token:null,live_token:null};
 const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:past,player_count:4,results_token:'synthetic-results'};
-const members=[{id:'test-user',name:'Test Host',role:'host',email:'test@invalid.example',avatar_url:null,joined_at:past},{id:'member-2',name:'Demo Player',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
+const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#214b37"/><circle cx="32" cy="25" r="13" fill="#e9c783"/><path d="M10 64c0-30 44-30 44 0" fill="#e9c783"/></svg>');
+const members=[{id:'test-user',name:'Test Host',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Demo Player',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
 const leaders=[{user_id:'test-user',display_name:'Test Host',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Demo Player',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past}];
 const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Demo Player',to:'test-user',to_name:'Test Host',amount:7500,status:'owed'}]};
 const user={id:'test-user',name:'Test Host',email:'test@invalid.example',avatar_url:null,plan:'pro',trial_active:false,trial_days_left:0};
@@ -117,6 +118,18 @@ async function test(){
        if(!imageResponse.ok())errors.push(size.name+' '+item.id+' banner image returned '+imageResponse.status());
        else if((await imageResponse.body()).length<25000)errors.push(size.name+' '+item.id+' photographic banner appears over-compressed');
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+     }
+     if(item.id==='dashboard'){
+       const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Test Host'}).locator('.pkr-pro-member-avatar img');
+       const fallback=page.locator('.pkr-pro-member').filter({hasText:'Demo Player'}).locator('.pkr-pro-member-avatar');
+       if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard not displaying member avatar_url');
+       else {
+         const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit,position:getComputedStyle(img).position}));
+         if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover'||details.position!=='absolute')
+           errors.push(size.name+' dashboard member portrait is not properly displayed: '+JSON.stringify(details));
+       }
+       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='D'||await fallback.locator('img').count())
+         errors.push(size.name+' dashboard member without a photo did not retain initials');
      }
      if(item.id==='dashboard'&&size.width<=700){
        const feature=page.locator('.pkr-mobile-featured');
