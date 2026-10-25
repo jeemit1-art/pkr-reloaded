@@ -7,16 +7,42 @@ interface PushPayload {
 }
 
 // ── VAPID JWT for authentication ─────────────────────────────────────────────
-async function vapidJWT(audience: string, email: string, privateKeyB64: string): Promise<string> {
-  const now = Math.floor(Date.now()/1000);
-  const hdr = btoa(JSON.stringify({typ:'JWT',alg:'ES256'})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const pld = btoa(JSON.stringify({aud:audience, exp:now+3600, sub:`mailto:${email}`})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const input = `${hdr}.${pld}`;
-  const rawKey = Uint8Array.from(atob(privateKeyB64.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
-  const key = await crypto.subtle.importKey('pkcs8', rawKey, {name:'ECDSA', namedCurve:'P-256'}, false, ['sign']);
-  const sig = await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'}, key, new TextEncoder().encode(input));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  return `${input}.${sigB64}`;
+function fromBase64Url(value: string): Uint8Array {
+  const base=value.replace(/-/g,'+').replace(/_/g,'/');
+  return Uint8Array.from(atob(base+'='.repeat((4-base.length%4)%4)),c=>c.charCodeAt(0));
+}
+
+function toBase64Url(value: Uint8Array): string {
+  return btoa(String.fromCharCode(...value)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+/** Compatible with both raw 32-byte web-push VAPID scalars and DER PKCS#8 secrets. */
+export async function vapidJWT(
+  audience: string,email: string,privateKeyB64: string,publicKeyB64: string,
+): Promise<string> {
+  const now=Math.floor(Date.now()/1000);
+  const header=toBase64Url(new TextEncoder().encode(JSON.stringify({typ:'JWT',alg:'ES256'})));
+  const claims=toBase64Url(new TextEncoder().encode(JSON.stringify({
+    aud:audience,exp:now+3600,sub:email.startsWith('mailto:')?email:'mailto:'+email,
+  })));
+  const input=header+'.'+claims;
+  const bytes=fromBase64Url(privateKeyB64);
+  let key: CryptoKey;
+  if(bytes.length===32){
+    // web-push generate-vapid-keys returns a raw private scalar, NOT PKCS#8.
+    const publicPoint=fromBase64Url(publicKeyB64);
+    if(publicPoint.length!==65||publicPoint[0]!==4)throw new Error('Invalid VAPID public key');
+    key=await crypto.subtle.importKey('jwk',{
+      kty:'EC',crv:'P-256',
+      x:toBase64Url(publicPoint.slice(1,33)),
+      y:toBase64Url(publicPoint.slice(33,65)),
+      d:toBase64Url(bytes),
+    },{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
+  }else{
+    key=await crypto.subtle.importKey('pkcs8',bytes,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
+  }
+  const signed=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},key,new TextEncoder().encode(input));
+  return input+'.'+toBase64Url(new Uint8Array(signed));
 }
 
 // ── Web Push encryption (RFC 8291 / RFC 8188) ────────────────────────────────
@@ -116,13 +142,13 @@ async function sendToSub(
   env: Env,
   sub: { endpoint: string; p256dh: string; auth_key: string },
   plaintext: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const { ciphertext, salt, serverPublicKey } = await encryptPayload(plaintext, sub.p256dh, sub.auth_key);
     const body = buildBody(salt, serverPublicKey, ciphertext);
 
     const url = new URL(sub.endpoint);
-    const jwt = await vapidJWT(`${url.protocol}//${url.host}`, env.VAPID_EMAIL, env.VAPID_PRIVATE_KEY);
+    const jwt = await vapidJWT(`${url.protocol}//${url.host}`, env.VAPID_EMAIL, env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY);
 
     const res = await fetch(sub.endpoint, {
       method: 'POST',
@@ -137,11 +163,16 @@ async function sendToSub(
 
     if (res.status === 410 || res.status === 404) {
       await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(sub.endpoint).run();
-    } else if (!res.ok) {
-      console.error('Push failed', res.status, await res.text().catch(()=>''));
+      return false;
     }
+    if (!res.ok) {
+      console.error('Push failed', res.status, await res.text().catch(()=>''));
+      return false;
+    }
+    return true; // Push service accepted; not proof the recipient received or read it.
   } catch(e) {
     console.error('Push send error', e);
+    return false;
   }
 }
 
@@ -159,8 +190,8 @@ export async function sendPushToEvent(env: Env, eventId: string, payload: PushPa
 }
 
 /** Send push to a specific player by display_name within an event */
-export async function sendPushToPlayer(env: Env, eventId: string, displayName: string, payload: PushPayload): Promise<void> {
-  if (env.PKR_ENV === 'staging') return;
+export async function sendPushToPlayer(env: Env, eventId: string, displayName: string, payload: PushPayload): Promise<number> {
+  if (env.PKR_ENV === 'staging') return 0;
   const name = displayName.toLowerCase().trim();
   const firstName = name.split(/\s+/)[0];
 
@@ -200,7 +231,8 @@ export async function sendPushToPlayer(env: Env, eventId: string, displayName: s
     const allowed=new Set(verified.results.map(v=>v.endpoint));
     subs.results=subs.results.filter(v=>allowed.has(v.endpoint));
   }
-  if (!subs.results.length) return;
+  if (!subs.results.length) return 0;
   const body = JSON.stringify({ title:payload.title, body:payload.body, icon:'/icon-192.png', badge:'/icon-192.png', data:payload.data||{} });
-  await Promise.allSettled(subs.results.map(s => sendToSub(env, s, body)));
+  const delivered=await Promise.allSettled(subs.results.map(s=>sendToSub(env,s,body)));
+  return delivered.filter(x=>x.status==='fulfilled'&&x.value===true).length;
 }

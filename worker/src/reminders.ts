@@ -21,12 +21,16 @@ export async function sendPaymentReminders(env: Env): Promise<void> {
 
   for (const r of rows.results) {
     if (!r.from_name) continue;
-    await sendPushToPlayer(env, r.event_id, r.from_name, {
+    const accepted=await sendPushToPlayer(env, r.event_id, r.from_name, {
       title: `You still owe ${money(r.amount)} — ${r.event_name}`,
-      body: `Pay ${r.to_name}, then tap "I've paid" in the app.`,
+      body: `Once paid, tell the host or co-host so they can confirm receipt in PKR.`,
       data: { gameId: r.game_id, eventId: r.event_id, type: 'payment_reminder', results_token: r.results_token },
     });
-    await env.DB.prepare('UPDATE settlement_transfers SET last_reminded_at=?, reminder_count=reminder_count+1 WHERE id=?')
-      .bind(now, r.id).run();
+    // Count only push service acceptance, not attempted or failed sends.
+    // This does NOT mean the device displayed or the payer read the reminder.
+    if(accepted>0){
+      await env.DB.prepare('UPDATE settlement_transfers SET last_reminded_at=?, reminder_count=reminder_count+1 WHERE id=?')
+        .bind(now, r.id).run();
+    }
   }
 }

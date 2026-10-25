@@ -47,7 +47,8 @@ export default function ResultsPage() {
   }
 
   function buildTransferMsg(t: typeof transfers[0]) {
-    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Please transfer when you get a chance 🃏`;
+    const link=typeof window!=='undefined'?window.location.origin+'/games/results/'+encodeURIComponent(token as string):'';
+    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Once paid, please tell the host so they can confirm receipt in PKR. 🃏${link?'\\nReview results: '+link:''}`;
   }
 
   function patchTransfer(id:string, p:Partial<Transfer>) {
@@ -62,13 +63,21 @@ export default function ResultsPage() {
     setBusy(null);
   }
 
-  async function enableReminders(t: Transfer) {
+  async function enableReminders() {
     if (isIOS() && !isPWAInstalled()) {
-      alert("On iPhone: tap Share, then Add to Home Screen. Open PKR from your home screen and tap Remind me again.");
+      alert('On iPhone: tap Share, then Add to Home Screen. Open PKR from the Home Screen to enable alerts.');
       return;
     }
-    const ok = await subscribePush(data!.game.event_id, undefined, t.from_name);
-    alert(ok ? "Reminders on. You will get a nudge at 6pm until you tap I've paid." : "Could not enable notifications. Check your browser settings.");
+    // Viewing a shared results link must not let somebody subscribe as another payer.
+    const user=await api.auth.me().catch(()=>null);
+    if(!user){
+      alert('Sign in to PKR to enable notifications for your account.');
+      return;
+    }
+    const ok=await subscribePush(data!.game.event_id,user.id,user.name);
+    alert(ok
+      ?'PKR room notifications enabled. Personal payment reminders depend on the player name matching your account.'
+      :'Could not enable notifications. Check room membership and browser settings.');
   }
 
   function share() {
@@ -174,8 +183,8 @@ export default function ResultsPage() {
                         <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
                       )}
                       {t.status!=='paid' && (canUsePush() || isIOS()) && (
-                        <button className="btn btn-ghost" onClick={()=>enableReminders(t)}
-                          style={{fontSize:11,padding:'5px 10px'}}>🔔 Remind me</button>
+                        <button className="btn btn-ghost" onClick={()=>enableReminders()}
+                          style={{fontSize:11,padding:'5px 10px'}}>🔔 Enable my alerts</button>
                       )}
                       {isBanker && t.status!=='paid' && (
                         <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'paid')}
