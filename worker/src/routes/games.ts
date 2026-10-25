@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Env, SettleRequest, Transfer } from '../types';
-import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
+import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { sendPushToEvent, sendPushToPlayer } from '../push';
 import { minimumTransfers, prepareSettlementPositions, SettlementValidationError } from '../settle';
 import { clientSafeGame } from '../public-data';
@@ -99,7 +99,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
   const players = await getPlayers(c.env.DB,gameId,revisionMode(c.env));
   if(revisionMode(c.env)&&players.results.some(p=>!Number.isSafeInteger(p.revision)))
     return c.json({error:'Financial revision records are not initialised.',code:'REVISION_UNAVAILABLE'},503);
-  const rsvps   = await c.env.DB.prepare('SELECT * FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
+  const rsvps   = await c.env.DB.prepare('SELECT id,game_id,display_name,status,created_at FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   if(c.env.PKR_RSVP_V2==='1'){
     const arrivals=await c.env.DB.prepare(
       'SELECT id,game_id,display_name,status,arrival_option,seat_number,created_at,updated_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
@@ -112,7 +112,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
   const transfers = game.status==='settled'
     ? (await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(gameId).all()).results
     : [];
-  return c.json({...clientSafeGame(game), buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results, rsvps:rsvps.results, transfers});
+  return c.json({...clientSafeGame(game), buy_in: event?.buy_in ?? 0, event_name: event?.name ?? '', players:players.results.map(({whatsapp,...safe}:any)=>safe), rsvps:rsvps.results, transfers});
 });
 
 /* ── Update game ── */
@@ -216,12 +216,13 @@ games.delete('/games/:id', authMiddleware, async(c)=>{
    PUBLIC VIEWS (no auth)
 ═══════════════════════════════════════════ */
 
-games.get('/games/:id/lobby', async (c) => {
+games.get('/games/:id/lobby', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare(
     'SELECT id,event_id,scheduled_at,location,notes,seats,status FROM games WHERE id=?'
   ).bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+  if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   const event   = await c.env.DB.prepare('SELECT id,name FROM events WHERE id=?').bind(game.event_id).first();
   // RSVP invite links are shareable. Never disclose phone numbers through
   // an unauthenticated game link.
@@ -232,10 +233,11 @@ games.get('/games/:id/lobby', async (c) => {
   return c.json({ game, event, rsvps:rsvps.results, players:players.results });
 });
 
-games.get('/games/live/:token', async (c) => {
+games.get('/games/live/:token', optionalAuth, async (c) => {
   const token = c.req.param('token');
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status FROM games WHERE live_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   const event    = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string, buy_in:number}>();
   const buyInAmt = event?.buy_in ?? 0;
   const players  = await c.env.DB.prepare('SELECT display_name,seat_number,buy_ins,buy_in_total,cashout,net FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(game.id).all<any>();
@@ -244,10 +246,11 @@ games.get('/games/live/:token', async (c) => {
   return c.json({ game, event, players:players.results, totalIn, totalOut, bank:totalIn-totalOut, buyInAmt });
 });
 
-games.get('/games/results/:token', async (c) => {
+games.get('/games/results/:token', optionalAuth, async (c) => {
   const token = c.req.param('token');
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status,results_token,variance FROM games WHERE results_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   const event     = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
   const players   = await c.env.DB.prepare('SELECT user_id,display_name,seat_number,buy_ins,buy_in_total,cashout,net,settled_at FROM game_players WHERE game_id=? ORDER BY net DESC NULLS LAST').bind(game.id).all();
   const transfers = await c.env.DB.prepare('SELECT * FROM settlement_transfers WHERE game_id=?').bind(game.id).all();
@@ -741,7 +744,7 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
 games.get('/events/:eventId/players', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
-  const players = await c.env.DB.prepare('SELECT * FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+  const players = await c.env.DB.prepare('SELECT id,event_id,display_name,user_id,games_played,created_at FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
   return c.json(players.results);
 });
 
