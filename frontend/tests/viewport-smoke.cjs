@@ -133,6 +133,8 @@ async function test(){
        await page.waitForTimeout(300);
        const selected=await page.locator('.pkr-event-tabs .tab.active').first().textContent().catch(()=>null);
        if(!selected||!selected.toLowerCase().includes('members'))errors.push(size.name+' global Members navigation did not open room Members tab');
+       const contrast=await page.locator('.pkr-event-tabs .tab.active').evaluate(node=>getComputedStyle(node).color);
+       if(contrast==='rgb(252, 209, 130)')errors.push(size.name+' selected room tab has low-contrast gold text');
        if(!await page.locator('.pkr-member-summary').isVisible())errors.push(size.name+' members summary missing after navigation');
       }
      }

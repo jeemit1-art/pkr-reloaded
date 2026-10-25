@@ -29,7 +29,7 @@ export default function InstallGuide(){
   if('Notification' in window)setPermission(Notification.permission);
   const onPrompt=(e:Event)=>{e.preventDefault();setPrompt(e as InstallPromptEvent)};
   const onInstalled=()=>{setInstalled(true);setPrompt(null);setNotice('PKR is installed. Open it from your Home Screen to finish setup.')};
-  const onVisibility=()=>{if(document.visibilityState==='visible')setInstalled(isPWAInstalled())};
+  const onVisibility=()=>{if(document.visibilityState==='visible'){setInstalled(isPWAInstalled());if('Notification' in window)setPermission(Notification.permission);}};
   window.addEventListener('beforeinstallprompt',onPrompt);
   window.addEventListener('appinstalled',onInstalled);
   document.addEventListener('visibilitychange',onVisibility);
@@ -75,7 +75,8 @@ export default function InstallGuide(){
   </section>
   <section className="pkr-install-card"><div className="pkr-install-card-title"><span className={doneNotifications?'done':'step'}>{doneNotifications?'✓':'2'}</span><div><h2>Get game-night notifications</h2><p>Know when games are scheduled and when your game records change.</p></div></div>
     <p className="pkr-install-meta">Notifications: <strong>{doneNotifications?'Enabled for this poker room':permission==='granted'?'Permission granted — subscription required':permission}</strong></p>
-    {group?<button className="pkr-install-primary" onClick={enableNotifications} disabled={busy||doneNotifications||(platform==='ios'&&!installed)}>{busy?'Enabling…':doneNotifications?'✓ Alerts enabled':'Enable game alerts'}</button>:<p className="pkr-install-footnote">Open this guide from your poker room to subscribe to that group's notifications.</p>}
+    {group?<button className="pkr-install-primary" onClick={enableNotifications} disabled={busy||doneNotifications||permission==='denied'||(platform==='ios'&&!installed)}>{busy?'Enabling…':doneNotifications?'✓ Alerts enabled':permission==='denied'?'Notifications blocked in browser settings':'Enable game alerts'}</button>:<p className="pkr-install-footnote">Open this guide from your poker room to subscribe to that group's notifications.</p>}
+    {permission==='denied'&&<p className="pkr-install-footnote" role="status">Notifications are blocked for this site. Allow notifications in your browser's site permissions, then return to PKR and try again.</p>}
     <p className="pkr-install-footnote">Sounds and vibration depend on your phone settings; websites cannot force custom background alerts.</p>
   </section>
   <section className="pkr-install-card"><div className="pkr-install-card-title"><span className="step">3</span><div><h2>Open your poker room</h2><p>See games, members, seating, results and settlement.</p></div></div><button className="pkr-install-primary" onClick={()=>router.push(group?'/events/'+encodeURIComponent(group):'/dashboard')}>Go to my poker room →</button></section>
