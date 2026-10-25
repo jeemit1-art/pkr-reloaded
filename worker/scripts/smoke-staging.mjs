@@ -38,16 +38,16 @@ async function main() {
   assert.equal(payload.environment, 'staging');
   console.log('PASS worker /health: 200, environment=staging');
 
-  // Live RSVP v2 activation: a deliberately nonexistent game is a safe read-only
-  // probe. 404 means the feature is enabled and the lookup reached the route;
-  // 503 means the feature flag is still off. Never create test records here.
+  // Privacy regression: anonymous visitors must not be able to read RSVPs.
   const rsvp = await request('/games/pkr-rsvp-v2-smoke-nonexistent/rsvp-board');
   const rsvpBody = await rsvp.json().catch(() => ({}));
-  assert.equal(rsvp.status, 404,
-    'RSVP v2 is not active (expected 404 for nonexistent game, got ' + rsvp.status +
-    ', code=' + (rsvpBody.code || 'n/a') + ')');
-  assert.equal(rsvpBody.error, 'Game not found');
-  console.log('PASS RSVP v2 route and feature flag active (nonexistent game returns 404)');
+  assert.equal(rsvp.status, 401, 'Anonymous RSVP board must deny access');
+  assert.equal(rsvpBody.error, 'Unauthorized');
+  console.log('PASS anonymous RSVP board access denied (401)');
+
+  const newSubmission = await request('/games/pkr-rsvp-v2-smoke-nonexistent/rsvp-board', { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({display_name:'Test',arrival_option:'19:00'}) });
+  assert.equal(newSubmission.status,401,'Anonymous RSVP submissions must deny access');
+  console.log('PASS anonymous RSVP submission denied (401)');
 
   const legacy = await request('/games/pkr-rsvp-v2-smoke-nonexistent/rsvp', {
     method:'POST',
