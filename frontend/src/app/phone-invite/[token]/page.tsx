@@ -35,7 +35,7 @@ export default function PrivatePhoneInvitePage(){
     try{
       const result=await api.phoneInvites.confirm(token,code);
       saveToken(result.token);
-      router.replace('/events/'+result.event_id);
+      router.replace('/install?group='+encodeURIComponent(result.event_id));
     }catch(e:any){setError(e.message||'Could not verify your phone.');}
     finally{setBusy(false);}
   }
