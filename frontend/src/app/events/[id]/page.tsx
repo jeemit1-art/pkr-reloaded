@@ -50,6 +50,8 @@ export default function EventPage() {
   const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>);
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
   const [phoneName,setPhoneName]=useState('');
+  const [memberQuery,setMemberQuery]=useState('');
+  const [memberFilter,setMemberFilter]=useState<'all'|'admins'|'players'>('all');
   const [phoneNumber,setPhoneNumber]=useState('');
   const [phoneRole,setPhoneRole]=useState<'member'|'cohost'>('member');
   const [phoneBusy,setPhoneBusy]=useState(false);
@@ -220,6 +222,12 @@ export default function EventPage() {
   const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
   const selectedGameId=upcoming.some(g=>g.id===selectedInviteGameId)?selectedInviteGameId:upcoming[0]?.id;
   const settled  = games.filter(g=>g.status==='settled');
+  const visibleMembers=(event.members||[]).filter((m:any)=>{
+    const role=String(m.role||'member');
+    const matchRole=memberFilter==='all'||(memberFilter==='admins'?role==='host'||role==='cohost':role==='member');
+    const q=memberQuery.trim().toLowerCase();
+    return matchRole&&(!q||String(m.name||'').toLowerCase().includes(q)||String(m.email||'').toLowerCase().includes(q));
+  });
   const installLink = appUrl;
 
   const statusColor:any = {
@@ -466,6 +474,12 @@ export default function EventPage() {
                 <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
                 <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
                   The host must approve the person's join request. This free flow does not verify phone ownership.</p>
+                <div className="pkr-invite-preview" aria-label="Private invitation preview">
+                  <span>♠ PKR · PRIVATE INVITATION</span>
+                  <strong>{event.name}</strong>
+                  <p>Hi {phoneShare.name}, you have been invited to join our poker room on PKR. Your host will review the request before access is granted.</p>
+                  <small>{phoneShare.url}</small>
+                </div>
                 <a href={phoneShare.whatsapp_url} rel="noreferrer" target="_blank" className="btn btn-primary"
                   style={{display:'block',textAlign:'center',padding:'13px',textDecoration:'none'}}>Open WhatsApp for this member</a>
                 <button className="btn btn-outline" style={{width:'100%',marginTop:9}}
@@ -491,6 +505,15 @@ export default function EventPage() {
                 </div>
               </div>
             )}
+            <div className="pkr-member-search-tools">
+              <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span>⌕</span>
+                <input id="pkr-member-search" type="search" aria-label="Search members" placeholder="Search members…" value={memberQuery} onChange={e=>setMemberQuery(e.target.value)}/>
+              </label>
+              <div className="pkr-member-role-filters" role="group" aria-label="Filter members by role">
+                {([['all','All'],['admins','Admins'],['players','Players']] as const).map(([key,label])=>
+                  <button key={key} type="button" aria-pressed={memberFilter===key} onClick={()=>setMemberFilter(key)}>{label}</button>)}
+              </div>
+            </div>
             {(!event.members || event.members.length === 0) ? (
               <div className="empty-state">
                 <div className="empty-state-icon">👥</div>
@@ -498,9 +521,10 @@ export default function EventPage() {
               </div>
             ) : (
               <div className="card pkr-member-roster" style={{marginBottom:14}}>
-                {event.members.map((m:any, i:number) => (
+                {visibleMembers.length===0&&<p className="pkr-member-no-results">No members match this search or filter.</p>}
+                {visibleMembers.map((m:any, i:number) => (
                   <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
-                    borderBottom:i<event.members.length-1?'1px solid var(--border-sub)':'none'}}>
+                    borderBottom:i<visibleMembers.length-1?'1px solid var(--border-sub)':'none'}}>
                     <div style={{width:38,height:38,borderRadius:'50%',background:'var(--bg3)',
                       border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
                       justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>

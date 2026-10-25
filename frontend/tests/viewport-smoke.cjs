@@ -144,6 +144,9 @@ async function test(){
          errors.push(size.name+' live table is not full-viewport: '+JSON.stringify(geometry));
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
+       const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
+       if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
+       if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
      }
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
@@ -159,6 +162,14 @@ async function test(){
        const contrast=await page.locator('.pkr-event-tabs .tab.active').evaluate(node=>getComputedStyle(node).color);
        if(contrast==='rgb(252, 209, 130)')errors.push(size.name+' selected room tab has low-contrast gold text');
        if(!await page.locator('.pkr-member-summary').isVisible())errors.push(size.name+' members summary missing after navigation');
+       const search=page.locator('#pkr-member-search');
+       if(await search.count()){
+         await search.fill('Demo');
+         const roster=page.locator('.pkr-member-roster');
+         if(!await roster.getByText('Demo Player').isVisible())errors.push(size.name+' filtered member missing');
+         if(await roster.getByText('Test Host').count())errors.push(size.name+' member search did not filter');
+         await search.fill('');
+       }
       }
      }
      await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
