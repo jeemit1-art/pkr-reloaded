@@ -54,6 +54,8 @@ def release_check():
         raise Stop("Current release does not contain verified frontend/Worker commit")
     config = (WORKER / "wrangler.toml").read_text()
     for value in ('name = "pkr-reloaded-worker"',
+                  'binding = "DB"',
+                  'account_id = "4b4794b983d6966f4207d2ff4fd8c991"',
                   'database_id = "' + DB + '"',
                   'id = "' + KV + '"',
                   'FRONTEND_URL = "https://mypkr.app"'):
@@ -76,8 +78,10 @@ def query_control():
            "(SELECT COUNT(*) FROM game_players gp LEFT JOIN game_player_revisions r "
            "ON r.game_id=gp.game_id AND r.user_id=gp.user_id "
            "WHERE r.revision IS NULL) AS missing_revisions")
+    # Resolve D1 through the audited Worker binding, NOT the legacy display
+    # name: the Cloudflare database was renamed without changing its UUID.
     output = command("npx","--no-install","wrangler","d1","execute",
-                     "pkr-reloaded-db","--config","wrangler.toml","--remote",
+                     "DB","--config","wrangler.toml","--remote",
                      "--json","--command",sql,cwd=WORKER)
     try: data = json.loads(output)
     except ValueError:
