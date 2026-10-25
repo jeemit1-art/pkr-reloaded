@@ -183,7 +183,7 @@ export default function EventPage() {
   function gameWhatsAppLink(phone:string,gameId:string){
     const url=appUrl+'/games/'+gameId+'/rsvp';
     const message='♠ '+event.name+' poker night\nPrivate group RSVP: '+url+
-      '\nOnly verified members of this group can access this game.';
+      '\nOnly authorised members of this group can access this game.';
     return 'https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent(message);
   }
 
@@ -1090,7 +1090,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
           </>)}
           {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
-            📱 Invite verified group members
+            📱 Invite approved group members
           </button>}
           {liveUrl && game.status==='active' && (
             <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}

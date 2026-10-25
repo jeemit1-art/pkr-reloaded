@@ -77,16 +77,10 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
 export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
 
 export const api = {
-  mobileAuth: {
-    start: (phone:string)=>pub<{ok:boolean;challenge:string;message:string}>('/auth/mobile/start',{method:'POST',body:JSON.stringify({phone})}),
-    confirm: (challenge:string,code:string)=>pub<{ok:boolean;token:string}>('/auth/mobile/confirm',{method:'POST',body:JSON.stringify({challenge,code})}),
-  },
   phoneInvites: {
     requestApproval:(token:string,display_name:string)=>pub<{claim:string;status:string}>(`/phone-invites/${encodeURIComponent(token)}/request-approval`,{method:'POST',body:JSON.stringify({display_name})}),
     completeApproval:(claim:string)=>pub<{ok:boolean;token:string;event_id:string;status?:string}>('/phone-invites/complete-approval',{method:'POST',body:JSON.stringify({claim})}),
-    preview: (token:string)=>pub<{event_name:string;masked_phone:string;role:string;verification_ready:boolean}>(`/phone-invites/${encodeURIComponent(token)}`),
-    sendCode:(token:string)=>pub<{ok:boolean;message:string}>(`/phone-invites/${encodeURIComponent(token)}/send-code`,{method:'POST'}),
-    confirm: (token:string,code:string)=>pub<{ok:boolean;token:string;event_id:string;event_name:string}>(`/phone-invites/${encodeURIComponent(token)}/confirm`,{method:'POST',body:JSON.stringify({code})}),
+    preview: (token:string)=>pub<{event_name:string;masked_phone:string;role:string;expires_at:number;approval_required:true;delivery:'manual_whatsapp'}>(`/phone-invites/${encodeURIComponent(token)}`),
   },
   auth: {
     me:       () => req<User>('/auth/me'),

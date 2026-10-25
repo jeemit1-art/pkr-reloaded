@@ -9,10 +9,7 @@ export interface Env {
   // Additive mobile-first private directory; fail-closed until staging migration.
   PKR_PHONE_MEMBERS_V1?: string;
   PKR_CONTACT_KEY?: string;
-  TWILIO_VERIFY_SERVICE_SID?: string;
-  TWILIO_API_KEY?: string;
-  TWILIO_API_SECRET?: string;
-  PKR_PHONE_OTP_CHANNEL?: 'sms'|'whatsapp';
+  // Hosts manually send personal WhatsApp messages. No messaging provider secrets.
   // Disabled by default; only enable after verifying optional D1 migration.
   PKR_INTEGRITY_REVISIONS?: string;
   // Disabled until verified hand_stack_baselines migration and host confirmation.

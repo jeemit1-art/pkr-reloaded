@@ -1,12 +1,12 @@
 // Mobile-first private group directory; no phone directory is published globally.
-// All pending contact numbers are encrypted. Invitations are single-use, scoped
-// to a group/contact, and cannot be redeemed without a WhatsApp OTP.
+// Private group contacts are encrypted. Hosts send individual personal links
+// through WhatsApp manually; each request needs host approval (no messaging API).
 import {Hono} from 'hono';
 import type {Env} from '../types';
 import {authMiddleware,generateId,requireEventRole} from '../middleware';
 import {signJWT} from '../jwt';
 import {normalizeMobile,phoneLookup,encryptPhone,decryptPhone,randomToken,
-  maskMobile,phoneMembersReady,verifyProviderReady,twilioVerify} from '../phone-security';
+  maskMobile,phoneMembersReady} from '../phone-security';
 
 const router=new Hono<{Bindings:Env}>();
 type Contact={id:string;event_id:string;display_name:string;phone_cipher:string;phone_lookup:string;user_id:string|null};
@@ -14,7 +14,7 @@ type Invite={id:string;event_id:string;contact_id:string;display_name:string;pho
   role:string;expires_at:number;consumed_at:number|null;sent_count:number;last_sent_at:number|null;verify_count:number; event_name:string};
 
 function unavailable(c:any){return c.json({
-  error:'Phone membership is not activated on this staging database yet.',
+  error:'Private mobile membership is not activated yet.',
   code:'PHONE_MEMBERS_NOT_READY'
 },503);}
 function failed(c:any){return c.json({error:'Private mobile membership service is temporarily unavailable.'},503);}
@@ -65,7 +65,7 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
     const contact=await c.env.DB.prepare('SELECT id,user_id FROM group_phone_contacts WHERE event_id=? AND phone_lookup=?')
       .bind(eventId,lookup).first<{id:string;user_id:string|null}>();
     if(!contact)return failed(c);
-    if(contact.user_id)return c.json({error:'This number is already verified in this group.'},409);
+    if(contact.user_id)return c.json({error:'This contact is already linked to a member in this group.'},409);
     // Creating a fresh invitation revokes prior outstanding links for this contact.
     const token=randomToken(),tokenHash=await phoneLookup(c.env,'invite',token);
     const inviteId=generateId(),expires=Math.floor(Date.now()/1000)+48*3600;
@@ -78,8 +78,9 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
     const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
     const group=await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
       .bind(eventId).first<{name:string}>();
-    const message='You have a private PKR invitation to '+(group?.name||'a poker group')+
-      '. Open this link and verify your mobile number to join: '+url;
+    const message='Hi '+name+', I am inviting you to '+(group?.name||'our poker group')+
+      ' on PKR. Open this one-time link and request to join; I will approve your request: '+url+
+      '\nThis link expires in 48 hours.';
     privateHeaders(c);
     return c.json({ok:true,contact:{id:contact.id,display_name:name,phone:mobile,status:'invited'},
       invite:{url,expires_at:expires,role},whatsapp_url:'https://wa.me/'+mobile.slice(1)+'?text='+encodeURIComponent(message)},201);
@@ -140,82 +141,11 @@ router.get('/phone-invites/:token',async c=>{
     const mobile=await decryptPhone(c.env,invite.phone_cipher);
     privateHeaders(c);
     return c.json({event_name:invite.event_name,masked_phone:maskMobile(mobile),
-      role:invite.role,expires_at:invite.expires_at,verification_ready:verifyProviderReady(c.env)});
+      role:invite.role,expires_at:invite.expires_at,approval_required:true,delivery:'manual_whatsapp'});
   }catch{return failed(c);}
 });
-router.post('/phone-invites/:token/send-code',async c=>{
-  if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'Phone verification must be configured by the administrator.'},503);
-  try{
-    const invite=await getInvite(c.env,c.req.param('token'));
-    if(!invite)return c.json({error:'Invitation unavailable or expired.'},404);
-    const limited=await c.env.DB.prepare(
-      'UPDATE group_phone_invites SET sent_count=sent_count+1,last_sent_at=unixepoch() '+
-      'WHERE id=? AND consumed_at IS NULL AND expires_at>unixepoch() AND sent_count<5 '+
-      'AND (last_sent_at IS NULL OR last_sent_at<unixepoch()-60)'
-    ).bind(invite.id).run();
-    if(!limited.meta.changes)return c.json({error:'Please wait before requesting another code.'},429);
-    const mobile=await decryptPhone(c.env,invite.phone_cipher);
-    const sent=await twilioVerify(c.env,'send',mobile);
-    if(!sent)return c.json({error:'Could not send a WhatsApp verification code. Try again later.'},503);
-    return c.json({ok:true,message:'Verification code sent to your WhatsApp number.'});
-  }catch{return failed(c);}
-});
-router.post('/phone-invites/:token/confirm',async c=>{
-  if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'Phone verification unavailable'},503);
-  const body=await c.req.json().catch(()=>null) as {code?:unknown}|null;
-  const code=typeof body?.code==='string'?body.code.trim():'';
-  if(!/^\d{4,10}$/.test(code))return c.json({error:'Enter your verification code.'},400);
-  try{
-    const invite=await getInvite(c.env,c.req.param('token'));
-    if(!invite)return c.json({error:'Invitation unavailable or expired.'},404);
-    const limited=await c.env.DB.prepare(
-      'UPDATE group_phone_invites SET verify_count=verify_count+1 '+
-      'WHERE id=? AND consumed_at IS NULL AND expires_at>unixepoch() AND verify_count<8 AND sent_count>0'
-    ).bind(invite.id).run();
-    if(!limited.meta.changes)return c.json({error:'Verification attempts exceeded or code not requested.'},429);
-    const mobile=await decryptPhone(c.env,invite.phone_cipher);
-    if(!await twilioVerify(c.env,'check',mobile,code))
-      return c.json({error:'Incorrect or expired verification code.'},403);
-    const globalLookup=await phoneLookup(c.env,'verified-phone',mobile);
-    let identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
-      .bind(globalLookup).first<{user_id:string}>();
-    if(!identity){
-      const userId=generateId();
-      // Legacy users schema requires google_sub/email; phone accounts use an
-      // opaque synthetic marker, NEVER the phone itself, and blank email.
-      await c.env.DB.prepare(
-        'INSERT INTO users(id,google_sub,email,name,plan,trial_started_at) VALUES(?,?,?,?,?,unixepoch())'
-      ).bind(userId,'phone:'+generateId(),'',invite.display_name,'trial').run();
-      await c.env.DB.prepare(
-        'INSERT OR IGNORE INTO verified_phone_identities(phone_lookup,user_id) VALUES(?,?)'
-      ).bind(globalLookup,userId).run();
-      identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
-        .bind(globalLookup).first<{user_id:string}>();
-    }
-    if(!identity)return failed(c);
-    const consumed=await c.env.DB.prepare(
-      'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
-    ).bind(invite.id).run();
-    if(!consumed.meta.changes)return c.json({error:'Invitation already used or expired.'},409);
-    await c.env.DB.batch([
-      c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?) '+
-        "ON CONFLICT(event_id,user_id) DO UPDATE SET role=CASE WHEN event_members.role='host' THEN 'host' "+
-        "WHEN event_members.role='cohost' THEN 'cohost' ELSE excluded.role END"
-      ).bind(invite.event_id,identity.user_id,invite.role),
-      c.env.DB.prepare('UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=?')
-        .bind(identity.user_id,invite.contact_id,invite.event_id)
-    ]);
-    const jwt=await signJWT({sub:identity.user_id,email:'',name:invite.display_name},c.env.JWT_SECRET);
-    privateHeaders(c);
-    return c.json({ok:true,token:jwt,event_id:invite.event_id,event_name:invite.event_name});
-  }catch{return failed(c);}
-});
-
-// Free, host-approved alternative to paid WhatsApp Verify.
-// The WhatsApp invite is a bearer link; it does NOT verify phone ownership.
-// No membership is granted until the existing group host approves the claim.
+// All members join by a host-sent, one-time private invitation link plus
+// explicit host approval. A forwarded link is NOT proof of phone ownership.
 router.post('/phone-invites/:token/request-approval',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
   const invite=await getInvite(c.env,c.req.param('token')).catch(()=>null);
@@ -318,74 +248,4 @@ router.post('/phone-invites/complete-approval',async c=>{
     event_id:state.event_id});
 });
 
-// Existing verified members can sign in with only their phone and a fresh OTP.
-// A challenge is opaque, short-lived and never exposes whether a phone is known.
-async function rateLimit(env:Env,value:string,scope:string,max:number):Promise<boolean>{
-  const key=await phoneLookup(env,'mobile-auth-rate:'+scope,value);
-  await env.DB.prepare(
-    'INSERT INTO phone_verification_limits(rate_key,window_start,attempts) VALUES(?,unixepoch(),1) '+
-    'ON CONFLICT(rate_key) DO UPDATE SET attempts=CASE WHEN window_start<unixepoch()-3600 THEN 1 ELSE attempts+1 END, '+
-    'window_start=CASE WHEN window_start<unixepoch()-3600 THEN unixepoch() ELSE window_start END'
-  ).bind(key).run();
-  const row=await env.DB.prepare('SELECT attempts FROM phone_verification_limits WHERE rate_key=?')
-    .bind(key).first<{attempts:number}>();
-  return !!row&&row.attempts<=max;
-}
-router.post('/auth/mobile/start',async c=>{
-  if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
-  const body=await c.req.json().catch(()=>null) as {phone?:unknown}|null;
-  const mobile=normalizeMobile(body?.phone);
-  if(!mobile)return c.json({error:'Enter a valid mobile number, including country code if outside Australia.'},400);
-  const challenge=randomToken();
-  const generic={ok:true,challenge,message:'If this mobile is registered with PKR, a WhatsApp code will be sent.'};
-  try{
-    const allowedPhone=await rateLimit(c.env,mobile,'phone',4);
-    const ip=c.req.header('CF-Connecting-IP')||'unknown';
-    const allowedIP=await rateLimit(c.env,ip,'ip',25);
-    if(!allowedPhone||!allowedIP)return c.json({error:'Too many verification requests. Try again later.'},429);
-    const lookup=await phoneLookup(c.env,'verified-phone',mobile);
-    const identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
-      .bind(lookup).first<{user_id:string}>();
-    if(identity){
-      const cipher=await encryptPhone(c.env,mobile);
-      await c.env.KV.put('phone-login:'+challenge,JSON.stringify({
-        phone_lookup:lookup,phone_cipher:cipher,checks:0
-      }),{expirationTtl:600});
-      // Do not disclose provider response or whether number exists.
-      await twilioVerify(c.env,'send',mobile);
-    }
-    return c.json(generic);
-  }catch{return failed(c);}
-});
-router.post('/auth/mobile/confirm',async c=>{
-  if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
-  const body=await c.req.json().catch(()=>null) as {challenge?:unknown;code?:unknown}|null;
-  const challenge=typeof body?.challenge==='string'?body.challenge:'';
-  const code=typeof body?.code==='string'?body.code.trim():'';
-  if(!/^[a-f0-9]{64}$/.test(challenge)||!/^\d{4,10}$/.test(code))
-    return c.json({error:'Invalid or expired verification.'},400);
-  try{
-    const raw=await c.env.KV.get('phone-login:'+challenge);
-    if(!raw)return c.json({error:'Invalid or expired verification.'},403);
-    const state=JSON.parse(raw) as {phone_lookup:string;phone_cipher:string;checks:number};
-    if(!state.phone_lookup||!state.phone_cipher||state.checks>=8)
-      return c.json({error:'Invalid or expired verification.'},403);
-    state.checks+=1;
-    await c.env.KV.put('phone-login:'+challenge,JSON.stringify(state),{expirationTtl:600});
-    const mobile=await decryptPhone(c.env,state.phone_cipher);
-    if(!await twilioVerify(c.env,'check',mobile,code))
-      return c.json({error:'Incorrect or expired verification code.'},403);
-    const identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
-      .bind(state.phone_lookup).first<{user_id:string}>();
-    if(!identity)return c.json({error:'Number is no longer registered.'},403);
-    const user=await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
-      .bind(identity.user_id).first<{id:string;email:string;name:string}>();
-    if(!user)return c.json({error:'Account no longer available.'},403);
-    await c.env.KV.delete('phone-login:'+challenge);
-    privateHeaders(c);
-    return c.json({ok:true,token:await signJWT({sub:user.id,email:user.email,name:user.name},c.env.JWT_SECRET)});
-  }catch{return failed(c);}
-});
 export default router;
