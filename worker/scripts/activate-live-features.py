@@ -25,7 +25,10 @@ KV = "35132989116243c6b9a79f7a8151e328"
 # Fixed release boundary: user-audited active games/hands were created before 1 Oct.
 LEGACY_HAND_CUTOFF_UNIX = 1790812800
 URL = "https://pkr-reloaded-worker.jeemit1.workers.dev"
-FLAGS = ("PKR_INTEGRITY_REVISIONS", "PKR_INTEGRITY_STACKS", "PKR_PHONE_MEMBERS_V1")
+FLAGS = ("PKR_INTEGRITY_STACKS", "PKR_PHONE_MEMBERS_V1")
+# Strict financial revision enforcement waits for the matching Vercel frontend;
+# the older live client can omit expected_revision during state restoration.
+# D1 audit/revision triggers are already installed and recording independently.
 OPTIONAL = ("game_player_revisions","game_financial_audit","hand_stack_baselines",
             "game_rsvp_arrivals","game_rsvp_guests","group_phone_contacts",
             "verified_phone_identities","group_phone_invites",
@@ -208,6 +211,8 @@ def main():
     base={"JWT_SECRET","GOOGLE_CLIENT_SECRET","PKR_RSVP_V2"}
     if not base.issubset(old):
         raise Stop("Expected production OAuth/JWT/RSVP secrets not present")
+    if "PKR_INTEGRITY_REVISIONS" in old:
+        raise Stop("Strict revisions are already configured; investigate live frontend compatibility")
     print("No post-cutoff gameplay; optional tables and revisions: PASS",flush=True)
     print("Deploying manual WhatsApp Worker with legacy-hand compatibility, no D1 changes...",flush=True)
     command("npx","--no-install","wrangler","deploy",
@@ -238,7 +243,8 @@ def main():
     except urllib.error.HTTPError as e:
         if e.code!=404:
             raise Stop("Phone invitation gate responded HTTP "+str(e.code)+", expected 404")
-    print("PRODUCTION ACTIVATION: PASS - RSVP, financial revisions, confirmed stacks, private WhatsApp membership",flush=True)
+    print("PRODUCTION SAFE ACTIVATION: PASS - RSVP, confirmed stacks, private WhatsApp membership",flush=True)
+    print("Financial audit triggers: INSTALLED. Strict expected_revision flag: DEFERRED until matching Vercel frontend is live.",flush=True)
     print("No data migration, historical hand deletion, invented opening chips, messaging API or AI activation.",flush=True)
     print("Now test signed-in invite/approval/recovery and counted opening stacks on a TEST game.",flush=True)
 
