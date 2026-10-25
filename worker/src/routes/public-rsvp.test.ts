@@ -42,15 +42,9 @@ describe('public invitation / RSVP privacy',()=>{
   it('never discloses RSVP WhatsApp numbers through a public lobby URL',async()=>{
     const f=fixture();
     const res=await games.request('https://test.invalid/games/game/lobby',{},f.env);
-    expect(res.status).toBe(200);
-    const data=await res.json() as any;
-    expect(data.rsvps).toHaveLength(1);
-    expect(data.rsvps[0].display_name).toBe('Fictional Alex');
-    expect(data.rsvps[0]).not.toHaveProperty('whatsapp');
-    expect(JSON.stringify(data)).not.toContain(f.privateNumber);
-    expect(f.calls.filter(s=>s.includes('FROM game_rsvps'))).toEqual([
-      expect.stringContaining('SELECT id,game_id,display_name,status,created_at'),
-    ]);
+    expect(res.status).toBe(401);
+    expect((await res.json() as any).error).toBe('Unauthorized');
+    expect(f.calls).toHaveLength(0);
   });
 
   it('blocks legacy name-only RSVP updates when the secure board is enabled',async()=>{
