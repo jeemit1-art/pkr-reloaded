@@ -173,8 +173,8 @@ board.post('/games/:id/rsvp-board',async(c)=>{
       const key=secret(),hash=await digest(key),id=generateId();
       try {
         const inserted=await c.env.DB.prepare(
-          "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
-        ).bind(id,game.id,name,status,arrival,seat,hash,game.id,seat,seat,game.id).run();
+          "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby')) AND NOT EXISTS(SELECT 1 FROM game_rsvps WHERE game_id=? AND display_name=? COLLATE NOCASE)"
+        ).bind(id,game.id,name,status,arrival,seat,hash,game.id,seat,seat,game.id,game.id,name).run();
         if(!inserted.meta.changes)return conflict(c);
       }catch{return conflict(c);}
       c.header('Cache-Control','no-store');

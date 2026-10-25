@@ -259,6 +259,10 @@ games.get('/games/results/:token', async (c) => {
 ═══════════════════════════════════════════ */
 
 games.post('/games/:id/rsvp', async (c) => {
+  // Once the v2 board is enabled, do not accept unauthenticated name-only edits.
+  if(c.env.PKR_RSVP_V2==='1')return c.json({
+    error:'Use the updated RSVP board to respond.',code:'RSVP_V2_REQUIRED'
+  },409);
   const gameId = c.req.param('id');
   const game = await c.env.DB.prepare('SELECT id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);

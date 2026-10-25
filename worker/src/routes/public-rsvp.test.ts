@@ -53,6 +53,17 @@ describe('public invitation / RSVP privacy',()=>{
     ]);
   });
 
+  it('blocks legacy name-only RSVP updates when the secure board is enabled',async()=>{
+    const f=fixture();
+    f.env.PKR_RSVP_V2='1';
+    const res=await games.request('https://test.invalid/games/game/rsvp',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({display_name:'Fictional Alex',status:'no'})
+    },f.env);
+    expect(res.status).toBe(409);
+    expect((await res.json() as any).code).toBe('RSVP_V2_REQUIRED');
+    expect(f.calls).toHaveLength(0);
+  });
   it('does not enumerate other players\' contacts in the public RSVP confirmation',async()=>{
     const f=fixture();
     const res=await games.request('https://test.invalid/games/game/rsvp',{
