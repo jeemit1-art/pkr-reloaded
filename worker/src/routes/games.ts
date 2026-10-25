@@ -122,6 +122,19 @@ games.put('/games/:id', authMiddleware, async (c) => {
   if (status !== undefined) {
     return c.json({error:'Use the dedicated game action to change status'},400);
   }
+  // Seat reductions must never orphan an occupied seat. Require the highest
+  // numbered seat(s) to be vacant; retain stable seat numbers and player data.
+  if (seats !== undefined && seats !== null) {
+    if (!Number.isSafeInteger(seats) || seats < 2 || seats > 15) {
+      return c.json({error:'Seats must be a whole number between 2 and 15'},400);
+    }
+    const highest = await c.env.DB.prepare(
+      'SELECT MAX(seat_number) AS highest FROM game_players WHERE game_id=? AND seat_number IS NOT NULL'
+    ).bind(gameId).first<{highest:number|null}>();
+    if ((highest?.highest ?? 0) > seats) {
+      return c.json({error:'Cannot remove an occupied seat. Move or unseat players from the highest-numbered seats first.'},409);
+    }
+  }
   const result = await c.env.DB.prepare(`UPDATE games SET
     scheduled_at=COALESCE(?,scheduled_at), location=COALESCE(?,location),
     notes=COALESCE(?,notes),

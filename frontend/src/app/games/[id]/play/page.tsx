@@ -162,6 +162,9 @@ export default function PlayPage() {
             <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
           </div>
           <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
+          <button className="pkr-toolbar-secondary" onClick={() => (window as any).removeSeat?.()}
+            style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 9px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}}
+            title="Remove last empty seat" aria-label="Remove last empty seat">−🪑</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
@@ -174,6 +177,7 @@ export default function PlayPage() {
 
         <div id="pkr-table-tools" className={'pkr-mobile-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove seat</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openTournament?.();}}>🏆 Tournament</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
@@ -2614,6 +2618,21 @@ window.addSeat = function() {
     state.game.seats=newSeats; saveState(); renderTable(); toast('Seat '+newSeats+' added ✓');
   }).catch(function(e){toast('Error: '+e.message);});
 };
+// Remove only the highest-numbered vacant seat, avoiding renumbering seated
+// players or changing buy-ins, cash-outs, balances or hand records.
+window.removeSeat = function() {
+  var ctx = getPkrCtx(); if(!ctx||!ctx.gameId||!state.game) return;
+  var current = state.game.seats||9;
+  if(current<=2){toast('A table needs at least 2 seats');return;}
+  var tail = state.players['seat'+current];
+  if(tail && tail.name){toast('Seat '+current+' is occupied. Unseat that player first.');return;}
+  var next = current-1;
+  pkrApi('/games/'+ctx.gameId,{method:'PUT',body:JSON.stringify({seats:next})}).then(function(game){
+    state.game.seats=game && game.seats || next;
+    saveState();renderTable();toast('Seat '+current+' removed ✓');
+  }).catch(function(e){toast('Cannot remove seat: '+e.message);});
+};
+
 
 })();
 `;
