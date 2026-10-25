@@ -1,14 +1,16 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {useSearchParams,useRouter} from 'next/navigation';
+import {useRouter} from 'next/navigation';
 import {canUsePush,isIOS,isSafari,isPWAInstalled,subscribePush} from '@/lib/push';
 import {api} from '@/lib/api';
 export default function InstallGuide(){
- const search=useSearchParams(),router=useRouter(),group=search.get('group')||'';
+ const router=useRouter();
+ const [group,setGroup]=useState('');
  const [installed,setInstalled]=useState(false),[permission,setPermission]=useState('default');
  const [prompt,setPrompt]=useState<any>(null),[notice,setNotice]=useState('');
  const [platform,setPlatform]=useState<'ios'|'android'|'desktop'>('desktop');
  useEffect(()=>{
+  setGroup(new URLSearchParams(window.location.search).get('group')||'');
   setInstalled(isPWAInstalled());
   setPlatform(isIOS()?'ios':/android/i.test(navigator.userAgent)?'android':'desktop');
   if('Notification' in window)setPermission(Notification.permission);
