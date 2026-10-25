@@ -151,7 +151,7 @@ export default function RsvpPage(){
     </header>
     <main className="pkr-guest-shell">
       <section className="pkr-guest-hero">
-        <span className="pkr-guest-kicker">YOUR NEXT GAME NIGHT</span>
+        <span className="pkr-guest-kicker">♠ YOUR NEXT GAME NIGHT</span>
         <h1>{board.event.name}</h1>
         <div className="pkr-guest-subtitle"><span>◷ {gameDate(board.game.scheduled_at)}</span>
           {board.game.location&&<span>⌖ {board.game.location}</span>}</div>
@@ -186,15 +186,20 @@ export default function RsvpPage(){
               <div><div className="pkr-guest-label">Pick a seat</div><p>Optional — decide on the night if you prefer.</p></div>
               <button className="pkr-guest-clear" disabled={closed} type="button" onClick={()=>setSeat(null)}>No preference</button>
             </div>
-            <div className="pkr-guest-seats" aria-label="Available seating">
+            <div className={'pkr-guest-seats '+(board.game.seats<=12?'pkr-guest-seat-map':'pkr-guest-seat-grid')} aria-label="Available seating">
+              {board.game.seats<=12&&<div className="pkr-guest-felt" aria-hidden="true"><span>♠</span><strong>PKR</strong></div>}
               {Array.from({length:board.game.seats},(_,i)=>{
                 const n=i+1,taken=unavailable.get(n),selected=seat===n;
+                const a=(i/board.game.seats)*Math.PI*2-Math.PI/2;
+                const position=board.game.seats<=12?{left:(50+39*Math.cos(a))+'%',top:(50+40*Math.sin(a))+'%'}:undefined;
                 return <button key={n} type="button" disabled={closed||Boolean(taken)} aria-pressed={selected}
                   className={'pkr-guest-seat '+(taken?'taken':selected?'selected':'')}
+                  style={position}
                   title={taken?'Reserved by '+taken:'Select seat '+n}
+                  aria-label={'Seat '+n+(taken?', reserved by '+taken:selected?', selected':', available')}
                   onClick={()=>setSeat(selected?null:n)}>
-                  <strong>{String(n).padStart(2,'0')}</strong>
-                  <span>{taken?(taken.length>10?taken.slice(0,9)+'…':taken):selected?'Yours':'Open'}</span>
+                  <strong>{n}</strong>
+                  <span>{taken?(taken.length>9?taken.slice(0,8)+'…':taken):selected?'Yours':'Open'}</span>
                 </button>;
               })}
             </div>

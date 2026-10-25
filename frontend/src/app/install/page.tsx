@@ -65,7 +65,9 @@ export default function InstallGuide(){
  const doneNotifications=permission==='granted' && subscribed;
  return <main className="pkr-onboarding pkr-install-vnext">
   <header className="pkr-install-hero"><a href="/dashboard" className="pkr-install-brand">♠ PKR</a><span className="pkr-eyebrow">YOUR PRIVATE POKER CLUB</span><h1>Your poker night. One tap away.</h1><p>Keep your games, RSVP board, table and results on your phone. Install PKR without visiting an app store.</p></header>
-  <div className="pkr-install-progress" aria-label="Installation progress"><span className={installed?'complete':''}>1. Install</span><span className={doneNotifications?'complete':''}>2. Alerts</span><span>3. Play</span></div>
+  <div className="pkr-install-progress" aria-label="Installation progress">
+   <span className={installed?'complete':''}>① Install app</span><span className={doneNotifications?'complete':''}>② Enable alerts</span><span className={installed?'complete':''}>③ Open your room</span>
+  </div>
   <section className="pkr-install-card"><div className="pkr-install-card-title"><span className={installed?'done':'step'}>{installed?'✓':'1'}</span><div><h2>Put PKR on your Home Screen</h2><p>Just once. After that, open PKR like any other app.</p></div></div>
    {installed?<div role="status" className="pkr-install-success">✓ PKR is running as an installed app on this device.</div>:
     platform==='ios'?<div className="pkr-install-instructions"><p>On iPhone, open this page in <strong>Safari</strong>:</p><ol><li>Tap the <strong>Share</strong> icon (square with arrow up).</li><li>Scroll down and tap <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>, then launch PKR from the new icon.</li></ol>{!isSafari()&&<div className="pkr-install-alert"><strong>Opened from WhatsApp or another app?</strong><p>Copy this setup link and paste it into Safari to see the installation option.</p><button onClick={copyLink}>{copied?'✓ Copied':'Copy setup link'}</button><input aria-label="Setup link to copy manually" readOnly onFocus={e=>e.currentTarget.select()} value={url}/></div>}</div>:

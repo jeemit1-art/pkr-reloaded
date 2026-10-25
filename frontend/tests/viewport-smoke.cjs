@@ -112,6 +112,25 @@ async function test(){
        const feature=page.locator('.pkr-mobile-featured');
        if(await feature.count() && !(await feature.isVisible()))errors.push(size.name+' mobile next-game feature hidden');
      }
+     if(item.id==='insights'){
+       await page.locator('#pkr-insights-room').waitFor({state:'visible'});
+       await page.locator('.pkr-insights-settle-tabs').waitFor({state:'visible'});
+       if(await page.locator('.pkr-insights-kpis .pkr-insights-kpi').count()!==5)errors.push(size.name+' insights KPI count mismatch');
+       await page.getByRole('tab',{name:'Player Balances'}).click();
+       if(!await page.getByRole('tab',{name:'Player Balances'}).getAttribute('aria-selected').then(v=>v==='true'))errors.push(size.name+' settlement balances tab did not activate');
+       await page.getByRole('tab',{name:'Who Pays Who'}).click();
+       const settlement=page.locator('#pkr-settlement');
+       if(!await settlement.isVisible())errors.push(size.name+' settlement centre disappeared');
+     }
+     if(item.id==='rsvp'){
+       const arrival=page.locator('.pkr-guest-options button').first();
+       if(await arrival.count()){
+         await arrival.click();
+         const seatMap=page.locator('.pkr-guest-seat-map');
+         if(!await seatMap.isVisible())errors.push(size.name+' RSVP oval seating diagram missing');
+         else if(await seatMap.locator('button').count()!==8)errors.push(size.name+' RSVP seat count is not based on game');
+       }
+     }
      if(item.id==='live-table'){
        // Gameplay uses the entire viewport, without the global desktop sidebar or mobile bottom navigation.
        const navCount=await page.locator('.pkr-persistent-nav, .pkr-universal-bottom-nav').count();
