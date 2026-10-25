@@ -11,7 +11,9 @@ vi.mock('../push',()=>({
 import games from './games';
 
 function fixture(options:{status?:string;financial?:boolean;hands?:boolean;
-  tournament?:boolean;settlement?:boolean}={}){
+  tournament?:boolean;settlement?:boolean;
+  historyOnly?:'tournament_levels'|'hand_analyses'|'paid_carryover'|
+    'hand_actions'|'hand_results'}={}){
   const game={id:'g',event_id:'e',status:options.status||'scheduled'};
   let deleted=0;
   const db={prepare(sql:string){return {bind(...args:any[]){
@@ -31,11 +33,17 @@ function fixture(options:{status?:string;financial?:boolean;hands?:boolean;
           'NOT EXISTS (SELECT 1 FROM tournament_state',
           'NOT EXISTS (SELECT 1 FROM tournament_rebuys',
           'NOT EXISTS (SELECT 1 FROM tournament_eliminations',
+          'NOT EXISTS (SELECT 1 FROM tournament_levels',
+          'NOT EXISTS (SELECT 1 FROM hand_analyses',
+          'NOT EXISTS (SELECT 1 FROM paid_carryover',
+          'NOT EXISTS (SELECT 1 FROM hand_actions',
+          'NOT EXISTS (SELECT 1 FROM hand_results',
           'buy_ins>0','buy_in_total>0','cashout IS NOT NULL',
         ])expect(sql).toContain(clause);
-        expect(args).toEqual(Array(8).fill('g'));
+        expect(args).toEqual(Array(13).fill('g'));
         if(!['scheduled','lobby','cancelled'].includes(game.status)||
-           options.financial||options.hands||options.tournament||options.settlement)
+           options.financial||options.hands||options.tournament||
+           options.settlement||options.historyOnly)
           return {meta:{changes:0}};
         deleted++;return {meta:{changes:1}};
       },
@@ -57,6 +65,18 @@ describe('history-safe permanent game deletion',()=>{
   it('refuses deleting active or settled games',async()=>{
     for(const status of ['active','settled']){
       const f=fixture({status});
+      const res=await games.request(url,req,f.env,ex);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({code:'GAME_HAS_HISTORY'});
+      expect(f.getDeletes()).toBe(0);
+    }
+  });
+  it('guards isolated legacy history lacking a declared game foreign key',async()=>{
+    for(const historyOnly of [
+      'tournament_levels','hand_analyses','paid_carryover',
+      'hand_actions','hand_results',
+    ] as const){
+      const f=fixture({status:'cancelled',historyOnly});
       const res=await games.request(url,req,f.env,ex);
       expect(res.status).toBe(409);
       expect(await res.json()).toMatchObject({code:'GAME_HAS_HISTORY'});
