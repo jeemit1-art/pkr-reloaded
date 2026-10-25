@@ -204,7 +204,15 @@ games.delete('/games/:id', authMiddleware, async(c)=>{
     AND NOT EXISTS (SELECT 1 FROM tournament_state WHERE game_id=?)
     AND NOT EXISTS (SELECT 1 FROM tournament_rebuys WHERE game_id=?)
     AND NOT EXISTS (SELECT 1 FROM tournament_eliminations WHERE game_id=?)
-  `).bind(gameId,gameId,gameId,gameId,gameId,gameId,gameId,gameId).run();
+    -- Extra guards are required on existing databases where these
+    -- historical tables have no declared game_id foreign key.
+    AND NOT EXISTS (SELECT 1 FROM tournament_levels WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM hand_analyses WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM paid_carryover WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=?)
+    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=?)
+  `).bind(gameId,gameId,gameId,gameId,gameId,gameId,gameId,gameId,
+    gameId,gameId,gameId,gameId,gameId).run();
   if(!result.meta.changes)return c.json({
     error:'Game has active play, money, hands or tournament history. Deletion is blocked to preserve records.',
     code:'GAME_HAS_HISTORY',
