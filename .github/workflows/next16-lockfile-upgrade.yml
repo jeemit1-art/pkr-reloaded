@@ -1,0 +1,54 @@
+name: PKR experimental Next 16 security upgrade
+
+on:
+  push:
+    branches:
+      - 'codex/pkr-next16-security-20261025'
+    paths:
+      - 'frontend/.next16-upgrade-trigger'
+      - '.github/workflows/next16-lockfile-upgrade.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-lockfile:
+    if: github.repository == 'jeemit1-art/pkr-reloaded' && github.ref == 'refs/heads/codex/pkr-next16-security-20261025'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Update supported Next/React versions and regenerate frontend lockfile
+        working-directory: frontend
+        run: |
+          npm install --save-exact next@16.4.3 react@19.3.1 react-dom@19.3.1
+          npm install --save-dev --save-exact @types/react@latest @types/react-dom@latest
+          npm ls next react react-dom
+      - name: Commit exact reviewed dependency files only on isolated upgrade branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          test "$GITHUB_REF" = 'refs/heads/codex/pkr-next16-security-20261025'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend/package.json frontend/package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'chore(security): upgrade isolated staging candidate to patched Next 16 and React 19'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/codex/pkr-next16-security-20261025
+      - name: Check Next 16 production build on upgraded dependencies
+        working-directory: frontend
+        env:
+          VERCEL_ENV: preview
+          NEXT_PUBLIC_PKR_ENV: staging
+          NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
