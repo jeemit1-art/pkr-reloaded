@@ -191,4 +191,75 @@ router.post('/phone-invites/:token/confirm',async c=>{
     return c.json({ok:true,token:jwt,event_id:invite.event_id,event_name:invite.event_name});
   }catch{return failed(c);}
 });
+
+// Existing verified members can sign in with only their phone and a fresh OTP.
+// A challenge is opaque, short-lived and never exposes whether a phone is known.
+async function rateLimit(env:Env,value:string,scope:string,max:number):Promise<boolean>{
+  const key=await phoneLookup(env,'mobile-auth-rate:'+scope,value);
+  await env.DB.prepare(
+    'INSERT INTO phone_verification_limits(rate_key,window_start,attempts) VALUES(?,unixepoch(),1) '+
+    'ON CONFLICT(rate_key) DO UPDATE SET attempts=CASE WHEN window_start<unixepoch()-3600 THEN 1 ELSE attempts+1 END, '+
+    'window_start=CASE WHEN window_start<unixepoch()-3600 THEN unixepoch() ELSE window_start END'
+  ).bind(key).run();
+  const row=await env.DB.prepare('SELECT attempts FROM phone_verification_limits WHERE rate_key=?')
+    .bind(key).first<{attempts:number}>();
+  return !!row&&row.attempts<=max;
+}
+router.post('/auth/mobile/start',async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
+  const body=await c.req.json().catch(()=>null) as {phone?:unknown}|null;
+  const mobile=normalizeMobile(body?.phone);
+  if(!mobile)return c.json({error:'Enter a valid mobile number, including country code if outside Australia.'},400);
+  const challenge=randomToken();
+  const generic={ok:true,challenge,message:'If this mobile is registered with PKR, a WhatsApp code will be sent.'};
+  try{
+    const allowedPhone=await rateLimit(c.env,mobile,'phone',4);
+    const ip=c.req.header('CF-Connecting-IP')||'unknown';
+    const allowedIP=await rateLimit(c.env,ip,'ip',25);
+    if(!allowedPhone||!allowedIP)return c.json({error:'Too many verification requests. Try again later.'},429);
+    const lookup=await phoneLookup(c.env,'verified-phone',mobile);
+    const identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
+      .bind(lookup).first<{user_id:string}>();
+    if(identity){
+      const cipher=await encryptPhone(c.env,mobile);
+      await c.env.KV.put('phone-login:'+challenge,JSON.stringify({
+        phone_lookup:lookup,phone_cipher:cipher,checks:0
+      }),{expirationTtl:600});
+      // Do not disclose provider response or whether number exists.
+      await twilioVerify(c.env,'send',mobile);
+    }
+    return c.json(generic);
+  }catch{return failed(c);}
+});
+router.post('/auth/mobile/confirm',async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
+  const body=await c.req.json().catch(()=>null) as {challenge?:unknown;code?:unknown}|null;
+  const challenge=typeof body?.challenge==='string'?body.challenge:'';
+  const code=typeof body?.code==='string'?body.code.trim():'';
+  if(!/^[a-f0-9]{64}$/.test(challenge)||!/^\d{4,10}$/.test(code))
+    return c.json({error:'Invalid or expired verification.'},400);
+  try{
+    const raw=await c.env.KV.get('phone-login:'+challenge);
+    if(!raw)return c.json({error:'Invalid or expired verification.'},403);
+    const state=JSON.parse(raw) as {phone_lookup:string;phone_cipher:string;checks:number};
+    if(!state.phone_lookup||!state.phone_cipher||state.checks>=8)
+      return c.json({error:'Invalid or expired verification.'},403);
+    state.checks+=1;
+    await c.env.KV.put('phone-login:'+challenge,JSON.stringify(state),{expirationTtl:600});
+    const mobile=await decryptPhone(c.env,state.phone_cipher);
+    if(!await twilioVerify(c.env,'check',mobile,code))
+      return c.json({error:'Incorrect or expired verification code.'},403);
+    const identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
+      .bind(state.phone_lookup).first<{user_id:string}>();
+    if(!identity)return c.json({error:'Number is no longer registered.'},403);
+    const user=await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
+      .bind(identity.user_id).first<{id:string;email:string;name:string}>();
+    if(!user)return c.json({error:'Account no longer available.'},403);
+    await c.env.KV.delete('phone-login:'+challenge);
+    privateHeaders(c);
+    return c.json({ok:true,token:await signJWT({sub:user.id,email:user.email,name:user.name},c.env.JWT_SECRET)});
+  }catch{return failed(c);}
+});
 export default router;

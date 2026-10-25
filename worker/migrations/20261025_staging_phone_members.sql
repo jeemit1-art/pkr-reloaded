@@ -34,3 +34,11 @@ CREATE TABLE IF NOT EXISTS group_phone_invites (
 );
 CREATE INDEX IF NOT EXISTS idx_group_phone_invites_contact
   ON group_phone_invites(contact_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS phone_verification_limits (
+  rate_key TEXT PRIMARY KEY,
+  window_start INTEGER NOT NULL DEFAULT (unixepoch()),
+  attempts INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_group_phone_contacts_display_name
+  ON group_phone_contacts(event_id,display_name COLLATE NOCASE);
