@@ -108,6 +108,29 @@ router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
     return c.json({ok:true});
   }catch{return failed(c);}
 });
+// Host-assisted account recovery never trusts a phone number alone. It requires
+// a fresh private invitation, a separate join request and explicit host approval.
+router.post('/events/:id/phone-contacts/:contactId/recovery',authMiddleware,async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const eventId=c.req.param('id'),contactId=c.req.param('contactId');
+  if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Host only'},403);
+  const contact=await c.env.DB.prepare(
+    'SELECT id,display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
+  ).bind(contactId,eventId).first<Contact>();
+  if(!contact?.user_id)return c.json({error:'Only existing members can recover access'},409);
+  const token=randomToken(),hash=await phoneLookup(c.env,'invite',token);
+  const expiry=Math.floor(Date.now()/1000)+48*3600;
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM group_phone_invites WHERE contact_id=? AND event_id=? AND consumed_at IS NULL').bind(contactId,eventId),
+    c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES(?,?,?,?,?,?)')
+      .bind(generateId(),eventId,contactId,hash,'member',expiry)
+  ]);
+  const phone=await decryptPhone(c.env,contact.phone_cipher);
+  const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
+  privateHeaders(c);
+  return c.json({ok:true,url,whatsapp_url:'https://wa.me/'+phone.slice(1)+'?text='+encodeURIComponent(
+    'Your private PKR access recovery link: '+url+' — request host approval to finish.'),expires_at:expiry});
+});
 // Invitation link possession is NOT proof of phone ownership.
 router.get('/phone-invites/:token',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
@@ -199,8 +222,11 @@ router.post('/phone-invites/:token/request-approval',async c=>{
   if(!invite)return c.json({error:'Invitation expired or unavailable'},404);
   const body=await c.req.json().catch(()=>null) as {display_name?:unknown}|null;
   const name=typeof body?.display_name==='string'?body.display_name.trim():'';
-  if(name.length<2||name.length>60||/[\\u0000-\\u001f<>]/.test(name))
+  if(name.length<2||name.length>60||/[\u0000-\u001f<>]/.test(name))
     return c.json({error:'Enter the name the host will recognise'},400);
+  // Limit one outstanding claim per invitation, including a newly approved claim.
+  const rateKey='join-invite-rate:'+invite.id;
+  if(await c.env.KV.get(rateKey))return c.json({error:'A join request is already pending for this invitation. Ask the host to review it.'},429);
   const claim=randomToken(),hash=await phoneLookup(c.env,'claim',claim);
   const existing=await c.env.KV.list({prefix:'join-request:'+invite.event_id+':'});
   if(existing.keys.length>=100)return c.json({error:'Too many pending requests'},429);
@@ -208,6 +234,7 @@ router.post('/phone-invites/:token/request-approval',async c=>{
     event_id:invite.event_id,invite_id:invite.id,contact_id:invite.contact_id,
     role:invite.role,display_name:name,claim_hash:hash,requested_at:Date.now()
   }),{expirationTtl:86400});
+  await c.env.KV.put(rateKey,'1',{expirationTtl:300});
   privateHeaders(c);
   return c.json({ok:true,claim,status:'pending',message:'The host must approve your request before you can join.'},202);
 });
@@ -266,21 +293,25 @@ router.post('/phone-invites/complete-approval',async c=>{
   const contact=await c.env.DB.prepare(
     'SELECT user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
   ).bind(state.contact_id,state.event_id).first<{user_id:string|null}>();
-  if(!contact||contact.user_id)return c.json({error:'This invitation was already used'},409);
-  const userId=generateId(),name=state.display_name;
-  await c.env.DB.prepare(
+  if(!contact)return c.json({error:'Invitation no longer valid'},409);
+  const userId=contact.user_id||generateId(),name=state.display_name;
+  // D1 batch is transactional: all account, membership, contact and invite
+  // changes commit together or roll back together. No orphan users on failure.
+  const writes=[];
+  if(!contact.user_id)writes.push(c.env.DB.prepare(
     'INSERT INTO users(id,google_sub,email,name,plan,trial_started_at) VALUES(?,?,?,?,?,unixepoch())'
-  ).bind(userId,'approval:'+generateId(),'',name,'trial').run();
-  const taken=await c.env.DB.prepare(
-    'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND consumed_at IS NULL'
-  ).bind(state.invite_id).run();
-  if(!taken.meta.changes)return c.json({error:'Invitation already redeemed'},409);
-  await c.env.DB.batch([
-    c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)')
-      .bind(state.event_id,userId,state.role),
-    c.env.DB.prepare('UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=?')
-      .bind(userId,state.contact_id,state.event_id)
-  ]);
+  ).bind(userId,'approval:'+generateId(),'',name,'trial'));
+  writes.push(c.env.DB.prepare(
+    'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+  ).bind(state.invite_id));
+  writes.push(c.env.DB.prepare(
+    "INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?) ON CONFLICT(event_id,user_id) DO NOTHING"
+  ).bind(state.event_id,userId,state.role));
+  writes.push(c.env.DB.prepare(
+    'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=?'
+  ).bind(userId,state.contact_id,state.event_id));
+  const results=await c.env.DB.batch(writes);
+  if(!results[contact.user_id?0:1]?.meta.changes)return c.json({error:'Invitation already redeemed'},409);
   await c.env.KV.delete('approved-join:'+hash);
   privateHeaders(c);
   return c.json({ok:true,token:await signJWT({sub:userId,email:'',name},c.env.JWT_SECRET),
