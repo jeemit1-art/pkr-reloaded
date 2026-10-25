@@ -51,7 +51,7 @@ const jsonPost=(payload:unknown,token?:string)=>({method:'POST',headers:{'Conten
 describe('free private WhatsApp membership host approval contract',()=>{
  it('requires a real host decision before issuing an account and consumes the invitation once',async()=>{
   const {env,code,dbState,kvMap}=makeFixture();
-  const req=await router.request(base+'/phone-invites/'+code,jsonPost({display_name:'New Player'}),env);
+  const req=await router.request(base+'/phone-invites/'+code+'/request-approval',jsonPost({display_name:'New Player'}),env);
   expect(req.status,await req.clone().text()).toBe(202);
   const pending=await req.json() as any;
   expect(pending.status).toBe('pending');
@@ -86,7 +86,7 @@ describe('free private WhatsApp membership host approval contract',()=>{
  });
  it('host rejection never creates a user or membership',async()=>{
   const {env,code,dbState}=makeFixture();
-  const req=await router.request(base+'/phone-invites/'+code,jsonPost({display_name:'Suspicious Request'}),env);
+  const req=await router.request(base+'/phone-invites/'+code+'/request-approval',jsonPost({display_name:'Suspicious Request'}),env);
   const pending=await req.json() as any;
   const hostToken=await signJWT({sub:'host-1',email:'host@invalid.test',name:'Host'},jwtSecret);
   const inbox=await router.request(base+'/events/room-1/join-requests',{headers:{Authorization:'Bearer '+hostToken}},env);
