@@ -1090,7 +1090,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
           </>)}
           {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
-            📱 Invite verified group members
+            📱 Invite approved group members
           </button>}
           {liveUrl && game.status==='active' && (
             <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}

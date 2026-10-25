@@ -119,7 +119,7 @@ export default function RsvpPage(){
       <h1>{error?'RSVP board unavailable':'Opening your poker night'}</h1>
       <p>{error||'Checking the latest arrivals and seats…'}</p>
       {error&&<><button className="pkr-guest-button" onClick={()=>void load()}>Try again</button>
-        <a className="pkr-guest-outline" href={'/mobile-login?next='+encodeURIComponent('/games/'+id+'/rsvp')}>Verify mobile to enter</a></>}
+        <a className="pkr-guest-outline" href={'/mobile-login?next='+encodeURIComponent('/games/'+id+'/rsvp')}>Ask your host for an invitation</a></>}
     </div></main>
   </div>;
 
@@ -166,7 +166,7 @@ export default function RsvpPage(){
           <div className="pkr-guest-card-head">
             <span className="pkr-guest-kicker">01 · YOUR PLAN</span>
             <h2>{guest?'Update your RSVP':'Are you coming?'}</h2>
-            <p>Only verified members of this group can respond. Choose your arrival time and a seat.</p>
+            <p>Only approved members of this group can respond. Choose your arrival time and a seat.</p>
           </div>
           <label className="pkr-guest-label" htmlFor="pkr-rsvp-name">Your name</label>
           <input className="pkr-guest-input" id="pkr-rsvp-name" maxLength={60} autoComplete="name"
@@ -241,7 +241,7 @@ export default function RsvpPage(){
               <h2>Arrival choices</h2><p>Set times for your group. Late and Not coming remain available.</p></div>
             <button className="pkr-guest-outline full" type="button"
               onClick={()=>router.push('/events/'+board.event.id+'?tab=members&inviteGame='+id)}>
-              Invite verified group members via WhatsApp
+              Invite approved group members via WhatsApp
             </button>
             <div className="pkr-guest-times">
               {times.map((time,i)=><div className="pkr-guest-time" key={i}>

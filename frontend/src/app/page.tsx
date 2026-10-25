@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 
 const journey=[
   {n:'01',icon:'♠',title:'Create your room',detail:'Set up a private poker group and choose the game night.'},
-  {n:'02',icon:'↗',title:'Invite your players',detail:'Invite players individually by mobile number. Only verified members can access the game.'},
+  {n:'02',icon:'↗',title:'Invite your players',detail:'Invite each player through a personal WhatsApp message. Your group host approves new members.'},
   {n:'03',icon:'◷',title:'Get the plan together',detail:'Players choose an arrival time and available seat. The group sees live responses.'},
   {n:'04',icon:'♣',title:'Open the table',detail:'Record buy-ins, track hands and settle up with a clear audit trail.'},
 ];
@@ -13,7 +13,7 @@ const features=[
   {icon:'◷',name:'Live arrivals',description:'7 pm, 8 pm, 9 pm, late or not coming — you decide the options.'},
   {icon:'♠',name:'Choose a seat',description:'Players see the seating plan before they arrive.'},
   {icon:'↗',name:'WhatsApp invite',description:'Send each member a private WhatsApp invitation.'},
-  {icon:'◎',name:'Shared RSVP board',description:'Verified members of that group can see who is coming.'},
+  {icon:'◎',name:'Shared RSVP board',description:'Approved members of that group can see who is coming.'},
 ];
 export default function HomePage(){
   const router=useRouter();
@@ -48,7 +48,7 @@ export default function HomePage(){
             <button className="pkr-landing-primary" onClick={()=>setLoginOpen(true)}>Create a poker room <span>→</span></button>
             <a className="pkr-landing-outline" href="#how-it-works">See how it works</a>
           </div>
-          <div className="pkr-landing-note">Hosts use Google · Players verify their WhatsApp mobile</div>
+          <div className="pkr-landing-note">Hosts use Google · Players join through a host-sent WhatsApp invitation</div>
         </div>
         <div className="pkr-landing-demo" aria-label="Illustration of the PKR live RSVP experience">
           <div className="pkr-landing-demo-top">
@@ -91,7 +91,7 @@ export default function HomePage(){
         <div className="pkr-landing-rsvp-copy">
           <span className="pkr-landing-kicker">THE GROUP KNOWS THE PLAN</span>
           <h2>No more <em>“what time are you coming?”</em></h2>
-          <p>The host chooses arrival slots. Verified members can RSVP, reserve an available seat and see who's running late or can't make it.</p>
+          <p>The host chooses arrival slots. Approved group members can RSVP, reserve an available seat and see who's running late or can't make it.</p>
           <div className="pkr-landing-feature-grid">
             {features.map(x=><div key={x.name}>
               <span>{x.icon}</span><strong>{x.name}</strong><small>{x.description}</small>
@@ -127,9 +127,9 @@ export default function HomePage(){
       <section className="pkr-landing-dialog" role="dialog" aria-modal="true" aria-label="Host sign in">
         <button className="pkr-landing-close" aria-label="Close sign in" onClick={()=>setLoginOpen(false)}>×</button>
         <div className="pkr-landing-dialog-logo">♠</div><h2>Host your poker night</h2>
-        <p>Sign in to host a room. Players join privately with their verified WhatsApp mobile number.</p>
+        <p>Sign in to host a room. Players join privately after receiving your individual WhatsApp invitation and host approval.</p>
         <button className="pkr-landing-primary" onClick={login}>Continue with Google (host) →</button>
-        <a href="/mobile-login" className="pkr-landing-outline" style={{display:'block',textAlign:'center',marginTop:12,padding:'12px'}}>Already a member? Sign in with mobile</a>
+        <a href="/mobile-login" className="pkr-landing-outline" style={{display:'block',textAlign:'center',marginTop:12,padding:'12px'}}>Already a member? Request a recovery link</a>
       </section>
     </div>}
   </div>;
