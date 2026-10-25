@@ -119,7 +119,7 @@ export default function RsvpPage(){
       <h1>{error?'RSVP board unavailable':'Opening your poker night'}</h1>
       <p>{error||'Checking the latest arrivals and seats…'}</p>
       {error&&<><button className="pkr-guest-button" onClick={()=>void load()}>Try again</button>
-        <a className="pkr-guest-outline" href={'/games/'+id+'/lobby'}>Legacy lobby</a></>}
+        <a className="pkr-guest-outline" href={'/mobile-login?next='+encodeURIComponent('/games/'+id+'/rsvp')}>Verify mobile to enter</a></>}
     </div></main>
   </div>;
 

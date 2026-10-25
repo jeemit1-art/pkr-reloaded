@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
+import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { clientSafeEvent, clientSafeGame } from '../public-data';
 
 const events = new Hono<{ Bindings: Env }>();
@@ -165,9 +165,11 @@ events.post('/:id/join', async (c) => {
   return c.json({ok:true, event_id:eventId, event_name:event.name});
 });
 
-events.post('/:id/subscribe', async (c) => {
+events.post('/:id/subscribe', optionalAuth, async (c) => {
   const eventId = c.req.param('id');
   const { endpoint, keys, userId, display_name } = await c.req.json();
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,eventId,'member'))
+    return c.json({error:'Private group membership required for notifications'},403);
   if (!endpoint||!keys?.p256dh||!keys?.auth) return c.json({error:'Invalid subscription'},400);
   const event = await c.env.DB.prepare('SELECT id FROM events WHERE id=?').bind(eventId).first();
   if (!event) return c.json({error:'Event not found'},404);
@@ -177,14 +179,21 @@ events.post('/:id/subscribe', async (c) => {
       event_id=excluded.event_id,
       user_id=COALESCE(excluded.user_id, user_id),
       display_name=COALESCE(excluded.display_name, display_name)
-  `).bind(generateId(),eventId,userId||null,display_name||null,endpoint,keys.p256dh,keys.auth).run();
+  `).bind(generateId(),eventId,c.env.PKR_PHONE_MEMBERS_V1==='1'?c.get('userId'):userId||null,
+    c.env.PKR_PHONE_MEMBERS_V1==='1'?null:display_name||null,endpoint,keys.p256dh,keys.auth).run();
   return c.json({ok:true});
 });
 
-events.post('/:id/unsubscribe', async (c) => {
+events.post('/:id/unsubscribe', optionalAuth, async (c) => {
   const { endpoint } = await c.req.json();
   if (!endpoint) return c.json({error:'endpoint required'},400);
-  await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(endpoint).run();
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'){
+    if(!await requireEventRole(c as any,c.req.param('id'),'member'))return c.json({error:'Private group membership required'},403);
+    await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=? AND event_id=? AND user_id=?')
+      .bind(endpoint,c.req.param('id'),c.get('userId')).run();
+  }else{
+    await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(endpoint).run();
+  }
   return c.json({ok:true});
 });
 

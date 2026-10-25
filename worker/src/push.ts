@@ -149,7 +149,9 @@ async function sendToSub(
 export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<void> {
   if (env.PKR_ENV === 'staging') return;
   const subs = await env.DB.prepare(
-    'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
+    env.PKR_PHONE_MEMBERS_V1==='1'
+      ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
+      :'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
   ).bind(eventId).all<{endpoint:string; p256dh:string; auth_key:string}>();
   if (!subs.results.length) return;
   const body = JSON.stringify({ title:payload.title, body:payload.body, icon:'/icon-192.png', badge:'/icon-192.png', data:payload.data||{} });
@@ -190,6 +192,14 @@ export async function sendPushToPlayer(env: Env, eventId: string, displayName: s
     name,
   ).all<{endpoint:string; p256dh:string; auth_key:string}>();
 
+  // Never notify a former member or an unauthenticated name-only subscriber.
+  if(env.PKR_PHONE_MEMBERS_V1==='1'){
+    const verified=await env.DB.prepare(
+      'SELECT s.endpoint FROM push_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
+    ).bind(eventId).all<{endpoint:string}>();
+    const allowed=new Set(verified.results.map(v=>v.endpoint));
+    subs.results=subs.results.filter(v=>allowed.has(v.endpoint));
+  }
   if (!subs.results.length) return;
   const body = JSON.stringify({ title:payload.title, body:payload.body, icon:'/icon-192.png', badge:'/icon-192.png', data:payload.data||{} });
   await Promise.allSettled(subs.results.map(s => sendToSub(env, s, body)));

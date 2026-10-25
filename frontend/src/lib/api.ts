@@ -94,9 +94,9 @@ export const api = {
     removePhoneContact:(id:string,contactId:string)=>req<{ok:boolean}>(`/events/${id}/phone-contacts/${contactId}`,{method:'DELETE'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
     subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
-      pub(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
+      req(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
     unsubscribe:    (eventId:string,endpoint:string) =>
-      pub(`/events/${eventId}/unsubscribe`,{method:'POST',body:JSON.stringify({endpoint})}),
+      req(`/events/${eventId}/unsubscribe`,{method:'POST',body:JSON.stringify({endpoint})}),
     leaderboard:    (id:string)      => req<LeaderboardEntry[]>(`/events/${id}/leaderboard`),
     history:        (id:string)      => req<Game[]>(`/events/${id}/history`),
     deleteGame:     (gameId:string)  => req<{ok:boolean}>(`/games/${gameId}`,{method:'DELETE'}),
@@ -110,9 +110,9 @@ export const api = {
   games: {
     list:     (eventId:string,status?:string) => req<Game[]>(`/events/${eventId}/games${status?`?status=${status}`:''}`),
     get:      (id:string)         => req<GameDetail>(`/games/${id}`),
-    lobby:    (id:string)         => pub<LobbyData>(`/games/${id}/lobby`),
-    live:     (token:string)      => pub<LiveData>(`/games/live/${token}`),
-    results:  (token:string)      => pub<ResultsData>(`/games/results/${token}`),
+    lobby:    (id:string)         => req<LobbyData>(`/games/${id}/lobby`),
+    live:     (token:string)      => req<LiveData>(`/games/live/${token}`),
+    results:  (token:string)      => req<ResultsData>(`/games/results/${token}`),
     create:   (eventId:string,d:any) => req<Game>(`/events/${eventId}/games`,{method:'POST',body:JSON.stringify(d)}),
     update:   (id:string,d:any)   => req(`/games/${id}`,{method:'PUT',body:JSON.stringify(d)}),
     settle:   (id:string,d:any)   => req<SettlementResult>(`/games/${id}/settle`,{method:'POST',body:JSON.stringify(d)}),
