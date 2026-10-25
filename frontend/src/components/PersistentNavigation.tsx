@@ -9,8 +9,8 @@ const navigation=[
  {name:'Games',icon:'♧',href:'room'},
  {name:'Players',icon:'♟',href:'members'},
  {name:'Insights',icon:'▥',href:'/insights'},
- {name:'Settle',icon:'＄',href:'room'},
- {name:'Schedule',icon:'▦',href:'room'},
+ {name:'Settle',icon:'＄',href:'/insights#pkr-settlement'},
+ {name:'Schedule',icon:'▦',href:'/schedule'},
  {name:'Members',icon:'♙',href:'members'},
  {name:'Install PKR',icon:'↗',href:'/install'},
 ] as const;
@@ -21,7 +21,7 @@ export default function PersistentNavigation(){
  const [rooms,setRooms]=useState<Event[]>([]);
  const [hasSession,setHasSession]=useState(false);
  const [gameEventId,setGameEventId]=useState<string|null>(null);
- const allowed=/^\/(dashboard|insights|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname);
+ const allowed=/^\/(dashboard|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname);
  useEffect(()=>{setHasSession(Boolean(getToken()));},[pathname]);
  useEffect(()=>{if(!allowed||!hasSession)return;let live=true;api.events.list().then(r=>{if(live)setRooms(r)}).catch(()=>{});return()=>{live=false};},[allowed,hasSession]);
  // A game belongs to its own room: never silently navigate to the first room.
