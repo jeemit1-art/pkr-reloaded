@@ -802,3 +802,93 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
   .pkr-pro-art{inset:0 0 0 24%!important;opacity:.24!important}
   .pkr-vnext-insights-art{inset:0 0 0 35%!important;opacity:.18!important}
 }
+
+
+/* 2026-10-25: Consolidated room and install layout corrections.
+   Desktop sidebar is fixed: content must reserve its space, never sit beneath it. */
+@media (min-width:1100px){
+ body:has(.pkr-persistent-nav) > main.pkr-install-vnext{
+   margin:0 0 0 218px!important;
+   width:calc(100% - 218px)!important;
+   max-width:none!important;
+   min-width:0!important;
+   padding:clamp(24px,3vw,48px)!important;
+ }
+ body:has(.pkr-persistent-nav) .pkr-event{
+   margin-left:218px!important;
+   width:calc(100% - 218px)!important;
+   max-width:calc(100% - 218px)!important;
+   min-width:0;
+ }
+}
+.pkr-install-vnext{box-sizing:border-box;overflow-wrap:anywhere}
+.pkr-install-vnext .pkr-install-hero,
+.pkr-install-vnext .pkr-install-progress,
+.pkr-install-vnext .pkr-install-card,
+.pkr-install-vnext .pkr-install-notice{
+ width:min(100%,820px);margin-left:auto;margin-right:auto;min-width:0;
+}
+.pkr-install-vnext .pkr-install-progress{margin-top:16px;margin-bottom:16px}
+.pkr-install-vnext .pkr-install-hero h1{overflow-wrap:break-word}
+.pkr-install-vnext .pkr-install-card-title>div{min-width:0}
+.pkr-install-vnext .pkr-install-instructions{overflow-wrap:anywhere}
+.pkr-install-vnext .pkr-install-alert input{max-width:100%}
+.pkr-event{box-sizing:border-box;min-width:0;overflow-x:clip}
+.pkr-event .pkr-topbar>div,
+.pkr-event .pkr-content,
+.pkr-event .pkr-event-tabs-inner{
+ width:min(100%,1120px)!important;
+ max-width:1120px!important;
+ margin-left:auto!important;
+ margin-right:auto!important;
+}
+.pkr-event .pkr-event-overview{
+ position:relative;
+ isolation:isolate;
+ width:min(calc(100% - 32px),1120px)!important;
+ max-width:1120px!important;
+ margin:20px auto 18px!important;
+ min-height:290px;
+ overflow:hidden;
+ border-radius:20px!important;
+ border:1px solid rgba(232,186,93,.32)!important;
+ background:
+   linear-gradient(90deg,#071a13 0%,rgba(7,26,19,.96) 40%,rgba(7,26,19,.18) 100%),
+   url('/images/pkr-room-hero.webp') right center/cover no-repeat,
+   #0b291d!important;
+}
+.pkr-event .pkr-event-overview-inner{
+ position:relative;
+ z-index:1;
+ width:min(100%,720px)!important;
+ max-width:720px!important;
+ min-height:290px;
+ margin:0!important;
+ padding:clamp(24px,3vw,42px)!important;
+ border:0!important;
+ border-radius:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+.pkr-event .pkr-event-overview-inner .pkr-casino-art{display:none!important}
+.pkr-event .pkr-event-overview-inner h1{overflow-wrap:anywhere}
+.pkr-event .pkr-event-tabs{width:min(calc(100% - 32px),1120px)!important;margin:0 auto!important}
+.pkr-event .pkr-content{padding-top:24px!important}
+@media (max-width:700px){
+ .pkr-event .pkr-event-overview{
+   width:calc(100% - 24px)!important;
+   min-height:250px;
+   margin:12px auto 14px!important;
+   background:
+     linear-gradient(90deg,rgba(7,26,19,.97),rgba(7,26,19,.78)),
+     url('/images/pkr-room-hero.webp') center/cover no-repeat,
+     #0b291d!important;
+ }
+ .pkr-event .pkr-event-overview-inner{min-height:250px;padding:22px!important}
+ .pkr-event .pkr-event-tabs{width:calc(100% - 24px)!important}
+ .pkr-event .pkr-event-tabs-inner{overflow-x:auto}
+ .pkr-install-vnext{width:100%!important;max-width:100%!important}
+ .pkr-install-vnext .pkr-install-hero,
+ .pkr-install-vnext .pkr-install-progress,
+ .pkr-install-vnext .pkr-install-card{width:100%}
+}
