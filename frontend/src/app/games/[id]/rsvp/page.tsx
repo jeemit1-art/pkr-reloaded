@@ -132,6 +132,18 @@ export default function RsvpPage(){
     +(board.game.location?'\n📍 '+board.game.location:'')
     +'\n\nChoose an arrival time and seat. See live RSVPs here:\n'+link;
   const closed=!['scheduled','lobby'].includes(board.game.status);
+  // WhatsApp supports user-initiated share links; never pretend PKR can
+  // automatically message the group or bypass a player's consent.
+  const mySummary=guest?board.guests.find(r=>r.id===guest.id):null;
+  const myWhatsAppUpdate=mySummary
+    ?'♠ '+board.event.name+' RSVP update\n'+mySummary.display_name+': '+
+      (mySummary.status==='no'?'Not coming':timeLabel(mySummary.arrival_option))+
+      (mySummary.seat_number?' · Seat '+mySummary.seat_number:'')+'\nLive RSVP board: '+link
+    :'';
+  const groupSummary='♠ *'+board.event.name+'* — current RSVPs\n'+
+    (board.guests.map(r=>r.display_name+': '+(r.status==='no'?'Not coming':timeLabel(r.arrival_option))+
+      (r.seat_number?' · Seat '+r.seat_number:'')).join('\n')||'No responses yet')+
+    '\nUpdate your RSVP: '+link;
   return <div className="pkr-guest">
     <header className="pkr-guest-top">
       <a href="/" className="pkr-guest-logo">♠ PKR</a>
@@ -209,6 +221,8 @@ export default function RsvpPage(){
                 {r.status==='no'?'OUT':r.seat_number?'SEAT '+r.seat_number:'IN'}</span>
             </div>)}
             <div className="pkr-guest-tools">
+              {mySummary&&<a className="pkr-guest-outline" href={'https://wa.me/?text='+encodeURIComponent(myWhatsAppUpdate)}
+                target="_blank" rel="noreferrer">Share my RSVP update to WhatsApp</a>}
               <a className="pkr-guest-button whats-app" href={'https://wa.me/?text='+encodeURIComponent(message)}
                 target="_blank" rel="noreferrer">Share in WhatsApp</a>
               <button className="pkr-guest-outline" type="button"
@@ -220,6 +234,8 @@ export default function RsvpPage(){
           {isHost&&<section className="pkr-guest-card">
             <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">HOST CONTROLS</span>
               <h2>Arrival choices</h2><p>Set times for your group. Late and Not coming remain available.</p></div>
+            <a className="pkr-guest-outline full" href={'https://wa.me/?text='+encodeURIComponent(groupSummary)}
+              target="_blank" rel="noreferrer">Share current RSVP summary to WhatsApp</a>
             <div className="pkr-guest-times">
               {times.map((time,i)=><div className="pkr-guest-time" key={i}>
                 <input type="time" aria-label={'Arrival option '+(i+1)} className="pkr-guest-input"
