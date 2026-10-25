@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "check:staging": "node scripts/check-staging-config.mjs",
     "dev:staging": "npm run check:staging && wrangler dev --config wrangler.staging.toml --local",
-    "deploy:staging": "npm run check:staging && wrangler deploy --config wrangler.staging.toml"
+    "deploy:staging": "npm run check:staging && node scripts/check-staging-secrets.mjs && wrangler deploy --config wrangler.staging.toml"
   },
   "dependencies": {
     "hono": "^4.4.0"

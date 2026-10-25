@@ -631,7 +631,7 @@ function pkrVersioned(body,player){
 // Update any remaining queued edit to use that new baseline BEFORE journaling.
 function pkrApplyAckRevision(action,response){
   if(!action||!response||!Number.isSafeInteger(response.revision))return;
-  var match=action.url.match(/\/(?:buyin|cashout)\/([^/]+)$/);
+  var match=action.url.match(new RegExp('/(?:buyin|cashout)/([^/]+)$'));
   if(!match)return;
   var uid=decodeURIComponent(match[1]);
   Object.keys(_pkrSeatedPlayers).forEach(function(sid){
@@ -640,7 +640,7 @@ function pkrApplyAckRevision(action,response){
   });
   _offlineQueue.forEach(function(next){
     if(next.id===action.id||!next.url.endsWith('/'+uid)||
-       !/\/(?:buyin|cashout)\//.test(next.url)||!next.options.body)return;
+       !(next.url.includes('/buyin/') || next.url.includes('/cashout/'))||!next.options.body)return;
     try{
       var body=JSON.parse(next.options.body);
       body.expected_revision=response.revision;
@@ -741,8 +741,8 @@ function queueAction(url, options, seatSid, seatName) {
   // Incremental POST money updates and arbitrary game mutations cannot
   // safely be replayed after a tab close or connectivity failure.
   var safe = (method === 'POST' && route === 'seat') ||
-    (method === 'DELETE' && /^seat\/[^/]+$/.test(route)) ||
-    (method === 'PUT' && /^(buyin|cashout)\/[^/]+$/.test(route));
+    (method === 'DELETE' && route.startsWith('seat/') && route.slice(5).length > 0) ||
+    (method === 'PUT' && (route.startsWith('buyin/') || route.startsWith('cashout/')) && route.split('/').length === 2);
   if (!safe) {
     throw new Error('Only game-specific, retry-safe changes can be queued');
   }
@@ -750,7 +750,7 @@ function queueAction(url, options, seatSid, seatName) {
   var pending = _offlineQueue.find(function(a){return a.key===key && a.id!==_activeQueueId;});
   var active = _offlineQueue.find(function(a){return a.key===key && a.id===_activeQueueId;});
   var body = options.body || null;
-  if (method === 'PUT' && /\/(buyin|cashout)\//.test(url) && body) {
+  if (method === 'PUT' && (url.includes('/buyin/') || url.includes('/cashout/')) && body) {
     var next = JSON.parse(body);
     var predecessor = pending || active;
     if (predecessor) {
@@ -1397,7 +1397,7 @@ window.syncSettleToPkr = async function() {
       var entry = pkrPlayerMap[key];
       // Priority: seated cache > local state userId > pkrPlayerMap > fallback
       var seatedEntry = Object.values(_pkrSeatedPlayers).find(function(s){ return s && s.name && s.name.toLowerCase()===key; });
-      var userId = (seatedEntry && seatedEntry.user_id) ? seatedEntry.user_id : (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\s+/g,'_')));
+      var userId = (seatedEntry && seatedEntry.user_id) ? seatedEntry.user_id : (p.userId && p.userId !== p.name) ? p.userId : (entry ? entry.user_id : ('manual_' + (p.name||'').replace(/\\s+/g,'_')));
       if (merged[key]) {
         merged[key].buy_ins      += buyinCount;
         merged[key].buy_in_total += Math.round(biTotal*100);

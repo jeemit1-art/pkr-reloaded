@@ -6,6 +6,8 @@ main = "src/index.ts"
 compatibility_date = "2024-05-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+# Preserve bindings managed through the Cloudflare dashboard across staging deploys.
+keep_vars = true
 
 [[kv_namespaces]]
 binding = "KV"

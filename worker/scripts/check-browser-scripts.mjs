@@ -34,5 +34,9 @@ if(/qrScript\.onload\s*=\s*injectTableScript/.test(page))
   throw Error('QR-code onload must not gate the poker runtime');
 const inline=page.slice(start+header.length,end);
 if(inline.includes('${'))throw Error('Unexpected live template interpolation in poker table source');
-new Script(inline,{filename:playFile+'#game-table'});
-console.log('PASS browser JavaScript syntax: '+playFile+' (embedded table runtime)');
+new Script(inline,{filename:playFile+'#game-table-source'});
+// JSX/TS template literals consume escapes before the browser receives the
+// injected script. Parse the evaluated runtime string, not just its source.
+const resolved = new Script('(' + JSON.stringify('') + ' + `' + inline + '`)', {filename:playFile+'#template'}).runInNewContext();
+new Script(resolved,{filename:playFile+'#game-table-runtime'});
+console.log('PASS browser JavaScript syntax: '+playFile+' (source + evaluated runtime)');
