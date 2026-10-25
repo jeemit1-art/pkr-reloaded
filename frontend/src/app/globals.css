@@ -737,7 +737,7 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
   isolation:isolate;
   background:
     linear-gradient(90deg,#061611 0%,rgba(6,22,17,.98) 37%,rgba(6,22,17,.78) 58%,rgba(6,22,17,.12) 100%),
-    url("https://images.pexels.com/photos/5412324/pexels-photo-5412324.jpeg?auto=compress&cs=tinysrgb&w=1400")
+    url("/images/pkr-room-hero.webp")
     right center/cover no-repeat,
     linear-gradient(115deg,#062219,#14462f) !important;
   box-shadow:0 18px 50px rgba(0,0,0,.18);
@@ -753,7 +753,7 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
   padding:clamp(24px,3vw,38px) !important;
   background:
     linear-gradient(90deg,#071c15 0%,rgba(7,28,21,.96) 44%,rgba(7,28,21,.45) 73%,rgba(7,28,21,.12) 100%),
-    url("https://images.pexels.com/photos/5412324/pexels-photo-5412324.jpeg?auto=compress&cs=tinysrgb&w=1400")
+    url("/images/pkr-room-hero.webp")
     right 42%/cover no-repeat,
     linear-gradient(120deg,#0a291d,#164630) !important;
 }
@@ -770,4 +770,35 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
  .pkr-vnext-insights-hero{padding:20px!important}
  .pkr-vnext-insights-hero h2{font-size:clamp(25px,7vw,33px)}
  .pkr-vnext-insights-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+
+/* Bundled approved poker imagery: never place the cards under the copy. */
+.pkr-pro-hero{
+  background:linear-gradient(112deg,#071710 0%,#0b281c 72%,#0e301f 100%)!important;
+}
+.pkr-pro-art{
+  inset:0 0 0 51% !important;
+  opacity:1!important;
+  background:
+    linear-gradient(90deg,rgba(7,23,16,.48),transparent 45%),
+    url("/images/pkr-room-hero.webp") center center/cover no-repeat !important;
+  mask-image:linear-gradient(90deg,transparent 0%,#000 27%)!important;
+}
+.pkr-pro-art .pkr-casino-art{display:none!important}
+.pkr-vnext-insights-hero{
+  background:linear-gradient(112deg,#071710,#0b301f)!important;
+}
+.pkr-vnext-insights-art{
+  inset:0 0 0 54% !important;
+  opacity:1!important;
+  background:
+    linear-gradient(90deg,rgba(7,23,16,.35),transparent 45%),
+    url("/images/pkr-room-hero.webp") center center/cover no-repeat !important;
+  mask-image:linear-gradient(90deg,transparent 0%,#000 23%)!important;
+}
+.pkr-vnext-insights-art .pkr-casino-art{display:none!important}
+@media(max-width:800px){
+  .pkr-pro-art{inset:0 0 0 24%!important;opacity:.24!important}
+  .pkr-vnext-insights-art{inset:0 0 0 35%!important;opacity:.18!important}
 }
