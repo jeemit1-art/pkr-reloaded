@@ -147,6 +147,7 @@ export default function PlayPage() {
   return (
     <>
       <style>{getTableCSS()}</style>
+      <style>{getPremiumTableCSS()}</style>
 
       {/* ── GAME SCREEN ── */}
       <div id="gameScreen" className="screen pkr-casino-live-table">
@@ -2637,4 +2638,7 @@ window.removeSeat = function() {
 
 })();
 `;
+}
+function getPremiumTableCSS():string {
+  return "/* Live game chrome — preserve the legacy table engine and its action IDs. */\n#gameScreen{--gold:#e4ba6b;--gold2:#f5d99b;--gold-dim:#ac8249;--cream:#f5f1e8;--cream2:#d6dbd3;--green:#39d796;--red:#f18578;--border:rgba(228,186,107,.22);--border2:rgba(228,186,107,.36);--bg:#071710;--bg2:#0c251c;--bg3:#15362a;--rail:#3c2c1a;--rail2:#82623c;--felt-top:#1c7553;--felt-mid:#12593d;--felt-bot:#073521;background:radial-gradient(ellipse at 50% 45%,#153f2b,#071710 80%);color:#f5f1e8}\n#gameScreen .topbar{background:linear-gradient(90deg,#081812,#102c20);border-bottom:1px solid rgba(228,186,107,.3);min-height:55px}\n#gameScreen .tb-title{color:#f5f1e8}\n#gameScreen .tb-back{color:#efd08b}\n#gameScreen .bank-bar{background:#0c241b;border-bottom:1px solid rgba(228,186,107,.23)}\n#gameScreen #tableOuter{background:linear-gradient(130deg,#9d784a,#312416 35%,#6b5235 70%,#1c1b13);box-shadow:0 0 0 2px rgba(231,187,110,.32),0 16px 65px #000c}\n#gameScreen #tableFelt{background:radial-gradient(ellipse at 48% 39%,#1c7d59,#11583d 55%,#083520);box-shadow:inset 0 0 34px #0008}\n#gameScreen .side-panel{background:#0d241a;border-left-color:rgba(228,186,107,.28)}\n#gameScreen .panel-hdr{background:#0b1e16}\n#gameScreen .game-tabs{background:#0b1e16;border-top-color:rgba(228,186,107,.22)}\n#gameScreen .game-tab{color:#b7cbbf}\n#gameScreen .game-tab:focus-visible,#gameScreen button:focus-visible{outline:3px solid #f1d28d;outline-offset:2px}\n@media(min-width:1100px){\n body:has(.pkr-persistent-nav) #gameScreen{left:218px!important;right:0!important;width:calc(100vw - 218px)!important}\n}\n@media(max-width:1099px){\n body:has(.pkr-universal-bottom-nav) #gameScreen{bottom:calc(70px + env(safe-area-inset-bottom))!important;height:auto!important}\n #gameScreen .side-panel.open{width:min(300px,74vw)}\n #gameScreen .game-tab{min-height:46px}\n}\n@media(max-width:650px){\n #gameScreen .topbar{gap:4px}\n #gameScreen .tb-title{font-size:14px;min-width:60px}\n #gameScreen .bank-pill b{font-size:12px}\n #gameScreen .game-tabs{min-height:47px}\n #gameScreen .game-tab{padding:7px 1px 8px;font-size:10px;letter-spacing:0}\n}\n@media(max-width:500px) and (orientation:landscape){\n body:has(.pkr-universal-bottom-nav) #gameScreen{bottom:55px!important}\n #gameScreen .topbar{min-height:42px}\n #gameScreen .game-tabs{min-height:37px}\n}";
 }

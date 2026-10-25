@@ -3,58 +3,78 @@ import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {canUsePush,isIOS,isSafari,isPWAInstalled,subscribePush} from '@/lib/push';
 import {api} from '@/lib/api';
+
+type Platform='ios'|'android'|'desktop';
+type InstallPromptEvent=Event&{prompt:()=>Promise<void>;userChoice:Promise<{outcome:'accepted'|'dismissed'}>};
 export default function InstallGuide(){
  const router=useRouter();
  const [group,setGroup]=useState('');
- const [installed,setInstalled]=useState(false),[permission,setPermission]=useState('default');
- const [prompt,setPrompt]=useState<any>(null),[notice,setNotice]=useState('');
+ const [installed,setInstalled]=useState(false);
+ const [permission,setPermission]=useState('default');
+ const [prompt,setPrompt]=useState<InstallPromptEvent|null>(null);
+ const [notice,setNotice]=useState('');
  const [copied,setCopied]=useState(false);
- const [platform,setPlatform]=useState<'ios'|'android'|'desktop'>('desktop');
+ const [platform,setPlatform]=useState<Platform>('desktop');
+ const [url,setUrl]=useState('');
+ const [busy,setBusy]=useState(false);
  useEffect(()=>{
-  setGroup(new URLSearchParams(window.location.search).get('group')||'');
+  const query=new URLSearchParams(window.location.search);
+  setGroup(query.get('group')||'');
+  setUrl(window.location.href);
   setInstalled(isPWAInstalled());
   setPlatform(isIOS()?'ios':/android/i.test(navigator.userAgent)?'android':'desktop');
   if('Notification' in window)setPermission(Notification.permission);
-  const onPrompt=(e:Event)=>{e.preventDefault();setPrompt(e);};
-  const onInstalled=()=>{setInstalled(true);setPrompt(null);};
-  window.addEventListener('beforeinstallprompt',onPrompt);window.addEventListener('appinstalled',onInstalled);
-  return ()=>{window.removeEventListener('beforeinstallprompt',onPrompt);window.removeEventListener('appinstalled',onInstalled)};
+  const onPrompt=(e:Event)=>{e.preventDefault();setPrompt(e as InstallPromptEvent)};
+  const onInstalled=()=>{setInstalled(true);setPrompt(null);setNotice('PKR is installed. Open it from your Home Screen to finish setup.')};
+  const onVisibility=()=>{if(document.visibilityState==='visible')setInstalled(isPWAInstalled())};
+  window.addEventListener('beforeinstallprompt',onPrompt);
+  window.addEventListener('appinstalled',onInstalled);
+  document.addEventListener('visibilitychange',onVisibility);
+  return()=>{window.removeEventListener('beforeinstallprompt',onPrompt);window.removeEventListener('appinstalled',onInstalled);document.removeEventListener('visibilitychange',onVisibility)};
  },[]);
- async function doInstall(){if(!prompt)return;await prompt.prompt();const result=await prompt.userChoice;if(result?.outcome==='accepted')setNotice('Installation started. Open PKR from your home screen.');else setNotice('You can install later.');setPrompt(null);}
- async function alerts(){
-  if(!group){setNotice('Open this setup page from your group to activate game notifications.');return;}
-  if(!canUsePush()){setNotice('Push notifications are not supported in this browser. On iPhone, add PKR to Home Screen first.');return;}
-  const p=await Notification.requestPermission();setPermission(p);
-  if(p!=='granted'){setNotice('Notifications not enabled. You can change this later in your phone settings.');return;}
-  const user=await api.auth.me().catch(()=>null);
-  const ok=await subscribePush(group,user?.id,user?.name);
-  setNotice(ok?'Game notifications enabled for this group.':'Unable to subscribe. Check browser and notification permissions.');
+ async function copyLink(){
+  try{
+   if(!url)throw new Error('Link unavailable');
+   await navigator.clipboard.writeText(url);
+   setCopied(true);setNotice('Link copied. Open Safari or Chrome and paste it into the address bar.');
+  }catch{setNotice('Copy is unavailable in this browser. Select the link below and copy it manually.')}
  }
- return <main className="pkr-onboarding" style={{maxWidth:540,margin:'0 auto',padding:'28px 22px 72px',lineHeight:1.6}}>
-  <a href="/dashboard" style={{color:'var(--gold)'}}>♠ PKR</a>
-  <p style={{color:'var(--gold)',fontSize:12,marginTop:24}}>PLAYER SETUP · 3 SIMPLE STEPS</p>
-  <h1 style={{fontSize:34,margin:'8px 0 10px'}}>Put poker night on your phone</h1>
-  <p style={{opacity:.8}}>Install PKR once. Invitations, seat reservations, buy-ins, cash-outs and settlement updates will be easier to find.</p>
-  <section style={{marginTop:24,padding:20,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:14}}>
-   <h2 style={{fontSize:20}}>1. Add PKR to your home screen</h2>
-   {installed?<p style={{color:'var(--green)'}}>✓ PKR is installed on this device.</p>:
-    platform==='ios'?<><p style={{fontSize:15,margin:'10px 0'}}>On iPhone: open PKR in <strong>Safari</strong> → tap the <strong>Share</strong> icon → scroll down to <strong>Add to Home Screen</strong> → tap <strong>Add</strong>.</p><div className="pkr-install-steps"><span>1  Safari</span><span>2  Share ↑</span><span>3  Add to Home Screen</span></div>{!isSafari()&&<><p style={{color:'var(--amber)'}}>WhatsApp's in-app browser cannot install PKR. Open this link in Safari first.</p><button onClick={async()=>{await navigator.clipboard.writeText(window.location.href);setCopied(true);}} style={{padding:'12px 18px',borderRadius:9,border:'1px solid var(--gold)',color:'var(--gold)',background:'transparent',marginTop:10}}>{copied?'✓ Link copied — paste in Safari':'Copy link for Safari'}</button></>}</>:
-    prompt?<button onClick={doInstall} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Install PKR</button>:
-    <p>{platform==='android'?'In Chrome, open the ⋮ menu and choose Install app or Add to Home screen.':'In a supported browser, open its menu and choose Install app.'}</p>}
+ async function installApp(){
+  if(!prompt)return;
+  try{await prompt.prompt();const choice=await prompt.userChoice;if(choice.outcome==='accepted')setNotice('Installation accepted. Open PKR from your Home Screen.');else setNotice('You can install PKR later.');setPrompt(null);}
+  catch{setNotice('Use your browser menu to install PKR.')}
+ }
+ async function enableNotifications(){
+  if(busy)return;setBusy(true);setNotice('');
+  try{
+   if(!group){setNotice('Open this setup page from your poker group to enable its game alerts.');return;}
+   if(platform==='ios'&&!installed){setNotice('On iPhone, install PKR and open it from your Home Screen before enabling alerts.');return;}
+   if(!canUsePush()){setNotice('This browser does not support push notifications. Open the installed PKR app, or use a compatible browser.');return;}
+   const p=await Notification.requestPermission();setPermission(p);
+   if(p!=='granted'){setNotice('Notifications were not enabled. You can change permission in your device settings.');return;}
+   const user=await api.auth.me().catch(()=>null);
+   const ok=await subscribePush(group,user?.id,user?.name);
+   setNotice(ok?'Notifications enabled for this poker group.':'Could not subscribe. Make sure you have joined this group, then try again.');
+  }catch{setNotice('Unable to activate notifications on this device.')}
+  finally{setBusy(false)}
+ }
+ const doneNotifications=permission==='granted';
+ return <main className="pkr-onboarding pkr-install-vnext">
+  <header className="pkr-install-hero"><a href="/dashboard" className="pkr-install-brand">♠ PKR</a><span className="pkr-eyebrow">YOUR PRIVATE POKER CLUB</span><h1>Your poker night. One tap away.</h1><p>Keep your games, RSVP board, table and results on your phone. Install PKR without visiting an app store.</p></header>
+  <div className="pkr-install-progress" aria-label="Installation progress"><span className={installed?'complete':''}>1. Install</span><span className={doneNotifications?'complete':''}>2. Alerts</span><span>3. Play</span></div>
+  <section className="pkr-install-card"><div className="pkr-install-card-title"><span className={installed?'done':'step'}>{installed?'✓':'1'}</span><div><h2>Put PKR on your Home Screen</h2><p>Just once. After that, open PKR like any other app.</p></div></div>
+   {installed?<div role="status" className="pkr-install-success">✓ PKR is running as an installed app on this device.</div>:
+    platform==='ios'?<div className="pkr-install-instructions"><p>On iPhone, open this page in <strong>Safari</strong>:</p><ol><li>Tap the <strong>Share</strong> icon (square with arrow up).</li><li>Scroll down and tap <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>, then launch PKR from the new icon.</li></ol>{!isSafari()&&<div className="pkr-install-alert"><strong>Opened from WhatsApp or another app?</strong><p>Copy this setup link and paste it into Safari to see the installation option.</p><button onClick={copyLink}>{copied?'✓ Copied':'Copy setup link'}</button><input aria-label="Setup link to copy manually" readOnly onFocus={e=>e.currentTarget.select()} value={url}/></div>}</div>:
+    prompt?<button className="pkr-install-primary" onClick={installApp}>↧ Install PKR now</button>:
+    <div className="pkr-install-instructions"><p>{platform==='android'?'In Chrome, tap the ⋮ menu and choose Install app or Add to Home screen.':'In Chrome or Edge, use the browser menu and choose Install app.'}</p><button onClick={copyLink} className="pkr-install-secondary">{copied?'✓ Copied':'Copy setup link'}</button></div>}
+   {platform==='ios'&&!installed&&<p className="pkr-install-footnote">iPhone may keep installed-app sign-in separate from Safari. If you see a sign-in screen after installation, open your group invitation again in PKR or ask your host for an approved recovery link.</p>}
   </section>
-  <section style={{marginTop:16,padding:20,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:14}}>
-   <h2 style={{fontSize:20}}>2. Turn on game notifications</h2>
-   <p>Get alerts for newly scheduled games, personal buy-ins, cash-outs and settlement results. Your phone may require PKR to be installed first.</p>
-   <p>Current permission: <strong>{permission}</strong></p>
-   {!installed&&platform==='ios'&&<p style={{color:'var(--amber)'}}>Install and open PKR from your Home Screen before enabling notifications.</p>}
-   <button disabled={!installed&&platform==='ios'} onClick={alerts} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Enable game alerts</button>
-   <p style={{fontSize:12,opacity:.7}}>Sound and vibration depend on your device settings. Browsers do not allow websites to force notification sounds while in the background.</p>
+  <section className="pkr-install-card"><div className="pkr-install-card-title"><span className={doneNotifications?'done':'step'}>{doneNotifications?'✓':'2'}</span><div><h2>Get game-night notifications</h2><p>Know when games are scheduled and when your game records change.</p></div></div>
+    <p className="pkr-install-meta">Current permission: <strong>{permission}</strong></p>
+    {group?<button className="pkr-install-primary" onClick={enableNotifications} disabled={busy||doneNotifications||(platform==='ios'&&!installed)}>{busy?'Enabling…':doneNotifications?'✓ Notifications allowed':'Enable game alerts'}</button>:<p className="pkr-install-footnote">Open this guide from your poker room to subscribe to that group's notifications.</p>}
+    <p className="pkr-install-footnote">Sounds and vibration depend on your phone settings; websites cannot force custom background alerts.</p>
   </section>
-  <section style={{marginTop:16,padding:20,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:14}}>
-   <h2 style={{fontSize:20}}>3. Open your poker group</h2>
-   <p>Your membership stays private to the group you joined. No other group's member directory is visible.</p>
-   <button onClick={()=>router.push(group?'/events/'+encodeURIComponent(group):'/dashboard')} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Go to my group →</button>
-  </section>
-  {notice&&<p role="status" style={{marginTop:18,color:'var(--gold)'}}>{notice}</p>}
+  <section className="pkr-install-card"><div className="pkr-install-card-title"><span className="step">3</span><div><h2>Open your poker room</h2><p>See games, members, seating, results and settlement.</p></div></div><button className="pkr-install-primary" onClick={()=>router.push(group?'/events/'+encodeURIComponent(group):'/dashboard')}>Go to my poker room →</button></section>
+  {notice&&<p className="pkr-install-notice" role="status">{notice}</p>}
  </main>;
 }
