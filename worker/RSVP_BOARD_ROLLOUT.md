@@ -50,3 +50,7 @@
 - `worker/scripts/test-rsvp-board-migration.py`: disposable in-memory SQLite uniqueness, case-insensitive names, closed choices and seat release.
 - `worker/scripts/check-staging-queries.py`: verifies static SQL against a disposable schema with both additive migrations.
 - GitHub CI does not deploy or migrate any D1 database.
+
+## Cloudflare Build configuration repair (October 2026)
+
+Set **Worker** to `pkr-reloaded-worker-staging`, **Root Directory** to `worker`, **Build command** to `npm run build:staging` (or leave blank after CI checks), **Deploy command** to `npm run deploy:staging`, and configure builds only from the staging branch `codex/pkr-production-protection-20261024`. Never select the root `wrangler.toml` or the default `npm run deploy`, which target the production Worker. Cloudflare's default command `npx wrangler deploy` may select the wrong configuration. Staging deployment uses `--config wrangler.staging.toml --keep-vars` explicitly. The remote secret-list diagnostic remains available separately as `npm run diagnose:staging:secrets` when an authorised operator has Cloudflare access; it is intentionally not part of CI deploy because authentication permissions can make list operations fail independently of deployment. Verify secret **names** before applying any migration or enabling RSVP v2; never log secret values. Confirm deployment target and database name before running any command. 
