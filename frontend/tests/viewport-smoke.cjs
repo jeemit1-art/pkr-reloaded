@@ -57,13 +57,14 @@ async function test(){
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
    });
-   for(const item of [{id:'dashboard',url:'/dashboard',ready:'.pkr-pro-home'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
+   for(const item of [{id:'dashboard',url:'/dashboard',ready:'.pkr-pro-home'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
+     if(item.id==='live-table'){const box=await page.locator('#gameScreen').boundingBox();if(box&&size.width>=1100&&box.x<210)errors.push(size.name+' live table overlaps sidebar');}
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
      }
