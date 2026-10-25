@@ -1191,7 +1191,7 @@ async function loadGameFromPkr() {
       game.players.forEach(function(p) {
         var sid = 'seat' + p.seat_number;
         if (p.user_id) _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
-          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
+          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout,revision:p.revision };
       });
     }
   } catch(e) { console.warn('Could not reload game:', e); }
@@ -2564,7 +2564,7 @@ if (ctx && ctx.gameId) {
         }
         // Cache user_id for PKR syncing
         if (p.user_id) _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
-          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
+          seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout,revision:p.revision };
       });
       // Hydrating server state must not create new money/seat writes.
       _origSaveState();
@@ -2602,7 +2602,7 @@ var _pollInterval = setInterval(function() {
       if (!existing || !existing.name) return;
       // Update PKR cache
       _pkrSeatedPlayers[sid] = { user_id:p.user_id,name:p.display_name,
-        seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout };
+        seat_number:p.seat_number,buy_ins:p.buy_ins,buy_in_total:p.buy_in_total,cashout:p.cashout,revision:p.revision };
     });
     // Update results token
     if (game.results_token) {

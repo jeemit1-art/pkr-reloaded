@@ -22,6 +22,8 @@ BRANCH = "release/pkr-production-20261025-rc2"
 BASE = "277a3de3a0e65fa7db6e49b137433c6db0e310cd"
 DB = "e21a4823-ef28-496a-9f49-fa3e04dc73bf"
 KV = "35132989116243c6b9a79f7a8151e328"
+# Fixed release boundary: user-audited active games/hands were created before 1 Oct.
+LEGACY_HAND_CUTOFF_UNIX = 1790812800
 URL = "https://pkr-reloaded-worker.jeemit1.workers.dev"
 FLAGS = ("PKR_INTEGRITY_REVISIONS", "PKR_INTEGRITY_STACKS", "PKR_PHONE_MEMBERS_V1")
 OPTIONAL = ("game_player_revisions","game_financial_audit","hand_stack_baselines",
@@ -77,7 +79,15 @@ def query_control():
            "(SELECT COUNT(*) FROM group_phone_contacts) AS contacts,"
            "(SELECT COUNT(*) FROM game_players gp LEFT JOIN game_player_revisions r "
            "ON r.game_id=gp.game_id AND r.user_id=gp.user_id "
-           "WHERE r.revision IS NULL) AS missing_revisions")
+           "WHERE r.revision IS NULL) AS missing_revisions,"
+           f"(SELECT COUNT(*) FROM games g WHERE g.status='active' AND g.created_at>={LEGACY_HAND_CUTOFF_UNIX}) AS recent_active_games,"
+           f"(SELECT COUNT(*) FROM hands h JOIN games g ON g.id=h.game_id WHERE g.status='active' AND h.created_at>={LEGACY_HAND_CUTOFF_UNIX}) AS recent_hands,"
+           f"(SELECT COUNT(*) FROM hand_actions a JOIN games g ON g.id=a.game_id WHERE g.status='active' AND a.created_at>={LEGACY_HAND_CUTOFF_UNIX}) AS recent_actions,"
+           f"(SELECT COUNT(*) FROM game_players p JOIN games g ON g.id=p.game_id WHERE g.status='active' AND p.created_at>={LEGACY_HAND_CUTOFF_UNIX}) AS recent_players,"
+           f"(SELECT COUNT(*) FROM game_financial_audit f JOIN games g ON g.id=f.game_id WHERE g.status='active' AND f.changed_at>={LEGACY_HAND_CUTOFF_UNIX}) AS recent_financial_edits,"
+           f"(SELECT COUNT(*) FROM hands h JOIN games g ON g.id=h.game_id WHERE g.status='active' AND h.voided=0 AND h.created_at<{LEGACY_HAND_CUTOFF_UNIX} "
+           "AND EXISTS(SELECT 1 FROM hand_actions a WHERE a.hand_id=h.id) "
+           "AND NOT EXISTS(SELECT 1 FROM hand_results r WHERE r.hand_id=h.id)) AS legacy_unfinished_hands")
     # Resolve D1 through the audited Worker binding, NOT the legacy display
     # name: the Cloudflare database was renamed without changing its UUID.
     output = command("npx","--no-install","wrangler","d1","execute",
@@ -100,9 +110,30 @@ def query_control():
         raise Stop("Unexpected D1 control results")
     result = rows[0]
     if not isinstance(result,dict): raise Stop("Unexpected D1 control row")
-    fields = ("optional_count","active_games","contacts","missing_revisions")
+    fields = ("optional_count","active_games","contacts","missing_revisions",
+              "recent_active_games","recent_hands","recent_actions","recent_players",
+              "recent_financial_edits","legacy_unfinished_hands")
     try: return {name:int(result[name]) for name in fields}
     except (KeyError,ValueError,TypeError): raise Stop("Invalid D1 control fields")
+
+def confirm_safe_activity(counts):
+    if counts["optional_count"] != 10:
+        raise Stop("Expected all 10 optional live D1 tables; no writes made")
+    if counts["missing_revisions"]:
+        raise Stop("Player financial revision records missing; no writes made")
+    recent = ("recent_active_games","recent_hands","recent_actions",
+              "recent_players","recent_financial_edits")
+    if any(counts[name] for name in recent):
+        raise Stop("New or modified game activity since 1 Oct 2026. Do not activate during play.")
+    # The user audited 11 historical open games, including exactly two
+    # unfinished pre-cutoff hands with actions. If additional ones appear,
+    # stop for another audit rather than assuming they are the same.
+    if counts["legacy_unfinished_hands"] > 2 or counts["active_games"] > 11:
+        raise Stop("Historical game inventory changed; review before activation")
+    print("Historical active games preserved:", counts["active_games"],flush=True)
+    print("Unverified pre-rollout unfinished hands preserved:",
+          counts["legacy_unfinished_hands"],flush=True)
+
 
 def secret_names():
     output = command("npx","--no-install","wrangler","secret","list",
@@ -172,23 +203,26 @@ def main():
     release_check()
     counts=query_control()
     print("Read-only D1 checks:",counts,flush=True)
-    if counts["optional_count"]!=10:
-        raise Stop("Expected 10 optional production D1 tables; no writes made")
-    if counts["missing_revisions"]:
-        raise Stop("Player financial revision records missing; no writes made")
-    if counts["active_games"]:
-        raise Stop("Active game exists; finish play and settlement before enabling chip stacks")
+    confirm_safe_activity(counts)
     old=secret_names()
     base={"JWT_SECRET","GOOGLE_CLIENT_SECRET","PKR_RSVP_V2"}
     if not base.issubset(old):
         raise Stop("Expected production OAuth/JWT/RSVP secrets not present")
-    print("No active games; all optional tables and financial revisions ready: PASS",flush=True)
-    print("Deploying manual WhatsApp Worker without D1 changes...",flush=True)
+    print("No post-cutoff gameplay; optional tables and revisions: PASS",flush=True)
+    print("Deploying manual WhatsApp Worker with legacy-hand compatibility, no D1 changes...",flush=True)
     command("npx","--no-install","wrangler","deploy",
             "--config","wrangler.toml","--keep-vars",cwd=WORKER)
     health()
     assert_manual_worker()
     print("Production Worker code / health / no-OTP endpoint: PASS",flush=True)
+    # Recheck directly before enabling flags: a game may have been opened
+    # while the Worker deploy was running.
+    second=query_control()
+    confirm_safe_activity(second)
+    if any(second[field]!=counts[field] for field in (
+      "optional_count","contacts","missing_revisions","active_games",
+      "legacy_unfinished_hands")):
+        raise Stop("Live game inventory changed during deployment; review before activation")
     contact_secret(old,counts["contacts"])
     if "PKR_CONTACT_KEY" not in secret_names():
         raise Stop("Contact key missing; stop before phone activation")
@@ -205,7 +239,7 @@ def main():
         if e.code!=404:
             raise Stop("Phone invitation gate responded HTTP "+str(e.code)+", expected 404")
     print("PRODUCTION ACTIVATION: PASS - RSVP, financial revisions, confirmed stacks, private WhatsApp membership",flush=True)
-    print("No data migration, finance mutation, paid WhatsApp API or AI activation.",flush=True)
+    print("No data migration, historical hand deletion, invented opening chips, messaging API or AI activation.",flush=True)
     print("Now test signed-in invite/approval/recovery and counted opening stacks on a TEST game.",flush=True)
 
 if __name__=="__main__":

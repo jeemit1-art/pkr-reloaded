@@ -11,6 +11,14 @@ const hands = new Hono<{ Bindings: Env }>();
 
 const legalStreets = new Set(['pre', 'flop', 'turn', 'river']);
 const legalActions = new Set(['post', 'straddle', 'fold', 'check', 'call', 'bet', 'raise', 'allin']);
+// Pre-1 Oct 2026 hands with prior actions cannot gain truthful opening stacks.
+// Such histories can finish under legacy betting rules; future hands still
+// require host-confirmed balances before the first action.
+const LEGACY_HAND_CUTOFF_UNIX=1790812800;
+function legacyUnverifiedHand(createdAt:unknown,actionCount:number,confirmedCount:number):boolean{
+  return Number.isSafeInteger(createdAt)&&Number(createdAt)<LEGACY_HAND_CUTOFF_UNIX&&
+    actionCount>0&&confirmedCount===0;
+}
 
 function isLocked(game: {status?:string}): boolean {
   return game.status === 'settled' || game.status === 'cancelled';
@@ -159,8 +167,8 @@ hands.get('/games/:id/hands/:handId/stack-baseline',authMiddleware,async(c)=>{
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   const hand=await c.env.DB.prepare(
-    'SELECT id,mode,voided FROM hands WHERE id=? AND game_id=?'
-  ).bind(handId,gameId).first<{id:string;mode:string;voided:number}>();
+    'SELECT id,mode,voided,created_at FROM hands WHERE id=? AND game_id=?'
+  ).bind(handId,gameId).first<{id:string;mode:string;voided:number;created_at:number}>();
   if(!hand)return c.json({error:'Hand not found'},404);
   if(c.env.PKR_INTEGRITY_STACKS!=='1')
     return c.json({enabled:false,confirmed:false,players:[]});
@@ -181,6 +189,9 @@ hands.get('/games/:id/hands/:handId/stack-baseline',authMiddleware,async(c)=>{
   const actions=await c.env.DB.prepare(
     'SELECT id FROM hand_actions WHERE hand_id=? LIMIT 1'
   ).bind(handId).first<{id:string}>();
+  if(actions&&legacyUnverifiedHand(hand.created_at,1,0))
+    return c.json({enabled:false,confirmed:false,legacy_unverified:true,players:[],
+      warning:'Pre-rollout hand with actions: opening chips cannot be certified retrospectively.'});
   if(actions)return c.json({error:'Opening stacks must be confirmed before betting.',
     code:'STACK_BASELINE_CONFLICT'},409);
   return c.json({enabled:true,confirmed:false,players:roster});
@@ -444,10 +455,10 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
   // trusting the browser's predicted actor or submitted chip amounts.
   // Remaining stacks cannot be certified without a server chip-stack ledger.
   const handMeta=await c.env.DB.prepare(
-    'SELECT dealer_seat,sb_seat,bb_seat,straddle,mode FROM hands WHERE id=? AND game_id=?'
+    'SELECT dealer_seat,sb_seat,bb_seat,straddle,mode,created_at FROM hands WHERE id=? AND game_id=?'
   ).bind(handId,gameId).first<{
     dealer_seat:number|null;sb_seat:number|null;bb_seat:number|null;
-    straddle:number|null;mode:string
+    straddle:number|null;mode:string;created_at:number
   }>();
   if(handMeta?.mode==='full'){
     if(!Number.isSafeInteger(handMeta.dealer_seat)||!Number.isSafeInteger(handMeta.bb_seat)){
@@ -492,25 +503,29 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
       ).bind(handId).all<{
         user_id:string;display_name:string;seat_number:number;opening_chips:number
       }>()).results;
-      if(confirmed.length!==roster.length||
+      // Preserve pre-cutoff hand histories already in progress; never invent chips.
+      const legacy=legacyUnverifiedHand(handMeta.created_at,historyRows.length,confirmed.length);
+      if(!legacy&&(confirmed.length!==roster.length||
          !roster.every(p=>confirmed.some(row=>row.user_id===p.user_id&&
-           row.display_name===p.display_name&&row.seat_number===p.seat_number))){
+           row.display_name===p.display_name&&row.seat_number===p.seat_number)))){
         return c.json({
           error:'Host-confirmed opening stacks are required for every active player.',
           code:'STACK_BASELINE_REQUIRED',
         },428);
       }
-      try{
-        auditHandStacks(
-          confirmed,
-          historyRows.concat([{id:'pending',display_name,street,action,
-            chips:chips as number}]),
-          null,handMeta.dealer_seat as number,game.seats,
-        );
-      }catch(err){
-        if(err instanceof StackAuditError)
-          return c.json({error:err.message,code:'STACK_LIMIT_CONFLICT'},409);
-        throw err;
+      if(!legacy){
+        try{
+          auditHandStacks(
+            confirmed,
+            historyRows.concat([{id:'pending',display_name,street,action,
+              chips:chips as number}]),
+            null,handMeta.dealer_seat as number,game.seats,
+          );
+        }catch(err){
+          if(err instanceof StackAuditError)
+            return c.json({error:err.message,code:'STACK_LIMIT_CONFLICT'},409);
+          throw err;
+        }
       }
     }
   }
