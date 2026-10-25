@@ -5,6 +5,7 @@ import './pkr-app.css';
 import './pkr-casino.css';
 import './pre-game.css';
 import FinancialNotice from '@/components/FinancialNotice';
+import PersistentNavigation from '@/components/PersistentNavigation';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
       <body>
+        <PersistentNavigation/>
         {children}
         <FinancialNotice/>
         <script dangerouslySetInnerHTML={{__html:`

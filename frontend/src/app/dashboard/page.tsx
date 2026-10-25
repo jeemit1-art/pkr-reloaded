@@ -252,8 +252,6 @@ function DashboardInner() {
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
-        <aside className="pkr-desktop-sidebar" aria-label="Main navigation"><div className="pkr-sidebar-brand">♠ <strong>PKR</strong></div><button className="selected" onClick={()=>router.push('/dashboard')}>⌂ <span>Home</span></button><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>♧ <span>Games</span></button><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ <span>Players</span></button><button onClick={()=>router.push('/insights')}>▥ <span>Insights</span></button><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>＄ <span>Settle</span></button><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>▦ <span>Schedule</span></button><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♙ <span>Members</span></button><button onClick={()=>router.push('/install')}>↗ <span>Install PKR</span></button></aside>
-
       {/* Install banner */}
       {showInstallBanner && (
         <div style={{background:'var(--bg3)',borderBottom:'1px solid var(--border)',
