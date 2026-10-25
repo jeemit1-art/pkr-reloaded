@@ -21,6 +21,18 @@ export default function PersistentNavigation(){
  const [rooms,setRooms]=useState<Event[]>([]);
  const [hasSession,setHasSession]=useState(false);
  const [gameEventId,setGameEventId]=useState<string|null>(null);
+ const [roomTab,setRoomTab]=useState('games');
+ useEffect(()=>{
+   setRoomTab(typeof window==='undefined'?'games':new URLSearchParams(window.location.search).get('tab')||'games');
+ },[pathname]);
+ useEffect(()=>{
+   const onRoomTab=(e:globalThis.Event)=>{
+     const tab=(e as CustomEvent<string>).detail;
+     if(['games','leaderboard','history','members'].includes(tab))setRoomTab(tab);
+   };
+   window.addEventListener('pkr:select-room-tab',onRoomTab);
+   return()=>window.removeEventListener('pkr:select-room-tab',onRoomTab);
+ },[]);
  const allowed=/^\/(dashboard|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname);
  useEffect(()=>{setHasSession(Boolean(getToken()));},[pathname]);
  useEffect(()=>{if(!allowed||!hasSession)return;let live=true;api.events.list().then(r=>{if(live)setRooms(r)}).catch(()=>{});return()=>{live=false};},[allowed,hasSession]);
@@ -36,11 +48,12 @@ export default function PersistentNavigation(){
  if(!allowed||!hasSession)return null;
  const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]||gameEventId||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
- const selected=(href:string)=>href==='room'?pathname.startsWith('/events/')||pathname.startsWith('/games/'):href==='members'?pathname.startsWith('/events/')&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('tab')==='members':pathname===href||pathname.startsWith(href+'/');
+ const selected=(href:string)=>href==='room'?(pathname.startsWith('/events/')&&roomTab!=='members')||pathname.startsWith('/games/'):href==='members'?pathname.startsWith('/events/')&&roomTab==='members':href.startsWith('/insights#')?pathname==='/insights'&&typeof window!=='undefined'&&window.location.hash==='#pkr-settlement':pathname===href||pathname.startsWith(href+'/');
  function visit(destination:string){
   if(destination==='room'||destination==='members'){
    if(!eventId){router.push('/dashboard');return;}
    if(destination==='members'&&pathname==='/events/'+eventId){
+    setRoomTab('members');
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:'members'}));
    }else{
     router.push(roomPath+(destination==='members'?'?tab=members':''));
