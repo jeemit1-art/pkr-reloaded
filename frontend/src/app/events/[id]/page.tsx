@@ -35,6 +35,7 @@ export default function EventPage() {
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [isGroupOwner,setIsGroupOwner]=useState(false);
+  const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>);
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
   const [phoneName,setPhoneName]=useState('');
   const [phoneNumber,setPhoneNumber]=useState('');
@@ -73,6 +74,16 @@ export default function EventPage() {
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
 
+  useEffect(()=>{
+    if(!isGroupOwner)return;
+    const refresh=()=>api.events.joinRequests(id).then(r=>setJoinRequests(r.requests)).catch(()=>{});
+    refresh();const timer=setInterval(refresh,15000);
+    return()=>clearInterval(timer);
+  },[isGroupOwner,id]);
+  async function decideJoin(requestId:string,approve:boolean){
+    try{await api.events.decideJoin(id,requestId,approve);setJoinRequests(v=>v.filter(r=>r.id!==requestId));}
+    catch(e:any){alert(e.message||'Unable to review request');}
+  }
   useEffect(()=>{
     if(tab!=='members'||!isGroupOwner)return;
     api.events.phoneContacts(id).then(r=>{setPhoneContacts(r.contacts);setPhoneError('');})
@@ -274,6 +285,7 @@ export default function EventPage() {
         {/* ── Games tab ── */}
         {tab==='games' && (
           <div>
+            {isGroupOwner&&joinRequests.length>0&&<button className="btn btn-primary" style={{marginBottom:16,width:'100%'}} onClick={()=>setTab('members')}>🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} awaiting approval — Review</button>}
             {isHost && (
               <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
                 <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('cohost');}}>+ Co-host</button>
@@ -367,6 +379,7 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div>
+           {isGroupOwner&&joinRequests.length>0&&<section style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
             {isGroupOwner&&<section style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
               borderRadius:10,marginBottom:16}}>
               <div style={{fontSize:11,color:'var(--gold)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:7}}>
@@ -374,7 +387,7 @@ export default function EventPage() {
               </div>
               <h2 style={{fontFamily:'var(--font-display),serif',fontSize:21,marginBottom:6}}>Invite by WhatsApp number</h2>
               <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:15}}>
-                The number identifies this member privately in your group. Only the invited number can verify and join.
+                The number identifies this member privately in your group. They receive a personal WhatsApp link and request host approval. Free invitations do not verify phone ownership.
                 Other groups cannot see your contacts.
               </p>
               <div style={{display:'grid',gap:9,marginBottom:12}}>
