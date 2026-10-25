@@ -655,3 +655,19 @@ footer { border-top:1px solid var(--border);padding:30px 40px;display:flex;align
 }
      
 } 
+/* PKR VNext: shared high-contrast emerald/champagne system, staging only */
+:root{--bg:#07120f;--bg2:#0c1b17;--bg3:#12241f;--bg4:#192c26;--gold:#e3b861;--gold-pale:#f9dfa6;--gold-dim:#9b7535;--white:#f8f5ed;--ivory:#d6dfd8;--muted:#9daea4;--faint:#52665c;--green:#26c987;--green-dim:#0e6748;--border:rgba(226,189,111,.18);--border-hi:rgba(226,189,111,.38);--border-sub:rgba(255,255,255,.10)}
+body{background:radial-gradient(ellipse at 80% 0%,rgba(12,74,49,.16),transparent 42%),var(--bg);font-weight:400}
+button,a,input,select,textarea{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f3d584;outline-offset:3px}
+.pkr-dashboard .pkr-hero{min-height:0!important;padding-bottom:24px!important;background:linear-gradient(115deg,rgba(5,28,21,.96),rgba(8,36,25,.88))!important;border:1px solid var(--border-hi)!important;border-radius:20px!important;overflow:hidden}
+.pkr-dashboard .pkr-hero h2{font-size:clamp(28px,3.3vw,46px)!important;line-height:1.12!important;letter-spacing:-.02em}
+.pkr-dashboard .pkr-hero .pkr-hero-top,.pkr-dashboard .pkr-hero h2,.pkr-dashboard .pkr-hero p{position:relative;z-index:1}
+.pkr-dashboard .pkr-hero .pkr-hero-stats{position:relative;z-index:1}
+.pkr-dashboard .pkr-hero .pkr-hero-actions{position:relative;z-index:1}
+.pkr-dashboard .pkr-list-head{padding-top:24px}
+.pkr-onboarding>section{box-shadow:0 12px 40px rgba(0,0,0,.2);border-radius:16px!important}
+.pkr-onboarding h1{font-family:var(--font-display),Georgia,serif;line-height:1.2}
+.pkr-install-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:14px 0}
+.pkr-install-steps span{background:rgba(227,184,97,.12);color:var(--gold-pale);border:1px solid var(--border);border-radius:8px;padding:9px 6px;font-size:11px;text-align:center;font-weight:700}
+@media(max-width:700px){.pkr-dashboard .pkr-hero{padding:20px!important;border-radius:15px!important}.pkr-dashboard .pkr-hero h2{font-size:30px!important}.pkr-onboarding{padding:20px 16px 110px!important}.pkr-onboarding>section{padding:18px!important}}

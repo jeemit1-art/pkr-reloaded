@@ -8,6 +8,7 @@ export default function InstallGuide(){
  const [group,setGroup]=useState('');
  const [installed,setInstalled]=useState(false),[permission,setPermission]=useState('default');
  const [prompt,setPrompt]=useState<any>(null),[notice,setNotice]=useState('');
+ const [copied,setCopied]=useState(false);
  const [platform,setPlatform]=useState<'ios'|'android'|'desktop'>('desktop');
  useEffect(()=>{
   setGroup(new URLSearchParams(window.location.search).get('group')||'');
@@ -29,7 +30,7 @@ export default function InstallGuide(){
   const ok=await subscribePush(group,user?.id,user?.name);
   setNotice(ok?'Game notifications enabled for this group.':'Unable to subscribe. Check browser and notification permissions.');
  }
- return <main style={{maxWidth:540,margin:'0 auto',padding:'28px 22px 72px',lineHeight:1.6}}>
+ return <main className="pkr-onboarding" style={{maxWidth:540,margin:'0 auto',padding:'28px 22px 72px',lineHeight:1.6}}>
   <a href="/dashboard" style={{color:'var(--gold)'}}>♠ PKR</a>
   <p style={{color:'var(--gold)',fontSize:12,marginTop:24}}>PLAYER SETUP · 3 SIMPLE STEPS</p>
   <h1 style={{fontSize:34,margin:'8px 0 10px'}}>Put poker night on your phone</h1>
@@ -37,7 +38,7 @@ export default function InstallGuide(){
   <section style={{marginTop:24,padding:20,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:14}}>
    <h2 style={{fontSize:20}}>1. Add PKR to your home screen</h2>
    {installed?<p style={{color:'var(--green)'}}>✓ PKR is installed on this device.</p>:
-    platform==='ios'?<><p>On iPhone: open this page in <strong>Safari</strong>, tap the <strong>Share</strong> button (square with up arrow), then choose <strong>Add to Home Screen</strong> → <strong>Add</strong>.</p>{!isSafari()&&<p style={{color:'var(--amber)'}}>You are not using Safari. Copy the link and open it in Safari to install PKR.</p>}</>:
+    platform==='ios'?<><p style={{fontSize:15,margin:'10px 0'}}>On iPhone: open PKR in <strong>Safari</strong> → tap the <strong>Share</strong> icon → scroll down to <strong>Add to Home Screen</strong> → tap <strong>Add</strong>.</p><div className="pkr-install-steps"><span>1  Safari</span><span>2  Share ↑</span><span>3  Add to Home Screen</span></div>{!isSafari()&&<><p style={{color:'var(--amber)'}}>WhatsApp's in-app browser cannot install PKR. Open this link in Safari first.</p><button onClick={async()=>{await navigator.clipboard.writeText(window.location.href);setCopied(true);}} style={{padding:'12px 18px',borderRadius:9,border:'1px solid var(--gold)',color:'var(--gold)',background:'transparent',marginTop:10}}>{copied?'✓ Link copied — paste in Safari':'Copy link for Safari'}</button></>}</>:
     prompt?<button onClick={doInstall} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Install PKR</button>:
     <p>{platform==='android'?'In Chrome, open the ⋮ menu and choose Install app or Add to Home screen.':'In a supported browser, open its menu and choose Install app.'}</p>}
   </section>
@@ -45,7 +46,8 @@ export default function InstallGuide(){
    <h2 style={{fontSize:20}}>2. Turn on game notifications</h2>
    <p>Get alerts for newly scheduled games, personal buy-ins, cash-outs and settlement results. Your phone may require PKR to be installed first.</p>
    <p>Current permission: <strong>{permission}</strong></p>
-   <button onClick={alerts} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Enable game alerts</button>
+   {!installed&&platform==='ios'&&<p style={{color:'var(--amber)'}}>Install and open PKR from your Home Screen before enabling notifications.</p>}
+   <button disabled={!installed&&platform==='ios'} onClick={alerts} style={{padding:'12px 20px',borderRadius:8,background:'var(--gold)',color:'#17120a',fontWeight:700}}>Enable game alerts</button>
    <p style={{fontSize:12,opacity:.7}}>Sound and vibration depend on your device settings. Browsers do not allow websites to force notification sounds while in the background.</p>
   </section>
   <section style={{marginTop:16,padding:20,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:14}}>
