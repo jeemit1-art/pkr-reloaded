@@ -6,6 +6,7 @@ on:
       - 'codex/pkr-next16-security-20261025'
     paths:
       - 'frontend/.next16-upgrade-trigger'
+      - 'frontend/.next16-overrides-trigger'
       - '.github/workflows/next16-lockfile-upgrade.yml'
 
 permissions:
