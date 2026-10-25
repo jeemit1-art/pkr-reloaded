@@ -48,8 +48,7 @@ function publicGuest(r:Guest) {
 }
 async function gameFor(env:Env,id:string):Promise<RsvpGame|null> {
   return env.DB.prepare(
-    'SELECT g.id,g.event_id,g.scheduled_at,g.location,g.seats,g.status,e.name AS event_name '+
-    'FROM games g JOIN events e ON e.id=g.event_id WHERE g.id=?'
+    'SELECT g.id,g.event_id,g.scheduled_at,g.location,g.seats,g.status,e.name AS event_name FROM games g JOIN events e ON e.id=g.event_id WHERE g.id=?'
   ).bind(id).first<RsvpGame>();
 }
 function closed(game:RsvpGame) {
@@ -163,10 +162,8 @@ board.post('/games/:id/rsvp-board',async(c)=>{
       if(!current)return c.json({error:'Only the person who created this RSVP can edit it on this device'},403);
       try {
         const updated=await c.env.DB.prepare(
-          'UPDATE game_rsvp_guests SET display_name=?,status=?,arrival_option=?,seat_number=?,updated_at=unixepoch() '+
-          'WHERE id=? AND game_id=? AND edit_token_hash=? '+
-          'AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?))'
-        ).bind(name,status,arrival,seat,current.id,game.id,hash,seat,game.id,seat).run();
+          "UPDATE game_rsvp_guests SET display_name=?,status=?,arrival_option=?,seat_number=?,updated_at=unixepoch() WHERE id=? AND game_id=? AND edit_token_hash=? AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
+        ).bind(name,status,arrival,seat,current.id,game.id,hash,seat,game.id,seat,game.id).run();
         if(!updated.meta.changes)return conflict(c);
       }catch{return conflict(c);}
     }else{
@@ -176,10 +173,7 @@ board.post('/games/:id/rsvp-board',async(c)=>{
       const key=secret(),hash=await digest(key),id=generateId();
       try {
         const inserted=await c.env.DB.prepare(
-          'INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,seat_number,edit_token_hash) '+
-          'SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS('+
-            'SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL'+
-          ') AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN (\'scheduled\',\'lobby\'))'
+          "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
         ).bind(id,game.id,name,status,arrival,seat,hash,game.id,seat,seat,game.id).run();
         if(!inserted.meta.changes)return conflict(c);
       }catch{return conflict(c);}

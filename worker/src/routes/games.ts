@@ -365,6 +365,16 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   const desired=seat == null ? null : Number(seat);
   if (desired!==null && (!Number.isSafeInteger(seat)||desired<1||desired>game.seats))
     return c.json({error:'Seat must be an available number in this game'},400);
+  // Do not let a host accidentally take a guest's reserved seat before start.
+  if(c.env.PKR_RSVP_V2==='1' && desired!==null &&
+     (game.status==='scheduled'||game.status==='lobby')){
+    const booked=await c.env.DB.prepare(
+      "SELECT display_name FROM game_rsvp_guests WHERE game_id=? AND seat_number=? AND status='yes'"
+    ).bind(gameId,desired).first<{display_name:string}>();
+    if(booked && booked.display_name.toLowerCase()!==name.toLowerCase())
+      return c.json({error:'This seat is reserved by '+booked.display_name+'. Ask the player to change their RSVP first.',
+        code:'RSVP_SEAT_RESERVED'},409);
+  }
   const phone=typeof body?.whatsapp==='string'&&body.whatsapp.trim()?body.whatsapp.trim():null;
   const hasExpected=!!body&&Object.prototype.hasOwnProperty.call(body,'expected_seat_number');
   const expected=body?.expected_seat_number;
