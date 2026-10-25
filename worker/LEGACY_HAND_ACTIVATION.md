@@ -32,8 +32,13 @@ It rechecks the inventory after deploying the Worker and before enabling
 feature flags.
 
 Only then, with a private encryption-key backup, it enables
-`PKR_INTEGRITY_REVISIONS`, `PKR_INTEGRITY_STACKS`, and
-`PKR_PHONE_MEMBERS_V1` one at a time. Existing `PKR_RSVP_V2` is preserved.
+`PKR_INTEGRITY_STACKS` and `PKR_PHONE_MEMBERS_V1` one at a time.
+Existing `PKR_RSVP_V2` is preserved. The financial change-audit triggers
+already run in D1. Strict `PKR_INTEGRITY_REVISIONS` remains OFF until the
+matching frontend (including revision-aware state restoration) is deployed
+to mypkr.app. Vercel blocked a matching October 25 build with a
+100-API-deployments-per-day Hobby limit; do not force the strict flag while
+mypkr.app serves the older frontend.
 No SQL migrations, Twilio, WhatsApp API or AI are needed.
 
 This preflight protects historical data, but it cannot establish whether
