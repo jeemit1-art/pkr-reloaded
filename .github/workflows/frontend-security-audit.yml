@@ -1,0 +1,50 @@
+name: PKR frontend dependency security gate
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-security-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-security-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install exact frontend lockfile
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+      - name: Report runtime dependency vulnerabilities
+        working-directory: frontend
+        run: |
+          npm audit --omit=dev --json > /tmp/pkr-runtime-audit.json || true
+          node -e '
+            const a=require("/tmp/pkr-runtime-audit.json");
+            if(a.error) throw Error("npm security audit unavailable: "+a.error.message);
+            for(const [name,entry] of Object.entries(a.vulnerabilities||{})){
+              console.log(name+": "+entry.severity+"; range="+entry.range);
+            }
+            const counts=a.metadata?.vulnerabilities||{};
+            console.log("Runtime audit: "+JSON.stringify(counts));
+            if((counts.high||0)+(counts.critical||0)>0)process.exit(1);
+          '
+      - name: Check exact expected supported framework
+        working-directory: frontend
+        run: |
+          node -e '
+            const p=require("./package.json");
+            if(p.dependencies.next!=="16.4.3"||p.dependencies.react!=="19.3.1"||p.dependencies["react-dom"]!=="19.3.1")throw Error("Unexpected or unsupported Next/React version");
+            console.log("Next 16.4.3 and React 19.3.1 verified");
+          '
