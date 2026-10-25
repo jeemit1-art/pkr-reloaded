@@ -220,18 +220,13 @@ export default function GamePage() {
           </button>
         )}
 
-        {/* Share row */}
-        {(game.status==='scheduled'||game.status==='lobby') && (
-          <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-            <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}}
-              onClick={()=>navigator.clipboard.writeText(lobbyUrl).then(()=>alert('RSVP link copied!'))}>
-              📋 Copy RSVP Link
+        {/* Personal game invitations are addressed from the private room roster. */}
+        {isHost&&(game.status==='scheduled'||game.status==='lobby')&&(
+          <div style={{marginBottom:16}}>
+            <button className="btn btn-outline" style={{width:'100%',fontSize:12,padding:'11px'}}
+              onClick={()=>router.push('/events/'+game.event_id+'?tab=members&inviteGame='+game.id)}>
+              📱 Invite verified members via WhatsApp →
             </button>
-            <a href={`https://wa.me/?text=${encodeURIComponent('🃏 '+game.event_name+'\n'+fmtDate(game.scheduled_at)+(game.location?'\n📍 '+game.location:'')+'\n\nChoose your arrival and seat: '+lobbyUrl)}`}
-              target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
-              style={{fontSize:11,padding:'7px 12px',textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
-              📱 WhatsApp Invite
-            </a>
           </div>
         )}
         {game.status==='active' && game.live_token && (

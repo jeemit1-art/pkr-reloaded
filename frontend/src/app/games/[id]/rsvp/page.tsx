@@ -223,10 +223,10 @@ export default function RsvpPage(){
             <div className="pkr-guest-tools">
               {mySummary&&<a className="pkr-guest-outline" href={'https://wa.me/?text='+encodeURIComponent(myWhatsAppUpdate)}
                 target="_blank" rel="noreferrer">Share my RSVP update to WhatsApp</a>}
-              <a className="pkr-guest-button whats-app" href={'https://wa.me/?text='+encodeURIComponent(message)}
-                target="_blank" rel="noreferrer">Share in WhatsApp</a>
-              <button className="pkr-guest-outline" type="button"
-                onClick={()=>navigator.clipboard.writeText(link).then(()=>setNotice('Invite link copied.'))}>Copy invitation link</button>
+              {isHost&&<button className="pkr-guest-button whats-app" type="button"
+                onClick={()=>router.push('/events/'+board.event.id+'?tab=members&inviteGame='+id)}>
+                Invite members from private group roster
+              </button>}
               <button className="pkr-guest-outline" type="button" onClick={allowAlerts}>Enable browser alerts</button>
             </div>
             <p className="pkr-guest-footnote">Only signed-in members of this group can view RSVP names and arrival choices. Forwarding the link does not grant access. Browser alerts require permission.</p>
@@ -234,8 +234,10 @@ export default function RsvpPage(){
           {isHost&&<section className="pkr-guest-card">
             <div className="pkr-guest-card-head"><span className="pkr-guest-kicker">HOST CONTROLS</span>
               <h2>Arrival choices</h2><p>Set times for your group. Late and Not coming remain available.</p></div>
-            <a className="pkr-guest-outline full" href={'https://wa.me/?text='+encodeURIComponent(groupSummary)}
-              target="_blank" rel="noreferrer">Share current RSVP summary to WhatsApp</a>
+            <button className="pkr-guest-outline full" type="button"
+              onClick={()=>router.push('/events/'+board.event.id+'?tab=members&inviteGame='+id)}>
+              Invite verified group members via WhatsApp
+            </button>
             <div className="pkr-guest-times">
               {times.map((time,i)=><div className="pkr-guest-time" key={i}>
                 <input type="time" aria-label={'Arrival option '+(i+1)} className="pkr-guest-input"
