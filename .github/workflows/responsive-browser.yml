@@ -1,6 +1,12 @@
 name: PKR responsive browser smoke (synthetic data only)
 
 on:
+  push:
+    branches:
+      - codex/pkr-production-protection-20261024
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/responsive-browser.yml'
   pull_request:
     paths:
       - 'frontend/**'
