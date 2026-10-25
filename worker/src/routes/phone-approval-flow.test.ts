@@ -16,7 +16,7 @@ function makeFixture(){
  const statement=(sql:string,args:any[])=>({
   async first(){
    if(sql.includes('JOIN group_phone_contacts c')&&sql.includes('group_phone_invites i'))
-    return dbState.consumed?null:{id:'invite-1',event_id:'room-1',contact_id:'contact-1',display_name:'Expected Player',phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678'),role:'member',expires_at:Math.floor(Date.now()/1000)+3600,consumed_at:null,sent_count:0,last_sent_at:null,verify_count:0,event_name:'Friday Test Group'};
+    return dbState.consumed?null:{id:'invite-1',event_id:'room-1',contact_id:'contact-1',display_name:'Expected Player',phone_cipher:'fake-opaque-cipher-used-only-by-invite',role:'member',expires_at:Math.floor(Date.now()/1000)+3600,consumed_at:null,sent_count:0,last_sent_at:null,verify_count:0,event_name:'Friday Test Group'};
    if(sql.includes('SELECT role FROM event_members'))return args[0]==='room-1'&&args[1]==='host-1'?{role:'host'}:null;
    if(sql.includes('SELECT id FROM group_phone_invites'))return dbState.consumed?null:{id:'invite-1'};
    if(sql.includes('SELECT user_id FROM group_phone_contacts'))return {user_id:dbState.userId};
@@ -52,7 +52,7 @@ describe('free private WhatsApp membership host approval contract',()=>{
  it('requires a real host decision before issuing an account and consumes the invitation once',async()=>{
   const {env,code,dbState,kvMap}=makeFixture();
   const req=await router.request(base+'/phone-invites/'+code,jsonPost({display_name:'New Player'}),env);
-  expect(req.status).toBe(202);
+  expect(req.status,await req.clone().text()).toBe(202);
   const pending=await req.json() as any;
   expect(pending.status).toBe('pending');
   expect(pending.claim).toMatch(/^[0-9a-f]{64}$/);
