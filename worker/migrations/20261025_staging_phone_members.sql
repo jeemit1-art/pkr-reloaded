@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS group_phone_contacts (
 );
 CREATE INDEX IF NOT EXISTS idx_group_phone_contacts_event
   ON group_phone_contacts(event_id, display_name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_group_phone_contact_pair ON group_phone_contacts(event_id,id);
 CREATE TABLE IF NOT EXISTS verified_phone_identities (
   phone_lookup TEXT PRIMARY KEY,
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS verified_phone_identities (
 CREATE TABLE IF NOT EXISTS group_phone_invites (
   id TEXT PRIMARY KEY,
   event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  contact_id TEXT NOT NULL REFERENCES group_phone_contacts(id) ON DELETE CASCADE,
+  contact_id TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
   role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('member','cohost')),
   expires_at INTEGER NOT NULL,
@@ -30,7 +31,8 @@ CREATE TABLE IF NOT EXISTS group_phone_invites (
   sent_count INTEGER NOT NULL DEFAULT 0,
   last_sent_at INTEGER,
   verify_count INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  FOREIGN KEY(event_id,contact_id) REFERENCES group_phone_contacts(event_id,id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_group_phone_invites_contact
   ON group_phone_invites(contact_id, expires_at DESC);

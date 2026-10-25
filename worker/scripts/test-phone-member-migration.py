@@ -30,11 +30,9 @@ except sqlite3.IntegrityError:
     pass
 try:
     db.execute("INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES('i2','e2','c1','bad-cross-group','member',9999999999)")
-    # Schema intentionally does not encode the pair as a composite FK; route
-    # JOIN and authorised event_id checks enforce that match at read time.
+    raise AssertionError("An invitation was allowed to point to a contact in another group")
 except sqlite3.IntegrityError:
     pass
-db.execute("DELETE FROM group_phone_invites WHERE id='i2'")
 db.execute("DELETE FROM events WHERE id='e1'")
 assert db.execute("SELECT COUNT(*) FROM group_phone_contacts WHERE event_id='e1'").fetchone()[0]==0
 assert db.execute("SELECT COUNT(*) FROM group_phone_invites WHERE event_id='e1'").fetchone()[0]==0
