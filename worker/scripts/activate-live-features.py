@@ -11,8 +11,6 @@ import re
 import secrets
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,6 +23,9 @@ KV = "35132989116243c6b9a79f7a8151e328"
 # Fixed release boundary: user-audited active games/hands were created before 1 Oct.
 LEGACY_HAND_CUTOFF_UNIX = 1790812800
 URL = "https://pkr-reloaded-worker.jeemit1.workers.dev"
+# Source deployed before the present rescue script; NO code/config redeploy.
+DEPLOYED_SOURCE_COMMIT = "bc49d5db485c6844a5bc696caa038babc72129b1"
+DEPLOYED_WORKER_VERSION = "06118fa5-eaaa-4ef9-bb4d-cd4416c16ffb"
 FLAGS = ("PKR_INTEGRITY_STACKS", "PKR_PHONE_MEMBERS_V1")
 # Strict financial revision enforcement waits for the matching Vercel frontend;
 # the older live client can omit expected_revision during state restoration.
@@ -162,24 +163,49 @@ def secret_put(name, value):
     print(name + ": SET (value hidden)",flush=True)
 
 def health():
+    # The Codespaces network proxy blocks Python urllib (403); curl returns 200.
+    response=command("curl","--silent","--show-error","--fail",
+                     "--max-time","20",URL+"/health")
     try:
-        with urllib.request.urlopen(URL + "/health",timeout=20) as response:
-            data = json.load(response)
-        if data.get("ok") is not True or data.get("environment")!="production":
-            raise Stop("Production Worker health does not report OK")
-    except (OSError,ValueError) as e:
-        raise Stop("Production Worker health unavailable: " + type(e).__name__)
+        body=json.loads(response)
+    except ValueError:
+        raise Stop("Production health did not return JSON")
+    if (not isinstance(body,dict) or body.get("ok") is not True or
+        body.get("service")!="pkr-reloaded-worker" or
+        body.get("environment")!="production"):
+        raise Stop("Production Worker health did not return expected identity")
+
+def curl_status(method,path):
+    args=["curl","--silent","--show-error","--max-time","20",
+          "--output","/dev/null","--write-out","%{http_code}","--request",method]
+    if method=="POST":
+        args.extend(["--header","Content-Type: application/json",
+                     "--data-binary","{}"])
+    args.append(URL+path)
+    status=command(*args)
+    if not re.fullmatch(r"[1-5][0-9]{2}",status):
+        raise Stop("Worker HTTP inspection did not return a status")
+    return int(status)
 
 def assert_manual_worker():
-    # The old OTP endpoint returned 503 when inactive. Its removal must be 404.
-    request=urllib.request.Request(URL + "/auth/mobile/start",data=b"{}",
-        method="POST",headers={"Content-Type":"application/json"})
-    try:
-        with urllib.request.urlopen(request,timeout=20):
-            raise Stop("Unexpected mobile OTP endpoint still responds successfully")
-    except urllib.error.HTTPError as e:
-        if e.code!=404:
-            raise Stop("Manual WhatsApp Worker not active: old OTP endpoint HTTP " + str(e.code))
+    # Old OTP endpoint returned 503 when inactive, while new code returns 404.
+    status=curl_status("POST","/auth/mobile/start")
+    if status!=404:
+        raise Stop("Expected manual WhatsApp Worker; mobile OTP endpoint HTTP "+str(status))
+
+def assert_deployed_version():
+    deployments=command("npx","--no-install","wrangler","deployments","list",
+                        "--config","wrangler.toml",cwd=WORKER)
+    # Most recent 100% deployment must match the audited Oct 25 code release.
+    versions=[line.split()[-1] for line in deployments.splitlines()
+              if "Version(s):" in line and "(100%)" in line]
+    if not versions or versions[-1]!=DEPLOYED_WORKER_VERSION:
+        raise Stop("Production Worker version changed; inspect before resuming")
+    changed=git("diff","--name-only",DEPLOYED_SOURCE_COMMIT,"HEAD","--",
+                "worker/src","worker/wrangler.toml")
+    if changed:
+        raise Stop("Worker source/config changed since deployment: "+changed[:100])
+    print("Reviewed Worker version and unchanged source: VERIFIED",flush=True)
 
 def contact_secret(existing, contacts):
     if "PKR_CONTACT_KEY" in existing:
@@ -202,8 +228,14 @@ def contact_secret(existing, contacts):
 
 def main():
     os.umask(0o077)
-    print("PKR PRODUCTION: CONTROLLED ALL-FEATURE ACTIVATION",flush=True)
+    if len(sys.argv)!=2 or sys.argv[1]!="--resume-deployed":
+        raise Stop("Run --resume-deployed only: the Worker was already deployed")
+    print("PKR PRODUCTION: RESUME FEATURE ACTIVATION (NO CODE DEPLOY)",flush=True)
     release_check()
+    assert_deployed_version()
+    health()
+    assert_manual_worker()
+    print("Worker health, version and removed OTP routes: PASS",flush=True)
     counts=query_control()
     print("Read-only D1 checks:",counts,flush=True)
     confirm_safe_activity(counts)
@@ -213,13 +245,10 @@ def main():
         raise Stop("Expected production OAuth/JWT/RSVP secrets not present")
     if "PKR_INTEGRITY_REVISIONS" in old:
         raise Stop("Strict revisions are already configured; investigate live frontend compatibility")
+    if any(name in old for name in FLAGS):
+        raise Stop("One or more feature flags are already set. Review partial activation")
     print("No post-cutoff gameplay; optional tables and revisions: PASS",flush=True)
-    print("Deploying manual WhatsApp Worker with legacy-hand compatibility, no D1 changes...",flush=True)
-    command("npx","--no-install","wrangler","deploy",
-            "--config","wrangler.toml","--keep-vars",cwd=WORKER)
-    health()
-    assert_manual_worker()
-    print("Production Worker code / health / no-OTP endpoint: PASS",flush=True)
+    print("Reusing the already deployed Worker. No code deployment executed.",flush=True)
     # Recheck directly before enabling flags: a game may have been opened
     # while the Worker deploy was running.
     second=query_control()
@@ -232,17 +261,16 @@ def main():
     if "PKR_CONTACT_KEY" not in secret_names():
         raise Stop("Contact key missing; stop before phone activation")
     for flag in FLAGS:
+        # Do not enable a feature if gameplay started during prior secret uploads.
+        confirm_safe_activity(query_control())
         secret_put(flag,"1")
         health()
+        assert_manual_worker()
     after=secret_names()
     if not base.issubset(after) or not set(FLAGS).issubset(after):
         raise Stop("One or more production feature secret names are missing")
-    try:
-        with urllib.request.urlopen(URL+"/phone-invites/not-a-valid-token",timeout=20):
-            raise Stop("Invalid private invitation unexpectedly succeeded")
-    except urllib.error.HTTPError as e:
-        if e.code!=404:
-            raise Stop("Phone invitation gate responded HTTP "+str(e.code)+", expected 404")
+    if curl_status("GET","/phone-invites/not-a-valid-token")!=404:
+        raise Stop("Invalid phone invitation gate did not return HTTP 404")
     print("PRODUCTION SAFE ACTIVATION: PASS - RSVP, confirmed stacks, private WhatsApp membership",flush=True)
     print("Financial audit triggers: INSTALLED. Strict expected_revision flag: DEFERRED until matching Vercel frontend is live.",flush=True)
     print("No data migration, historical hand deletion, invented opening chips, messaging API or AI activation.",flush=True)
@@ -252,5 +280,5 @@ if __name__=="__main__":
     try: main()
     except Stop as exc:
         print("STOP: "+str(exc),file=sys.stderr,flush=True)
-        print("Do not blindly rerun a partial deployment. Inspect its live state first.",file=sys.stderr)
+        print("Do not rerun after partial secret changes; inspect live state first.",file=sys.stderr)
         raise SystemExit(2)
