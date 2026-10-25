@@ -42,3 +42,21 @@ CREATE TABLE IF NOT EXISTS phone_verification_limits (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_group_phone_contacts_display_name
   ON group_phone_contacts(event_id,display_name COLLATE NOCASE);
+
+-- A verified mobile member owns one RSVP per game across devices. The phone
+-- itself is never stored in the RSVP table or revealed to other members.
+CREATE TABLE IF NOT EXISTS game_rsvp_member_links (
+  game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  rsvp_id TEXT NOT NULL UNIQUE REFERENCES game_rsvp_guests(id) ON DELETE CASCADE,
+  PRIMARY KEY(game_id,user_id)
+);
+CREATE TRIGGER IF NOT EXISTS trg_phone_rsvp_link_valid
+BEFORE INSERT ON game_rsvp_member_links
+WHEN NOT EXISTS(
+  SELECT 1 FROM game_rsvp_guests g
+  JOIN games gg ON gg.id=g.game_id
+  JOIN event_members em ON em.event_id=gg.event_id AND em.user_id=NEW.user_id
+  WHERE g.id=NEW.rsvp_id AND g.game_id=NEW.game_id
+)
+BEGIN SELECT RAISE(ABORT,'Phone RSVP must belong to a member of the same group and game'); END;
