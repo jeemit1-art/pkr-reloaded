@@ -708,3 +708,66 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
 /* Ensure legacy live-screen and RSVP pages respect the shared navigation shell. */
 @media(max-width:1099px){body:has(.pkr-universal-bottom-nav) .pkr-guest{padding-bottom:calc(90px + env(safe-area-inset-bottom))}body:has(.pkr-universal-bottom-nav) #gameScreen .game-tab{touch-action:manipulation}}
 @media(min-width:1100px){body:has(.pkr-persistent-nav) .pkr-guest{margin-left:218px}body:has(.pkr-persistent-nav) #gameScreen{left:218px!important;width:calc(100vw - 218px)!important;right:0!important}}
+
+
+/* Oct-25 staging fix: top-level analytic/schedule routes do not use .pkr-app.
+   They must reserve the fixed sidebar column exactly once. */
+@media (min-width:1100px){
+  body:has(.pkr-persistent-nav) > main.pkr-vnext-insights,
+  body:has(.pkr-persistent-nav) > main.pkr-schedule-page{
+    box-sizing:border-box;
+    margin:0 0 0 218px !important;
+    width:calc(100% - 218px) !important;
+    max-width:calc(100% - 218px) !important;
+    min-width:0;
+  }
+}
+.pkr-vnext-insights,.pkr-schedule-page{box-sizing:border-box;min-width:0;overflow-wrap:break-word}
+.pkr-vnext-insights-top{max-width:100%;min-width:0}
+.pkr-vnext-insights-top>div:first-child{min-width:0}
+.pkr-vnext-insights-top h1{overflow-wrap:anywhere}
+.pkr-vnext-insights-top .pkr-insights-selector{flex:0 1 240px;min-width:180px}
+.pkr-vnext-insights-stats>div{min-width:0}
+.pkr-vnext-insights-stats strong{white-space:normal;overflow-wrap:anywhere}
+
+/* Photographic poker hero treatment aligned with the approved visual reference.
+   A decorative CSS casino scene remains underneath as offline/error fallback.
+   The externally hosted photo should be bundled locally before production release. */
+.pkr-pro-hero{
+  isolation:isolate;
+  background:
+    linear-gradient(90deg,#061611 0%,rgba(6,22,17,.98) 37%,rgba(6,22,17,.78) 58%,rgba(6,22,17,.12) 100%),
+    url("https://images.pexels.com/photos/5412324/pexels-photo-5412324.jpeg?auto=compress&cs=tinysrgb&w=1400")
+    right center/cover no-repeat,
+    linear-gradient(115deg,#062219,#14462f) !important;
+  box-shadow:0 18px 50px rgba(0,0,0,.18);
+}
+.pkr-pro-hero-content{width:min(74%,850px)}
+.pkr-pro-art{opacity:.06 !important}
+.pkr-pro-hero h1,.pkr-vnext-insights-hero h2{text-shadow:0 2px 22px rgba(0,0,0,.55)}
+.pkr-vnext-insights-hero{
+  display:flex;
+  align-items:center;
+  isolation:isolate;
+  min-height:190px;
+  padding:clamp(24px,3vw,38px) !important;
+  background:
+    linear-gradient(90deg,#071c15 0%,rgba(7,28,21,.96) 44%,rgba(7,28,21,.45) 73%,rgba(7,28,21,.12) 100%),
+    url("https://images.pexels.com/photos/5412324/pexels-photo-5412324.jpeg?auto=compress&cs=tinysrgb&w=1400")
+    right 42%/cover no-repeat,
+    linear-gradient(120deg,#0a291d,#164630) !important;
+}
+.pkr-vnext-insights-hero-copy{width:min(70%,700px);max-width:100%}
+.pkr-vnext-insights-art{opacity:.05 !important;pointer-events:none}
+@media(max-width:800px){
+ .pkr-pro-hero-content{width:100%}
+ .pkr-vnext-insights-hero{min-height:155px}
+ .pkr-vnext-insights-hero-copy{width:100%}
+ .pkr-vnext-insights-top .pkr-insights-selector{min-width:0;flex:1 1 auto}
+ .pkr-pro-hero{background-position:center,right 45% center,center!important}
+}
+@media(max-width:430px){
+ .pkr-vnext-insights-hero{padding:20px!important}
+ .pkr-vnext-insights-hero h2{font-size:clamp(25px,7vw,33px)}
+ .pkr-vnext-insights-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

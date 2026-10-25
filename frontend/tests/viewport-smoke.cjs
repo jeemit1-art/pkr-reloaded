@@ -64,6 +64,20 @@ async function test(){
      await page.waitForTimeout(350);
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
+     // The old synthetic test missed a real regression: Insights/Schedule rendered
+     // underneath the fixed desktop sidebar without causing horizontal overflow.
+     if(size.width>=1100 && (item.id==='insights'||item.id==='schedule')){
+       const geometry=await page.evaluate(selector=>{
+         const sidebar=document.querySelector('.pkr-persistent-nav');
+         const content=document.querySelector(selector);
+         if(!sidebar||!content)return null;
+         const side=sidebar.getBoundingClientRect(),main=content.getBoundingClientRect();
+         return {sideRight:side.right,mainLeft:main.left,mainRight:main.right,windowWidth:innerWidth};
+       },item.ready);
+       if(!geometry)errors.push(size.name+' '+item.id+' missing sidebar/content for overlap test');
+       else if(geometry.mainLeft<geometry.sideRight-1 || geometry.mainRight>geometry.windowWidth+1)
+         errors.push(size.name+' '+item.id+' content clipped/overlaps fixed sidebar: '+JSON.stringify(geometry));
+     }
      if(item.id==='live-table'){const box=await page.locator('#gameScreen').boundingBox();if(box&&size.width>=1100&&box.x<210)errors.push(size.name+' live table overlaps sidebar');}
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');

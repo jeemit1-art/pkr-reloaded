@@ -60,7 +60,7 @@ export default function InsightsPage(){
   return dates;
  },[games]);
  const maxMonth=Math.max(1,...filteredMonthly.map(x=>x.count));
- return <main className="pkr-vnext-insights">
+ return <main className="pkr-vnext-insights pkr-casino">
   <header className="pkr-vnext-insights-top"><div><span className="pkr-eyebrow">♠ PKR / ANALYTICS</span><h1>Insights &amp; Settlement</h1><p>Real results and balances for your private poker rooms.</p></div>
     <div className="pkr-insights-selector"><label htmlFor="pkr-insights-room">Poker room</label><select id="pkr-insights-room" value={selected} onChange={e=>setSelected(e.target.value)} disabled={loadingRooms||!rooms.length}>{rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
   </header>
