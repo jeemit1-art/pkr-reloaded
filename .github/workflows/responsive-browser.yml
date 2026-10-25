@@ -1,0 +1,61 @@
+name: PKR responsive browser smoke (synthetic data only)
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/responsive-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  responsive-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_PKR_ENV: staging
+      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Install browser test runner without changing package lock
+        working-directory: frontend
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - name: Install isolated Chromium test browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Start local Next.js server (staging environment only)
+        working-directory: frontend
+        run: |
+          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-viewport-next.log 2>&1 &
+          echo $! > /tmp/pkr-viewport-next.pid
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/pkr-viewport-next.log
+          exit 1
+      - name: Test app layouts across 6 viewport sizes with synthetic API data
+        working-directory: frontend
+        run: node tests/viewport-smoke.cjs
+      - name: Upload synthetic-data screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkr-viewport-smoke
+          path: artifacts/viewport-smoke/
+          if-no-files-found: ignore
+          retention-days: 5
