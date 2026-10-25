@@ -8,7 +8,7 @@
 //  - create() error handling now distinguishes 402 (modal handles it) vs other errors
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, User, Event, fmt, saveToken, clearToken, getToken } from '@/lib/api';
+import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
@@ -30,6 +30,10 @@ function DashboardInner() {
   const [scanStatus, setScanStatus] = useState('');
   const [scanning, setScanning] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
+  const [featuredGames,setFeaturedGames]=useState<Game[]>([]);
+  const [featuredHistory,setFeaturedHistory]=useState<Game[]>([]);
+  const [featuredMembers,setFeaturedMembers]=useState<EventMember[]>([]);
+  const [search,setSearch]=useState('');
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -236,6 +240,22 @@ function DashboardInner() {
   // Keep active rooms ahead of archived rooms without altering source state.
   const visibleRooms = [...activeRooms, ...events.filter(evt => (evt as any).status === 'ended')];
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
+  useEffect(()=>{
+    if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);return;}
+    let active=true;
+    setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);
+    Promise.allSettled([api.games.list(featuredRoom.id),api.events.history(featuredRoom.id),api.events.get(featuredRoom.id)]).then(items=>{
+      if(!active)return;
+      if(items[0].status==='fulfilled')setFeaturedGames(items[0].value);
+      if(items[1].status==='fulfilled')setFeaturedHistory(items[1].value);
+      if(items[2].status==='fulfilled')setFeaturedMembers(items[2].value.members||[]);
+    });
+    return()=>{active=false};
+  },[featuredRoom?.id]);
+  const upcomingGames=featuredGames.filter(g=>['scheduled','lobby','active'].includes(g.status)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
+  const nextGame=upcomingGames[0];
+  const recentResults=featuredHistory.slice().sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,4);
+  const searchedRooms=visibleRooms.filter(room=>room.name.toLowerCase().includes(search.toLowerCase().trim()));
   const openCreate = () => {
     setShowCreate(true);
     document.getElementById('pkr-rooms')?.scrollIntoView({ behavior: 'smooth' });
@@ -306,6 +326,7 @@ function DashboardInner() {
         <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',display:'flex',flexDirection:'column'}}>
           <div style={{height:52,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
           <div className="pkr-brand"><span className="pkr-brand-mark" aria-hidden="true">♠</span>PKR<span className="pkr-brand-sub">HOME POKER</span></div>
+          <label className="pkr-pro-search"><span>⌕</span><input aria-label="Search poker rooms" placeholder="Search poker rooms…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
           <div className="pkr-header-controls" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
             {user?.avatar_url && (
               <img src={user.avatar_url} alt={user.name}
@@ -355,24 +376,25 @@ function DashboardInner() {
                 <div><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games played</small></div>
                 <div><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></div>
                 <div><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></div>
+                <div><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></div>
               </div>
               <div className="pkr-pro-actions"><button className="btn btn-primary" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>▶ {featuredRoom?'Open Room':'Create Room'} →</button><button className="btn btn-ghost" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ Invite Players</button></div>
             </div>
             <div className="pkr-pro-art" aria-hidden="true"><CasinoArtwork variant="lounge"/></div>
           </div>
           <div className="pkr-pro-panels">
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>▦ Your Games</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>View all →</button></div>
-              {featuredRoom?<div className="pkr-pro-feature-game"><div className="pkr-pro-date">♠</div><div><strong>{featuredRoom.name}</strong><p>{featuredRoom.game_count||0} games recorded · {featuredRoom.member_count||0} members</p><span className="pkr-pro-live">● Private room</span></div></div>:<p className="pkr-pro-empty">Create your first room to schedule a poker night.</p>}
-              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{featuredRoom?'View Room & Games →':'Create Room →'}</button>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>▦ Upcoming Games</h2><button onClick={()=>router.push('/schedule')}>View all →</button></div>
+              {nextGame?<div className="pkr-pro-feature-game"><div className="pkr-pro-date"><strong>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'2-digit'})}</strong><small>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{month:'short'})}</small></div><div><strong>{featuredRoom?.name}</strong><p>{fmtDate(nextGame.scheduled_at)} · {nextGame.location||'Location to confirm'}</p><span className="pkr-pro-live">● {nextGame.status==='active'?'In progress':'Upcoming'}</span></div></div>:<p className="pkr-pro-empty">No upcoming games. Open your room to schedule poker night.</p>}
+              <div className="pkr-pro-panel-ctas"><button className="pkr-pro-wide-button" onClick={()=>nextGame?router.push('/games/'+nextGame.id):featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{nextGame?'View Game →':'Open Room →'}</button>{nextGame&&<button className="pkr-pro-wide-button" onClick={()=>router.push('/games/'+nextGame.id+'/rsvp')}>Manage RSVP</button>}</div>
             </section>
             <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♟ Members</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>View all →</button></div>
-              <div className="pkr-pro-member-stats"><div><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></div><div><strong>{activeRooms.length}</strong><small>Active rooms</small></div></div>
-              <p className="pkr-pro-empty">Private invitations and host approvals keep your group together.</p>
+              <div className="pkr-pro-member-stats"><div><strong>{featuredRoom?.member_count||0}</strong><small>Total members</small></div><div><strong>{activeRooms.length}</strong><small>Active rooms</small></div></div>
+              <div className="pkr-pro-member-list">{featuredMembers.slice(0,4).map(m=><div key={m.id} className="pkr-pro-member"><span aria-hidden="true">{m.name?.trim().charAt(0)?.toUpperCase()||'♠'}</span><strong>{m.name}</strong><small>{m.role}</small></div>)}{!featuredMembers.length&&<p className="pkr-pro-empty">Members appear after joining a room.</p>}</div>
               <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>Manage Members →</button>
             </section>
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♛ Results & Settlement</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>View →</button></div>
-              <p className="pkr-pro-empty">View verified results, buy-ins, cash-outs and player balances inside your room. No estimates or invented transactions.</p>
-              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>Open Game Ledger →</button>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♛ Recent Results</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=history'):openCreate()}>View all →</button></div>
+              {recentResults.length?recentResults.map(g=><button className="pkr-pro-result-row" key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>♛</span><span><strong>{fmtDate(g.scheduled_at)}</strong><small>{(g as any).player_count||0} players · Settled</small></span><span>→</span></button>):<p className="pkr-pro-empty">No settled games yet. Results appear here after settlement.</p>}
+              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=history'):openCreate()}>Review Results →</button>
             </section>
           </div>
           <div className="pkr-pro-bottom">
@@ -382,9 +404,15 @@ function DashboardInner() {
             <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>ϟ Quick Actions</h2></div><div className="pkr-pro-shortcuts">
               <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}><span>▶</span><strong>Open Game</strong><small>Manage a session</small></button>
               <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}><span>♟</span><strong>Invite Players</strong><small>Share your room</small></button>
-              <button onClick={()=>router.push('/install')}><span>▣</span><strong>Install PKR</strong><small>Add to phone</small></button>
+              <button onClick={()=>router.push('/schedule')}><span>▦</span><strong>Schedule</strong><small>Next game night</small></button>
               <button onClick={startScan}><span>⊞</span><strong>Scan Invite</strong><small>Join a group</small></button>
             </div></section>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>ϟ Recent Activity</h2><button onClick={()=>router.push('/schedule')}>All games →</button></div>
+              {recentResults.length||upcomingGames.length?<div className="pkr-pro-activity-list">
+                {upcomingGames.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>▦</span><span><strong>Game {g.status==='active'?'in progress':'scheduled'}</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
+                {recentResults.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>♛</span><span><strong>Game settled</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
+              </div>:<p className="pkr-pro-empty">Game activity will appear here as your club plays.</p>}
+            </section>
           </div>
         </section>
 
@@ -477,7 +505,7 @@ function DashboardInner() {
         )}
 
         <div className="pkr-room-grid">
-          {visibleRooms.map(evt => (
+          {searchedRooms.map(evt => (
             <article key={evt.id} className="pkr-room-card">
               <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
                 aria-label={'Open poker room ' + evt.name}>
