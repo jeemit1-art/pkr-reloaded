@@ -21,14 +21,16 @@ The Worker flags **`PKR_INTEGRITY_REVISIONS`** and **`PKR_INTEGRITY_STACKS`** de
 
 ## Mandatory release blockers
 
-1. **Staging Worker deployment and preview acceptance:** The Vercel frontend preview is available again, but Cloudflare Workers Builds has been failing for the isolated staging Worker. Inspect its build logs and verify Root Directory `worker`, the correct staging-only Wrangler config, runtime secrets and deployment command before any further Worker release. A successful Next.js preview does not verify backend changes. Inspect the signed-in app on laptop and iPhone.
+1. **Staging Worker deployment and preview acceptance:** The isolated Cloudflare Worker and frontend builds are passing on the current staging branch. The browser smoke suite uses synthetic data across six viewport sizes; successful CI alone does not prove a real signed-in game or production readiness. Test the full app on iPhone, Android, tablet and desktop, including landscape rotation and unreliable connections.
 2. **Real-device gameplay:** Run a complete event/game cycle using fictional players on at least two phones, including login, seats/RSVPs, buy-ins, cash-outs, hands, all-ins, side pots, tied winners, tournament levels/rebuys, settlement and later reloading. Repeat with a deliberate connection loss, duplicate taps and browser/tab closure at critical financial steps.
 3. **Financial integrity:** Compare each player's original buy-ins, buy-in totals, cash-out and net, and confirm aggregate balances reconcile to settlement transfers. Exercise missing/duplicate sync ACKs and value-change-then-revert (ABA).
 4. **Host-confirmed stacks:** Verify all opening chips against physical counts, fail a false all-in, reject an over-stack wager, interrupt before first blind, restore the same unfinished hand and make sure no blind posts twice. Preserve separate read-only audit output.
 5. **Legacy compatibility:** Check existing production client/server database structure **read-only** against the staging assumptions before any schema change. Identify legacy games, historical hand results and discontinued client versions. Do not introduce a destructive migration.
 6. **Backup and tested restoration:** Arrange an independently verified production D1 backup, restore a copy into a separately named disposable database, and compare row counts and critical financial totals. Do not use this staging database as a restore target. Record a tested rollback procedure, deployment ownership and failure monitoring.
-7. **RSVP v2 staging migration and privacy:** Back up and verify *only* the isolated staging D1 before authorising `20261025_staging_rsvp_board.sql`. After the migration, enable `PKR_RSVP_V2=1` on staging only, verify private edit keys, seat conflicts, host-defined arrival times, concurrent RSVP updates, WhatsApp link sharing and notification opt-in. No WhatsApp Business group bot is implemented. Consult `RSVP_BOARD_ROLLOUT.md`.
-8. **Owner acceptance:** Confirm the production release candidate against a frozen commit and obtain explicit written owner approval to merge/release. Only then plan a production rollout. Commercialisation remains out of scope.
+7. **RSVP v2 and mobile membership acceptance:** The user confirmed the isolated staging RSVP tables and phone-membership tables were created, with staging flags enabled, and an invalid invite received the expected error. These are configuration checks, not a completed acceptance test. Verify private edit keys, seat conflicts, host-defined arrival times, concurrent RSVP updates, WhatsApp link sharing and notification opt-in. No WhatsApp Business group bot is implemented. Consult `RSVP_BOARD_ROLLOUT.md`.
+8. **Framework security:** Frontend is still pinned to `next@14.2.4` and `react@18` as of October 2026. Next 14 is no longer a supported secure release line; published 2026 Next.js advisories affect older versions. Upgrade the frontend to a currently supported patched Next.js version (prefer `16.4.3` or newer after compatibility assessment), regenerate the lockfile, audit dependencies, run the full Next.js build and browser tests, and verify authentication/redirect compatibility before production. Do not claim that an obsolete 14.x patch alone clears the release. See https://nextjs.org/blog/nextjs-security-update-october-14-2026 .
+9. **Installed-PWA identity:** Validate that mobile membership survives installation and reopening on real iOS and Android devices. iOS may isolate web-app storage; do not transmit session JWTs in invite or query URLs as a workaround. Require a fresh, host-approved recovery route if needed.
+10. **Owner acceptance:** Confirm the production release candidate against a frozen commit and obtain explicit written owner approval to merge/release. Only then plan a production rollout. Commercialisation remains out of scope.
 
 ## Read-only schema inventory for future authorised review
 
@@ -54,13 +56,15 @@ Do not share customer data, auth secrets or SQL dumps in GitHub. Record differen
 | --- | --- | --- |
 | Worker + SQL + tests | Exact green GitHub Actions run and commit | Automated staging verification only |
 | Frontend source build | Exact green GitHub frontend-preview-build job | Automated staging verification only |
-| Cloudflare isolated Worker build | Successful dedicated staging deployment | **Failing; inspect Cloudflare build logs and settings** |
-| RSVP v2 additive migration | Verified staging backup, migration and flag enablement | **Not applied; feature disabled** |
-| Vercel interactive preview | Successfully built URL and device screenshots | **Staging preview available; browser sign-in and live RSVP acceptance outstanding** |
+| Cloudflare isolated Worker build | Successful dedicated staging deployment | **Passing on latest staging commits; production not verified** |
+| RSVP v2 and phone membership | User-confirmed isolated staging schema, secret, flag, non-existent invite check | **Configured on staging; end-to-end member/RSVP testing pending** |
+| Vercel interactive preview | Successful build and browser smoke | **Synthetic six-viewport checks passing; real-device session/game test pending** |
 | Remote optional D1 migration | Authorised staged migration and row/version audit | **Not performed** |
-| Multi-device/offline UAT | Signed test log and reconciled example game | **Outstanding** |
+| Multi-device/offline UAT | Signed test log and reconciled example game | **Outstanding (synthetic browser smoke is not sufficient)** |
 | Production D1 compatibility | Read-only schema comparison | **Outstanding** |
 | Production backup restore rehearsal | Backup metadata and independent restore evidence | **Outstanding** |
+| Frontend security upgrade | Patched supported Next.js, fresh lockfile, security audit and green CI | **Required; Next 14.2.4 not release-ready** |
+| Installed PWA identity | iPhone and Android installed-app login/recovery and push test | **Outstanding** |
 | Owner production approval | Explicit written authorisation tied to commit | **Not given** |
 
 Stop the release if any item is unverified. No staging code change is an approval to alter production.
@@ -128,10 +132,37 @@ reconcile source and restored row counts and critical financial totals. Never
 upload full exported records, database files, auth tokens or private financial
 reports to GitHub, Vercel or ChatGPT.
 
-The optional additive staging migration remains unexecuted remotely and its
-integrity flags remain disabled. Test it only after an isolated staging D1
+The separate optional integrity migration remains unexecuted remotely and its
+integrity flags remain disabled. This is distinct from the user-confirmed RSVP and phone membership staging tables. Test it only after an isolated staging D1
 backup, schema inspection and explicit confirmation of staging DB ID.
 
 Cloudflare documentation:
 - https://developers.cloudflare.com/d1/best-practices/import-export-data/
 - https://developers.cloudflare.com/d1/reference/time-travel/
+
+## Approved visual and functional release scope (25 October 2026)
+
+The user approved premium black, emerald and warm-gold layouts for desktop
+home, live table, mobile RSVP, invitations, members, notifications and
+Insights/Settlement. Staging work to date includes the shared navigation
+shell, actual-data dashboard, insights, schedule, guided PWA installation,
+legacy table styling and a synthetic six-viewport browser smoke workflow.
+
+**Still unverified:** exact approved visual parity on every signed-in screen;
+complete private join/recovery through an actual WhatsApp flow; seat and
+arrival conflicts; real buy-in/cash-out/settlement cycle; exact payment
+acknowledgement state and balances; actual push sounds and background
+notifications; browser-to-installed-PWA authentication; mobile rotation and
+offline reconnection during a hand; migration rehearsal from an independently
+restored production D1 copy; patched supported Next.js version.
+
+**Release procedure:** freeze a reviewed commit, take a production D1 Time Travel
+bookmark and independently verify an export/restore of a separately named
+copy; perform a read-only schema/financial baseline comparison; apply only
+validated additive migrations; deploy the approved Worker/frontend in a
+controlled window; reconcile critical row counts and totals before and after
+and smoke-test sign-in, groups, buy-ins, settlements and historical games;
+keep documented rollback ownership. No staging data should overwrite
+production records. Roll back code first if needed; a database Time Travel
+restore would overwrite post-bookmark writes and must be separately authorised
+and reconciled.
