@@ -25,6 +25,13 @@ if(start<0)throw Error('Inline poker table script not found');
 const ending='\n`;\n}';
 const end=page.indexOf(ending,start+header.length);
 if(end<0)throw Error('Inline poker table script terminator not found');
+// Regression: optional QR-code fetching must never gate the live-table boot.
+const coreBoot=page.indexOf('      injectTableScript();', page.indexOf('function bootTable()'));
+const qrFetch=page.indexOf("qrScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'");
+if(coreBoot<0 || qrFetch<0 || coreBoot>qrFetch)
+  throw Error('Poker table startup depends on optional QR-code network load');
+if(/qrScript\.onload\s*=\s*injectTableScript/.test(page))
+  throw Error('QR-code onload must not gate the poker runtime');
 const inline=page.slice(start+header.length,end);
 if(inline.includes('${'))throw Error('Unexpected live template interpolation in poker table source');
 new Script(inline,{filename:playFile+'#game-table'});

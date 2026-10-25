@@ -86,14 +86,17 @@ export default function PlayPage() {
         }).catch(() => {});
       }
 
-      // Load QRCode library, then inject the table script
-      if (!(window as any).QRCode) {
+      // The core table must boot regardless of optional third-party scripts.
+      // QR codes are only needed when sharing; failure to load them must never
+      // leave the poker table and its controls unusable.
+      injectTableScript();
+      if (!(window as any).QRCode && !document.getElementById('pkr-qr-lib')) {
         const qrScript = document.createElement('script');
+        qrScript.id = 'pkr-qr-lib';
         qrScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        qrScript.onload = injectTableScript;
+        qrScript.async = true;
+        qrScript.onerror = () => console.warn('PKR: optional QR library unavailable; table remains functional');
         document.head.appendChild(qrScript);
-      } else {
-        injectTableScript();
       }
       // Load hand tracker as separate static file (always reload to pick up updates)
       const existingHt = document.getElementById('pkr-hand-tracker');
