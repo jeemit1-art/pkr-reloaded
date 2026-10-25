@@ -66,17 +66,32 @@ async function test(){
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
      // The old synthetic test missed a real regression: Insights/Schedule rendered
      // underneath the fixed desktop sidebar without causing horizontal overflow.
-     if(size.width>=1100 && (item.id==='insights'||item.id==='schedule')){
+     if(size.width>=1100 && ['insights','schedule','room','install','game-detail'].includes(item.id)){
+       const mainSelector=item.id==='room'?'.pkr-event':item.id==='install'?'.pkr-install-vnext':item.id==='game-detail'?'.pkr-game-detail':item.ready;
        const geometry=await page.evaluate(selector=>{
          const sidebar=document.querySelector('.pkr-persistent-nav');
          const content=document.querySelector(selector);
          if(!sidebar||!content)return null;
          const side=sidebar.getBoundingClientRect(),main=content.getBoundingClientRect();
          return {sideRight:side.right,mainLeft:main.left,mainRight:main.right,windowWidth:innerWidth};
-       },item.ready);
+       },mainSelector);
        if(!geometry)errors.push(size.name+' '+item.id+' missing sidebar/content for overlap test');
        else if(geometry.mainLeft<geometry.sideRight-1 || geometry.mainRight>geometry.windowWidth+1)
          errors.push(size.name+' '+item.id+' content clipped/overlaps fixed sidebar: '+JSON.stringify(geometry));
+     }
+     if(item.id==='room'){
+       const rect=await page.evaluate(()=>{
+        const hero=document.querySelector('.pkr-event-overview');const tabs=document.querySelector('.pkr-event-tabs');
+        if(!hero||!tabs)return null;const h=hero.getBoundingClientRect(),t=tabs.getBoundingClientRect();
+        return {heroWidth:h.width,tabsWidth:t.width,heroLeft:h.left,tabsLeft:t.left,heroRight:h.right,tabsRight:t.right};
+       });
+       if(!rect)errors.push(size.name+' room missing hero/tabs geometry');
+       else if(Math.abs(rect.heroLeft-rect.tabsLeft)>18||Math.abs(rect.heroRight-rect.tabsRight)>18) errors.push(size.name+' room banner and tabs misaligned: '+JSON.stringify(rect));
+     }
+     if(item.id==='install'&&size.width>=1100){
+       const card=await page.locator('.pkr-install-card').first().boundingBox();
+       const sidebar=await page.locator('.pkr-persistent-nav').boundingBox();
+       if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
      if(item.id==='live-table'){const box=await page.locator('#gameScreen').boundingBox();if(box&&size.width>=1100&&box.x<210)errors.push(size.name+' live table overlaps sidebar');}
      if(item.id==='room'&&size.width<=700){
