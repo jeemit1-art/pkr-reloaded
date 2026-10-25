@@ -37,6 +37,10 @@ jobs:
         run: python3 worker/scripts/test-phone-member-migration.py
       - name: Test read-only restored-D1 schema preflight with synthetic data
         run: python3 worker/scripts/test-restore-preflight.py
+      - name: Test guarded historical-game production activation (offline synthetic data)
+        run: |
+          python3 -m py_compile worker/scripts/activate-live-features.py
+          python3 worker/scripts/test-live-activation-guard.py
       - name: Compile route SQL against isolated staging schema
         run: python3 worker/scripts/check-staging-queries.py
       - name: Install Worker dependencies

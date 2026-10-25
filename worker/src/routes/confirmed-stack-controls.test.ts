@@ -24,7 +24,8 @@ const context:any={waitUntil:(_:Promise<unknown>)=>{}};
 function fixture({enabled=true,started=true,hasActions=false}={}){
   const game={id:'g',event_id:'e',seats:4,status:'active'};
   const hand={id:'h',game_id:'g',mode:'full',voided:0,
-    dealer_seat:1,sb_seat:4,bb_seat:3,straddle:0,pot_chips:0};
+    dealer_seat:1,sb_seat:4,bb_seat:3,straddle:0,pot_chips:0,
+    created_at:1794000000};
   const confirmed:any[]=[];
   const history:any[]=hasActions?[{
     id:'existing',display_name:'Small',street:'pre',action:'post',chips:1,
@@ -38,10 +39,11 @@ function fixture({enabled=true,started=true,hasActions=false}={}){
           async first():Promise<any>{
             if(sql.includes('FROM games WHERE id=?'))return {...game};
             if(sql.includes('SELECT id FROM hands WHERE id=? AND game_id=?'))return {id:'h'};
-            if(sql.includes('SELECT id,mode,voided FROM hands WHERE id=?'))return {...hand};
+            if(sql.includes('SELECT id,mode,voided,created_at FROM hands WHERE id=?'))return {...hand};
             if(sql.includes('SELECT dealer_seat,sb_seat,bb_seat,straddle,mode'))return {...hand};
             if(sql.includes('SELECT pot_chips FROM hands WHERE id=?'))return {...hand};
             if(sql.includes('FROM hand_results WHERE hand_id=?'))return null;
+            if(sql.includes('FROM hand_actions WHERE hand_id=? LIMIT 1'))return history[0]||null;
             return null;
           },
           async all():Promise<any>{
@@ -146,6 +148,23 @@ describe('immutable host-verified opening stacks',()=>{
     const f=fixture({hasActions:true});
     expect((await confirm(f,{verified:true,opening_stacks:opening})).status).toBe(409);
     expect(f.confirmed).toHaveLength(0);
+  });
+  it('grandfathers pre-October unfinished hands with real action history only',async()=>{
+    const f=fixture({hasActions:true});f.hand.created_at=1775400000;
+    const read=await hands.request(base+'/stack-baseline',{},f.env,context);
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({enabled:false,confirmed:false,legacy_unverified:true});
+    const next=await action(f,'Big','post',2);
+    expect(next.status).toBe(200);
+    expect(f.history).toHaveLength(2);
+    expect(f.confirmed).toHaveLength(0);
+  });
+  it('does not grandfather a new hand merely because it already has actions',async()=>{
+    const f=fixture({hasActions:true});
+    const next=await action(f,'Big','post',2);
+    expect(next.status).toBe(428);
+    expect(await next.json()).toMatchObject({code:'STACK_BASELINE_REQUIRED'});
+    expect(f.history).toHaveLength(1);
   });
   it('requires a confirmed baseline before recording even the first blind',async()=>{
     const f=fixture();
