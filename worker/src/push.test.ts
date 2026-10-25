@@ -11,9 +11,9 @@ function decode(value:string):Uint8Array {
 async function fixture(){
   const keys=await crypto.subtle.generateKey(
     {name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']) as CryptoKeyPair;
-  const jwk=await crypto.subtle.exportKey('jwk',keys.privateKey);
-  const raw=await crypto.subtle.exportKey('raw',keys.publicKey);
-  const pkcs8=await crypto.subtle.exportKey('pkcs8',keys.privateKey);
+  const jwk=await crypto.subtle.exportKey('jwk',keys.privateKey) as JsonWebKey;
+  const raw=await crypto.subtle.exportKey('raw',keys.publicKey) as ArrayBuffer;
+  const pkcs8=await crypto.subtle.exportKey('pkcs8',keys.privateKey) as ArrayBuffer;
   return {keys,privateRaw:jwk.d!,publicRaw:b64url(new Uint8Array(raw)),
     privatePkcs8:b64url(new Uint8Array(pkcs8))};
 }
@@ -51,7 +51,7 @@ describe('VAPID signing and push dispatch (synthetic keys and subscribers only)'
     const f=await fixture();
     const subscriber=await crypto.subtle.generateKey(
       {name:'ECDH',namedCurve:'P-256'},true,['deriveBits']) as CryptoKeyPair;
-    const p256dh=b64url(new Uint8Array(await crypto.subtle.exportKey('raw',subscriber.publicKey)));
+    const p256dh=b64url(new Uint8Array(await crypto.subtle.exportKey('raw',subscriber.publicKey) as ArrayBuffer));
     const auth=b64url(crypto.getRandomValues(new Uint8Array(16)));
     const fetchMock=vi.fn(async(_url:string,opts:any)=>{
       expect(opts.headers['Content-Encoding']).toBe('aes128gcm');
