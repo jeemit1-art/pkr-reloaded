@@ -248,7 +248,7 @@ function DashboardInner() {
   );
 
   return (
-    <div className="pkr-app pkr-dashboard pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
+    <div className="pkr-app pkr-dashboard pkr-casino pkr-premium-shell" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
@@ -344,35 +344,47 @@ function DashboardInner() {
         </div>
       </nav>
 
-      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'38px 20px 45px',position:'relative',zIndex:1}}>
-        {/* VNext overview: operational controls, not an oversized promotional banner. */}
-        <section className="pkr-vnext-overview" aria-label="Your poker dashboard">
-          <div className="pkr-vnext-heading"><span className="pkr-eyebrow">♠ PKR / YOUR CLUB</span>
-            <h1>Good to see you{user?.name ? ', ' + user.name.split(' ')[0] : ''}.</h1>
-            <p>Manage your rooms, invite players and keep game night moving.</p>
-          </div>
-          <div className="pkr-vnext-hero">
-            <div className="pkr-vnext-main">
-              <span className="pkr-eyebrow">YOUR POKER ROOM</span>
-              <h2>{featuredRoom ? featuredRoom.name : 'Your next game starts here'}</h2>
-              <p>{featuredRoom ? 'Your private poker group, games and members.' : 'Create a private poker room to invite players.'}</p>
-              <div className="pkr-vnext-metrics">
-                <div><span>Games recorded</span><strong>{featuredRoom ? featuredRoom.game_count || 0 : totalGames}</strong></div>
-                <div><span>Group members</span><strong>{featuredRoom ? featuredRoom.member_count || 1 : 0}</strong></div>
-                <div><span>Rooms</span><strong>{activeRooms.length}</strong></div>
+      <div className="pkr-content" style={{maxWidth:1600,margin:'0 auto',padding:'22px 22px 45px',position:'relative',zIndex:1}}>
+        <section className="pkr-pro-home" aria-label="Poker room overview">
+          <div className="pkr-pro-hero">
+            <div className="pkr-pro-hero-content">
+              <span className="pkr-eyebrow">♠ YOUR POKER ROOM</span>
+              <div className="pkr-pro-title"><h1>{featuredRoom?.name||'Your poker club'}</h1><span className="pkr-pro-live">● {featuredRoom?'Active':'Get started'}</span></div>
+              <p>Your group, upcoming games and results — all in one place.</p>
+              <div className="pkr-pro-stats">
+                <div><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games played</small></div>
+                <div><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></div>
+                <div><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></div>
               </div>
-              <div className="pkr-vnext-actions">
-                <button className="btn btn-primary" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{featuredRoom?'Open poker room →':'Create a room →'}</button>
-                {featuredRoom&&<button className="btn btn-ghost" onClick={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}>Invite players</button>}
-              </div>
+              <div className="pkr-pro-actions"><button className="btn btn-primary" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>▶ {featuredRoom?'Open Room':'Create Room'} →</button><button className="btn btn-ghost" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ Invite Players</button></div>
             </div>
-            <div className="pkr-vnext-visual" aria-hidden="true"><CasinoArtwork variant="lounge"/></div>
+            <div className="pkr-pro-art" aria-hidden="true"><CasinoArtwork variant="lounge"/></div>
           </div>
-          <div className="pkr-vnext-quick">
-            <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}><span>♠</span><strong>Games</strong><small>Open your room</small></button>
-            <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}><span>♟</span><strong>Members</strong><small>Invite & approve</small></button>
-            <button onClick={()=>router.push('/install')}><span>↗</span><strong>Install PKR</strong><small>Guided phone setup</small></button>
-            <button onClick={startScan}><span>▣</span><strong>Join a room</strong><small>Scan invitation</small></button>
+          <div className="pkr-pro-panels">
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>▦ Your Games</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>View all →</button></div>
+              {featuredRoom?<div className="pkr-pro-feature-game"><div className="pkr-pro-date">♠</div><div><strong>{featuredRoom.name}</strong><p>{featuredRoom.game_count||0} games recorded · {featuredRoom.member_count||0} members</p><span className="pkr-pro-live">● Private room</span></div></div>:<p className="pkr-pro-empty">Create your first room to schedule a poker night.</p>}
+              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{featuredRoom?'View Room & Games →':'Create Room →'}</button>
+            </section>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♟ Members</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>View all →</button></div>
+              <div className="pkr-pro-member-stats"><div><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></div><div><strong>{activeRooms.length}</strong><small>Active rooms</small></div></div>
+              <p className="pkr-pro-empty">Private invitations and host approvals keep your group together.</p>
+              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>Manage Members →</button>
+            </section>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♛ Results & Settlement</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>View →</button></div>
+              <p className="pkr-pro-empty">View verified results, buy-ins, cash-outs and player balances inside your room. No estimates or invented transactions.</p>
+              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>Open Game Ledger →</button>
+            </section>
+          </div>
+          <div className="pkr-pro-bottom">
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♧ Active Rooms</h2><button onClick={openCreate}>+ New room</button></div>
+              {activeRooms.length?activeRooms.slice(0,3).map(room=><button key={room.id} className="pkr-pro-room-row" onClick={()=>router.push('/events/'+room.id)}><span>♠</span><span><strong>{room.name}</strong><small>{room.member_count||0} members · {room.game_count||0} games</small></span><span>→</span></button>):<p className="pkr-pro-empty">No active rooms yet.</p>}
+            </section>
+            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>ϟ Quick Actions</h2></div><div className="pkr-pro-shortcuts">
+              <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}><span>▶</span><strong>Open Game</strong><small>Manage a session</small></button>
+              <button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}><span>♟</span><strong>Invite Players</strong><small>Share your room</small></button>
+              <button onClick={()=>router.push('/install')}><span>▣</span><strong>Install PKR</strong><small>Add to phone</small></button>
+              <button onClick={startScan}><span>⊞</span><strong>Scan Invite</strong><small>Join a group</small></button>
+            </div></section>
           </div>
         </section>
 
