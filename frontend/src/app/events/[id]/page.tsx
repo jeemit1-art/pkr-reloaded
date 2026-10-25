@@ -232,6 +232,7 @@ export default function EventPage() {
   const TABS_NAV = ['games','leaderboard','history','members'];
   const selectTab = (next: Tab) => {
     setTab(next);
+    window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   return (
@@ -276,6 +277,11 @@ export default function EventPage() {
             <div className="pkr-event-metric"><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></div>
             <div className="pkr-event-metric"><strong>{event.game_count || 0}</strong><small>Games</small></div>
             <div className="pkr-event-metric"><strong>{event.member_count || 1}</strong><small>Members</small></div>
+            <div className="pkr-event-metric"><strong>{upcoming[0]?new Date(upcoming[0].scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></div>
+          </div>
+          <div className="pkr-event-hero-actions">
+            {upcoming[0]&&<button type="button" onClick={()=>router.push('/games/'+encodeURIComponent(upcoming[0].id))}>▶ View next game</button>}
+            <button type="button" onClick={()=>selectTab('members')}>♟ {isHost?'Invite Players':'View Members'}</button>
           </div>
         </div>
       </section>

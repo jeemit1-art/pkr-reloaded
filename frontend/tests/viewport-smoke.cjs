@@ -93,6 +93,19 @@ async function test(){
        const sidebar=await page.locator('.pkr-persistent-nav').boundingBox();
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
+     if(['dashboard','room','insights'].includes(item.id)){
+       const heroSelector=item.id==='dashboard'?'.pkr-pro-hero':item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
+       const visual=await page.locator(heroSelector).evaluate(node=>{
+         const s=getComputedStyle(node),r=node.getBoundingClientRect();
+         return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
+       });
+       if(!visual.background.includes('pkr-hero-premium.svg'))errors.push(size.name+' '+item.id+' missing crisp bundled hero fallback');
+       if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+     }
+     if(item.id==='dashboard'&&size.width<=700){
+       const feature=page.locator('.pkr-mobile-featured');
+       if(await feature.count() && !(await feature.isVisible()))errors.push(size.name+' mobile next-game feature hidden');
+     }
      if(item.id==='live-table'){
        // Gameplay uses the entire viewport, without the global desktop sidebar or mobile bottom navigation.
        const navCount=await page.locator('.pkr-persistent-nav, .pkr-universal-bottom-nav').count();

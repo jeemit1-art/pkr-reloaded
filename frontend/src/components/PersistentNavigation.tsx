@@ -3,16 +3,17 @@ import {useEffect,useState} from 'react';
 import {usePathname,useRouter} from 'next/navigation';
 import {api,Event} from '@/lib/api';
 import {getToken} from '@/lib/api';
+import PkrGlyph from '@/components/PkrGlyph';
 
 const navigation=[
- {name:'Home',icon:'⌂',href:'/dashboard'},
- {name:'Games',icon:'♧',href:'room'},
- {name:'Players',icon:'♟',href:'members'},
- {name:'Insights',icon:'▥',href:'/insights'},
- {name:'Settle',icon:'＄',href:'/insights#pkr-settlement'},
- {name:'Schedule',icon:'▦',href:'/schedule'},
- {name:'Members',icon:'♙',href:'members'},
- {name:'Install PKR',icon:'↗',href:'/install'},
+ {name:'Home',icon:'home',href:'/dashboard'},
+ {name:'Games',icon:'games',href:'room'},
+ {name:'Players',icon:'players',href:'members'},
+ {name:'Insights',icon:'insights',href:'/insights'},
+ {name:'Settle',icon:'settle',href:'/insights#pkr-settlement'},
+ {name:'Schedule',icon:'schedule',href:'/schedule'},
+ {name:'Members',icon:'members',href:'members'},
+ {name:'Install PKR',icon:'install',href:'/install'},
 ] as const;
 
 export default function PersistentNavigation(){
@@ -66,7 +67,7 @@ export default function PersistentNavigation(){
  return <><aside className="pkr-persistent-nav" aria-label="PKR navigation">
   <div className="pkr-persistent-brand"><span>♠</span> PKR</div>
   <div className="pkr-persistent-room"><span>YOUR POKER CLUB</span><strong>{rooms.find(r=>r.id===eventId)?.name||'Poker rooms'}</strong></div>
-  <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={selected(item.href)?'page':undefined} className={selected(item.href)?'active':''}><span aria-hidden="true">{item.icon}</span>{item.name}</button>)}</nav>
+  <nav>{navigation.map(item=><button key={item.name} type="button" onClick={()=>visit(item.href)} aria-current={selected(item.href)?'page':undefined} className={selected(item.href)?'active':''}><PkrGlyph name={item.icon}/>{item.name}</button>)}</nav>
   <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
- </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{[{name:'Home',icon:'⌂',href:'/dashboard'},{name:'Games',icon:'♧',href:'room'},{name:'Members',icon:'♟',href:'members'},{name:'Insights',icon:'▥',href:'/insights'},{name:'Install',icon:'↗',href:'/install'}].map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><span aria-hidden="true">{item.icon}</span><small>{item.name}</small></button>)}</nav></>;
+ </aside><nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">{[{name:'Home',icon:'home',href:'/dashboard'},{name:'Games',icon:'games',href:'room'},{name:'Members',icon:'members',href:'members'},{name:'Insights',icon:'insights',href:'/insights'},{name:'Install',icon:'install',href:'/install'}].map(item=><button key={item.name} type="button" className={selected(item.href)?'active':''} aria-current={selected(item.href)?'page':undefined} onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/><small>{item.name}</small></button>)}</nav></>;
 }

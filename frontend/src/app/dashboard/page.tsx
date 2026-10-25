@@ -367,6 +367,20 @@ function DashboardInner() {
 
       <div className="pkr-content" style={{maxWidth:1600,margin:'0 auto',padding:'22px 22px 45px',position:'relative',zIndex:1}}>
         <section className="pkr-pro-home" aria-label="Poker room overview">
+          {nextGame&&<section className="pkr-mobile-featured" aria-label="Next game">
+            <span className="pkr-eyebrow">♠ NEXT GAME</span>
+            <h2>{featuredRoom?.name||'Poker night'}</h2>
+            <span className="pkr-mobile-featured-status">● {nextGame.status==='active'?'Live game':'Upcoming game'}</span>
+            <div className="pkr-mobile-featured-meta">
+              <span>▦ {fmtDate(nextGame.scheduled_at)}</span>
+              <span>⌖ {nextGame.location||'Location to confirm'}</span>
+              <span>♟ {(nextGame as any).player_count||0} players</span>
+            </div>
+            <div className="pkr-mobile-featured-actions">
+              <button type="button" onClick={()=>router.push('/games/'+nextGame.id+(nextGame.status==='active'?'/play':'/rsvp'))}>▶ {nextGame.status==='active'?'Open Live Table':'RSVP for Game'}</button>
+              <button type="button" onClick={()=>router.push('/games/'+nextGame.id)}>View Details →</button>
+            </div>
+          </section>}
           <div className="pkr-pro-hero">
             <div className="pkr-pro-hero-content">
               <span className="pkr-eyebrow">♠ YOUR POKER ROOM</span>
