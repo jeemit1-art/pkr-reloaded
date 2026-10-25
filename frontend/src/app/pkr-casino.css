@@ -615,3 +615,39 @@
  #gameScreen.pkr-casino-live-table .bank-right .bank-pill {padding-right:6px}
  #gameScreen.pkr-casino-live-table .pkr-tools-toggle span {display:none}
 }
+
+/* Laptop table seating: reserve chip space on the rail and move the
+   text into an outside column. No new financial or seating logic. */
+#gameScreen.pkr-casino-live-table .seat[data-side] {
+  min-width:40px;min-height:44px;gap:0;
+}
+#gameScreen.pkr-casino-live-table .seat[data-side] .seat-label,
+#gameScreen.pkr-casino-live-table .seat[data-side] .seat-net {
+  position:absolute;min-width:66px;max-width:110px;
+  margin:0;line-height:1.2;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;z-index:8;
+}
+#gameScreen.pkr-casino-live-table .seat[data-side="left"] .seat-label,
+#gameScreen.pkr-casino-live-table .seat[data-side="left"] .seat-net {
+  right:calc(100% + 4px);text-align:right;
+}
+#gameScreen.pkr-casino-live-table .seat[data-side="right"] .seat-label,
+#gameScreen.pkr-casino-live-table .seat[data-side="right"] .seat-net {
+  left:calc(100% + 4px);text-align:left;
+}
+#gameScreen.pkr-casino-live-table .seat[data-side] .seat-label {top:0}
+#gameScreen.pkr-casino-live-table .seat[data-side] .seat-net {top:24px}
+#gameScreen.pkr-casino-live-table .seat[data-side] > div[style*="chips"] {
+  position:absolute;top:47px;white-space:nowrap;
+}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-label,
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-net {
+  min-width:44px;max-width:64px;font-size:.66rem;
+ }
+ #gameScreen.pkr-casino-live-table .seat[data-side="left"] .seat-label,
+ #gameScreen.pkr-casino-live-table .seat[data-side="left"] .seat-net {right:calc(100% + 1px)}
+ #gameScreen.pkr-casino-live-table .seat[data-side="right"] .seat-label,
+ #gameScreen.pkr-casino-live-table .seat[data-side="right"] .seat-net {left:calc(100% + 1px)}
+ #gameScreen.pkr-casino-live-table .seat[data-side] .seat-net {top:20px}
+}

@@ -1638,6 +1638,10 @@ function buildSeats(count, tW, tH, cx, cy) {
     var p = state.players[sid];
     var seat = document.createElement('div');
     seat.className = 'seat';
+    // Side seats place the name and balance outside the felt so neighbouring
+    // players do not cover each other's labels on a laptop.
+    if (i > 0 && i <= leftCount) seat.dataset.side = 'left';
+    else if (i > leftCount + 1) seat.dataset.side = 'right';
     seat.setAttribute('role','button');
     seat.setAttribute('tabindex','0');
     seat.setAttribute('aria-label',p && p.name ? 'Open player '+p.name : 'Assign player to seat '+(i+1));

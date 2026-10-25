@@ -1499,7 +1499,8 @@ function renderActionPanel(){
     box.appendChild(who);
 
     // Action buttons
-    var acts=isOption?[
+    // With nothing owed, offer Check (not Call) at the start of a fresh street.
+    var acts=(callAmt===0)?[
       {a:'fold',l:'Fold',bg:'rgba(231,76,60,0.15)',col:'#e74c3c',br:'rgba(231,76,60,0.3)'},
       {a:'check',l:'Check',bg:'rgba(255,255,255,0.05)',col:'rgba(255,255,255,0.6)',br:'rgba(255,255,255,0.15)'},
       {a:'bet',l:'Bet',bg:'rgba(201,168,76,0.1)',col:'var(--gold,#c9a84c)',br:'rgba(201,168,76,0.3)'},
