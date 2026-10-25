@@ -9,6 +9,8 @@ conn = sqlite3.connect(":memory:")
 conn.execute("PRAGMA foreign_keys = ON")
 conn.executescript("""
 CREATE TABLE games(id TEXT PRIMARY KEY);
+CREATE TABLE game_players(game_id TEXT NOT NULL, display_name TEXT NOT NULL,seat_number INTEGER,
+  PRIMARY KEY(game_id,display_name));
 INSERT INTO games(id) VALUES ('fixture');
 """)
 conn.executescript(migration)
@@ -36,6 +38,19 @@ add("f","Fictional Fred","no","not-coming",None)
 add("g","Fictional Gia","yes","late",None)
 conn.execute("UPDATE game_rsvp_guests SET status='no',arrival_option='not-coming',seat_number=NULL WHERE id='a'")
 add("h","Fictional Harry","yes","20:00",1)
+# Cross-table race safety: a host cannot take somebody else's reserved seat.
+blocked(lambda:conn.execute(
+    "INSERT INTO game_players(game_id,display_name,seat_number) VALUES('fixture','Fictional Intruder',1)"
+))
+# A host may seat the same RSVP guest when starting the game.
+conn.execute(
+    "INSERT INTO game_players(game_id,display_name,seat_number) VALUES('fixture','Fictional Harry',1)"
+)
+conn.execute("INSERT INTO game_players(game_id,display_name,seat_number) VALUES('fixture','Host',2)")
+blocked(lambda:add('new-guest','Fictional Zoe','yes','20:00',2))
+blocked(lambda:conn.execute(
+    "UPDATE game_players SET seat_number=1 WHERE display_name='Host'"
+))
 assert conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0] == 4
 assert conn.execute("SELECT COUNT(*) FROM game_rsvp_guests WHERE seat_number=1").fetchone()[0] == 1
 print("PASS: idempotent migration, no duplicate names, unique reserved seats, safe not-coming and seat release")

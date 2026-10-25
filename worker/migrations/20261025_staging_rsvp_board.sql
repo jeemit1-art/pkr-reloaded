@@ -25,3 +25,40 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_game_rsvp_guests_seat
   ON game_rsvp_guests(game_id,seat_number) WHERE seat_number IS NOT NULL AND status='yes';
 CREATE INDEX IF NOT EXISTS idx_game_rsvp_guests_game
   ON game_rsvp_guests(game_id,updated_at DESC);
+
+-- A host seat assignment and a guest RSVP reservation live in separate tables.
+-- Database triggers close the race between their independent API checks.
+CREATE TRIGGER IF NOT EXISTS trg_rsvp_reserve_vacant_insert
+BEFORE INSERT ON game_rsvp_guests
+WHEN NEW.status='yes' AND NEW.seat_number IS NOT NULL
+  AND EXISTS(SELECT 1 FROM game_players
+             WHERE game_id=NEW.game_id AND seat_number=NEW.seat_number)
+BEGIN
+  SELECT RAISE(ABORT,'RSVP seat is already assigned');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_rsvp_reserve_vacant_update
+BEFORE UPDATE OF seat_number,status ON game_rsvp_guests
+WHEN NEW.status='yes' AND NEW.seat_number IS NOT NULL
+  AND EXISTS(SELECT 1 FROM game_players
+             WHERE game_id=NEW.game_id AND seat_number=NEW.seat_number)
+BEGIN
+  SELECT RAISE(ABORT,'RSVP seat is already assigned');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_rsvp_host_seat_insert
+BEFORE INSERT ON game_players
+WHEN NEW.seat_number IS NOT NULL
+ AND EXISTS(SELECT 1 FROM game_rsvp_guests
+            WHERE game_id=NEW.game_id AND seat_number=NEW.seat_number
+              AND status='yes' AND display_name COLLATE NOCASE <> NEW.display_name COLLATE NOCASE)
+BEGIN
+  SELECT RAISE(ABORT,'Seat is reserved by another RSVP');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_rsvp_host_seat_update
+BEFORE UPDATE OF seat_number,display_name ON game_players
+WHEN NEW.seat_number IS NOT NULL
+ AND EXISTS(SELECT 1 FROM game_rsvp_guests
+            WHERE game_id=NEW.game_id AND seat_number=NEW.seat_number
+              AND status='yes' AND display_name COLLATE NOCASE <> NEW.display_name COLLATE NOCASE)
+BEGIN
+  SELECT RAISE(ABORT,'Seat is reserved by another RSVP');
+END;
