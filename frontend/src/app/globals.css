@@ -394,7 +394,7 @@ body::before {
 }
 
 
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+        /* Font import was invalid mid-stylesheet. Next root layout provides font-family fallback. */
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 .landing-page {
