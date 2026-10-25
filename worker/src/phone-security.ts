@@ -64,20 +64,3 @@ export function maskMobile(mobile:string):string{
 export function phoneMembersReady(env:Env):boolean{
   return env.PKR_PHONE_MEMBERS_V1==='1'&&!!env.PKR_CONTACT_KEY&&env.PKR_CONTACT_KEY.length>=32;
 }
-export function verifyProviderReady(env:Env):boolean{
-  return !!(env.TWILIO_VERIFY_SERVICE_SID&&env.TWILIO_API_KEY&&env.TWILIO_API_SECRET);
-}
-export async function twilioVerify(env:Env,action:'send'|'check',mobile:string,code?:string):Promise<boolean>{
-  if(!verifyProviderReady(env))throw Error('Phone verification provider is not configured');
-  const root='https://verify.twilio.com/v2/Services/'+encodeURIComponent(env.TWILIO_VERIFY_SERVICE_SID!);
-  const path=action==='send'?'/Verifications':'/VerificationCheck';
-  const body=new URLSearchParams(action==='send'
-    ?{To:mobile,Channel:env.PKR_PHONE_OTP_CHANNEL==='sms'?'sms':'whatsapp'}:{To:mobile,Code:code||''});
-  const authorization='Basic '+btoa(env.TWILIO_API_KEY+':'+env.TWILIO_API_SECRET);
-  const response=await fetch(root+path,{method:'POST',headers:{
-    Authorization:authorization,'Content-Type':'application/x-www-form-urlencoded'
-  },body:body.toString(),signal:AbortSignal.timeout(12000)});
-  if(!response.ok)return false;
-  const data=await response.json() as {status?:string};
-  return data.status===(action==='send'?'pending':'approved');
-}

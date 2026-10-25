@@ -1,12 +1,13 @@
 // Mobile-first private group directory; no phone directory is published globally.
-// All pending contact numbers are encrypted. Invitations are single-use, scoped
-// to a group/contact, and cannot be redeemed without a WhatsApp OTP.
+// All pending contact numbers are encrypted. WhatsApp OTP uses the official
+// Meta Cloud API; optional manual host approval is separately gated.
 import {Hono} from 'hono';
 import type {Env} from '../types';
 import {authMiddleware,generateId,requireEventRole} from '../middleware';
 import {signJWT} from '../jwt';
 import {normalizeMobile,phoneLookup,encryptPhone,decryptPhone,randomToken,
-  maskMobile,phoneMembersReady,verifyProviderReady,twilioVerify} from '../phone-security';
+  maskMobile,phoneMembersReady} from '../phone-security';
+import {whatsappOtpReady,sendWhatsappOtp,checkWhatsappOtp} from '../whatsapp-otp';
 
 const router=new Hono<{Bindings:Env}>();
 type Contact={id:string;event_id:string;display_name:string;phone_cipher:string;phone_lookup:string;user_id:string|null};
@@ -14,10 +15,13 @@ type Invite={id:string;event_id:string;contact_id:string;display_name:string;pho
   role:string;expires_at:number;consumed_at:number|null;sent_count:number;last_sent_at:number|null;verify_count:number; event_name:string};
 
 function unavailable(c:any){return c.json({
-  error:'Phone membership is not activated on this staging database yet.',
+  error:'Private mobile membership is not activated yet.',
   code:'PHONE_MEMBERS_NOT_READY'
 },503);}
 function failed(c:any){return c.json({error:'Private mobile membership service is temporarily unavailable.'},503);}
+function hostApprovalReady(env:Env):boolean{
+  return env.PKR_HOST_APPROVAL_FALLBACK==='1'&&!whatsappOtpReady(env);
+}
 async function getInvite(env:Env,token:string):Promise<Invite|null>{
   if(!/^[0-9a-f]{64}$/.test(token))return null;
   const hash=await phoneLookup(env,'invite',token);
@@ -140,12 +144,12 @@ router.get('/phone-invites/:token',async c=>{
     const mobile=await decryptPhone(c.env,invite.phone_cipher);
     privateHeaders(c);
     return c.json({event_name:invite.event_name,masked_phone:maskMobile(mobile),
-      role:invite.role,expires_at:invite.expires_at,verification_ready:verifyProviderReady(c.env)});
+      role:invite.role,expires_at:invite.expires_at,verification_ready:whatsappOtpReady(c.env)});
   }catch{return failed(c);}
 });
 router.post('/phone-invites/:token/send-code',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'Phone verification must be configured by the administrator.'},503);
+  if(!whatsappOtpReady(c.env))return c.json({error:'WhatsApp OTP sender must be configured by the administrator.'},503);
   try{
     const invite=await getInvite(c.env,c.req.param('token'));
     if(!invite)return c.json({error:'Invitation unavailable or expired.'},404);
@@ -156,17 +160,17 @@ router.post('/phone-invites/:token/send-code',async c=>{
     ).bind(invite.id).run();
     if(!limited.meta.changes)return c.json({error:'Please wait before requesting another code.'},429);
     const mobile=await decryptPhone(c.env,invite.phone_cipher);
-    const sent=await twilioVerify(c.env,'send',mobile);
+    const sent=await sendWhatsappOtp(c.env,mobile,'invite:'+invite.id);
     if(!sent)return c.json({error:'Could not send a WhatsApp verification code. Try again later.'},503);
     return c.json({ok:true,message:'Verification code sent to your WhatsApp number.'});
   }catch{return failed(c);}
 });
 router.post('/phone-invites/:token/confirm',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'Phone verification unavailable'},503);
+  if(!whatsappOtpReady(c.env))return c.json({error:'Phone verification unavailable'},503);
   const body=await c.req.json().catch(()=>null) as {code?:unknown}|null;
   const code=typeof body?.code==='string'?body.code.trim():'';
-  if(!/^\d{4,10}$/.test(code))return c.json({error:'Enter your verification code.'},400);
+  if(!/^\d{6}$/.test(code))return c.json({error:'Enter your verification code.'},400);
   try{
     const invite=await getInvite(c.env,c.req.param('token'));
     if(!invite)return c.json({error:'Invitation unavailable or expired.'},404);
@@ -176,7 +180,7 @@ router.post('/phone-invites/:token/confirm',async c=>{
     ).bind(invite.id).run();
     if(!limited.meta.changes)return c.json({error:'Verification attempts exceeded or code not requested.'},429);
     const mobile=await decryptPhone(c.env,invite.phone_cipher);
-    if(!await twilioVerify(c.env,'check',mobile,code))
+    if(!await checkWhatsappOtp(c.env,mobile,code,'invite:'+invite.id))
       return c.json({error:'Incorrect or expired verification code.'},403);
     const globalLookup=await phoneLookup(c.env,'verified-phone',mobile);
     let identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
@@ -213,10 +217,11 @@ router.post('/phone-invites/:token/confirm',async c=>{
   }catch{return failed(c);}
 });
 
-// Free, host-approved alternative to paid WhatsApp Verify.
+// Optional manual host approval is disabled by default and does not verify ownership.
 // The WhatsApp invite is a bearer link; it does NOT verify phone ownership.
 // No membership is granted until the existing group host approves the claim.
 router.post('/phone-invites/:token/request-approval',async c=>{
+  if(!hostApprovalReady(c.env))return c.json({error:'WhatsApp OTP is required; manual approval is disabled.',code:'WHATSAPP_OTP_REQUIRED'},503);
   if(!phoneMembersReady(c.env))return unavailable(c);
   const invite=await getInvite(c.env,c.req.param('token')).catch(()=>null);
   if(!invite)return c.json({error:'Invitation expired or unavailable'},404);
@@ -239,6 +244,7 @@ router.post('/phone-invites/:token/request-approval',async c=>{
   return c.json({ok:true,claim,status:'pending',message:'The host must approve your request before you can join.'},202);
 });
 router.get('/events/:id/join-requests',authMiddleware,async c=>{
+  if(!hostApprovalReady(c.env))return c.json({error:'WhatsApp OTP is required; manual approval is disabled.',code:'WHATSAPP_OTP_REQUIRED'},503);
   if(!phoneMembersReady(c.env))return unavailable(c);
   const id=c.req.param('id');
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
@@ -258,6 +264,7 @@ router.get('/events/:id/join-requests',authMiddleware,async c=>{
   return c.json({requests:requests.filter(Boolean)});
 });
 router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async c=>{
+  if(!hostApprovalReady(c.env))return c.json({error:'WhatsApp OTP is required; manual approval is disabled.',code:'WHATSAPP_OTP_REQUIRED'},503);
   if(!phoneMembersReady(c.env))return unavailable(c);
   const id=c.req.param('id'),key='join-request:'+id+':'+c.req.param('requestId');
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
@@ -278,6 +285,7 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
   return c.json({ok:true,approved:body?.approve===true});
 });
 router.post('/phone-invites/complete-approval',async c=>{
+  if(!hostApprovalReady(c.env))return c.json({error:'WhatsApp OTP is required; manual approval is disabled.',code:'WHATSAPP_OTP_REQUIRED'},503);
   if(!phoneMembersReady(c.env))return unavailable(c);
   const body=await c.req.json().catch(()=>null) as {claim?:unknown}|null;
   const claim=typeof body?.claim==='string'?body.claim:'';
@@ -318,7 +326,7 @@ router.post('/phone-invites/complete-approval',async c=>{
     event_id:state.event_id});
 });
 
-// Existing verified members can sign in with only their phone and a fresh OTP.
+// Existing verified members use a fresh WhatsApp Cloud API OTP to sign in.
 // A challenge is opaque, short-lived and never exposes whether a phone is known.
 async function rateLimit(env:Env,value:string,scope:string,max:number):Promise<boolean>{
   const key=await phoneLookup(env,'mobile-auth-rate:'+scope,value);
@@ -333,7 +341,7 @@ async function rateLimit(env:Env,value:string,scope:string,max:number):Promise<b
 }
 router.post('/auth/mobile/start',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
+  if(!whatsappOtpReady(c.env))return c.json({error:'WhatsApp OTP sender is not configured.'},503);
   const body=await c.req.json().catch(()=>null) as {phone?:unknown}|null;
   const mobile=normalizeMobile(body?.phone);
   if(!mobile)return c.json({error:'Enter a valid mobile number, including country code if outside Australia.'},400);
@@ -353,18 +361,18 @@ router.post('/auth/mobile/start',async c=>{
         phone_lookup:lookup,phone_cipher:cipher,checks:0
       }),{expirationTtl:600});
       // Do not disclose provider response or whether number exists.
-      await twilioVerify(c.env,'send',mobile);
+      await sendWhatsappOtp(c.env,mobile,'login:'+challenge);
     }
     return c.json(generic);
   }catch{return failed(c);}
 });
 router.post('/auth/mobile/confirm',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  if(!verifyProviderReady(c.env))return c.json({error:'WhatsApp verification is not configured.'},503);
+  if(!whatsappOtpReady(c.env))return c.json({error:'WhatsApp OTP sender is not configured.'},503);
   const body=await c.req.json().catch(()=>null) as {challenge?:unknown;code?:unknown}|null;
   const challenge=typeof body?.challenge==='string'?body.challenge:'';
   const code=typeof body?.code==='string'?body.code.trim():'';
-  if(!/^[a-f0-9]{64}$/.test(challenge)||!/^\d{4,10}$/.test(code))
+  if(!/^[a-f0-9]{64}$/.test(challenge)||!/^\d{6}$/.test(code))
     return c.json({error:'Invalid or expired verification.'},400);
   try{
     const raw=await c.env.KV.get('phone-login:'+challenge);
@@ -372,10 +380,12 @@ router.post('/auth/mobile/confirm',async c=>{
     const state=JSON.parse(raw) as {phone_lookup:string;phone_cipher:string;checks:number};
     if(!state.phone_lookup||!state.phone_cipher||state.checks>=8)
       return c.json({error:'Invalid or expired verification.'},403);
+    const allowed=await rateLimit(c.env,challenge,'login-confirm',8);
+    if(!allowed)return c.json({error:'Too many verification attempts. Request a new code.'},429);
     state.checks+=1;
     await c.env.KV.put('phone-login:'+challenge,JSON.stringify(state),{expirationTtl:600});
     const mobile=await decryptPhone(c.env,state.phone_cipher);
-    if(!await twilioVerify(c.env,'check',mobile,code))
+    if(!await checkWhatsappOtp(c.env,mobile,code,'login:'+challenge))
       return c.json({error:'Incorrect or expired verification code.'},403);
     const identity=await c.env.DB.prepare('SELECT user_id FROM verified_phone_identities WHERE phone_lookup=?')
       .bind(state.phone_lookup).first<{user_id:string}>();
