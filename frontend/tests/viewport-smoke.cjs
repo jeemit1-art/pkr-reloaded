@@ -101,7 +101,11 @@ async function test(){
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
-       if(!visual.background.includes('pkr-hero-premium.svg'))errors.push(size.name+' '+item.id+' missing crisp bundled hero fallback');
+       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
+       if(!visual.background.includes(imageName))errors.push(size.name+' '+item.id+' approved photographic banner not applied: '+JSON.stringify(visual));
+       const imageResponse=await page.request.get('http://127.0.0.1:3000/images/'+imageName);
+       if(!imageResponse.ok())errors.push(size.name+' '+item.id+' banner image returned '+imageResponse.status());
+       else if((await imageResponse.body()).length<25000)errors.push(size.name+' '+item.id+' photographic banner appears over-compressed');
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'&&size.width<=700){
