@@ -147,6 +147,17 @@ async function test(){
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
        if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
+       if(size.width>=1100){
+         await page.waitForFunction(()=>{
+           const felt=document.querySelector('#tableFelt');
+           return felt&&felt.getBoundingClientRect().width>100;
+         },{timeout:10000});
+         const table=await page.locator('#tableFelt').evaluate(node=>{
+           const r=node.getBoundingClientRect();
+           return {width:r.width,height:r.height,wide:document.querySelector('#gameScreen')?.classList.contains('pkr-wide-table')};
+         });
+         if(!table.wide||table.width<=table.height)errors.push(size.name+' live table did not change to wide oval: '+JSON.stringify(table));
+       }
      }
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');

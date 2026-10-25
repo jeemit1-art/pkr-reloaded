@@ -1597,8 +1597,13 @@ function renderTable() {
   var W = wrap.offsetWidth, H = wrap.offsetHeight;
   if (!W || !H) { setTimeout(renderTable, 80); return; }
   // Leave enough room for seat labels and balances around the padded rail.
-  var tH = Math.min(H * (W < 530 ? 0.64 : 0.72), 480);
-  var tW = Math.min(W * (W < 530 ? 0.48 : 0.46), tH * 0.58);
+  // Wide felt on desktop, traditional vertical table on phones and narrow screens.
+  // Only the visual coordinates change; seat IDs and financial state stay untouched.
+  var wideTable = W >= 850 && H >= 500;
+  var tH = wideTable ? Math.min(H * 0.62, 520) : Math.min(H * (W < 530 ? 0.64 : 0.72), 480);
+  var tW = wideTable ? Math.min(W * 0.72, tH * 1.78, 1050) : Math.min(W * (W < 530 ? 0.48 : 0.46), tH * 0.58);
+  var screen = document.getElementById('gameScreen');
+  if (screen) screen.classList.toggle('pkr-wide-table',wideTable);
   var cx = W / 2, cy = H / 2;
   var pad = 14;
   var outer = document.getElementById('tableOuter');
@@ -1611,13 +1616,13 @@ function renderTable() {
   var players = Object.values(state.players).filter(function(p){ return p && p.name; });
   var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
-  buildSeats(state.game.seats, tW, tH, cx, cy);
+  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable);
   updateBank();
   updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
 
-function buildSeats(count, tW, tH, cx, cy) {
+function buildSeats(count, tW, tH, cx, cy, wideTable) {
   var cont = document.getElementById('seatsContainer');
   if (!cont) return;
   cont.innerHTML = '';
@@ -1629,15 +1634,27 @@ function buildSeats(count, tW, tH, cx, cy) {
   var hOff = tW / 2 + seatGap;
   var vOff = tH / 2 + seatGap;
   var positions = [];
-  positions.push({ x: cx, y: cy - vOff });
-  for (var i = 0; i < leftCount; i++) {
-    var spacing = tH / (leftCount + 1);
-    positions.push({ x: cx - hOff, y: cy + (-tH/2 + spacing*(i+1)) });
-  }
-  positions.push({ x: cx, y: cy + vOff });
-  for (var j = 0; j < rightCount; j++) {
-    var spacingR = tH / (rightCount + 1);
-    positions.push({ x: cx + hOff, y: cy + (-tH/2 + spacingR*(j+1)) });
+  if (wideTable) {
+    // Seat 1 at the top, then continue down the left and back up the right.
+    // Retain the same logical seat numbering and selection handlers.
+    var rx = tW/2 + Math.min(seatGap,38);
+    var ry = tH/2 + Math.min(seatGap,29);
+    var polar = function(angle){ return {x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)}; };
+    positions.push(polar(-Math.PI/2));
+    for (var i=0;i<leftCount;i++) positions.push(polar(-Math.PI/2-Math.PI*(i+1)/(leftCount+1)));
+    positions.push(polar(Math.PI/2));
+    for (var j=0;j<rightCount;j++) positions.push(polar(Math.PI/2-Math.PI*(j+1)/(rightCount+1)));
+  } else {
+    positions.push({ x: cx, y: cy - vOff });
+    for (var i = 0; i < leftCount; i++) {
+      var spacing = tH / (leftCount + 1);
+      positions.push({ x: cx - hOff, y: cy + (-tH/2 + spacing*(i+1)) });
+    }
+    positions.push({ x: cx, y: cy + vOff });
+    for (var j = 0; j < rightCount; j++) {
+      var spacingR = tH / (rightCount + 1);
+      positions.push({ x: cx + hOff, y: cy + (-tH/2 + spacingR*(j+1)) });
+    }
   }
   positions.forEach(function(pos, i) {
     var sid = 'seat' + (i+1);

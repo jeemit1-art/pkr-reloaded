@@ -232,3 +232,14 @@
  #gameScreen .game-tabs{min-height:48px!important}
  #gameScreen .game-tab{font-size:10px!important}
 }
+
+/* Wide desktop felt matches the approved live-game composition.
+   RenderTable supplies measured geometry; never force pixel dimensions in CSS. */
+#gameScreen.pkr-wide-table #tableOuter{border-radius:50% / 50%!important;background:linear-gradient(140deg,#b88b4a 0%,#3e2d1b 24%,#b08850 48%,#262017 75%,#a2793c 100%)!important;box-shadow:0 0 0 3px rgba(246,204,121,.5),0 0 0 12px #080d0a,0 18px 60px #000b!important}
+#gameScreen.pkr-wide-table #tableFelt{border-radius:50% / 50%!important;background:radial-gradient(ellipse at 50% 40%,#147a53,#0e5a3f 54%,#063723 100%)!important;border:3px solid rgba(201,163,89,.55)}
+#gameScreen.pkr-wide-table #tableCenter{display:grid;gap:9px}
+#gameScreen.pkr-wide-table #tableName{font:650 clamp(20px,2.6vw,34px) Georgia,serif!important;letter-spacing:.14em!important;color:rgba(237,210,144,.53)!important}
+#gameScreen.pkr-wide-table #tableStats{font-size:12px!important;color:rgba(241,222,172,.85)!important}
+#gameScreen.pkr-wide-table .seat-chip{border-color:#d6ad60!important;background:linear-gradient(135deg,#173e30,#071a14)!important;box-shadow:0 6px 15px #000a}
+#gameScreen.pkr-wide-table .seat-chip.empty{background:#0b2019!important;border:1.5px dashed #ac8b50!important}
+#gameScreen.pkr-wide-table .seat-net{color:#e7d9af}
