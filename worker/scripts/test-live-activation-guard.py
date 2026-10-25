@@ -48,7 +48,7 @@ for i in range(5):
 saved_command=a.command
 
 def fake_wrangle(*cmd,cwd=None):
-    assert cmd[:5]==("npx","--no-install","wrangler","d1","execute","DB")
+    assert cmd[:6]==("npx","--no-install","wrangler","d1","execute","DB")
     query=cmd[cmd.index("--command")+1]
     row=db.execute(query).fetchone()
     return json.dumps([{"results":[dict(row)],"success":True}])
