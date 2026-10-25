@@ -53,10 +53,10 @@ export default function PrivatePhoneInvitePage(){
         {!data.verification_ready&&<p style={{color:'var(--amber)'}}>The group host needs to finish configuring WhatsApp verification before you can join.</p>}
         {!requested
           ?<button style={buttonStyle} disabled={busy||!data.verification_ready} onClick={requestCode}>
-            {busy?'Sending…':'Send verification code via WhatsApp'}
+            {busy?'Sending…':'Send verification code to my mobile'}
            </button>
           :<form onSubmit={e=>{e.preventDefault();void confirm();}} style={{display:'grid',gap:12}}>
-            <label htmlFor="phone-invite-code" style={{fontSize:12}}>WhatsApp verification code</label>
+            <label htmlFor="phone-invite-code" style={{fontSize:12}}>Mobile verification code</label>
             <input id="phone-invite-code" type="text" inputMode="numeric" autoComplete="one-time-code"
               placeholder="6-digit code" maxLength={10} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} style={inputStyle}/>
             <button type="submit" disabled={busy} style={buttonStyle}>{busy?'Checking…':'Verify mobile and join group'}</button>

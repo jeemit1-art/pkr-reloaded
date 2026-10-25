@@ -41,16 +41,16 @@ export default function MobileLogin(){
       <p style={{color:'var(--gold)',letterSpacing:'0.14em',fontSize:10,marginTop:20}}>PRIVATE MEMBERS ONLY</p>
       <h1 style={{fontFamily:'var(--font-display),serif',fontSize:32,margin:'10px 0'}}>Sign in with mobile</h1>
       <p style={{fontSize:13,color:'var(--ivory)',lineHeight:1.65,marginBottom:20}}>
-        Your verified WhatsApp number is your PKR player identity. No email address is needed.
+        Your verified mobile number is your PKR player identity. No email address is needed.
       </p>
       {!challenge?<form onSubmit={e=>{e.preventDefault();void start();}}>
         <label htmlFor="mobile-number" style={{fontSize:12}}>WhatsApp mobile number</label>
         <input id="mobile-number" value={phone} type="tel" autoComplete="tel"
           placeholder="04xx xxx xxx or +61…" style={inp} onChange={e=>setPhone(e.target.value)} required/>
         <button className="btn btn-primary" type="submit" disabled={busy}
-          style={{width:'100%',padding:'13px',marginTop:14}}>{busy?'Checking…':'Send WhatsApp code'}</button>
+          style={{width:'100%',padding:'13px',marginTop:14}}>{busy?'Checking…':'Send verification code'}</button>
       </form>:<form onSubmit={e=>{e.preventDefault();void verify();}}>
-        <label htmlFor="mobile-otp" style={{fontSize:12}}>Code received on WhatsApp</label>
+        <label htmlFor="mobile-otp" style={{fontSize:12}}>Verification code</label>
         <input id="mobile-otp" value={code} inputMode="numeric" autoComplete="one-time-code"
           maxLength={10} placeholder="Verification code" style={inp}
           onChange={e=>setCode(e.target.value.replace(/\D/g,''))} required/>
