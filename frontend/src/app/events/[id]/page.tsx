@@ -422,8 +422,9 @@ export default function EventPage() {
                   display:'flex',alignItems:'center',flexWrap:'wrap',gap:8}}>
                   <div style={{flex:1,minWidth:140}}>
                     <div style={{fontSize:14}}>{contact.display_name}</div>
-                    <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Verified member':'Invitation pending'}</div>
+                    <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Joined':'Invitation pending'}</div>
                   </div>
+                  {contact.status==='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy} onClick={async()=>{try{const result=await api.events.recoverContact(id,contact.id);setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.url,name:contact.display_name});}catch(e:any){alert(e.message);}}}>Recover access</button>}
                   {contact.status==='joined'&&selectedGameId&&
                     <a href={gameWhatsAppLink(contact.phone,selectedGameId)} target="_blank" rel="noreferrer"
                       className="btn btn-outline" style={{textDecoration:'none',fontSize:10,padding:'7px 9px'}}>WhatsApp game</a>}
@@ -441,7 +442,7 @@ export default function EventPage() {
               <div className="modal-sheet">
                 <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
                 <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
-                  The recipient must verify their own number before joining.</p>
+                  The host must approve the person's join request. This free flow does not verify phone ownership.</p>
                 <a href={phoneShare.whatsapp_url} rel="noreferrer" target="_blank" className="btn btn-primary"
                   style={{display:'block',textAlign:'center',padding:'13px',textDecoration:'none'}}>Open WhatsApp for this member</a>
                 <button className="btn btn-outline" style={{width:'100%',marginTop:9}}

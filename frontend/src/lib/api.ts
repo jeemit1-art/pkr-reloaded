@@ -102,6 +102,7 @@ export const api = {
     end:            (id:string)      => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
     reopen:         (id:string)      => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
+    recoverContact:(id:string,contactId:string)=>req<{ok:boolean;url:string;whatsapp_url:string}>(`/events/${id}/phone-contacts/${contactId}/recovery`,{method:'POST'}),
     joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>}>(`/events/${id}/join-requests`),
     decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
     phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
