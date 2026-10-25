@@ -1,6 +1,16 @@
 # PKR Reloaded — release readiness and go/no-go checklist
 
 **Status: NOT CLEARED FOR PRODUCTION.** Keep PR #1 a draft and keep all work on `codex/pkr-production-protection-20261024`. This document does not authorise a merge or deployment.
+## 25 October 2026: operator-reported private backup rehearsal
+
+- A private SQL export was successfully restored to an isolated local SQLite file. The operator reported quick_check=ok and no declared foreign-key violations.
+- Additional read-only checks identified unreferenced legacy hand-tracking history; the owner confirmed the affected hand-tracking test records were unused and authorised their removal.
+- Targeted deletion of only those test records passed on a disposable local copy. All other tables and financial records remained unchanged in the rehearsal.
+- On a second disposable copy, the missing hand-action game reference and hand void flag were added, historical action references backfilled, and three required unique keys created; integrity and row-preservation checks passed.
+- The rehearsal remains structurally different from staging: weaker NOT NULL declarations and differing relationship delete actions (including stricter settlement protections).
+- **No Cloudflare production D1 migration, cleanup, merge or production deployment has happened.** The rehearsal is not production clearance.
+- Before live data changes: reconcile a fresh, verified live D1 source against an independently restored copy; verify financial records privately; test a precisely targeted D1-compatible migration; complete signed-in real-device/offline gameplay acceptance. Do not run staging.schema.sql against production.
+
 
 ## What is verified in isolated staging
 
