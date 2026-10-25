@@ -1,11 +1,11 @@
 {
   "name": "PKR Reloaded",
   "short_name": "PKR",
-  "description": "Private poker group management — schedule games, track the ledger, settle up.",
+  "description": "Private poker rooms, mobile RSVPs, buy-ins and settlement — all in one place.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#080c0a",
-  "theme_color": "#00ff88",
+  "background_color": "#07120f",
+  "theme_color": "#07120f",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },

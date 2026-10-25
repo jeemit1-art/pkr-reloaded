@@ -258,10 +258,10 @@ function DashboardInner() {
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div>
             <span style={{fontSize:13,color:'var(--ivory)',fontWeight:500}}>Install PKR</span>
-            <span style={{fontSize:12,color:'var(--muted)',marginLeft:8}}>Add to your home screen</span>
+            <span style={{fontSize:12,color:'var(--muted)',marginLeft:8}}>Guided iPhone and Android setup</span>
           </div>
           <div style={{display:'flex',gap:8}}>
-            <button className="btn btn-primary" style={{fontSize:11,padding:'5px 12px'}} onClick={installApp}>Install</button>
+            <button className="btn btn-primary" style={{fontSize:11,padding:'5px 12px'}} onClick={()=>router.push('/install')}>Set up on phone</button>
             <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px'}} onClick={()=>setShowInstallBanner(false)}>✕</button>
           </div>
         </div>
