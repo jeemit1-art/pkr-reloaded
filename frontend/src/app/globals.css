@@ -892,3 +892,20 @@ html,body{max-width:100%;overflow-x:clip}img,svg,video,canvas{max-width:100%}but
  .pkr-install-vnext .pkr-install-progress,
  .pkr-install-vnext .pkr-install-card{width:100%}
 }
+
+/* Release candidate fix: room tab strip must be identical to hero width on desktop.
+   Earlier rules constrain tabs to 960px even when hero expands to 1120px. */
+@media (min-width:701px){
+ .pkr-event .pkr-event-tabs{
+   width:min(calc(100% - 32px),1120px)!important;
+   min-width:0!important;
+   max-width:1120px!important;
+   margin-inline:auto!important;
+ }
+ .pkr-event .pkr-event-tabs-inner{
+   width:100%!important;
+   max-width:none!important;
+   min-width:0!important;
+   margin-inline:auto!important;
+ }
+}
