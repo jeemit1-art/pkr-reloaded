@@ -39,7 +39,7 @@ function fixture({enabled=true,started=true,hasActions=false}={}){
           async first():Promise<any>{
             if(sql.includes('FROM games WHERE id=?'))return {...game};
             if(sql.includes('SELECT id FROM hands WHERE id=? AND game_id=?'))return {id:'h'};
-            if(sql.includes('SELECT id,mode,voided,created_at FROM hands WHERE id=?'))return {...hand};
+            if(sql.includes('SELECT id,mode,voided') && sql.includes('FROM hands WHERE id=? AND game_id=?'))return {...hand};
             if(sql.includes('SELECT dealer_seat,sb_seat,bb_seat,straddle,mode'))return {...hand};
             if(sql.includes('SELECT pot_chips FROM hands WHERE id=?'))return {...hand};
             if(sql.includes('FROM hand_results WHERE hand_id=?'))return null;
