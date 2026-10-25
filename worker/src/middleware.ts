@@ -90,13 +90,17 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
 
 export function generateId(): string { return crypto.randomUUID(); }
 
-export function corsHeaders(origin: string, frontendUrl?: string): Record<string,string> {
+export function corsHeaders(origin: string, frontendUrl?: string, staging=false): Record<string,string> {
   const allowed = [
     frontendUrl || '',
     'http://localhost:3000',
     'http://localhost:3001',
   ].filter(Boolean);
-  const ao = allowed.find(a => a === origin) ?? allowed[0] ?? '*';
+  // Vercel creates an immutable preview hostname for each staging commit.
+  // Only PKR's own Vercel project may call the isolated staging Worker.
+  // Production keeps its original exact-origin allowlist.
+  const isPkrPreview = staging && /^https:\/\/pkr-reloaded-[a-z0-9-]+-jeemit1-arts-projects\.vercel\.app$/.test(origin);
+  const ao = isPkrPreview ? origin : (allowed.find(a => a === origin) ?? allowed[0] ?? '*');
   return {
     'Access-Control-Allow-Origin':      ao,
     'Access-Control-Allow-Methods':     'GET,POST,PUT,DELETE,OPTIONS',

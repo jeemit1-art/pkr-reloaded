@@ -18,7 +18,7 @@ const app = new Hono<{ Bindings: Env }>();
 // CORS for every request
 app.use('*', async (c, next) => {
   const origin = c.req.header('Origin') || '';
-  const headers = corsHeaders(origin, c.env.FRONTEND_URL);
+  const headers = corsHeaders(origin, c.env.FRONTEND_URL, c.env.PKR_ENV === 'staging');
   if (c.req.method === 'OPTIONS') return new Response(null, { status:204, headers });
   await next();
   Object.entries(headers).forEach(([k,v]) => c.res.headers.set(k,v));
