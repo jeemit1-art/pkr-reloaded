@@ -58,6 +58,8 @@ export default function PersistentNavigation(){
    }else{
     router.push(roomPath+(destination==='members'?'?tab=members':''));
    }
+  } else if(destination==='/install' && eventId){
+   router.push('/install?group='+encodeURIComponent(eventId));
   } else router.push(destination);
  }
  return <><aside className="pkr-persistent-nav" aria-label="PKR navigation">
