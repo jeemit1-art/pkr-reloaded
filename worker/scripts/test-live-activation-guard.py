@@ -111,8 +111,8 @@ def fake_live_http(*cmd,cwd=None):
     if cmd[0]=="curl" and cmd[-1]==a.URL+"/phone-invites/not-a-valid-token":
         return "404"
     if cmd[:4]==("npx","--no-install","wrangler","deployments"):
-        return ("Created: 2026-10-25T13:03:54.487Z\\n"
-                "Version(s): (100%) 06118fa5-eaaa-4ef9-bb4d-cd4416c16ffb\\n")
+        return ("Created: 2026-10-25T13:03:54.487Z\n"
+                "Version(s): (100%) 06118fa5-eaaa-4ef9-bb4d-cd4416c16ffb\n")
     raise AssertionError("Unexpected external call: "+repr(cmd))
 a.command=fake_live_http
 try:
