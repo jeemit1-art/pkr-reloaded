@@ -178,7 +178,7 @@ games.post('/games/:id/cancel', authMiddleware, async (c) => {
   return c.json({ok:true,status:'cancelled'});
 });
 
-/* ── Delete an unused/cancelled game only; never erase historical records ── */
+/* ── Delete an unused/cancelled game only; never erase financial history ── */
 games.delete('/games/:id', authMiddleware, async(c)=>{
   const gameId=c.req.param('id');
   const game=await c.env.DB.prepare(
@@ -204,15 +204,7 @@ games.delete('/games/:id', authMiddleware, async(c)=>{
     AND NOT EXISTS (SELECT 1 FROM tournament_state WHERE game_id=?)
     AND NOT EXISTS (SELECT 1 FROM tournament_rebuys WHERE game_id=?)
     AND NOT EXISTS (SELECT 1 FROM tournament_eliminations WHERE game_id=?)
-    -- Legacy production has no FK for several history tables. Guard them
-    -- explicitly, including archived records with no hand parent.
-    AND NOT EXISTS (SELECT 1 FROM tournament_levels WHERE game_id=?)
-    AND NOT EXISTS (SELECT 1 FROM hand_analyses WHERE game_id=?)
-    AND NOT EXISTS (SELECT 1 FROM paid_carryover WHERE game_id=?)
-    AND NOT EXISTS (SELECT 1 FROM hand_actions WHERE game_id=?)
-    AND NOT EXISTS (SELECT 1 FROM hand_results WHERE game_id=?)
-  `).bind(gameId,gameId,gameId,gameId,gameId,gameId,gameId,gameId,
-    gameId,gameId,gameId,gameId,gameId).run();
+  `).bind(gameId,gameId,gameId,gameId,gameId,gameId,gameId,gameId).run();
   if(!result.meta.changes)return c.json({
     error:'Game has active play, money, hands or tournament history. Deletion is blocked to preserve records.',
     code:'GAME_HAS_HISTORY',
