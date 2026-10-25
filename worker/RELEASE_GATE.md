@@ -21,13 +21,14 @@ The Worker flags **`PKR_INTEGRITY_REVISIONS`** and **`PKR_INTEGRITY_STACKS`** de
 
 ## Mandatory release blockers
 
-1. **Preview availability:** The latest Vercel preview deployment is blocked by a Vercel build-rate limit. A GitHub Next.js build pass does not prove the interactive Vercel deployment is available. Restore preview build capability before visual acceptance tests.
+1. **Staging Worker deployment and preview acceptance:** The Vercel frontend preview is available again, but Cloudflare Workers Builds has been failing for the isolated staging Worker. Inspect its build logs and verify Root Directory `worker`, the correct staging-only Wrangler config, runtime secrets and deployment command before any further Worker release. A successful Next.js preview does not verify backend changes. Inspect the signed-in app on laptop and iPhone.
 2. **Real-device gameplay:** Run a complete event/game cycle using fictional players on at least two phones, including login, seats/RSVPs, buy-ins, cash-outs, hands, all-ins, side pots, tied winners, tournament levels/rebuys, settlement and later reloading. Repeat with a deliberate connection loss, duplicate taps and browser/tab closure at critical financial steps.
 3. **Financial integrity:** Compare each player's original buy-ins, buy-in totals, cash-out and net, and confirm aggregate balances reconcile to settlement transfers. Exercise missing/duplicate sync ACKs and value-change-then-revert (ABA).
 4. **Host-confirmed stacks:** Verify all opening chips against physical counts, fail a false all-in, reject an over-stack wager, interrupt before first blind, restore the same unfinished hand and make sure no blind posts twice. Preserve separate read-only audit output.
 5. **Legacy compatibility:** Check existing production client/server database structure **read-only** against the staging assumptions before any schema change. Identify legacy games, historical hand results and discontinued client versions. Do not introduce a destructive migration.
 6. **Backup and tested restoration:** Arrange an independently verified production D1 backup, restore a copy into a separately named disposable database, and compare row counts and critical financial totals. Do not use this staging database as a restore target. Record a tested rollback procedure, deployment ownership and failure monitoring.
-7. **Owner acceptance:** Confirm the production release candidate against a frozen commit and obtain explicit written owner approval to merge/release. Only then plan a production rollout. Commercialisation remains out of scope.
+7. **RSVP v2 staging migration and privacy:** Back up and verify *only* the isolated staging D1 before authorising `20261025_staging_rsvp_board.sql`. After the migration, enable `PKR_RSVP_V2=1` on staging only, verify private edit keys, seat conflicts, host-defined arrival times, concurrent RSVP updates, WhatsApp link sharing and notification opt-in. No WhatsApp Business group bot is implemented. Consult `RSVP_BOARD_ROLLOUT.md`.
+8. **Owner acceptance:** Confirm the production release candidate against a frozen commit and obtain explicit written owner approval to merge/release. Only then plan a production rollout. Commercialisation remains out of scope.
 
 ## Read-only schema inventory for future authorised review
 
@@ -53,7 +54,9 @@ Do not share customer data, auth secrets or SQL dumps in GitHub. Record differen
 | --- | --- | --- |
 | Worker + SQL + tests | Exact green GitHub Actions run and commit | Automated staging verification only |
 | Frontend source build | Exact green GitHub frontend-preview-build job | Automated staging verification only |
-| Vercel interactive preview | Successfully built URL and device screenshots | **Blocked by Vercel rate limit** |
+| Cloudflare isolated Worker build | Successful dedicated staging deployment | **Failing; inspect Cloudflare build logs and settings** |
+| RSVP v2 additive migration | Verified staging backup, migration and flag enablement | **Not applied; feature disabled** |
+| Vercel interactive preview | Successfully built URL and device screenshots | **Staging preview available; browser sign-in and live RSVP acceptance outstanding** |
 | Remote optional D1 migration | Authorised staged migration and row/version audit | **Not performed** |
 | Multi-device/offline UAT | Signed test log and reconciled example game | **Outstanding** |
 | Production D1 compatibility | Read-only schema comparison | **Outstanding** |
