@@ -65,6 +65,10 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
 export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
 
 export const api = {
+  mobileAuth: {
+    start: (phone:string)=>pub<{ok:boolean;challenge:string;message:string}>('/auth/mobile/start',{method:'POST',body:JSON.stringify({phone})}),
+    confirm: (challenge:string,code:string)=>pub<{ok:boolean;token:string}>('/auth/mobile/confirm',{method:'POST',body:JSON.stringify({challenge,code})}),
+  },
   phoneInvites: {
     preview: (token:string)=>pub<{event_name:string;masked_phone:string;role:string;verification_ready:boolean}>(`/phone-invites/${encodeURIComponent(token)}`),
     sendCode:(token:string)=>pub<{ok:boolean;message:string}>(`/phone-invites/${encodeURIComponent(token)}/send-code`,{method:'POST'}),
