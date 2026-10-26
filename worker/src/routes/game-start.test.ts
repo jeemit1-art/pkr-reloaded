@@ -15,9 +15,10 @@ import games from './games';
 type Player={user_id:string;display_name:string;seat_number:number|null;
   buy_ins:number;buy_in_total:number;cashout:number|null;whatsapp:string|null};
 type Rsvp={id:string;display_name:string;whatsapp:string|null};
+type BoardRsvp={id:string;display_name:string;status:'yes'|'no';seat_number:number|null};
 function fixture(options?:{
   existing?:Player[];rsvps?:Rsvp[];capacity?:number;password?:string|null;
-  failBatch?:boolean;lateSeatClaim?:boolean;unpaidHost?:boolean;
+  failBatch?:boolean;lateSeatClaim?:boolean;unpaidHost?:boolean;v2Responses?:BoardRsvp[];
 }){
   const game={id:'g',event_id:'e',status:'scheduled',
     seats:options?.capacity??3,game_password:options?.password??null};
@@ -39,6 +40,8 @@ function fixture(options?:{
               return null;
             },
             async all():Promise<any>{
+              if(sql.includes('FROM game_rsvp_guests WHERE game_id=?'))
+                return {results:(options?.v2Responses||[]).map(r=>({...r}))};
               if(sql.includes('FROM game_rsvps WHERE game_id=?'))
                 return {results:rsvps.map(r=>({...r}))};
               if(sql.includes('FROM game_players WHERE game_id=? ORDER BY created_at ASC'))
@@ -100,7 +103,8 @@ function fixture(options?:{
       }
     },
   };
-  const env:any={DB:db,JWT_SECRET:'staging-test-only',PKR_ENV:'staging'};
+  const env:any={DB:db,JWT_SECRET:'staging-test-only',PKR_ENV:'staging',
+    PKR_RSVP_V2:options?.v2Responses?'1':undefined};
   return {env,players,game,batchCount:()=>batchCount};
 }
 function post(password=''):RequestInit{
@@ -117,6 +121,20 @@ describe('transactional game start and RSVP registration',()=>{
     expect(f.game.status).toBe('scheduled');
     expect(f.players).toHaveLength(0);
     expect(f.batchCount()).toBe(0);
+  });
+  it('uses V2 attendance, honours reserved seats and excludes declined legacy RSVPs',async()=>{
+    const f=fixture({capacity:3,
+      existing:[{user_id:'host',display_name:'Host',seat_number:1,buy_ins:0,buy_in_total:0,cashout:null,whatsapp:null},
+        {user_id:'quick',display_name:'Quick',seat_number:null,buy_ins:0,buy_in_total:0,cashout:null,whatsapp:null}],
+      rsvps:[{id:'legacy-out',display_name:'Declined',whatsapp:null},{id:'legacy-guest',display_name:'Guest',whatsapp:null}],
+      v2Responses:[{id:'v2-out',display_name:'Declined',status:'no',seat_number:null},
+        {id:'v2-guest',display_name:'Guest',status:'yes',seat_number:3}]});
+    const response=await games.request(url,post(),f.env,exec);
+    expect(response.status).toBe(200);
+    expect(f.players.find(p=>p.user_id==='quick')?.seat_number).toBe(2);
+    expect(f.players.filter(p=>p.display_name==='Guest').map(p=>p.seat_number)).toEqual([3]);
+    expect(f.players.some(p=>p.display_name==='Declined')).toBe(false);
+    expect(f.players).toHaveLength(3);
   });
   it('preserves manual seats, fills Quick Seat first and leaves overflow unseated',async()=>{
     const f=fixture({capacity:3,existing:[
