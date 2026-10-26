@@ -17,7 +17,7 @@ type Player={user_id:string;display_name:string;seat_number:number|null;
 type Rsvp={id:string;display_name:string;whatsapp:string|null};
 function fixture(options?:{
   existing?:Player[];rsvps?:Rsvp[];capacity?:number;password?:string|null;
-  failBatch?:boolean;lateSeatClaim?:boolean;
+  failBatch?:boolean;lateSeatClaim?:boolean;unpaidHost?:boolean;
 }){
   const game={id:'g',event_id:'e',status:'scheduled',
     seats:options?.capacity??3,game_password:options?.password??null};
@@ -32,6 +32,9 @@ function fixture(options?:{
             sql,args,
             async first():Promise<any>{
               if(sql.includes('FROM games WHERE id=?'))return {...game};
+              if(sql.includes('SELECT host_id FROM events WHERE id=?'))return {host_id:'synthetic-host'};
+              if(sql.includes('SELECT plan, trial_started_at, plan_expires_at FROM users WHERE id=?'))
+                return {plan:options?.unpaidHost?'trial':'pro',trial_started_at:1,plan_expires_at:null};
               if(sql.includes('FROM event_players WHERE event_id=?'))return null;
               return null;
             },
@@ -107,6 +110,14 @@ const url='https://fixture.invalid/games/g/start';
 const exec:any={waitUntil:(_:Promise<unknown>)=>{}};
 
 describe('transactional game start and RSVP registration',()=>{
+  it('blocks unpaid hosts without changing existing scheduled games or players',async()=>{
+    const f=fixture({unpaidHost:true,rsvps:[{id:'a',display_name:'Alice',whatsapp:null}]});
+    const response=await games.request(url,post(),f.env,exec);
+    expect(response.status).toBe(402);
+    expect(f.game.status).toBe('scheduled');
+    expect(f.players).toHaveLength(0);
+    expect(f.batchCount()).toBe(0);
+  });
   it('preserves manual seats, fills Quick Seat first and leaves overflow unseated',async()=>{
     const f=fixture({capacity:3,existing:[
       {user_id:'host',display_name:'Host',seat_number:1,buy_ins:2,
