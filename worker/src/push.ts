@@ -177,16 +177,17 @@ async function sendToSub(
 }
 
 /** Broadcast to ALL subscribers of an event */
-export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<void> {
-  if (env.PKR_ENV === 'staging') return;
+export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<number> {
+  if (env.PKR_ENV === 'staging') return 0;
   const subs = await env.DB.prepare(
     env.PKR_PHONE_MEMBERS_V1==='1'
       ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
       :'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
   ).bind(eventId).all<{endpoint:string; p256dh:string; auth_key:string}>();
-  if (!subs.results.length) return;
+  if (!subs.results.length) return 0;
   const body = JSON.stringify({ title:payload.title, body:payload.body, icon:'/icon-192.png', badge:'/icon-192.png', data:payload.data||{} });
-  await Promise.allSettled(subs.results.map(s => sendToSub(env, s, body)));
+  const delivered = await Promise.allSettled(subs.results.map(s => sendToSub(env, s, body)));
+  return delivered.filter(r=>r.status==='fulfilled'&&r.value===true).length;
 }
 
 /** Send push to a specific player by display_name within an event */
