@@ -290,3 +290,30 @@
  .pkr-landing-v2 .pkr-tour-cta,.pkr-landing-v2 .pkr-proof-card,.pkr-landing-v2 .pkr-tour-tab{transition:none}
  .pkr-landing-v2 .pkr-tour-cta:hover,.pkr-landing-v2 .pkr-proof-card:hover{transform:none}
 }
+
+
+/* Mobile first fold: put the REAL app screenshot immediately after the title,
+   instead of making visitors scroll past all marketing copy to find the product. */
+@media(max-width:620px){
+ .pkr-landing-v2 .pkr-l2-hero-inner{
+  display:flex;flex-direction:column;align-items:stretch;
+  gap:0;padding-top:42px;padding-bottom:75px;
+ }
+ .pkr-landing-v2 .pkr-l2-hero-copy{display:contents}
+ .pkr-landing-v2 .pkr-l2-eyebrow{order:1}
+ .pkr-landing-v2 .pkr-l2-hero-copy h1{
+  order:2;margin:17px 0 19px;
+  font-size:clamp(39px,10vw,53px);
+ }
+ .pkr-landing-v2 .pkr-hero-real{order:3;margin:0 0 13px;padding-bottom:46px}
+ .pkr-landing-v2 .pkr-l2-hero-copy>p{
+  order:4;margin:8px 0 0;
+  font-size:13px;line-height:1.55;
+ }
+ .pkr-landing-v2 .pkr-l2-hero-actions{order:5;margin:19px 0 15px}
+ .pkr-landing-v2 .pkr-l2-hero-trust{order:6;margin:0;line-height:1.6}
+}
+@media(max-width:370px){
+ .pkr-landing-v2 .pkr-l2-hero-copy h1{font-size:38px}
+ .pkr-landing-v2 .pkr-hero-real{padding-bottom:39px}
+}
