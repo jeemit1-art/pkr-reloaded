@@ -167,7 +167,7 @@ billing.post('/webhook', async (c) => {
         || session.metadata?.pkr_user_id;
       const plan = session.subscription_data?.metadata?.plan
         || session.metadata?.plan;
-      if (!userId || !['starter','pro'].includes(plan) || session.payment_status !== 'paid') break;
+      if (!userId || !['starter','pro'].includes(plan) || session.payment_status !== 'paid' || !session.subscription) break;
       await c.env.DB.prepare(
         'UPDATE users SET plan=?, stripe_subscription_id=?, plan_expires_at=NULL WHERE id=?'
       ).bind(plan, session.subscription, userId).run();
@@ -178,7 +178,10 @@ billing.post('/webhook', async (c) => {
       const sub = event.data.object;
       const userId = sub.metadata?.pkr_user_id;
       const plan = sub.metadata?.plan;
-      if (!userId || !['starter','pro'].includes(plan)) break;
+      if (!userId || !['starter','pro'].includes(plan) || !sub.id) break;
+      const current = await c.env.DB.prepare('SELECT stripe_subscription_id FROM users WHERE id=?').bind(userId).first<{stripe_subscription_id:string|null}>();
+      // An old or unrelated subscription must never reactivate or disable a replacement plan.
+      if (!current?.stripe_subscription_id || current.stripe_subscription_id !== sub.id) break;
       if (sub.status === 'active') {
         await c.env.DB.prepare(
           'UPDATE users SET plan=?, plan_expires_at=NULL WHERE id=?'
@@ -195,10 +198,10 @@ billing.post('/webhook', async (c) => {
     case 'customer.subscription.deleted': {
       const sub = event.data.object;
       const userId = sub.metadata?.pkr_user_id;
-      if (!userId) break;
+      if (!userId || !sub.id) break;
       await c.env.DB.prepare(
-        "UPDATE users SET plan='trial', stripe_subscription_id=NULL, plan_expires_at=NULL WHERE id=?"
-      ).bind(userId).run();
+        "UPDATE users SET plan='trial', stripe_subscription_id=NULL, plan_expires_at=NULL WHERE id=? AND stripe_subscription_id=?"
+      ).bind(userId,sub.id).run();
       break;
     }
 
