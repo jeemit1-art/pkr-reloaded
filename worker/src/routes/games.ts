@@ -386,10 +386,23 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     const existing=(await c.env.DB.prepare(
       'SELECT user_id,display_name,seat_number FROM game_players WHERE game_id=? ORDER BY created_at ASC'
     ).bind(gameId).all<ExistingGameSeat>()).results;
-    const rsvps=(await c.env.DB.prepare(
+    const legacy=(await c.env.DB.prepare(
       "SELECT id,display_name,whatsapp FROM game_rsvps WHERE game_id=? AND status='yes' ORDER BY created_at ASC,id ASC"
     ).bind(gameId).all<ConfirmedRsvp>()).results;
-    const plan=planStartSeating(game.seats,existing,rsvps);
+    let confirmed:ConfirmedRsvp[]=legacy;
+    if(c.env.PKR_RSVP_V2==='1'){
+      // V2 attendance takes precedence over legacy name-only responses.
+      // A V2 'not coming' must never be resurrected by an old yes RSVP.
+      const modern=(await c.env.DB.prepare(
+        'SELECT id,display_name,status,seat_number FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC,id ASC'
+      ).bind(gameId).all<ConfirmedRsvp & {status:'yes'|'no'}>()).results;
+      const replaced=new Set(modern.map(r=>r.display_name.trim().toLowerCase()));
+      confirmed=[
+        ...modern.filter(r=>r.status==='yes').map(r=>({id:r.id,display_name:r.display_name,seat_number:r.seat_number})),
+        ...legacy.filter(r=>!replaced.has(r.display_name.trim().toLowerCase())),
+      ];
+    }
+    const plan=planStartSeating(game.seats,existing,confirmed);
     // Only the winning start transaction may allocate seats.
     // Activate LAST, after guarded seating operations, within the D1 batch.
     const statements: D1PreparedStatement[]=[];
@@ -407,7 +420,7 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       const userId=known?.user_id||'rsvp_'+player.id;
       // A late seat collision retains the RSVP with NULL seat, never displacing another player.
       statements.push(c.env.DB.prepare(
-        "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('active','settled','cancelled')) AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=?)) ON CONFLICT DO NOTHING"
+        "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('active','settled','cancelled')) AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=? COLLATE NOCASE)) ON CONFLICT DO NOTHING"
       ).bind(gameId,userId,player.display_name,player.whatsapp,
         player.seat_number,gameId,player.seat_number,player.seat_number,
         gameId,gameId,userId,player.display_name));
