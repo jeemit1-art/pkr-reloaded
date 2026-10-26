@@ -206,9 +206,8 @@ async function test(){
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
          return {height:r.height,image:s.backgroundImage};
        });
-       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
-       if(summary.height<245||!summary.image.includes(imageName))
-         errors.push(size.name+' game detail hero not matching approved banner: '+JSON.stringify(summary));
+       if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
+         errors.push(size.name+' game detail hero does not use the redesigned no-gold header: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -223,11 +222,8 @@ async function test(){
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
-       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
-       if(!visual.background.includes(imageName))errors.push(size.name+' '+item.id+' approved photographic banner not applied: '+JSON.stringify(visual));
-       const imageResponse=await page.request.get('http://127.0.0.1:3000/images/'+imageName);
-       if(!imageResponse.ok())errors.push(size.name+' '+item.id+' banner image returned '+imageResponse.status());
-       else if((await imageResponse.body()).length<25000)errors.push(size.name+' '+item.id+' photographic banner appears over-compressed');
+       if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
+         errors.push(size.name+' '+item.id+' stale casino photo remains instead of graphite header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'){
