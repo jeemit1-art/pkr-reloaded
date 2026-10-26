@@ -1,0 +1,222 @@
+/* PKR / 2026 graphite refresh.
+   Calm product-first branding: ink, warm ivory and muted coral.
+   Loaded last, so legacy casino gold does not define the brand.
+   The approved poker FELT geometry is deliberately left unchanged. */
+:root {
+  --bg:#111113;--bg2:#1a1b1e;--bg3:#242528;--bg4:#2b2c30;
+  --gold:#ef8976;--gold-dim:#c96553;--gold-pale:#ffe0d7;--gold-glow:rgba(239,137,118,.12);
+  --white:#f7f5f1;--ivory:#e5e0d8;--muted:#b6b2ad;--faint:#77777b;
+  --border:rgba(233,225,215,.16);--border-hi:rgba(239,137,118,.54);--border-sub:rgba(244,240,235,.1);
+}
+body {background:#111113;color:#f7f5f1;font:400 15px/1.5 var(--font-landing-body),system-ui,sans-serif}
+.display,.serif {font-family:var(--font-landing-display),system-ui,sans-serif;font-style:normal;letter-spacing:-.035em}
+/* Product shell and logged-in app */
+.pkr-app, .pkr-app.pkr-casino {
+ --bg:#111113;--bg2:#1b1b1e;--bg3:#262628;--bg4:#313034;
+ --gold:#ef8976;--gold-dim:#c96553;--gold-pale:#ffe3dc;--gold-glow:rgba(239,137,118,.12);
+ --white:#f7f5f1;--ivory:#e5e0d8;--muted:#b7b3ad;--faint:#848181;
+ --green:#69cfa3;--green-dim:#286f55;--red:#ff818e;--amber:#f0b76f;
+ --border:rgba(238,231,224,.16);--border-hi:rgba(239,137,118,.48);--border-sub:rgba(238,231,224,.09);
+ background:radial-gradient(ellipse 55% 32% at 100% -8%,rgba(196,94,80,.12),transparent 75%),#111113;
+ font-family:var(--font-landing-body),system-ui,sans-serif;color:var(--white);
+}
+.pkr-app :is(h1,h2,h3,.display,.serif,.stat-value),
+.pkr-casino :is(.display,.serif,.stat-value,.pkr-intro h1,.pkr-list-head h2,.pkr-hero h2,.pkr-event-overview h1,.pkr-room-name) {
+ font-family:var(--font-landing-display),system-ui,sans-serif;font-weight:700;letter-spacing:-.032em
+}
+.pkr-app :is(button,input,select,a) {font-family:var(--font-landing-body),system-ui,sans-serif}
+.pkr-app :is(.card,.card-gold,.card-inset,.pkr-room-card),
+.pkr-casino :is(.card,.card-gold,.pkr-room-card) {
+ background:#1e1e21;border:1px solid rgba(244,240,235,.12);
+ box-shadow:0 12px 34px #0002;border-radius:16px
+}
+.pkr-app .card::after,.pkr-casino .pkr-game-card::after {display:none}
+.pkr-app :is(.btn-primary,.tab.active),
+.pkr-casino :is(.btn-primary,.pkr-hero-action,.tab.active) {
+ background:#ef8976;color:#25120f;border:1px solid #f4a595;
+ box-shadow:0 6px 20px rgba(239,137,118,.12);font-weight:800;border-radius:11px
+}
+.pkr-app .btn-primary:hover,.pkr-casino :is(.btn-primary,.pkr-hero-action):hover {
+ background:#ffb09d;color:#25120f;border-color:#ffc2b5;box-shadow:0 8px 24px #e879632e
+}
+.pkr-app :is(.btn-ghost,.btn-outline),.pkr-casino :is(.btn-ghost,.btn-outline) {
+ background:#29282b;color:#f1e9e2;border:1px solid rgba(242,231,219,.21);
+}
+.pkr-app :is(.btn-ghost,.btn-outline):hover,.pkr-casino :is(.btn-ghost,.btn-outline):hover {background:#373337;border-color:#ef8976}
+.pkr-app :is(.inp,select),.pkr-casino :is(.inp,select) {background:#242326;border-color:#555055;color:#fbf9f6}
+.pkr-app :is(.nav,.pkr-topbar),.pkr-casino :is(.nav,.pkr-topbar) {
+ background:rgba(17,17,19,.96)!important;border-bottom:1px solid rgba(235,226,216,.13)!important;
+ backdrop-filter:blur(18px)
+}
+.pkr-app .pkr-brand-mark,.pkr-casino .pkr-brand-mark {background:#ef8976;color:#261713;box-shadow:none}
+.pkr-app .pkr-brand,.pkr-casino .pkr-brand {color:#fff8f3;font-family:var(--font-landing-display),sans-serif}
+.pkr-casino .pkr-brand-sub {color:#c6bcb4}
+.pkr-app .pkr-eyebrow,.pkr-casino .pkr-eyebrow {color:#ffa694}
+.pkr-casino .pkr-room-icon {background:#35272a;color:#ffb29f;border-color:#6e514c;box-shadow:none}
+.pkr-casino .pkr-room-arrow {color:#ef8976}
+.pkr-casino .pkr-room-card:hover {background:#2b292b;border-color:#a06960}
+.pkr-casino .pkr-room-end,.pkr-casino .pkr-hero-tag {color:#f0ae9f}
+.pkr-casino .pkr-event-tabs-inner {background:#252327;border-color:#444043}
+.pkr-casino .pkr-event-metric,.pkr-casino .pkr-hero-metric {background:#252327;border-color:#4b4345}
+.pkr-casino .pkr-hero {
+ background:linear-gradient(180deg,transparent 10%,rgba(17,17,19,.12) 25%,rgba(17,17,19,.85) 65%,#171719);
+ border-color:rgba(234,224,211,.22)
+}
+.pkr-casino .pkr-event-overview-inner {background:linear-gradient(180deg,#252326,#18181a);border-color:#51484a}
+.pkr-casino .pkr-game-summary {background:#262326;border-color:#604e4b}
+.pkr-casino .pkr-game-summary .display,.pkr-casino .pkr-event-metric strong,.pkr-casino .pkr-hero-metric strong {color:#f9f5f0!important;font-family:var(--font-landing-display),sans-serif}
+.pkr-casino .pkr-mobile-nav {background:#19191b;border-top:1px solid #514447}
+.pkr-casino .pkr-mobile-nav button[aria-current="page"] {color:#ffa08d}
+.pkr-casino .pkr-mobile-nav button[aria-current="page"] .pkr-nav-icon {background:#ef897621}
+.pkr-casino .pkr-casino-art {
+ background:radial-gradient(circle at 30% 0%,#8d4c3b25,transparent 43%),linear-gradient(160deg,#2b2222,#151b19)
+}
+.pkr-casino .pkr-casino-art-glow {background:radial-gradient(circle,#db786835,transparent 75%)}
+/* Table's playable felt and seats are intentionally not recoloured. */
+.pkr-app :is(button,a,input,select):focus-visible {outline:3px solid #ffac9c;outline-offset:3px}
+/* The marketing site has its own, light-and-dark rhythm. */
+.pkr-landing-v2 {
+ --l2-green:#141416;--l2-green-2:#252427;--l2-gold:#f19b88;
+ --l2-ivory:#fbf8f4;--l2-muted:#c7c1ba;
+ background:#141416;color:#fbf8f4;font-family:var(--font-landing-body),sans-serif
+}
+.pkr-landing-v2 .pkr-l2-topbar {background:#151517;border-bottom:1px solid #ffffff20}
+.pkr-landing-v2 .pkr-l2-nav-inner {min-height:78px}
+.pkr-landing-v2 .pkr-l2-brand {color:#faf6f0;font-family:var(--font-landing-display),sans-serif}
+.pkr-landing-v2 .pkr-l2-brand-emblem {background:#f09984;color:#271714;box-shadow:none}
+.pkr-landing-v2 .pkr-l2-brand small {color:#dbcec4}
+.pkr-landing-v2 .pkr-l2-navlinks a,.pkr-landing-v2 .pkr-l2-player-link {color:#e2ddd7}
+.pkr-landing-v2 .pkr-l2-navlinks a:hover,.pkr-landing-v2 .pkr-l2-player-link:hover {color:#f49f8e}
+.pkr-landing-v2 .pkr-l2-btn {border-radius:12px;min-height:52px;font-weight:800}
+.pkr-landing-v2 .pkr-l2-btn-gold {background:#ef8976;border:1px solid #ffb29f;color:#2c1612;box-shadow:0 8px 25px #ef897622}
+.pkr-landing-v2 .pkr-l2-btn-gold:hover {background:#ffaf9e;border-color:#ffd0c4}
+.pkr-landing-v2 .pkr-l2-btn-outline {background:#242325;color:#faf0e8;border:1px solid #7d6d6a}
+.pkr-landing-v2 .pkr-l2-btn-glass {background:#28272a;color:#f9f3ed;border:1px solid #716462}
+.pkr-landing-v2 .pkr-l2-hero {
+ background:radial-gradient(ellipse 50% 70% at 97% 48%,#4730328c,transparent 80%),#141416
+}
+.pkr-landing-v2 .pkr-l2-hero-art {display:none}
+.pkr-landing-v2 .pkr-l2-hero-vignette {background:linear-gradient(90deg,#141416 0%,#141416ad 50%,transparent 100%)}
+.pkr-landing-v2 .pkr-l2-hero-inner {max-width:1450px;grid-template-columns:minmax(0,.96fr) minmax(400px,1.12fr);gap:clamp(26px,4vw,64px);padding-top:78px;padding-bottom:94px}
+.pkr-landing-v2 .pkr-l2-hero-copy {max-width:665px}
+.pkr-landing-v2 .pkr-l2-hero h1 {font:790 clamp(53px,6.3vw,100px)/1 var(--font-landing-display),sans-serif;letter-spacing:-.059em;margin:22px 0}
+.pkr-landing-v2 .pkr-l2-hero-copy>p {color:#d2cbc5;font-size:clamp(16px,1.5vw,19px);line-height:1.65}
+.pkr-landing-v2 .pkr-l2-eyebrow,.pkr-landing-v2 .pkr-l2-section-kicker {color:#f19b88}
+.pkr-landing-v2 .pkr-l2-eyebrow i {background:#f19b88;box-shadow:0 0 0 5px #f19b8823}
+.pkr-landing-v2 em {color:#f3a08d;font-style:normal}
+.pkr-landing-v2 .pkr-l2-hero-trust {color:#cbc5be}
+.pkr-landing-v2 .pkr-l2-hero-trust span::first-letter {color:#f4ab9a}
+.pkr-landing-v2 .pkr-l2-hero-annotation {color:#cfb3ab}
+.pkr-landing-v2 .pkr-hero-real {filter:drop-shadow(0 24px 44px #000a)}
+.pkr-landing-v2 .pkr-hero-real::before {background:radial-gradient(ellipse,#f1987b31,transparent 65%)}
+.pkr-landing-v2 .pkr-hero-desktop {background:#222123;border:1px solid #6d5a57;box-shadow:0 25px 60px #0007}
+.pkr-landing-v2 .pkr-hero-desktop-header {color:#ded8d2}
+.pkr-landing-v2 .pkr-hero-desktop-header span:first-child::before {background:#ef8976;box-shadow:0 0 0 3px #ef897623}
+.pkr-landing-v2 .pkr-hero-mobile {background:#181719;border-color:#8c7974;box-shadow:0 25px 44px #0009}
+.pkr-landing-v2 .pkr-hero-real-label {background:#242123;color:#f2eae3;border-color:#8a706b;box-shadow:0 6px 24px #0006}
+.pkr-landing-v2 .pkr-hero-real-label i {background:#ef8976;box-shadow:none}
+.pkr-landing-v2 .pkr-l2-ribbon {background:#eeebe5;color:#252427;border-color:#e1dbd1}
+.pkr-landing-v2 .pkr-l2-ribbon>div {border-color:#d8d1c9}
+.pkr-landing-v2 .pkr-l2-ribbon strong {color:#242226}
+.pkr-landing-v2 .pkr-l2-ribbon small {color:#696260}
+.pkr-landing-v2 .pkr-l2-ribbon-icon {color:#b35549}
+.pkr-landing-v2 .pkr-product-tour {
+ background:#f6f2eb;color:#252326;border-top:0;border-bottom:1px solid #e2ddd5;
+ padding-top:92px;padding-bottom:95px
+}
+.pkr-landing-v2 .pkr-tour-overline,.pkr-landing-v2 .pkr-tour-overline>span {color:#b85348}
+.pkr-landing-v2 .pkr-product-tour-header h2 {color:#252326}
+.pkr-landing-v2 .pkr-product-tour-header h2 em {color:#b45348}
+.pkr-landing-v2 .pkr-product-tour-header>p {color:#665f5b}
+.pkr-landing-v2 .pkr-tour-tabs {scrollbar-color:#c4a19a transparent}
+.pkr-landing-v2 .pkr-tour-tab {background:#ede8e0;border:1px solid #d6cec6;color:#3e3836}
+.pkr-landing-v2 .pkr-tour-tab:hover {background:#e5dbd1;border-color:#b46c5d}
+.pkr-landing-v2 .pkr-tour-tab>span {color:#9d6d65}
+.pkr-landing-v2 .pkr-tour-tab.selected {background:#282326;color:#fff7f1;border-color:#282326;box-shadow:0 4px 15px #2a222017}
+.pkr-landing-v2 .pkr-tour-tab.selected>span {color:#f6aa99}
+.pkr-landing-v2 .pkr-tour-panel {background:#252427;border:1px solid #3b373a;box-shadow:0 26px 70px #29232124;border-radius:24px}
+.pkr-landing-v2 .pkr-tour-panel::before {background:none}
+.pkr-landing-v2 .pkr-tour-copy h3 {color:#fff9f4}
+.pkr-landing-v2 .pkr-tour-copy p {color:#cac3bc}
+.pkr-landing-v2 .pkr-tour-copy li {color:#e6dcd4}
+.pkr-landing-v2 .pkr-tour-copy li>span {color:#f29d89}
+.pkr-landing-v2 .pkr-tour-cta {background:#f08c78;border-color:#ffad9a;color:#2c1612}
+.pkr-landing-v2 .pkr-tour-cta:hover {background:#ffb09c;color:#271411}
+.pkr-landing-v2 .pkr-tour-visual {background:#171719;border-color:#4a3e3d}
+.pkr-landing-v2 .pkr-tour-screen-top {background:#272426;color:#d9d0c9;border-color:#514846}
+.pkr-landing-v2 .pkr-tour-screen-top>span:last-child {color:#f09d8c}
+.pkr-landing-v2 .pkr-tour-sample-note {background:#262123;color:#f2dbd4;border-color:#8b655f}
+.pkr-landing-v2 .pkr-tour-nav button {background:#393437;border-color:#5c5050;color:#fff7f2}
+.pkr-landing-v2 .pkr-tour-nav button:hover {background:#5b3d3d;border-color:#eb8e78}
+.pkr-landing-v2 .pkr-proof-card {background:#fffdf8;border-color:#e3dbd1;box-shadow:0 9px 27px #00000013}
+.pkr-landing-v2 .pkr-proof-card:hover {border-color:#b36a5d;transform:translateY(-3px)}
+.pkr-landing-v2 .pkr-proof-card-copy {background:#fffaf4;color:#292427}
+.pkr-landing-v2 .pkr-proof-card-copy strong {color:#282326}
+.pkr-landing-v2 .pkr-proof-card-copy span:not(.pkr-proof-card-arrow) {color:#975c54}
+.pkr-landing-v2 .pkr-proof-card-arrow {color:#b85e50}
+.pkr-landing-v2 .pkr-l2-feature-intro {background:#171719;color:#fbf7f1}
+.pkr-landing-v2 .pkr-l2-features {background:#f6f2eb;color:#282428}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading h2 {color:#282428}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading h2 em {color:#b85348}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading p {color:#706862}
+.pkr-landing-v2 .pkr-l2-feature-card {background:#fffdf8;border:1px solid #ddd5cb;color:#272326;box-shadow:0 9px 29px #00000012}
+.pkr-landing-v2 .pkr-l2-feature-copy h3 {color:#292527}
+.pkr-landing-v2 .pkr-l2-feature-copy p {color:#68605d}
+.pkr-landing-v2 .pkr-l2-feature-copy>span {color:#b95b4d}
+.pkr-landing-v2 .pkr-l2-how {background:#202023;color:#fbf8f4}
+.pkr-landing-v2 .pkr-l2-step {background:#2b292b;border-color:#4a4141}
+.pkr-landing-v2 .pkr-l2-step-top span,.pkr-landing-v2 .pkr-l2-step-top small {color:#f49d8a}
+.pkr-landing-v2 .pkr-l2-step h3 {color:#fff8f2}
+.pkr-landing-v2 .pkr-l2-step p {color:#c9c1b9}
+.pkr-landing-v2 .pkr-mobile-product-showcase {background:#f6f2eb;color:#252327}
+.pkr-landing-v2 .pkr-mobile-product-intro h2 {color:#262326}
+.pkr-landing-v2 .pkr-mobile-product-intro h2 em {color:#b85348}
+.pkr-landing-v2 .pkr-mobile-product-intro p {color:#615b56}
+.pkr-landing-v2 .pkr-mobile-device-shell {background:#181719;border-color:#7c7171;box-shadow:0 14px 42px #0003}
+.pkr-landing-v2 .pkr-mobile-device figcaption {color:#4c4743}
+.pkr-landing-v2 .pkr-l2-pricing {background:#161618;color:#faf7f1}
+.pkr-landing-v2 .pkr-l2-plan {background:#242225;border-color:#494044;color:#f8f3ed}
+.pkr-landing-v2 .pkr-l2-plan-featured {background:#302529;border-color:#d78270;box-shadow:0 0 0 1px #d7827033}
+.pkr-landing-v2 .pkr-l2-plan h3 {color:#fff8f1}
+.pkr-landing-v2 .pkr-l2-plan p,.pkr-landing-v2 .pkr-l2-plan ul {color:#c9c0b9}
+.pkr-landing-v2 .pkr-l2-plan-name,.pkr-landing-v2 .pkr-l2-plan-badge,.pkr-landing-v2 .pkr-l2-price {color:#ffc0b1}
+.pkr-landing-v2 .pkr-l2-join-section {background:#efebe4;color:#292427}
+.pkr-landing-v2 .pkr-l2-join-section h2 {color:#292427}
+.pkr-landing-v2 .pkr-l2-join-section p {color:#6d6460}
+.pkr-landing-v2 .pkr-l2-join-form label {color:#463b39}
+.pkr-landing-v2 .pkr-l2-join-form input {background:#fffdf8;color:#282326;border-color:#cfc5bd}
+.pkr-landing-v2 .pkr-l2-join-form button {background:#292427;color:#fff8f2}
+.pkr-landing-v2 .pkr-l2-last-call {background:#282124}
+.pkr-landing-v2 .pkr-l2-last-call>img {display:none}
+.pkr-landing-v2 .pkr-l2-last-call::after {background:radial-gradient(ellipse at 85% 10%,#a9574d4c,transparent 67%)}
+.pkr-landing-v2 .pkr-l2-faq {background:#f6f2eb;color:#292427}
+.pkr-landing-v2 .pkr-l2-faq h2 {color:#292427}
+.pkr-landing-v2 .pkr-l2-faq h2 em {color:#b45348}
+.pkr-landing-v2 .pkr-l2-faq .pkr-l2-section-heading p {color:#6a625d}
+.pkr-landing-v2 .pkr-l2-faq-item {background:#fffdf8;border-color:#e1d9d0;color:#282326}
+.pkr-landing-v2 .pkr-l2-faq-item summary {color:#2c2628}
+.pkr-landing-v2 .pkr-l2-faq-item p {color:#665d57}
+.pkr-landing-v2 .pkr-l2-footer {background:#151517;border-color:#493d3c}
+.pkr-landing-v2 .pkr-l2-footer p {color:#c6bcb4}
+.pkr-landing-v2 .pkr-l2-footer a {color:#ece1d8}
+.pkr-landing-v2 .pkr-landing-dialog {background:#252225;border-color:#72514c;color:#fff8f2}
+.pkr-landing-v2 .pkr-landing-dialog-logo,.pkr-landing-v2 .pkr-landing-primary {background:#f08d79;color:#2c1612}
+.pkr-landing-v2 .pkr-landing-dialog p {color:#d5c7be}
+.pkr-marketing-editorial {
+ --mk-gold:#ed9583;--mk-ink:#fff9f5;--mk-muted:#c9c1ba;
+ background:radial-gradient(ellipse 48% 24% at 95% 0%,#5636386a,transparent 85%),#171719;
+ color:var(--mk-ink);font-family:var(--font-landing-body),sans-serif
+}
+.pkr-marketing-editorial em,.pkr-marketing-price {color:#f3a592}
+.pkr-marketing-button {background:#2c292c;border:1px solid #6b5552;color:#fff7f1!important}
+.pkr-marketing-button:hover {background:#4b3638}
+.pkr-marketing-button.primary {background:#f08c78;color:#2c1511!important;border-color:#ffb09e}
+.pkr-marketing-button.primary:hover {background:#ffc0af}
+.pkr-marketing-feature-visual {background:#282123;border-color:#604e4c}
+.pkr-marketing-feature-visual::after {background:linear-gradient(90deg,#171719ed,rgba(23,23,25,.35) 75%)}
+.pkr-marketing-plan {background:#282628;border-color:#53494a}
+.pkr-marketing-plan.featured {background:linear-gradient(140deg,#3d292c,#242225);border-color:#eb9682}
+.pkr-marketing-steps article {background:#242326;border-color:#574b49}
+.pkr-landing-v2 :is(button,a,input):focus-visible,.pkr-marketing-editorial :is(a,button,summary):focus-visible {outline:3px solid #ffa994;outline-offset:3px}
+@media(max-width:1000px){.pkr-landing-v2 .pkr-l2-hero-inner{grid-template-columns:1fr;max-width:840px;padding-top:52px}.pkr-landing-v2 .pkr-hero-real{justify-self:center}}
+@media(prefers-reduced-motion:reduce){.pkr-landing-v2 .pkr-l2-btn,.pkr-landing-v2 .pkr-tour-tab{transition:none}}
