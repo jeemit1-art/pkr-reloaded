@@ -447,3 +447,40 @@ body:has(.pkr-persistent-nav) {background:#141416}
 .pkr-mobile-featured button:first-child {background:#f19582!important;color:#2b1512!important}
 .pkr-pro-home .pkr-pro-art {display:none!important}
 .pkr-landing-v2 .pkr-hero-real-label {font-size:9px}
+
+
+/* The previous banner photograph contained brass chips and green UI; retire
+   it from the marketing preview AND from new management screens.
+   The real playable table remains visible in the product tour. */
+.pkr-schedule-hero,
+.pkr-vnext-insights-top,
+.pkr-guest-hero,
+.pkr-install-vnext .pkr-install-hero,
+.pkr-game-detail .pkr-casino-game-summary {
+ background-image:radial-gradient(circle at 90% 10%,#64433d57,transparent 57%),linear-gradient(117deg,#32282b,#1d1c1f 70%,#30282b)!important;
+ background-color:#242123!important;background-position:center!important;
+ background-size:cover!important;border-color:#775b56!important
+}
+.pkr-mobile-featured {
+ background-image:radial-gradient(ellipse at 80% 15%,#754a4154,transparent 61%),linear-gradient(120deg,#3e2c30,#242123)!important;
+ background-color:#2b2528!important;border-color:#755a57!important
+}
+.pkr-game-detail .pkr-casino-game-summary::after {color:#ffc5b31e!important}
+.pkr-install-vnext .pkr-install-hero h1,
+.pkr-schedule-hero h1 {font-family:var(--font-landing-display),sans-serif!important;color:#fff9f4!important}
+.pkr-l2-last-call,.pkr-landing-v2 .pkr-l2-last-call {background-image:none!important}
+/* The glass computer panel is a product window rather than a gold casino frame. */
+.pkr-landing-v2 .pkr-tour-visual,
+.pkr-landing-v2 .pkr-proof-card-image {border-color:#675753;background:#232225}
+.pkr-landing-v2 .pkr-feature-photo-real {border-color:#6b5855}
+.pkr-landing-v2 .pkr-feature-photo-real::after {background:linear-gradient(0deg,#1a1718c9,transparent)}
+.pkr-landing-v2 .pkr-feature-photo-real span {color:#fff7f1}
+.pkr-landing-v2 .pkr-mobile-device figcaption span {color:#675f5b}
+.pkr-landing-v2 .pkr-mobile-device-shell {box-shadow:0 22px 48px #0004}
+@media(max-width:700px) {
+ .pkr-schedule-hero,.pkr-vnext-insights-top,.pkr-guest-hero,
+ .pkr-install-vnext .pkr-install-hero,.pkr-game-detail .pkr-casino-game-summary,
+ .pkr-event .pkr-event-overview,.pkr-dashboard .pkr-pro-hero {
+ background-image:radial-gradient(ellipse at 90% 0%,#74504a4b,transparent 64%),linear-gradient(145deg,#30272a,#1e1c1f)!important
+ }
+}
