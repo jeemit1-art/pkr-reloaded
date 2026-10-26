@@ -209,6 +209,7 @@ export default function EventPage() {
       await api.games.list(id).then(setGames).catch(()=>setGames(gs=>[g,...gs]));
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
+      router.push('/games/'+g.id);
     } catch(e:any){ alert(e.message); }
     finally { setSaving(false); }
   }
@@ -889,6 +890,29 @@ export default function EventPage() {
                 <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
               </div>
               <div>
+                <div className="lbl" style={{marginBottom:8}}>Game format *</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:8}} role="group" aria-label="Game format">
+                  {([{key:'cash',label:'Cash game'},{key:'tournament',label:'Tournament'},{key:'rebuy',label:'Rebuy tournament'},{key:'freezeout',label:'Freezeout'}] as const).map(option=>(
+                    <button type="button" key={option.key} aria-pressed={form.format===option.key}
+                      onClick={()=>setForm(previous=>({...previous,format:option.key}))}
+                      style={{minHeight:44,padding:'9px 12px',borderRadius:7,cursor:'pointer',fontSize:12,
+                        border:form.format===option.key?'1px solid var(--gold)':'1px solid var(--border-sub)',
+                        color:form.format===option.key?'var(--gold)':'var(--muted)',background:'var(--bg3)'}}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {form.format!=='cash'&&<p style={{fontSize:12,color:'var(--muted)',marginTop:8}}>
+                  PKR will prepare editable blind levels and a tournament timer. Players must record their buy-ins before tournament start.
+                </p>}
+              </div>
+              {form.format!=='cash'&&<div>
+                <label className="lbl" htmlFor="pkr-create-starting-chips" style={{display:'block',marginBottom:6}}>Starting chips per player</label>
+                <input id="pkr-create-starting-chips" className="inp" type="number" min="100" max="1000000000" step="100"
+                  value={form.starting_chips||'10000'}
+                  onChange={e=>setForm(previous=>({...previous,starting_chips:e.target.value}))}/>
+              </div>}
+              <div>
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
@@ -922,8 +946,8 @@ export default function EventPage() {
               </div>
             </div>
             <p className="pkr-unfinished-note" style={{marginTop:12}}>
-              Repeating schedules create four weekly or fortnightly games. Cash sessions are scheduled here;
-              tournament blind levels and stacks are configured in the tournament setup before play.
+              Repeating schedules create four weekly or fortnightly games. Tournament formats include editable blinds and chip stacks;
+              open the game after scheduling to confirm RSVP arrival times and send invitations.
             </p>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
