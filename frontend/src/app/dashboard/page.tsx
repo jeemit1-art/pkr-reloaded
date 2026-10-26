@@ -34,6 +34,8 @@ function DashboardInner() {
   const [featuredHistory,setFeaturedHistory]=useState<Game[]>([]);
   const [featuredMembers,setFeaturedMembers]=useState<EventMember[]>([]);
   const [search,setSearch]=useState('');
+  const [showArchivedRooms,setShowArchivedRooms]=useState(false);
+  const [reopeningRoomId,setReopeningRoomId]=useState<string|null>(null);
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -93,10 +95,22 @@ function DashboardInner() {
     setEndingEvent(true);
     try {
       await api.events.end(eventId);
-      setEvents(es => es.map(e => e.id===eventId ? {...e, status:'ended'} as any : e));
+      setEvents(es => es.map(e => e.id===eventId ? {...e, status:'ended'} : e));
       setConfirmEndEventId(null);
     } catch(e) { alert('Failed to end event'); }
     finally { setEndingEvent(false); }
+  }
+
+  async function reopenArchivedRoom(eventId: string) {
+    setReopeningRoomId(eventId);
+    try {
+      await api.events.reopen(eventId);
+      setEvents(es => {
+        const room=es.find(e=>e.id===eventId);
+        return room ? [{...room,status:'active'},...es.filter(e=>e.id!==eventId)] : es;
+      });
+    } catch(e) { alert('Failed to reopen poker room'); }
+    finally { setReopeningRoomId(null); }
   }
 
   async function initCamera() {
@@ -235,10 +249,10 @@ function DashboardInner() {
   const needsUpgrade = user && user.plan === 'trial' && !user.trial_active;
   const onTrial = user && user.plan === 'trial' && user.trial_active;
   const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
-  const activeRooms = events.filter(evt => (evt as any).status !== 'ended');
-  const featuredRoom = activeRooms[0] || events[0] || null;
-  // Keep active rooms ahead of archived rooms without altering source state.
-  const visibleRooms = [...activeRooms, ...events.filter(evt => (evt as any).status === 'ended')];
+  const activeRooms = events.filter(evt => evt.status !== 'ended');
+  const archivedRooms = events.filter(evt => evt.status === 'ended');
+  // Exclude ended rooms from active/featured dashboard content by default.
+  const featuredRoom = activeRooms[0] || null;
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
   useEffect(()=>{
     if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);return;}
@@ -255,10 +269,45 @@ function DashboardInner() {
   const upcomingGames=featuredGames.filter(g=>['scheduled','lobby','active'].includes(g.status)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
   const nextGame=upcomingGames[0];
   const recentResults=featuredHistory.slice().sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,4);
-  const searchedRooms=visibleRooms.filter(room=>room.name.toLowerCase().includes(search.toLowerCase().trim()));
+  const searchedRooms=activeRooms.filter(room=>room.name.toLowerCase().includes(search.toLowerCase().trim()));
+  const searchedArchivedRooms=archivedRooms.filter(room=>room.name.toLowerCase().includes(search.toLowerCase().trim()));
   const openCreate = () => {
     setShowCreate(true);
     document.getElementById('pkr-rooms')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const renderRoomCard = (evt: Event) => {
+    const archived=evt.status==='ended';
+    return (
+      <article key={evt.id} className={'pkr-room-card'+(archived?' pkr-room-archived':'')}>
+        <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
+          aria-label={(archived?'View archived poker room ':'Open poker room ') + evt.name}>
+          <span className="pkr-room-icon" aria-hidden="true">♠</span>
+          <span className="pkr-room-copy">
+            <span className="pkr-room-name" style={{display:'block'}}>{evt.name}</span>
+            <span className="pkr-room-meta">
+              <span>{evt.game_count || 0} games</span>
+              <span>{evt.member_count || 1} members</span>
+              {evt.buy_in > 0 && <span>{fmt(evt.buy_in)} buy-in</span>}
+              {archived && <span>Ended</span>}
+            </span>
+            {evt.role && <span className={'badge badge-' + evt.role} style={{marginTop:9}}>{evt.role}</span>}
+          </span>
+          <span className="pkr-room-arrow" aria-hidden="true">↗</span>
+        </button>
+        {evt.role === 'host' && (archived ?
+          <button type="button" className="pkr-room-end pkr-room-reopen"
+            disabled={reopeningRoomId===evt.id}
+            onClick={() => reopenArchivedRoom(evt.id)}
+            aria-label={'Reopen poker room ' + evt.name}>
+            {reopeningRoomId===evt.id?'Reopening…':'Reopen'}
+          </button> :
+          <button type="button" className="pkr-room-end"
+            onClick={() => setConfirmEndEventId(evt.id)} aria-label={'End poker room ' + evt.name}>
+            End
+          </button>)}
+      </article>
+    );
   };
 
   if (loading) return (
@@ -436,6 +485,11 @@ function DashboardInner() {
             <h2>Poker rooms <span style={{fontSize:13,color:'var(--muted)',fontWeight:600}}>({activeRooms.length} active)</span></h2>
           </div>
           <div className="pkr-list-head-actions">
+            {archivedRooms.length>0&&
+              <button type="button" className="btn btn-ghost" aria-expanded={showArchivedRooms}
+                aria-controls="pkr-archived-rooms" onClick={()=>setShowArchivedRooms(show=>!show)}>
+                {showArchivedRooms?'Hide archived rooms':`Show archived rooms (${archivedRooms.length})`}
+              </button>}
             <button type="button" className="btn btn-ghost" onClick={startScan}>Scan invite</button>
             <button type="button" className="btn btn-primary" onClick={openCreate}>+ New room</button>
           </div>
@@ -518,33 +572,24 @@ function DashboardInner() {
           </div>
         )}
 
-        <div className="pkr-room-grid">
-          {searchedRooms.map(evt => (
-            <article key={evt.id} className="pkr-room-card">
-              <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
-                aria-label={'Open poker room ' + evt.name}>
-                <span className="pkr-room-icon" aria-hidden="true">♠</span>
-                <span className="pkr-room-copy">
-                  <span className="pkr-room-name" style={{display:'block'}}>{evt.name}</span>
-                  <span className="pkr-room-meta">
-                    <span>{evt.game_count || 0} games</span>
-                    <span>{evt.member_count || 1} members</span>
-                    {evt.buy_in > 0 && <span>{fmt(evt.buy_in)} buy-in</span>}
-                    {(evt as any).status === 'ended' && <span>Ended</span>}
-                  </span>
-                  {evt.role && <span className={'badge badge-' + evt.role} style={{marginTop:9}}>{evt.role}</span>}
-                </span>
-                <span className="pkr-room-arrow" aria-hidden="true">↗</span>
-              </button>
-              {evt.role === 'host' && (evt as any).status !== 'ended' && (
-                <button type="button" className="pkr-room-end"
-                  onClick={() => setConfirmEndEventId(evt.id)} aria-label={'End poker room ' + evt.name}>
-                  End
-                </button>
-              )}
-            </article>
-          ))}
+        <div className="pkr-room-grid" id="pkr-active-rooms">
+          {searchedRooms.map(renderRoomCard)}
         </div>
+        {activeRooms.length===0&&events.length>0&&
+          <p className="pkr-pro-empty">No active rooms. Create a room or open Archived rooms to view previous ones.</p>}
+        {activeRooms.length>0&&searchedRooms.length===0&&
+          <p className="pkr-pro-empty">No active rooms match your search.</p>}
+        {showArchivedRooms&&archivedRooms.length>0&&
+          <section className="pkr-archived-rooms" id="pkr-archived-rooms" aria-label="Archived poker rooms">
+            <div className="pkr-archived-room-head">
+              <h3>Archived rooms</h3>
+              <p>Ended rooms are hidden from the active list. Their game history and financial records are preserved.</p>
+            </div>
+            <div className="pkr-room-grid">
+              {searchedArchivedRooms.map(renderRoomCard)}
+            </div>
+            {searchedArchivedRooms.length===0&&<p className="pkr-pro-empty">No archived rooms match your search.</p>}
+          </section>}
 
         {/* End event confirm modal */}
         {confirmEndEventId && (

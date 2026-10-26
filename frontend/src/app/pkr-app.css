@@ -413,3 +413,29 @@
   #gameScreen .bank-bar { padding-inline: 10px; }
   .pkr-game-detail .pkr-game-metrics { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
 }
+
+/* Ended rooms stay recoverable but no longer clutter the active dashboard. */
+.pkr-app .pkr-archived-rooms{
+  margin:16px 0 24px;
+  padding:clamp(12px,2.5vw,18px);
+  border:1px solid var(--border-sub);
+  border-radius:15px;
+  background:linear-gradient(135deg,#0c1f19,#0a1714);
+}
+.pkr-app .pkr-archived-room-head{margin:0 0 14px;}
+.pkr-app .pkr-archived-room-head h3{
+  font-family:var(--font-display),Georgia,serif;
+  font-size:20px;
+  margin:0 0 5px;
+  color:var(--white);
+}
+.pkr-app .pkr-archived-room-head p{
+  font-size:12px;
+  line-height:1.5;
+  color:var(--muted);
+  margin:0;
+}
+.pkr-app .pkr-room-archived{background:#0b1b17;}
+.pkr-app .pkr-room-reopen{min-width:79px;color:var(--gold-pale);}
+.pkr-app .pkr-room-reopen:hover{color:var(--gold);background:rgba(227,184,97,.08);}
+.pkr-app .pkr-room-reopen:disabled{cursor:wait;opacity:.6;}

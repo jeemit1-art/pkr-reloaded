@@ -10,6 +10,7 @@ fs.mkdirSync(output,{recursive:true});
 const future=Math.floor(Date.now()/1000)+86400;
 const past=Math.floor(Date.now()/1000)-86400;
 const room={id:'test-room',name:'Friday Night Test',description:'Private game room',status:'active',role:'host',host_id:'test-user',member_count:4,game_count:2,buy_in:5000,created_at:past};
+const archivedRoom={id:'synthetic-ended-room',name:'Synthetic Closed Room',description:'Archived test room',status:'ended',role:'host',host_id:'test-user',member_count:1,game_count:1,buy_in:2500,created_at:past-9000};
 const upcoming={id:'test-game',event_id:room.id,scheduled_at:future,status:'scheduled',location:'Test room',notes:'',seats:8,created_at:past,player_count:2,results_token:null,live_token:null};
 const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:past,player_count:4,results_token:'synthetic-results'};
 const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#214b37"/><circle cx="32" cy="25" r="13" fill="#e9c783"/><path d="M10 64c0-30 44-30 44 0" fill="#e9c783"/></svg>');
@@ -20,7 +21,8 @@ const user={id:'test-user',name:'Test Host',email:'test@invalid.example',avatar_
 const fixture=(pathname,method)=>{
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
-  if(pathname==='/events')return [room];
+  if(pathname==='/events')return [room,archivedRoom];
+  if(pathname==='/events/'+archivedRoom.id+'/reopen'&&method==='POST')return {ok:true};
   if(pathname==='/events/'+room.id)return {...room,members};
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished];
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
@@ -130,6 +132,34 @@ async function test(){
        }
        if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='D'||await fallback.locator('img').count())
          errors.push(size.name+' dashboard member without a photo did not retain initials');
+     }
+     if(item.id==='dashboard'){
+       const archivedToggle=page.getByRole('button',{name:'Show archived rooms (1)'});
+       const archivedCard=page.locator('#pkr-archived-rooms .pkr-room-archived');
+       if(await page.locator('#pkr-active-rooms .pkr-room-card').count()!==1)
+         errors.push(size.name+' ended room appeared in the active list');
+       if(await page.locator('#pkr-archived-rooms').count()!==0)
+         errors.push(size.name+' archived section visible before opening');
+       if(!await archivedToggle.isVisible())
+         errors.push(size.name+' archived rooms toggle missing');
+       else{
+         await archivedToggle.click();
+         if(await archivedCard.count()!==1 || !(await archivedCard.textContent())?.includes('Synthetic Closed Room'))
+           errors.push(size.name+' archived room not available after expanding');
+         if(size.width>=1100){
+           // Reopening uses a mocked, host-authorised Worker route; no real D1 updates.
+           await page.getByRole('button',{name:'Reopen poker room Synthetic Closed Room'}).click();
+           await page.waitForTimeout(180);
+           if(await page.locator('#pkr-active-rooms .pkr-room-card').count()!==2 ||
+              await page.locator('#pkr-archived-rooms').count()!==0)
+             errors.push(size.name+' reopened room did not return to active list');
+         }else{
+           await page.getByRole('button',{name:'Hide archived rooms'}).click();
+           if(await page.locator('#pkr-archived-rooms').count()!==0 ||
+              await page.locator('#pkr-active-rooms .pkr-room-card').count()!==1)
+             errors.push(size.name+' hiding archived rooms changed active list');
+         }
+       }
      }
      if(item.id==='dashboard'&&size.width<=700){
        const feature=page.locator('.pkr-mobile-featured');
