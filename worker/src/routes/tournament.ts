@@ -207,6 +207,41 @@ tournament.post('/games/:id/tournament/next-level', authMiddleware, async (c) =>
   return c.json({ok:true,level,current_level:nextLevel,level_started_at:now});
 });
 
+/** Server-authoritative, idempotent automatic advance for an open host panel.
+ * An expired local browser timer alone can never skip a level.
+ */
+tournament.post('/games/:id/tournament/advance-due',authMiddleware,async(c)=>{
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const state=await c.env.DB.prepare(
+    'SELECT status,current_level,level_started_at FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<{status:string;current_level:number;level_started_at:number|null}>();
+  if(!state||state.status!=='running')
+    return c.json({ok:true,advanced:false,reason:'not-running'});
+  const current=await c.env.DB.prepare(
+    'SELECT duration_secs FROM tournament_levels WHERE game_id=? AND level_num=?'
+  ).bind(gameId,state.current_level).first<{duration_secs:number}>();
+  if(!current||!Number.isSafeInteger(state.level_started_at))
+    return c.json({error:'Current blind stage is missing'},409);
+  const now=Math.floor(Date.now()/1000);
+  if(now<state.level_started_at+current.duration_secs)
+    return c.json({ok:true,advanced:false,seconds_remaining:state.level_started_at+current.duration_secs-now});
+  const next=await c.env.DB.prepare(
+    'SELECT * FROM tournament_levels WHERE game_id=? AND level_num=?'
+  ).bind(gameId,state.current_level+1).first<any>();
+  if(!next)return c.json({ok:true,advanced:false,structure_complete:true});
+  const result=await c.env.DB.prepare(
+    "UPDATE tournament_state SET current_level=?,level_started_at=? WHERE game_id=? AND status='running' AND current_level=? AND level_started_at=?"
+  ).bind(next.level_num,now,gameId,state.current_level,state.level_started_at).run();
+  return c.json({ok:true,advanced:!!result.meta.changes,
+    current_level:result.meta.changes?next.level_num:state.current_level,
+    level_started_at:result.meta.changes?now:state.level_started_at,
+    level:result.meta.changes?next:null});
+});
+
 tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {
   const gameId=c.req.param('id');
   const game=await getGameAndVerify(c,gameId);
