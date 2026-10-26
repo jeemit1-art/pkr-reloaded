@@ -104,7 +104,7 @@ export default function RsvpPage(){
   }
   async function saveTimes(){
     if(new Set(times).size!==times.length){setError('Arrival times must be unique. Change or remove the duplicate time.');return;}
-    if(times.some(t=>!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t))){setError('Choose valid arrival times.');return;}
+    if(times.some(t=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))){setError('Choose valid arrival times.');return;}
     setUpdatingTimes(true);setError('');
     try{
       const result=await api.games.setRsvpTimes(id,times);
