@@ -91,6 +91,10 @@ billing.post('/checkout', authMiddleware, async (c) => {
   const plan=input?.plan;
   if (!plan || !PLANS[plan]) return c.json({ error: 'Invalid plan' }, 400);
 
+  // Production Wrangler does not require PKR_ENV to be explicitly set.
+  // All environments except the isolated staging Worker must use live Stripe.
+  if(c.env.PKR_ENV!=='staging' && !c.env.STRIPE_SECRET_KEY?.startsWith('sk_live_'))
+    return c.json({error:'Live Stripe billing is not configured. Contact support.'},503);
   const userId = c.get('userId');
   const user = await c.env.DB.prepare('SELECT id, email, name, stripe_customer_id, stripe_subscription_id, plan_expires_at FROM users WHERE id=?')
     .bind(userId).first<User>();
@@ -106,7 +110,7 @@ billing.post('/checkout', authMiddleware, async (c) => {
   if (!priceId) return c.json({ error: 'Subscription pricing is not configured. Contact support.' }, 503);
   // A misleading USD or trial price must never be sold under the AUD banner.
   const configured=await stripe(c.env,'/prices/'+encodeURIComponent(priceId));
-  if(!isConfiguredAudPrice(configured,plan))
+  if(!isConfiguredAudPrice(configured,plan) || (c.env.PKR_ENV!=='staging'&&configured.livemode!==true))
     return c.json({error:'Subscription pricing is not configured for AUD monthly billing. Contact support.'},503);
 
   const front = c.env.FRONTEND_URL;
@@ -187,7 +191,7 @@ billing.post('/webhook', async (c) => {
     const actual=await stripe(c.env,'/subscriptions/'+encodeURIComponent(subId)+'?expand%5B%5D=latest_invoice');
     // Stripe's current record is authoritative; delayed/replayed webhook bodies
     // cannot reactivate a canceled or unpaid subscription.
-    if(c.env.PKR_ENV==='production'&&actual.livemode!==true)
+    if(c.env.PKR_ENV!=='staging'&&actual.livemode!==true)
       throw new Error('Production billing requires a live Stripe subscription');
     const entitlement=verifiedPaidSubscription(
       actual,userId,user.stripe_customer_id,priceIds,now
