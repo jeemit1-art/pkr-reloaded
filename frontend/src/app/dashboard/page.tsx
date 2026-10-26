@@ -238,6 +238,11 @@ function DashboardInner() {
   function PlanBadge() {
     if (!user) return null;
     const plan = user.plan;
+    if(!user.is_active)return (
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,
+        background:'rgba(220,60,60,0.12)',color:'rgba(220,80,80,0.85)',
+        letterSpacing:'0.1em',textTransform:'uppercase'}}>Subscription required</span>
+    );
     if (plan === 'lifetime') return (
       <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
         color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
@@ -269,9 +274,9 @@ function DashboardInner() {
     );
   }
 
-  const needsUpgrade = user && user.plan === 'trial' && !user.trial_active;
+  const needsUpgrade = user && !user.is_active;
   const onTrial = user && user.plan === 'trial' && user.trial_active;
-  const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
+  const isPaid = user && user.is_active;
   const activeRooms = events.filter(evt => evt.status !== 'ended');
   const totalPending = Object.values(pendingByRoom).reduce((sum,count)=>sum+count,0);
   // Only hosts can read the private approval queue. The backend enforces host access.
@@ -392,7 +397,7 @@ function DashboardInner() {
           <button
             className="btn btn-primary"
             style={{fontSize:11,padding:'5px 14px'}}
-            onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Choose a plan before your trial ends.'}}))}
+            onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Choose a paid host subscription.'}}))}
           >
             Upgrade
           </button>
