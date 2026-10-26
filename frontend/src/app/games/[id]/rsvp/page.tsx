@@ -89,6 +89,8 @@ export default function RsvpPage(){
     finally{setSaving(false);}
   }
   async function saveTimes(){
+    if(new Set(times).size!==times.length){setError('Arrival times must be unique. Change or remove the duplicate time.');return;}
+    if(times.some(t=>!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t))){setError('Choose valid arrival times.');return;}
     setUpdatingTimes(true);setError('');
     try{
       const result=await api.games.setRsvpTimes(id,times);
@@ -254,7 +256,7 @@ export default function RsvpPage(){
             </div>
             <div className="pkr-guest-host-actions">
               <button className="pkr-guest-outline" disabled={closed||times.length>=8}
-                onClick={()=>{setTimes(v=>[...v,'18:30']);setTimesDirty(true);}}>+ Add time</button>
+                onClick={()=>{setTimes(v=>{const used=new Set(v);for(let h=17;h<=23;h++)for(const m of ['00','30']){const candidate=String(h).padStart(2,'0')+':'+m;if(!used.has(candidate))return [...v,candidate];}return v;});setTimesDirty(true;}}>+ Add time</button>
               <button className="pkr-guest-button" disabled={closed||updatingTimes||!timesDirty}
                 onClick={saveTimes}>{updatingTimes?'Saving…':'Save times'}</button>
             </div>
