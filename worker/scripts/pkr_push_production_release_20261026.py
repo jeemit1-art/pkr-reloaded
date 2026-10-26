@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sqlite3
+import tempfile
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -46,7 +47,7 @@ BASELINE_SQL = '''SELECT
  (SELECT COUNT(*) FROM group_phone_contacts) AS contacts,
  (SELECT COUNT(*) FROM group_phone_invites) AS invitations,
  (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='push_room_subscriptions') AS push_v2_table,
- (SELECT COUNT(*) FROM games WHERE status='active' AND created_at>=1790812800) AS new_active_games
+ (SELECT COUNT(*) FROM games WHERE status='active') AS active_games
 '''
 
 def run(*args, input_text=None, show=False, cwd=WORKER):
@@ -154,6 +155,15 @@ def main():
                isinstance(b.get('results'), list) and len(b['results']) == 1 and
                int(b['results'][0].get('n', 0)) == 1 for b in stage_blocks):
         raise RuntimeError('STOP: staging push table missing')
+    # Verify this installed Wrangler's D1 export behaviour without touching production.
+    checkpoint('Preflight: export isolated staging D1 using installed Wrangler')
+    with tempfile.TemporaryDirectory(prefix='pkr-staging-d1-export-') as scratch:
+        probe = Path(scratch) / 'staging-export.sql'
+        wrangler('d1', 'export', 'DB', '--config', 'wrangler.staging.toml',
+                 '--remote', '--output', str(probe), input_text='y\n')
+        if not probe.is_file() or probe.stat().st_size < 100:
+            raise RuntimeError('STOP: staging D1 export returned no usable SQL file')
+    print('Staging D1 export compatibility: PASS')
     if status('/phone-invites/not-a-real-token') != 404:
         raise RuntimeError('Private phone invitation gate is not available')
 
@@ -195,12 +205,14 @@ def main():
     source = database_baseline()
     if int(source['push_v2_table']) != 0:
         raise RuntimeError('STOP: multi-room table already exists; review before changing anything')
-    if int(source['new_active_games']) != 0:
-        raise RuntimeError('STOP: recently created game is active; do not deploy during gameplay')
+    if int(source['active_games']) != 0:
+        raise RuntimeError('STOP: at least one game is active; do not deploy during gameplay')
     (target/'baseline-before.json').write_text(json.dumps(source, indent=2))
     export = target/'production-before.sql'
-    wrangler('d1', 'export', db_name, '--config', 'wrangler.toml',
-             '--remote', '--output', str(export), '--skip-confirmation', show=True)
+    # Wrangler 3.114.17 does not accept --skip-confirmation on d1 export.
+    # The DB binding selects the verified production database ID, independent of its display name.
+    wrangler('d1', 'export', 'DB', '--config', 'wrangler.toml',
+             '--remote', '--output', str(export), input_text='y\n', show=True)
     if not export.is_file() or export.stat().st_size < 100:
         raise RuntimeError('STOP: production D1 SQL export is missing or empty')
     print('Private SQL backup saved outside repository; bytes:', export.stat().st_size)
@@ -277,7 +289,7 @@ def main():
     expected = dict(source)
     expected['push_v2_table'] = 1
     if final != expected:
-        print('WARNING: Some production counts/financial totals changed during the release; reconcile immediately.')
+        raise RuntimeError('STOP: production counts or financial totals changed during release; V2 is enabled but needs reconciliation')
     print('\nPRODUCTION PUSH RELEASE ACTIVATED')
     print(str(source['legacy_push']) + ' existing legacy device subscriptions were preserved, not migrated automatically.')
     print('Each host/player must open each room and re-enable notifications.')
