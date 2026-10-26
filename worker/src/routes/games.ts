@@ -87,7 +87,9 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     }, 402);
   }
 
-  const requestedSeats=seats??9;
+  if(tournamentMode && !['pro','lifetime'].includes(planStatus.plan))
+    return c.json({error:'Tournament hosting requires the Pro subscription.',code:'UPGRADE_REQUIRED',feature:'tournament'},402);
+    const requestedSeats=seats??9;
   if(!Number.isSafeInteger(requestedSeats)||requestedSeats<2||requestedSeats>15)
     return c.json({error:'Select between 2 and 15 seats'},400);
   if(requestedSeats>planStatus.max_seats) {
