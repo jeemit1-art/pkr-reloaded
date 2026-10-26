@@ -39,7 +39,7 @@ export default function EventPage() {
   const [user, setUser]       = useState(null as any);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null as any);
-  const [selectedPlayer, setSelectedPlayer] = useState(null as any); // display_name for drill-down // gameId or gameId+':delete'
+  const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // Open Standings player profile
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
@@ -77,6 +77,9 @@ export default function EventPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError,setPushError] = useState('');
   const [expandedHistory,setExpandedHistory] = useState<string[]>([]);
+  useEffect(()=>{
+    if(tab!=='leaderboard')setSelectedPlayer(null);
+  },[tab]);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(()=>{
@@ -971,6 +974,16 @@ export default function EventPage() {
         {id:'members',label:'Members',icon:'members',active:tab==='members',onSelect:()=>selectTab('members')}
       ]} />
 
+      {/* Standings player profile. Both podium and list buttons select this same dialog. */}
+      {tab==='leaderboard' && selectedPlayer && (
+        <PlayerHistoryDialog
+          player={selectedPlayer}
+          history={history}
+          leader={leaders.find((p:any)=>p.display_name===selectedPlayer)}
+          onClose={()=>setSelectedPlayer(null)}
+        />
+      )}
+
       {/* ── Quick Seat Modal (#13) ── */}
       {showQuickSeat && quickSeatGameId && (
         <QuickSeatModal
@@ -1142,6 +1155,60 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
 }
 
 
+/**
+ * Standings detail is a dialog: a state update alone is not visible to the user.
+ * Focus the close control, restore focus on dismissal and keep keyboard users inside.
+ */
+function PlayerHistoryDialog({ player, history, leader, onClose }: {
+  player: string;
+  history: any[];
+  leader: any;
+  onClose: () => void;
+}) {
+  const dialogRef=useRef<HTMLDivElement>(null);
+  const onCloseRef=useRef(onClose);
+  onCloseRef.current=onClose;
+  useEffect(()=>{
+    const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    dialogRef.current?.querySelector<HTMLButtonElement>('[data-pkr-player-close]')?.focus();
+    const onKey=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){
+        event.preventDefault();
+        onCloseRef.current();
+      }else if(event.key==='Tab'){
+        const target=dialogRef.current;
+        const focusable=Array.from(target?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])'
+        )||[]).filter(el=>el.getClientRects().length>0);
+        if(!focusable.length)return;
+        const first=focusable[0],last=focusable[focusable.length-1];
+        if(event.shiftKey&&(document.activeElement===first||!target?.contains(document.activeElement))){
+          event.preventDefault();last.focus();
+        }else if(!event.shiftKey&&(document.activeElement===last||!target?.contains(document.activeElement))){
+          event.preventDefault();first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown',onKey);
+    return ()=>{
+      document.removeEventListener('keydown',onKey);
+      document.body.style.overflow=previousOverflow;
+      if(previous?.isConnected)previous.focus();
+    };
+  },[]);
+  return (
+    <div className="modal-overlay pkr-player-history-overlay"
+      onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <section ref={dialogRef} className="pkr-player-history-dialog"
+        role="dialog" aria-modal="true" aria-label={'Player history for '+player}>
+        <PlayerHistoryCard player={player} history={history} leader={leader} onClose={onClose}/>
+      </section>
+    </div>
+  );
+}
+
 function PlayerHistoryCard({ player, history, leader, onClose }: {
   player: string;
   history: any[];
@@ -1161,12 +1228,12 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
           <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
           {leader && (
             <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
-              {leader.games_played} games · {leader.games_won} wins · best {leader.biggest_win>0?'+':''}{(leader.biggest_win/100).toFixed(0)} · worst -{(leader.biggest_loss/100).toFixed(0)}
+              {leader.games_played} games · {leader.games_won} profitable games · total net {fmtSign(leader.total_net)}
             </div>
           )}
         </div>
-        <button onClick={onClose}
-          style={{background:'none',border:'none',color:'var(--faint)',fontSize:18,cursor:'pointer',padding:'2px 6px'}}>✕</button>
+        <button type="button" data-pkr-player-close aria-label="Close player history" onClick={onClose}
+          style={{background:'none',border:'none',color:'var(--ivory)',fontSize:20,cursor:'pointer',padding:'8px 12px',borderRadius:8}}>✕</button>
       </div>
       {nets.length>0&&<div className="pkr-profile-stats">
         <div><small>Settled games</small><strong>{nets.length}</strong></div>
@@ -1189,7 +1256,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
             {net!==null && (
               <div style={{fontSize:15,fontWeight:600,fontFamily:'serif',
                 color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)'}}>
-                {net>0?'+':''}{(net/100).toFixed(0)}
+                {fmtSign(net)}
               </div>
             )}
           </div>

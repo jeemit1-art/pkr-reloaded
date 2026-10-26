@@ -27,7 +27,12 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events/'+room.id)return {...room,members};
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
-  if(pathname==='/events/'+room.id+'/history')return [finished];
+  if(pathname==='/events/'+room.id+'/history')return [{
+    ...finished,top_players:[
+      {display_name:'Test Host',net:7500},
+      {display_name:'Demo Player',net:-7500},
+    ],
+  }];
   if(pathname==='/events/'+room.id+'/join-requests')return {requests:[]};
   if(pathname==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
   if(pathname==='/games/'+upcoming.id)return {...upcoming,players:[],rsvps:[]};
@@ -298,6 +303,21 @@ async function test(){
         errors.push(size.name+' Standings search did not filter players');
       await playerSearch.fill('');
       await page.getByLabel('Sort player standings').selectOption('average');
+      // Regression: player buttons must OPEN the profile, not just set internal state.
+      await page.locator('.pkr-standings-row').first().click();
+      const profile=page.getByRole('dialog',{name:/Player history for/});
+      await profile.waitFor({state:'visible',timeout:5000});
+      if(!await profile.getByText('Test Host',{exact:true}).count())
+        errors.push(size.name+' Standings player profile shows the wrong player');
+      if(!await profile.getByText('Settled games',{exact:true}).count())
+        errors.push(size.name+' Standings player profile missing settled-game statistics');
+      await page.screenshot({path:path.join(output,size.name+'-player-history.png'),fullPage:false});
+      await profile.getByRole('button',{name:'Close player history'}).click();
+      await profile.waitFor({state:'hidden',timeout:5000});
+      await page.locator('.pkr-standings-podium-card').first().click();
+      await profile.waitFor({state:'visible',timeout:5000});
+      await page.keyboard.press('Escape');
+      await profile.waitFor({state:'hidden',timeout:5000});
       await page.screenshot({path:path.join(output,size.name+'-standings.png'),fullPage:false});
      }
      // Interactions may scroll the page: capture consistently at its top.

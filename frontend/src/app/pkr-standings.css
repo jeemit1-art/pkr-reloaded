@@ -84,3 +84,41 @@
  .pkr-event .pkr-event-tabs .tab{font-size:12px!important}
  .pkr-insights-refresh .pkr-insights-payment-help,.pkr-insights-refresh .pkr-vnext-card-heading p{font-size:12px!important;line-height:1.5}
 }
+
+
+/* Player details must render above the universal bottom nav and the fixed sidebar. */
+.pkr-player-history-overlay{
+  z-index:450!important;
+  align-items:center;
+  padding:clamp(12px,3vw,28px);
+}
+.pkr-player-history-dialog{
+  width:min(100%,640px);
+  max-height:calc(100dvh - 48px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  background:#0b1c16;
+  border:1px solid rgba(229,190,105,.45);
+  border-radius:16px;
+  box-shadow:0 32px 96px rgba(0,0,0,.8);
+}
+.pkr-player-history-dialog>div{
+  margin-top:0!important;
+  border:0!important;
+  border-radius:16px!important;
+}
+.pkr-player-history-dialog button:focus-visible,
+.pkr-player-history-dialog a:focus-visible{
+  outline:3px solid #f0d18a;
+  outline-offset:3px;
+}
+@media(max-width:700px){
+  .pkr-player-history-overlay{
+    align-items:flex-end;
+    padding:10px 8px calc(12px + env(safe-area-inset-bottom));
+  }
+  .pkr-player-history-dialog{
+    max-height:calc(100dvh - 22px - env(safe-area-inset-bottom));
+    border-radius:15px;
+  }
+}
