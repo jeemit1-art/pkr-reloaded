@@ -4,6 +4,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {useParams,useRouter} from 'next/navigation';
 import {api,getToken,type RsvpBoardData} from '@/lib/api';
 import {canUsePush,isPWAInstalled,subscribePush} from '@/lib/push';
+import {playPkrSound} from '@/lib/sounds';
 
 const guestKey=(id:string)=>'pkr:rsvp:v2:'+id;
 function timeLabel(t:string){
@@ -39,8 +40,7 @@ export default function RsvpPage(){
       const next=JSON.stringify(data.guests.map(r=>[r.id,r.status,r.arrival_option,r.seat_number,r.updated_at]));
       if(snapshot.current&&snapshot.current!==next&&document.visibilityState==='visible'){
         setNotice('The group RSVP board was updated.');
-        if(alertsRef.current&&typeof Notification!=='undefined'&&Notification.permission==='granted')
-          new Notification('Poker night RSVP update',{body:'Someone updated their arrival or seat.'});
+        if(alertsRef.current)playPkrSound('update');
       }
       snapshot.current=next;setError('');
       if(first.current)return;
@@ -101,14 +101,14 @@ export default function RsvpPage(){
     if(typeof Notification==='undefined'){setNotice('Browser notifications are unavailable here. The live page still updates.');return;}
     const result=await Notification.requestPermission();
     setAlerts(result==='granted');
-    if(result==='granted'&&canUsePush()&&isPWAInstalled()&&board){
+    if(result==='granted'&&canUsePush()&&board){
       const subscribed=await subscribePush(board.event.id,undefined,name.trim()||undefined);
       setNotice(subscribed
         ?'PKR push alerts enabled for this device where supported. WhatsApp group posts are not automatic.'
         :'Browser alerts enabled while this page stays open. Push registration was unavailable.');
     }else{
       setNotice(result==='granted'
-        ?'Browser alerts enabled while this page is open. WhatsApp group posts are not automatic.'
+        ?'Browser alerts enabled while this page is open. For alerts when the page is closed, finish phone setup in PKR.'
         :'Alerts declined. The page will still update live.');
     }
   }
