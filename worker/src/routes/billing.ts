@@ -3,6 +3,8 @@
 import { Hono } from 'hono';
 import { Env, User } from '../types';
 import { authMiddleware } from '../middleware';
+import {getPlanStatus} from '../middleware';
+import {HOST_PRICES,isConfiguredAudPrice,verifiedPaidSubscription,type PaidPlan} from '../billing-entitlement';
 
 const billing = new Hono<{ Bindings: Env }>();
 
@@ -14,8 +16,8 @@ const billing = new Hono<{ Bindings: Env }>();
 //   npx wrangler secret put STRIPE_PRICE_STARTER
 //   npx wrangler secret put STRIPE_PRICE_PRO
 const PLANS = {
-  starter: { label: 'Starter', price_usd: 999,  features: ['1 group', 'Up to 9 seats', 'Buy-ins, live view, leaderboard, hand tracking'] },
-  pro:     { label: 'Pro',     price_usd: 1999, features: ['Unlimited groups', 'Up to 15 seats', 'AI analysis', 'Tournament mode', 'Player stats', 'Rabbit hunt'] },
+  starter: { label: 'Starter', price_aud_cents: 999,  features: ['1 group', 'Up to 9 seats', 'Buy-ins, live view, leaderboard, hand tracking'] },
+  pro:     { label: 'Pro',     price_aud_cents: 1999, features: ['Unlimited groups', 'Up to 15 seats', 'AI analysis', 'Tournament mode', 'Player stats', 'Rabbit hunt'] },
 };
 
 // ── Helper: call Stripe REST API directly (no SDK needed in Workers) ──────────
@@ -82,8 +84,9 @@ billing.get('/plan', authMiddleware, async (c) => {
 
 // ── POST /billing/checkout — create Stripe Checkout session ──────────────────
 billing.post('/checkout', authMiddleware, async (c) => {
-  const { plan } = await c.req.json() as { plan: 'starter' | 'pro' };
-  if (!PLANS[plan]) return c.json({ error: 'Invalid plan' }, 400);
+  const input=await c.req.json().catch(()=>null) as {plan?:PaidPlan}|null;
+  const plan=input?.plan;
+  if (!plan || !PLANS[plan]) return c.json({ error: 'Invalid plan' }, 400);
 
   const userId = c.get('userId');
   const user = await c.env.DB.prepare('SELECT id, email, name, stripe_customer_id FROM users WHERE id=?')
@@ -94,7 +97,11 @@ billing.post('/checkout', authMiddleware, async (c) => {
     ? (c.env as any).STRIPE_PRICE_STARTER
     : (c.env as any).STRIPE_PRICE_PRO;
 
-  if (!priceId) return c.json({ error: `STRIPE_PRICE_${plan.toUpperCase()} secret not set. See billing.ts comments.` }, 500);
+  if (!priceId) return c.json({ error: 'Subscription pricing is not configured. Contact support.' }, 503);
+  // A misleading USD or trial price must never be sold under the AUD banner.
+  const configured=await stripe(c.env,'/prices/'+encodeURIComponent(priceId));
+  if(!isConfiguredAudPrice(configured,plan))
+    return c.json({error:'Subscription pricing is not configured for AUD monthly billing. Contact support.'},503);
 
   const front = c.env.FRONTEND_URL;
 
@@ -122,7 +129,7 @@ billing.post('/checkout', authMiddleware, async (c) => {
     'subscription_data[metadata][plan]': plan,
     'metadata[pkr_user_id]': user.id,
     'metadata[plan]': plan,
-    'allow_promotion_codes': 'true',
+    'payment_method_types[0]': 'card',
   });
 
   return c.json({ url: session.url });
@@ -157,56 +164,81 @@ billing.post('/webhook', async (c) => {
   const valid = await verifyStripeSignature(body, sig, c.env.STRIPE_WEBHOOK_SECRET);
   if (!valid) return c.json({ error: 'Invalid signature' }, 400);
 
-  const event = JSON.parse(body) as { type: string; data: { object: any } };
+  let event:{id?:string;type:string;data:{object:any}};
+  try{event=JSON.parse(body);}catch{return c.json({error:'Invalid webhook payload'},400);}
+  const now=Math.floor(Date.now()/1000);
+  const priceIds:Record<PaidPlan,string|undefined>={
+    starter:(c.env as any).STRIPE_PRICE_STARTER,pro:(c.env as any).STRIPE_PRICE_PRO,
+  };
 
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      if (session.mode !== 'subscription') break;
-      const userId = session.subscription_data?.metadata?.pkr_user_id
-        || session.metadata?.pkr_user_id;
-      const plan = session.subscription_data?.metadata?.plan
-        || session.metadata?.plan;
-      if (!userId || !['starter','pro'].includes(plan) || session.payment_status !== 'paid' || !session.subscription) break;
-      await c.env.DB.prepare(
-        'UPDATE users SET plan=?, stripe_subscription_id=?, plan_expires_at=NULL WHERE id=?'
-      ).bind(plan, session.subscription, userId).run();
-      break;
-    }
-
-    case 'customer.subscription.updated': {
-      const sub = event.data.object;
-      const userId = sub.metadata?.pkr_user_id;
-      const plan = sub.metadata?.plan;
-      if (!userId || !['starter','pro'].includes(plan) || !sub.id) break;
-      const current = await c.env.DB.prepare('SELECT stripe_subscription_id FROM users WHERE id=?').bind(userId).first<{stripe_subscription_id:string|null}>();
-      // An old or unrelated subscription must never reactivate or disable a replacement plan.
-      if (!current?.stripe_subscription_id || current.stripe_subscription_id !== sub.id) break;
-      if (sub.status === 'active') {
-        await c.env.DB.prepare(
-          'UPDATE users SET plan=?, plan_expires_at=NULL WHERE id=?'
-        ).bind(plan, userId).run();
-      } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'past_due' || sub.status === 'incomplete_expired' || sub.status === 'incomplete' || sub.status === 'trialing') {
-        // Grace: keep access until period end
-        await c.env.DB.prepare(
-          'UPDATE users SET plan_expires_at=? WHERE id=?'
-        ).bind(sub.status === 'canceled' ? Math.max(Math.floor(Date.now()/1000),Number(sub.current_period_end)||0) : Math.floor(Date.now()/1000)-1, userId).run();
+  async function refreshSubscription(userId:string,subId:string,allowNew=false,customerFromCheckout?:string){
+    const user=await c.env.DB.prepare(
+      'SELECT stripe_customer_id,stripe_subscription_id FROM users WHERE id=?'
+    ).bind(userId).first<{stripe_customer_id:string|null;stripe_subscription_id:string|null}>();
+    if(!user?.stripe_customer_id)return;
+    if(customerFromCheckout&&customerFromCheckout!==user.stripe_customer_id)return;
+    if(!allowNew&&user.stripe_subscription_id!==subId)return;
+    const actual=await stripe(c.env,'/subscriptions/'+encodeURIComponent(subId)+'?expand%5B%5D=latest_invoice');
+    // Stripe's current record is authoritative; delayed/replayed webhook bodies
+    // cannot reactivate a canceled or unpaid subscription.
+    if(c.env.PKR_ENV==='production'&&actual.livemode!==true)
+      throw new Error('Production billing requires a live Stripe subscription');
+    const entitlement=verifiedPaidSubscription(
+      actual,userId,user.stripe_customer_id,priceIds,now
+    );
+    if(entitlement){
+      if(allowNew&&user.stripe_subscription_id&&user.stripe_subscription_id!==subId){
+        // A delayed Checkout event cannot replace a newer paid subscription.
+        const previous=await stripe(c.env,'/subscriptions/'+encodeURIComponent(user.stripe_subscription_id));
+        if(Number(previous.created)>=Number(actual.created))return;
       }
-      break;
-    }
-
-    case 'customer.subscription.deleted': {
-      const sub = event.data.object;
-      const userId = sub.metadata?.pkr_user_id;
-      if (!userId || !sub.id) break;
       await c.env.DB.prepare(
-        "UPDATE users SET plan='trial', stripe_subscription_id=NULL, plan_expires_at=NULL WHERE id=? AND stripe_subscription_id=?"
-      ).bind(userId,sub.id).run();
+        'UPDATE users SET plan=?,plan_expires_at=?,stripe_subscription_id=? WHERE id=?'
+      ).bind(entitlement.plan,entitlement.periodEnd,subId,userId).run();
+    }else if(!allowNew&&user.stripe_subscription_id===subId){
+      await c.env.DB.prepare(
+        "UPDATE users SET plan='trial',plan_expires_at=? WHERE id=? AND stripe_subscription_id=?"
+      ).bind(now-1,userId,subId).run();
+    }
+  }
+
+  switch(event.type){
+    case 'checkout.session.completed':{
+      const session=event.data.object;
+      if(session.mode!=='subscription'||session.payment_status!=='paid')break;
+      const userId=session.metadata?.pkr_user_id;
+      const subId=typeof session.subscription==='string'?session.subscription:session.subscription?.id;
+      const customer=typeof session.customer==='string'?session.customer:session.customer?.id;
+      if(userId&&subId&&customer)
+        await refreshSubscription(userId,subId,true,customer);
       break;
     }
-
-    case 'invoice.payment_failed': {
-      // Don't immediately cut off — Stripe retries, subscription.updated handles final state
+    case 'customer.subscription.updated':
+    case 'customer.subscription.created':{
+      const sub=event.data.object;
+      if(sub.metadata?.pkr_user_id&&sub.id)
+        await refreshSubscription(sub.metadata.pkr_user_id,sub.id);
+      break;
+    }
+    case 'customer.subscription.deleted':{
+      const sub=event.data.object;
+      if(sub.metadata?.pkr_user_id&&sub.id)
+        await c.env.DB.prepare(
+          "UPDATE users SET plan='trial',stripe_subscription_id=NULL,plan_expires_at=NULL WHERE id=? AND stripe_subscription_id=?"
+        ).bind(sub.metadata.pkr_user_id,sub.id).run();
+      break;
+    }
+    case 'invoice.paid':
+    case 'invoice.payment_failed':{
+      const invoice=event.data.object;
+      const subId=invoice.subscription||invoice.parent?.subscription_details?.subscription;
+      const id=typeof subId==='string'?subId:subId?.id;
+      if(id){
+        const current=await c.env.DB.prepare(
+          'SELECT id FROM users WHERE stripe_subscription_id=?'
+        ).bind(id).first<{id:string}>();
+        if(current)await refreshSubscription(current.id,id);
+      }
       break;
     }
   }
