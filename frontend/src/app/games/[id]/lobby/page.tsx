@@ -50,9 +50,10 @@ export default function LobbyPage() {
     if (!canUsePush()) { setInstallState('installed_no_push'); return; }
     const perm = getNotificationPermission();
     if (perm === 'denied') { setInstallState('push_denied'); return; }
-    const subscribed = await isPushSubscribedToEvent(id);
+    if(!data?.event?.id)return;
+    const subscribed = await isPushSubscribedToEvent(data.event.id);
     setInstallState(subscribed ? 'subscribed' : 'installed_no_push');
-  }, [id]);
+  }, [data?.event?.id]);
 
   useEffect(() => { checkState(); }, [checkState]);
 
@@ -81,7 +82,13 @@ export default function LobbyPage() {
       if (isPWAInstalled() && canUsePush() && installState !== 'subscribed') {
         await handleSubscribe(name.trim());
       }
-    } catch(e: any) { alert(e.message); }
+    } catch(e: any) {
+      // If the verified RSVP board is enabled, legacy public RSVP submissions
+      // are intentionally rejected. Take the player to the supported board.
+      if(String(e.message||'').includes('updated RSVP board'))
+        router.push('/games/'+id+'/rsvp');
+      else alert(e.message);
+    }
     finally { setSending(false); }
   }
 
@@ -332,6 +339,12 @@ export default function LobbyPage() {
             </span>
           </div>
         )}
+
+        {!isLive&&<button type="button" className="btn btn-primary"
+          style={{width:'100%',padding:'12px',marginBottom:12,borderRadius:9}}
+          onClick={()=>router.push('/games/'+id+'/rsvp')}>
+          ♟ View live RSVP & choose your seat →
+        </button>}
 
         {/* RSVP form */}
         {!done && !isLive && (
