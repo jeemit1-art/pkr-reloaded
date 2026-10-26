@@ -73,3 +73,46 @@
 .pkr-landing-join small{display:block;margin-top:10px;color:var(--muted);font-size:11px;line-height:1.55}
 .pkr-landing-join [role=alert]{display:block;margin-top:9px;font-size:12px;color:var(--red)}
 @media(max-width:480px){.pkr-landing-join-controls button{flex:1}.pkr-landing-join{margin-top:16px}}
+
+/* iPhone-sized room and game detail layouts; excludes the live felt/table. */
+@media (max-width: 700px) {
+  .pkr-event .pkr-content,
+  .pkr-game-detail .pkr-content {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+  .pkr-event .modal-overlay {
+    align-items: flex-end;
+    padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom));
+  }
+  .pkr-event .modal-sheet {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 18px;
+    border-radius: 14px 14px 6px 6px;
+  }
+  .pkr-game-detail .pkr-game-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 8px !important;
+  }
+  .pkr-event .pkr-member-roster,
+  .pkr-event .pkr-schedule-cards,
+  .pkr-game-detail .card {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .pkr-event input,
+  .pkr-event select,
+  .pkr-event textarea,
+  .pkr-event button,
+  .pkr-game-detail button {
+    max-width: 100%;
+  }
+}
