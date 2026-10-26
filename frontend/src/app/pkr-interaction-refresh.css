@@ -64,3 +64,12 @@
  .pkr-schedule-hero{padding:19px}
  .pkr-schedule-counts{flex-wrap:wrap}
 }
+.pkr-landing-join{margin-top:21px;max-width:510px;border:1px solid rgba(201,168,76,.27);border-radius:12px;background:rgba(14,32,22,.9);padding:16px;position:relative}
+.pkr-landing-join label{display:block;color:var(--gold);font-size:13px;font-weight:700;margin-bottom:10px}
+.pkr-landing-join-controls{display:flex;gap:8px;flex-wrap:wrap}
+.pkr-landing-join-controls input{background:var(--bg3);border:1px solid var(--border-hi);color:var(--white);padding:11px 13px;border-radius:8px;min-width:185px;flex:1;font-size:12px}
+.pkr-landing-join-controls button{padding:10px 16px;border-radius:8px;border:1px solid var(--gold);background:var(--gold);color:#10150d;cursor:pointer;font-weight:700;font-size:12px;min-height:42px}
+.pkr-landing-join-controls button:disabled{opacity:.5;cursor:not-allowed}
+.pkr-landing-join small{display:block;margin-top:10px;color:var(--muted);font-size:11px;line-height:1.55}
+.pkr-landing-join [role=alert]{display:block;margin-top:9px;font-size:12px;color:var(--red)}
+@media(max-width:480px){.pkr-landing-join-controls button{flex:1}.pkr-landing-join{margin-top:16px}}
