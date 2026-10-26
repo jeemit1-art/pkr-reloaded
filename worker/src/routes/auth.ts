@@ -163,7 +163,7 @@ auth.post('/refresh', authMiddleware, async (c) => {
 // /me — returns user + plan status
 auth.get('/me', authMiddleware, async (c) => {
   const user = await c.env.DB.prepare(
-    'SELECT id, email, name, avatar_url, plan, trial_started_at, plan_expires_at, stripe_customer_id FROM users WHERE id=?'
+    'SELECT id, email, name, avatar_url, plan, trial_started_at, plan_expires_at, stripe_customer_id, stripe_subscription_id FROM users WHERE id=?'
   ).bind(c.get('userId')).first<User>();
   if (!user) return c.json({ error:'Not found' }, 404);
 
@@ -178,7 +178,7 @@ auth.get('/me', authMiddleware, async (c) => {
   const TRIAL_DAYS = 5;
   const trialEnd = user.trial_started_at + TRIAL_DAYS * 86400;
   const trialActive = false; // Unpaid trials cannot host games.
-  const trialDaysLeft = user.plan === 'trial' ? Math.max(0, Math.ceil((trialEnd - now) / 86400)) : 0;
+  const trialDaysLeft = 0;
 
   // Check expired paid plan
   let effectivePlan = user.plan;
@@ -187,7 +187,10 @@ auth.get('/me', authMiddleware, async (c) => {
     await c.env.DB.prepare("UPDATE users SET plan='trial' WHERE id=?").bind(user.id).run();
   }
 
-  const isActive = effectivePlan === 'lifetime' || effectivePlan === 'starter' || effectivePlan === 'pro';
+  const paid=(effectivePlan==='starter'||effectivePlan==='pro')&&
+    !!user.stripe_subscription_id?.startsWith('sub_')&&
+    Number.isSafeInteger(user.plan_expires_at)&&Number(user.plan_expires_at)>now;
+  const isActive=effectivePlan==='lifetime'||paid;
 
   return c.json({
     id: user.id,
@@ -200,7 +203,7 @@ auth.get('/me', authMiddleware, async (c) => {
     trial_end: trialEnd,
     plan_expires_at: user.plan_expires_at,
     is_active: isActive,
-    has_payment: !!user.stripe_customer_id,
+    has_payment: !!user.stripe_customer_id&&!!user.stripe_subscription_id,
     // Computed limits
     max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
     max_seats: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? 15 : 9,
