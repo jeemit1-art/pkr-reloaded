@@ -2,7 +2,7 @@ import { Env } from './types';
 import { sendPushToEvent,sendPushToPlayer } from './push';
 
 const GRACE   = 6 * 3600;   // don't nag within 6h of settling
-const MIN_GAP = 20 * 3600;  // at most one reminder per ~day
+const MIN_GAP = 24 * 3600;  // hourly cron must never exceed one reminder per day
 
 const money = (c: number) => '$' + (c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2));
 
