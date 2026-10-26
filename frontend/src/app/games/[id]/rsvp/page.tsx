@@ -256,7 +256,7 @@ export default function RsvpPage(){
             </div>
             <div className="pkr-guest-host-actions">
               <button className="pkr-guest-outline" disabled={closed||times.length>=8}
-                onClick={()=>{setTimes(v=>{const used=new Set(v);for(let h=17;h<=23;h++)for(const m of ['00','30']){const candidate=String(h).padStart(2,'0')+':'+m;if(!used.has(candidate))return [...v,candidate];}return v;});setTimesDirty(true;}}>+ Add time</button>
+                onClick={()=>{setTimes(v=>{const used=new Set(v);for(let h=17;h<=23;h++){for(const m of ['00','30']){const candidate=String(h).padStart(2,'0')+':'+m;if(!used.has(candidate))return [...v,candidate];}}return v;});setTimesDirty(true;}}>+ Add time</button>
               <button className="pkr-guest-button" disabled={closed||updatingTimes||!timesDirty}
                 onClick={saveTimes}>{updatingTimes?'Saving…':'Save times'}</button>
             </div>
