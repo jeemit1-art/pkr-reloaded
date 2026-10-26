@@ -25,29 +25,35 @@ function fixture(){
     latest_invoice:{id:'in_synthetic',status:'paid',amount_paid:999},
   };
   const DB={
-    prepare(sql:string){return {bind(...values:any[]){return {
-      async first(){
-        if(sql.includes('SELECT stripe_customer_id,stripe_subscription_id FROM users WHERE id=?'))
-          return values[0]==='synthetic-host'?{...user}:null;
-        if(sql.includes('SELECT id FROM users WHERE stripe_subscription_id=?'))
-          return values[0]===user.stripe_subscription_id?{id:'synthetic-host'}:null;
-        return null;
-      },
-      async run(){
-        if(sql.startsWith('UPDATE users SET plan=?,plan_expires_at=?,stripe_subscription_id=?')){
-          user.plan=values[0];user.plan_expires_at=values[1];user.stripe_subscription_id=values[2];
-        }else if(sql.includes("UPDATE users SET plan='trial',plan_expires_at=?")){
-          if(user.stripe_subscription_id===values[2]){
-            user.plan='trial';user.plan_expires_at=values[0];
-          }
-        }else if(sql.includes("UPDATE users SET plan='trial',stripe_subscription_id=NULL")){
-          if(user.stripe_subscription_id===values[1]){
-            user.plan='trial';user.stripe_subscription_id=null;user.plan_expires_at=null;
-          }
-        }else throw Error('Unexpected synthetic SQL: '+sql);
-        return {meta:{changes:1}};
-      },
-    }};}},
+    prepare(sql:string){
+      return {
+        bind(...values:any[]){
+          return {
+            async first(){
+              if(sql.includes('SELECT stripe_customer_id,stripe_subscription_id FROM users WHERE id=?'))
+                return values[0]==='synthetic-host'?{...user}:null;
+              if(sql.includes('SELECT id FROM users WHERE stripe_subscription_id=?'))
+                return values[0]===user.stripe_subscription_id?{id:'synthetic-host'}:null;
+              return null;
+            },
+            async run(){
+              if(sql.startsWith('UPDATE users SET plan=?,plan_expires_at=?,stripe_subscription_id=?')){
+                user.plan=values[0];user.plan_expires_at=values[1];user.stripe_subscription_id=values[2];
+              }else if(sql.includes("UPDATE users SET plan='trial',plan_expires_at=?")){
+                if(user.stripe_subscription_id===values[2]){
+                  user.plan='trial';user.plan_expires_at=values[0];
+                }
+              }else if(sql.includes("UPDATE users SET plan='trial',stripe_subscription_id=NULL")){
+                if(user.stripe_subscription_id===values[1]){
+                  user.plan='trial';user.stripe_subscription_id=null;user.plan_expires_at=null;
+                }
+              }else throw Error('Unexpected synthetic SQL: '+sql);
+              return {meta:{changes:1}};
+            },
+          };
+        },
+      };
+    },
   };
   const env:any={DB,PKR_ENV:'production',STRIPE_WEBHOOK_SECRET:secret,
     STRIPE_SECRET_KEY:'sk_live_synthetic_test_only',STRIPE_PRICE_STARTER:prices.starter,
