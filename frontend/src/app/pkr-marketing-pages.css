@@ -1,0 +1,89 @@
+/* PKR public resource / pricing pages — independent of live gameplay. */
+.pkr-marketing-editorial {
+ --mk-gold:#edc57b;--mk-ink:#fff5e4;--mk-muted:#c3d5c5;
+ min-height:100vh;background:radial-gradient(ellipse 50% 12% at 95% 0,#24513966,transparent 75%),#081b14;
+ color:var(--mk-ink);padding:29px clamp(20px,4.3vw,72px) 80px;
+ font-family:var(--font-landing-body),Arial,sans-serif;
+}
+.pkr-marketing-editorial a {color:var(--mk-gold)}
+.pkr-marketing-editorial :is(a,button,summary):focus-visible {outline:3px solid #f5dca7;outline-offset:4px}
+.pkr-marketing-editorial :is(h1,h2,h3) {font-family:var(--font-landing-display),Arial,sans-serif;font-weight:780;letter-spacing:-.04em}
+.pkr-marketing-editorial em {font-style:normal;color:#f3cb7e}
+.pkr-marketing-breadcrumb {display:flex;align-items:center;gap:12px;color:#cbd9c9;font-size:12px;max-width:1190px;margin:0 auto 22px}
+.pkr-marketing-breadcrumb a {color:#f4d49b;text-decoration:none}
+.pkr-marketing-breadcrumb a:hover {text-decoration:underline}
+.pkr-marketing-kicker {font-size:11px;color:#f2cc86;letter-spacing:.17em;font-weight:850}
+.pkr-marketing-hero {max-width:1190px;margin:0 auto;padding:50px 0 38px}
+.pkr-marketing-hero h1 {font-size:clamp(45px,7vw,83px);line-height:1.05;max-width:930px;margin:18px 0 26px}
+.pkr-marketing-hero p {font-size:clamp(15px,2vw,18px);line-height:1.75;color:var(--mk-muted);max-width:760px}
+.pkr-marketing-hero-actions {display:flex;gap:13px;flex-wrap:wrap;margin-top:26px}
+.pkr-marketing-button {display:inline-flex;align-items:center;justify-content:space-between;gap:30px;background:#13382a;border:1px solid #cfae748f;border-radius:11px;padding:14px 22px;min-height:49px;color:#fbe4af!important;text-decoration:none;font-size:13px;font-weight:850;transition:background .2s}
+.pkr-marketing-button:hover {background:#1c4e36}
+.pkr-marketing-button.primary {background:linear-gradient(140deg,#ffe9b7,#ddb16a);color:#0b2318!important}
+.pkr-marketing-button.primary:hover {background:#ffe7aa}
+.pkr-marketing-feature-visual {position:relative;max-width:1190px;min-height:390px;overflow:hidden;border:1px solid #d1a96a71;border-radius:22px;margin:16px auto 38px;background:#173c2b}
+.pkr-marketing-feature-visual>img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pkr-marketing-feature-visual::after {content:"";position:absolute;inset:0;background:linear-gradient(90deg,#071a13f0,rgba(8,32,23,.35) 70%)}
+.pkr-marketing-feature-visual>div {position:relative;z-index:2;padding:clamp(28px,6vw,75px);display:grid;gap:20px}
+.pkr-marketing-feature-visual small {color:var(--mk-gold);font-weight:800;letter-spacing:.14em}
+.pkr-marketing-feature-visual strong {font:750 clamp(30px,4vw,54px)/1.16 var(--font-landing-display),Arial,sans-serif;color:#fff3dd;letter-spacing:-.04em}
+.pkr-marketing-prose {max-width:1190px;margin:0 auto;padding:45px 0;border-top:1px solid #c4ae7138}
+.pkr-marketing-prose h2 {font-size:clamp(30px,4.3vw,53px);margin:18px 0 25px}
+.pkr-marketing-prose>p {font-size:15px;line-height:1.85;color:var(--mk-muted);max-width:810px;margin:17px 0}
+.pkr-marketing-prose>p a {text-underline-offset:3px}
+.pkr-marketing-steps {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-top:25px}
+.pkr-marketing-steps article {min-width:0;padding:23px;background:#123022;border:1px solid #bda76c55;border-radius:14px}
+.pkr-marketing-steps article>span {display:block;color:#f4d393;font:780 27px var(--font-landing-display),Arial,sans-serif}
+.pkr-marketing-steps h3 {font-size:22px;margin:19px 0 11px;line-height:1.15}
+.pkr-marketing-steps p {font-size:12px;line-height:1.7;color:#c5d7c8}
+.pkr-marketing-plan-grid {max-width:1040px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:12px auto}
+.pkr-marketing-plan {display:flex;flex-direction:column;gap:17px;background:#102a1e;border:1px solid #aa8c5e6f;border-radius:18px;padding:35px;min-width:0}
+.pkr-marketing-plan.featured {border-color:#f0c675;background:linear-gradient(150deg,#214630,#0e281e 65%);box-shadow:0 0 0 1px #f0c67530}
+.pkr-marketing-plan>span {font-weight:800;letter-spacing:.17em;font-size:12px;color:#ebc67d}
+.pkr-marketing-plan h2 {font-size:clamp(26px,3.2vw,36px);line-height:1.18}
+.pkr-marketing-price {font:780 clamp(29px,3.5vw,40px) var(--font-landing-display),Arial,sans-serif;color:#ffe2a2;letter-spacing:-.04em}
+.pkr-marketing-price small {font:500 12px var(--font-landing-body),sans-serif;letter-spacing:0;color:#c6d8c6}
+.pkr-marketing-plan p {color:#c1d3bf;font-size:13px;line-height:1.7}
+.pkr-marketing-plan ul {flex:1;list-style:none;display:grid;gap:14px;padding:15px 0 20px;border-top:1px solid #f0d39725}
+.pkr-marketing-plan li {display:flex;gap:10px;font-size:13px;color:#e1e9df;line-height:1.35}
+.pkr-marketing-plan li::before {content:'✓';color:#77e7ad;font-weight:900}
+.pkr-marketing-fine-print {max-width:1040px;margin:20px auto 50px;text-align:center;font-size:12px;color:#abc7b1;line-height:1.65}
+.pkr-marketing-prose details {background:#10291f;border:1px solid #a68a5666;border-radius:12px;max-width:900px;margin:12px 0;overflow:hidden}
+.pkr-marketing-prose details>summary {list-style:none;cursor:pointer;padding:20px 24px;display:flex;justify-content:space-between;gap:20px;align-items:center;font-size:15px;color:#fff1d9;font-weight:750}
+.pkr-marketing-prose details>summary::-webkit-details-marker {display:none}
+.pkr-marketing-prose details>summary b {font-size:22px;font-weight:350;color:#f0c879}
+.pkr-marketing-prose details p {padding:0 24px 23px;color:#c1d4bf;font-size:13px;line-height:1.75}
+.pkr-marketing-bottom {max-width:1190px;margin:55px auto 0;text-align:center;background:radial-gradient(ellipse at 50% 100%,#25563b77,transparent 67%),#0a251a;border:1px solid #d4b5716b;border-radius:22px;padding:55px 22px;display:grid;justify-items:center;gap:15px}
+.pkr-marketing-bottom h2 {font-size:clamp(30px,4vw,49px)}
+.pkr-marketing-bottom p {color:#c1d2c3;font-size:14px;line-height:1.6}
+.pkr-marketing-bottom>a:not(.pkr-marketing-button) {font-size:12px;text-underline-offset:3px}
+.pkr-marketing-tournament-preview {max-width:880px;margin:18px auto 40px;text-align:center;border:1px solid #e0bd7c80;border-radius:20px;background:radial-gradient(ellipse at 55% 0,#59482955,transparent 65%),linear-gradient(150deg,#103c2c,#071f17);padding:35px clamp(20px,5vw,60px);display:grid;gap:20px}
+.pkr-marketing-tournament-preview>span {font-size:11px;color:#eed193;letter-spacing:.15em}
+.pkr-marketing-tournament-time {font:780 clamp(51px,9vw,82px) var(--font-landing-display),Arial,sans-serif;color:#f5d28e;letter-spacing:-.03em}
+.pkr-marketing-tournament-time small {display:block;font-size:10px;letter-spacing:.15em;color:#c7d9c6}
+.pkr-marketing-tournament-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.pkr-marketing-tournament-grid div {display:grid;gap:12px;border-radius:10px;border:1px solid #f2d89f38;padding:18px;background:#0c271d}
+.pkr-marketing-tournament-grid small {color:#bcd3c2;font-size:10px}
+.pkr-marketing-tournament-grid strong {font:780 clamp(27px,4vw,44px) var(--font-landing-display),Arial,sans-serif;color:#ffe2a6}
+.pkr-marketing-tournament-preview p {color:#c0d8c5;font-size:12px}
+.pkr-marketing-example {max-width:800px;margin:18px auto 45px;padding:32px;border:1px solid #deb77672;border-radius:18px;background:linear-gradient(145deg,#143a29,#0b221b)}
+.pkr-marketing-example>span {color:#f1d38c;letter-spacing:.13em;font-size:11px}
+.pkr-marketing-example>div {display:flex;justify-content:space-between;gap:14px;padding:16px 0;border-bottom:1px solid #e6bf7c24}
+.pkr-marketing-example>div strong {font-size:14px}
+.pkr-marketing-example>div b {font-size:15px;color:#7ce9b3}
+.pkr-marketing-example>div b.negative {color:#f3a39d}
+.pkr-marketing-example p {font-size:12px;line-height:1.7;color:#c9d9c9;margin-top:20px}
+@media(max-width:850px){.pkr-marketing-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){
+ .pkr-marketing-editorial {padding:22px 19px 62px}
+ .pkr-marketing-hero {padding:35px 0 25px}
+ .pkr-marketing-hero h1 {font-size:clamp(42px,10vw,58px)}
+ .pkr-marketing-plan-grid,.pkr-marketing-steps {grid-template-columns:1fr}
+ .pkr-marketing-plan {padding:27px}
+ .pkr-marketing-feature-visual {min-height:310px}
+ .pkr-marketing-feature-visual>div {padding:30px}
+ .pkr-marketing-prose {padding:30px 0}
+ .pkr-marketing-tournament-preview {padding:25px 13px}
+ .pkr-marketing-tournament-grid div {padding:10px}
+ .pkr-marketing-tournament-grid small {font-size:9px}
+}

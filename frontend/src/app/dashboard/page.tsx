@@ -46,6 +46,31 @@ function DashboardInner() {
     try{setPreferredRoomId(localStorage.getItem('pkr_preferred_room')||'');}catch{}
   },[]);
 
+  // A visitor selecting Starter/Pro on a public page should find that
+  // exact plan after Google sign-in, without an automatic charge.
+  useEffect(()=>{
+    if(loading||!user)return;
+    let plan='';
+    try{
+      const requested=searchParams.get('subscribe');
+      const stored=sessionStorage.getItem('pkr_host_plan_intent');
+      plan=(requested==='starter'||requested==='pro')?requested:(stored||'');
+      if(plan==='starter'||plan==='pro'){
+        sessionStorage.removeItem('pkr_host_plan_intent');
+        if(requested)window.history.replaceState({},'','/dashboard');
+      }
+    }catch{}
+    if(plan!=='starter'&&plan!=='pro')return;
+    const selected=plan;
+    const timeout=window.setTimeout(()=>{
+      window.dispatchEvent(new CustomEvent('pkr:upgrade_required',{detail:{
+        preferredPlan:selected,
+        error:'You selected the '+(selected==='pro'?'Pro':'Starter')+' host plan. Review the terms and then select Subscribe to open secure Stripe checkout.'
+      }}));
+    },150);
+    return()=>window.clearTimeout(timeout);
+  },[loading,user?.id,searchParams]);
+
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
     window.addEventListener('beforeinstallprompt', handler);

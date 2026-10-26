@@ -66,6 +66,14 @@ async function test(){
     try{
       await guestPage.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:40000});
       await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
+      await guestPage.locator('.pkr-l2-hero-art').evaluate(async image=>{
+        if(image instanceof HTMLImageElement && !image.complete){
+          await new Promise(resolve=>{
+            image.addEventListener('load',resolve,{once:true});
+            image.addEventListener('error',resolve,{once:true});
+          });
+        }
+      });
       const landing=await guestPage.evaluate(()=>{
         const hero=document.querySelector('.pkr-l2-hero-art');
         return {
@@ -85,6 +93,32 @@ async function test(){
       if(await guestPage.getByRole('dialog',{name:'Host sign in'}).count())
         errors.push(size.name+' landing host sign-in dialog did not close');
       await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:false});
+      if(size.name==='phone'||size.name==='desktop'){
+        for(const route of ['/pricing','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement']){
+          await guestPage.goto(BASE+route,{waitUntil:'domcontentloaded',timeout:40000});
+          await guestPage.locator('.pkr-marketing-hero h1').waitFor({state:'visible',timeout:25000});
+          const measured=await guestPage.evaluate(()=>({
+            width:document.documentElement.scrollWidth,
+            viewport:document.documentElement.clientWidth,
+            canonical:document.querySelector('link[rel=canonical]')?.getAttribute('href')||''
+          }));
+          if(measured.width>measured.viewport+5)errors.push(size.name+' marketing '+route+' horizontal overflow');
+          if(!measured.canonical.endsWith(route))errors.push(size.name+' marketing '+route+' canonical missing');
+        }
+        await guestPage.goto(BASE+'/pricing',{waitUntil:'domcontentloaded'});
+        await guestPage.getByRole('link',{name:/Choose Starter/i}).click();
+        await guestPage.getByRole('dialog',{name:'Host sign in'}).waitFor({state:'visible',timeout:5000});
+        if(!(await guestPage.getByRole('dialog',{name:'Host sign in'}).textContent())?.includes('Starter'))
+          errors.push(size.name+' Starter selection not preserved through marketing sign-in');
+      }
+      if(size.name==='desktop'){
+        const map=await guestPage.request.get(BASE+'/sitemap.xml');
+        if(!map.ok()||!(await map.text()).includes('/poker-tournament-manager'))
+          errors.push('Public marketing sitemap missing tournament manager');
+        const robots=await guestPage.request.get(BASE+'/robots.txt');
+        if(!robots.ok()||!(await robots.text()).includes('Sitemap:'))
+          errors.push('robots.txt missing sitemap declaration');
+      }
     }catch(e){errors.push(size.name+' landing: '+(e?.message||e));}
     finally{await guestContext.close();}
 

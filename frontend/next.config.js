@@ -17,6 +17,17 @@ if (process.env.NEXT_PUBLIC_PKR_ENV === 'staging') {
 
 /** @type {import('next').NextConfig} */
 module.exports = {
+  async headers() {
+    const privateRoutes=[
+      '/dashboard/:path*','/events/:path*','/games/:path*',
+      '/insights/:path*','/schedule/:path*',
+      '/invite/:path*','/phone-invite/:path*','/mobile-login/:path*'
+    ];
+    return privateRoutes.map(source=>({
+      source,
+      headers:[{key:'X-Robots-Tag',value:'noindex, nofollow, noarchive'}]
+    }));
+  },
   images: {
     remotePatterns: [{ protocol:'https', hostname:'lh3.googleusercontent.com' }],
   },
