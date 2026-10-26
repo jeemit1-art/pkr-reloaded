@@ -21,7 +21,7 @@ const items:TourItem[]=[
  {
   id:'table',tab:'Live poker table',eyebrow:'03 / GAME NIGHT',
   title:'Your poker table. Your rules.',
-  description:'See PKR's real table, player positions and host controls. Run the night without scattered notes or an improvised spreadsheet.',
+  description:'See the real PKR table, player positions and host controls. Run the night without scattered notes or an improvised spreadsheet.',
   desktop:'/demo/live-table.webp',mobile:'/demo/mobile-live-table.webp',
   alt:'PKR poker game table with seats and host controls, shown with fictional sample data',
   points:['Live poker table with available seats','Host game controls and bank summary','Track buy-ins, cash-outs and final results'],
