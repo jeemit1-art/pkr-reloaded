@@ -2,7 +2,6 @@
 
 import {useState} from 'react';
 import Link from 'next/link';
-import {DemoScreen} from './MarketingDemoScreen';
 
 type TourItem={
  id:string;
@@ -22,9 +21,9 @@ const items:TourItem[]=[
  {
   id:'table',tab:'Live poker table',eyebrow:'03 / GAME NIGHT',
   title:'Your poker table. Your rules.',
-  description:'See the actual PKR game table with its approved green felt, seating positions and host controls. Run the night without scattered notes or an improvised spreadsheet.',
+  description:'See PKR's real table, player positions and host controls. Run the night without scattered notes or an improvised spreadsheet.',
   desktop:'/demo/live-table.webp',mobile:'/demo/mobile-live-table.webp',
-  alt:'Actual PKR poker game table with green felt, gold-edged oval and eight player seats, shown with demo data',
+  alt:'PKR poker game table with seats and host controls, shown with fictional sample data',
   points:['Live poker table with available seats','Host game controls and bank summary','Track buy-ins, cash-outs and final results'],
   href:'/home-poker-game-tracker',cta:'Explore cash games'
  },
@@ -76,7 +75,7 @@ const items:TourItem[]=[
 ];
 
 const highlights=[
- {title:'Run the table',label:'The real felt, not a render',image:'/demo/live-table.webp',alt:'Actual green PKR poker game table with gold rail and empty demo seats',link:'/home-poker-game-tracker'},
+ {title:'Run the table',label:'From the actual PKR app',image:'/demo/live-table.webp',alt:'PKR live table screen, shown with demo data',link:'/home-poker-game-tracker'},
  {title:'Players and RSVPs',label:'See who is coming',image:'/demo/rsvp-board.webp',alt:'PKR RSVP page showing an illustrated private poker room and response options',link:'/home-poker-game-tracker'},
  {title:'Every result recorded',label:'Insights and settlement',image:'/demo/insights.webp',alt:'PKR Insights screen with sample totals, balance summary and game trends',link:'/home-poker-settlement'},
 ];
@@ -92,7 +91,7 @@ export function ProductTour(){
   <div className="pkr-product-tour-header">
    <span className="pkr-tour-overline"><span aria-hidden="true">●</span> SEE THE ACTUAL APP</span>
    <h2 id="pkr-product-tour-title">See exactly what <em>PKR does.</em></h2>
-   <p>Interactive interface previews showing PKR features with fictional sample data.</p>
+   <p>Real screens from the PKR app, captured in desktop and mobile browsers. All names, games and balances shown are sample data.</p>
   </div>
   <div className="pkr-tour-tabs" role="tablist" aria-label="PKR app features">
    {items.map((item,i)=><button type="button" role="tab" aria-selected={item.id===active}
@@ -125,14 +124,17 @@ export function ProductTour(){
    </div>
    <div className={'pkr-tour-visual'+(selected.id==='table'?' is-table':'')}>
     <div className="pkr-tour-screen-top"><div className="pkr-tour-browser-dots" aria-hidden="true"><i/><i/><i/></div><span>mypkr.app · PKR APP</span><span>● DEMO</span></div>
-    <DemoScreen kind={selected.id} />
-    <div className="pkr-tour-sample-note"><span aria-hidden="true">◉</span> PKR INTERFACE PREVIEW <span aria-hidden="true">·</span> SAMPLE DATA</div>
+    <picture>
+     {selected.mobile&&<source media="(max-width: 620px)" srcSet={selected.mobile}/>}
+     <img src={selected.desktop} alt={selected.alt} width={selected.id==='table'?1440:1225} height={selected.id==='table'?900:845} loading="lazy" decoding="async"/>
+    </picture>
+    <div className="pkr-tour-sample-note"><span aria-hidden="true">◉</span> REAL PKR SCREEN <span aria-hidden="true">·</span> SAMPLE DATA</div>
    </div>
   </div>
 
   <div className="pkr-product-proof" aria-label="PKR application screenshot gallery">
    {highlights.map((item)=><Link className="pkr-proof-card" href={item.link} key={item.title}>
-    <div className="pkr-proof-card-image"><DemoScreen kind={item.title==='Run the table'?'table':item.title==='Players and RSVPs'?'rsvp':'insights'} /></div>
+    <div className="pkr-proof-card-image"><img src={item.image} alt={item.alt} width={item.title==='Run the table'?1440:1225} height={item.title==='Run the table'?900:845} loading="lazy" decoding="async"/></div>
     <div className="pkr-proof-card-copy"><div><span>{item.label}</span><strong>{item.title}</strong></div><span className="pkr-proof-card-arrow" aria-hidden="true">↗</span></div>
    </Link>)}
   </div>
@@ -144,7 +146,7 @@ export function MobileProductShowcase(){
   <div className="pkr-mobile-product-intro">
    <span className="pkr-tour-overline">FROM YOUR PHONE</span>
    <h2 id="pkr-mobile-showcase-title">Your game night <em>in your pocket.</em></h2>
-   <p>Check the next game, open the table and view every recorded result from your phone. These are representative previews using fictional sample data.</p>
+   <p>Check the next game, open the table and view every recorded result from your phone. These are screenshots of PKR running on a real mobile-sized browser.</p>
    <Link href="/install" className="pkr-tour-cta">Use PKR on your phone <span aria-hidden="true">↗</span></Link>
   </div>
   <div className="pkr-mobile-devices">
@@ -153,7 +155,7 @@ export function MobileProductShowcase(){
     {src:'/demo/mobile-live-table.webp',title:'The poker table',alt:'PKR live poker table mobile screenshot with a gold-trimmed oval felt'},
     {src:'/demo/mobile-insights.webp',title:'Insights and results',alt:'PKR mobile Insights dashboard screenshot with sample game balances and totals'},
    ].map(item=><figure className="pkr-mobile-device" key={item.src}>
-      <div className="pkr-mobile-device-shell"><div className="pkr-mobile-device-speaker" aria-hidden="true"/><DemoScreen kind={item.title==='The poker table'?'table':item.title==='Insights and results'?'insights':'dashboard'} /></div>
+      <div className="pkr-mobile-device-shell"><div className="pkr-mobile-device-speaker" aria-hidden="true"/><img src={item.src} width="390" height="844" alt={item.alt} loading="lazy" decoding="async"/></div>
       <figcaption>{item.title} <span>· Demo</span></figcaption>
     </figure>)}
   </div>
