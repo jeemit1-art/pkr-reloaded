@@ -294,7 +294,7 @@ async function test(){
          errors.push(size.name+' host notification summary did not show synthetic registration count');
        const badges=page.locator('.pkr-member-push-state');
        if(await badges.count()!==2 || !await badges.first().getByText('Registered on 2 devices').count()
-          || !await badges.last().getByText('No room device registered').count())
+          || !await badges.last().getByText('Notifications not enabled on this member’s device').count())
          errors.push(size.name+' registered/unregistered member badges were not rendered');
        await registration.getByRole('button',{name:'↻ Refresh'}).click();
        await registration.getByText('1 of 2 members have a registered notification device').waitFor({state:'visible',timeout:5000});
