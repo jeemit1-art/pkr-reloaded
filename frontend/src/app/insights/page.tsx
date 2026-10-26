@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
+import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
 
 type SettlementRow={game:Game;transfer:Transfer};
 type SettlementView='transfers'|'balances'|'status';
@@ -20,10 +21,15 @@ export default function InsightsPage(){
  const [settlementView,setSettlementView]=useState<SettlementView>('transfers');
  const [paymentBusy,setPaymentBusy]=useState<string|null>(null);
  const [paymentNotice,setPaymentNotice]=useState('');
+ const [transferPage,setTransferPage]=useState(0);
+ const [period,setPeriod]=useState<'all'|'90d'>('all');
 
  useEffect(()=>{
   let live=true;
-  api.events.list().then(r=>{if(!live)return;setRooms(r);setSelected(r.find(x=>x.status!=='ended')?.id||r[0]?.id||'');})
+  api.events.list().then(r=>{if(!live)return;setRooms(r);
+    let last='';try{last=localStorage.getItem('pkr_preferred_room')||''}catch{}
+    setSelected(r.find(x=>x.id===last)?.id||r.find(x=>x.status!=='ended')?.id||r[0]?.id||'');
+  })
    .catch(e=>{if(live)setError(e.message||'Could not load rooms')})
    .finally(()=>{if(live)setLoadingRooms(false)});
   return()=>{live=false};
@@ -32,17 +38,30 @@ export default function InsightsPage(){
  useEffect(()=>{
   if(!selected)return;
   let live=true;
-  setPaymentNotice('');setPaymentBusy(null);
+  setPaymentNotice('');setPaymentBusy(null);setTransferPage(0);setPeriod('all');
   setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setTransfersPartial(false);setSettlementView('transfers');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
    setGames(g);setLeaders(l);
-   const settled=g.filter(x=>x.status==='settled'&&x.results_token).sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,5);
-   const result=await Promise.allSettled(settled.map(async game=>({game,results:await api.games.results(game.results_token!)})));
+   const settled=g.filter(x=>x.status==='settled'&&x.results_token).sort((a,b)=>b.scheduled_at-a.scheduled_at);
+   // Read every settled game, in small batches to protect the Worker and D1.
+   // Never mutate settlement records when preparing insights.
+   const rows:SettlementRow[]=[];
+   let partial=false;
+   for(let offset=0;offset<settled.length;offset+=6){
+     const results=await Promise.allSettled(settled.slice(offset,offset+6).map(
+       async game=>({game,results:await api.games.results(game.results_token!)})));
+     if(!live)return;
+     for(const item of results){
+       if(item.status==='rejected'){partial=true;continue;}
+       for(const transfer of item.value.results.transfers||[]){
+         rows.push({game:item.value.game,transfer});
+       }
+     }
+   }
    if(!live)return;
-   setTransfers(result.flatMap(item=>item.status==='fulfilled'?
-    (item.value.results.transfers||[]).map(transfer=>({game:item.value.game,transfer})):[]));
-   setTransfersPartial(result.some(item=>item.status==='rejected'));
+   setTransfers(rows);
+   setTransfersPartial(partial);
   }).catch(e=>{if(live)setError(e.message||'Could not load room insights')})
    .finally(()=>{if(live)setLoadingDetails(false)});
   return()=>{live=false};
@@ -51,19 +70,25 @@ export default function InsightsPage(){
  const room=rooms.find(x=>x.id===selected);
  const canManagePayments=room?.role==='host'||room?.role==='cohost';
  const played=games.filter(g=>g.status==='settled');
- const upcoming=games.filter(g=>['scheduled','lobby','active'].includes(g.status));
+ const upcoming=games.filter(g=>isCurrentGame(g));
+ const unfinished=games.filter(g=>isUnfinishedGame(g));
  const recent=played.slice().sort((a,b)=>b.scheduled_at-a.scheduled_at);
  const leadersByNet=leaders.slice().sort((a,b)=>b.total_net-a.total_net);
  const best=leadersByNet.find(p=>p.total_net>0);
  const maxNet=Math.max(1,...leaders.map(p=>Math.abs(p.total_net)));
- const outstanding=transfers.filter(t=>t.transfer.status!=='paid');
- const paid=transfers.filter(t=>t.transfer.status==='paid');
+ const filteredTransfers=period==='all'?transfers:transfers.filter(x=>x.game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400);
+ const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid');
+ const paid=filteredTransfers.filter(t=>t.transfer.status==='paid');
+ const perPage=20;
+ const pageCount=Math.max(1,Math.ceil(filteredTransfers.length/perPage));
+ const page=Math.min(transferPage,pageCount-1);
+ const pageTransfers=filteredTransfers.slice(page*perPage,(page+1)*perPage);
  const totalPending=outstanding.reduce((sum,row)=>sum+row.transfer.amount,0);
  const peopleOwing=new Set(outstanding.map(t=>t.transfer.from)).size;
  const peopleReceiving=new Set(outstanding.map(t=>t.transfer.to)).size;
  const balances=useMemo(()=>{
   const map=new Map<string,{name:string;net:number}>();
-  for(const {transfer} of transfers){
+  for(const {transfer} of filteredTransfers){
    if(transfer.status==='paid')continue;
    const from=map.get(transfer.from)||{name:transfer.from_name,net:0};
    from.net-=transfer.amount;map.set(transfer.from,from);
@@ -71,7 +96,7 @@ export default function InsightsPage(){
    to.net+=transfer.amount;map.set(transfer.to,to);
   }
   return [...map.entries()].map(([id,value])=>({id,...value})).filter(x=>x.net!==0).sort((a,b)=>b.net-a.net);
- },[transfers]);
+ },[filteredTransfers]);
  const months=useMemo(()=>{
   const today=new Date(),dates=Array.from({length:6},(_,i)=>{
    const d=new Date(today.getFullYear(),today.getMonth()-5+i,1);
@@ -137,12 +162,12 @@ export default function InsightsPage(){
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></div>
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></div>
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Outstanding</small><strong>{fmt(totalPending)}</strong><em>Latest five settled games</em></span></div>
+    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Outstanding</small><strong>{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'}</em></span></div>
    </section>
    {loadingDetails&&<p className="pkr-insights-loader" role="status">Updating the recorded results and settlement information…</p>}
    <div className="pkr-insights-overview-grid">
     <section className="pkr-vnext-card pkr-insights-balance-summary">
-     <div className="pkr-vnext-card-heading"><div><h2>＄ Balance Summary</h2><p>Recorded outstanding transfers from the latest five settled games.</p></div>
+     <div className="pkr-vnext-card-heading"><div><h2>＄ Balance Summary</h2><p>Recorded outstanding transfers across {period==='all'?'all settled games':'the last 90 days'}.</p></div>
       <button type="button" onClick={()=>document.getElementById('pkr-settlement')?.scrollIntoView({behavior:'smooth'})}>View details →</button>
      </div>
      <div className="pkr-insights-balance-tiles">
@@ -161,7 +186,13 @@ export default function InsightsPage(){
    </div>
    <div className="pkr-insights-activity-grid">
     <section className="pkr-vnext-card pkr-insights-settlement" id="pkr-settlement">
-     <div className="pkr-vnext-card-heading"><div><h2>＄ Settlement Centre</h2><p>See who pays whom and track recorded payment status.</p></div></div>
+     <div className="pkr-vnext-card-heading"><div><h2>＄ Settlement Centre</h2><p>See who pays whom and track recorded payment status across your room.</p></div>
+       <label style={{display:'grid',gap:5,color:'var(--ivory)',fontSize:12}}>Period
+        <select aria-label="Settlement reporting period" value={period} onChange={e=>{setPeriod(e.target.value as 'all'|'90d');setTransferPage(0)}}
+          style={{background:'#112b20',border:'1px solid #658260',color:'#ffe8b3',borderRadius:8,padding:'8px 11px'}}>
+          <option value="all">All time</option><option value="90d">Last 90 days</option>
+        </select></label>
+      </div>
      <div className="pkr-insights-settle-tabs" role="tablist" aria-label="Settlement views">
       {([['transfers','Who Pays Who'],['balances','Player Balances'],['status','Payment Status']] as const).map(([key,label])=>
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
@@ -170,8 +201,8 @@ export default function InsightsPage(){
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
      {settlementView==='transfers'&&
-      (transfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>
-       {transfers.slice(0,20).map((item,i)=><tr key={item.game.id+':'+(item.transfer.id||i)}>
+      (filteredTransfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>
+       {pageTransfers.map((item,i)=><tr key={item.game.id+':'+(item.transfer.id||i)}>
         <td>{item.transfer.from_name}</td><td>{item.transfer.to_name}</td><td>{fmt(item.transfer.amount)}</td>
         <td>
           {canManagePayments&&item.transfer.id&&item.transfer.status!=='legacy'?
@@ -188,7 +219,13 @@ export default function InsightsPage(){
          </td>
         <td><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button></td>
        </tr>)}
-      </tbody></table></div>:<p className="pkr-vnext-empty">No transfers recorded for the latest five settled games.</p>)}
+      </tbody></table>
+       {pageCount>1&&<div className="pkr-insights-pagination">
+         <button type="button" disabled={page===0} onClick={()=>setTransferPage(n=>Math.max(0,n-1))}>Previous</button>
+         <span>Page {page+1} of {pageCount} · {filteredTransfers.length} transfers</span>
+         <button type="button" disabled={page===pageCount-1} onClick={()=>setTransferPage(n=>Math.min(pageCount-1,n+1))}>Next</button>
+       </div>}
+       </div>:<p className="pkr-vnext-empty">No transfers recorded for this period.</p>)}
      {settlementView==='balances'&&
       (balances.length?<div className="pkr-insights-balance-list">{balances.map(p=><div className="pkr-insights-balance-row" key={p.id}>
        <span className="pkr-insights-avatar">{p.name.slice(0,1).toUpperCase()}</span><strong>{p.name}</strong><small>{p.net<0?'To pay':'To receive'}</small>
@@ -212,7 +249,7 @@ export default function InsightsPage(){
    <div className="pkr-insights-players-grid">
     <section className="pkr-vnext-card pkr-insights-players">
      <div className="pkr-vnext-card-heading"><div><h2>▥ Player Performance</h2><p>Recorded results for the selected room.</p></div><button type="button" onClick={()=>router.push(roomUrl('leaderboard'))}>All players →</button></div>
-     {leaders.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>Player</th><th>Games</th><th>Wins</th><th>Win rate</th><th>Net result</th></tr></thead>
+     {leaders.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>Player</th><th>Games</th><th>Profitable</th><th>Profitable %</th><th>Net result</th></tr></thead>
       <tbody>{leadersByNet.slice(0,8).map((p,i)=><tr key={p.user_id}><td><span className="pkr-insights-player-name"><span className="pkr-insights-rank">{i+1}</span>{p.display_name}</span></td>
        <td>{p.games_played}</td><td>{p.games_won}</td><td>{p.games_played?Math.round(p.games_won/p.games_played*100)+'%':'—'}</td>
        <td className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</td></tr>)}</tbody>
@@ -226,7 +263,9 @@ export default function InsightsPage(){
      </div>)}</div>:<p className="pkr-vnext-empty">No settled player results recorded yet.</p>}
     </section>
    </div>
-   {upcoming.length>0&&<p className="pkr-insights-upcoming-note">{upcoming.length} upcoming or live game{upcoming.length===1?'':'s'} are excluded from settled results.</p>}
+   {(upcoming.length>0||unfinished.length>0)&&<p className="pkr-insights-upcoming-note">
+     {upcoming.length} upcoming/live and {unfinished.length} unfinished game{unfinished.length===1?'':'s'} are excluded from settled results.
+    </p>}
   </>}
  </main>;
 }

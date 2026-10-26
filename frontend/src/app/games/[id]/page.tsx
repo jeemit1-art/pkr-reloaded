@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, fmtDate, fmt, fmtSign } from "@/lib/api";
+import {isUnfinishedGame,isLiveGame,gameStatusLabel} from '@/lib/game-status';
 
 export default function GamePage() {
   const params = useParams();
@@ -70,6 +71,8 @@ export default function GamePage() {
   );
   if (!game) return null;
 
+  const unfinished=isUnfinishedGame(game);
+  const live=isLiveGame(game);
   const lobbyUrl   = `${appUrl}/games/${game.id}/rsvp`;
   const resultsUrl = game.results_token ? `${appUrl}/games/results/${game.results_token}` : '';
   const statusColor: any = {
@@ -103,16 +106,20 @@ export default function GamePage() {
           <div style={{display:'flex',alignItems:'center',gap:6}}>
             <span style={{width:7,height:7,borderRadius:'50%',
               background:statusColor[game.status]||'var(--faint)',display:'inline-block'}}/>
-            <span className={game.status==='active' ? 'pkr-live-chip' : ''}
+            <span className={live ? 'pkr-live-chip' : ''}
               style={{fontSize:11,color:statusColor[game.status]||'var(--faint)',
-              fontFamily:'var(--font-body),sans-serif',textTransform:game.status==='active'?'uppercase':'capitalize'}}>
-              {game.status==='active'?'LIVE NOW':game.status}
+              fontFamily:'var(--font-body),sans-serif',textTransform:live?'uppercase':'capitalize'}}>
+              {gameStatusLabel(game)}
             </span>
           </div>
         </div>
       </div>
 
       <div className="pkr-content pkr-game-detail-shell" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
+        {unfinished&&<div className="pkr-unfinished-note" role="status" style={{marginBottom:16}}>
+          <strong>Historical unfinished game</strong>
+          <p>This game is still saved as {game.status}, but its scheduled date has passed. It is not being advertised as live. All player and financial records remain unchanged.</p>
+        </div>}
 
         {/* Game info card */}
         <div className="card-gold pkr-game-summary pkr-casino-game-summary" style={{padding:'20px',marginBottom:16}}>
@@ -197,7 +204,7 @@ export default function GamePage() {
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
               background:'var(--gold)',color:'#06271d'}}
             onClick={()=>router.push(`/games/${id}/play`)}>
-            🃏 Open Table
+            🃏 {unfinished?'Resume / Review Table':'Open Table'}
           </button>
         )}
 
@@ -206,7 +213,7 @@ export default function GamePage() {
           <button className="btn btn-ghost"
             style={{width:'100%',fontSize:13,padding:'12px',marginBottom:12}}
             onClick={()=>router.push(`/games/live/${game.live_token}`)}>
-            📡 Watch Live Scores
+            📡 {unfinished?'View Saved Table':'Watch Live Scores'}
           </button>
         )}
 

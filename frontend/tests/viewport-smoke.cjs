@@ -13,6 +13,7 @@ const room={id:'test-room',name:'Friday Night Test',description:'Private game ro
 const archivedRoom={id:'synthetic-ended-room',name:'Synthetic Closed Room',description:'Archived test room',status:'ended',role:'host',host_id:'test-user',member_count:1,game_count:1,buy_in:2500,created_at:past-9000};
 const upcoming={id:'test-game',event_id:room.id,scheduled_at:future,status:'scheduled',location:'Test room',notes:'',seats:8,created_at:past,player_count:2,results_token:null,live_token:null};
 const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:past,player_count:4,results_token:'synthetic-results'};
+const oldUnfinished={...upcoming,id:'test-old-unfinished',status:'active',scheduled_at:past-90*86400,created_at:past-90*86400,player_count:0};
 const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#214b37"/><circle cx="32" cy="25" r="13" fill="#e9c783"/><path d="M10 64c0-30 44-30 44 0" fill="#e9c783"/></svg>');
 const members=[{id:'test-user',name:'Test Host',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Demo Player',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
 const leaders=[{user_id:'test-user',display_name:'Test Host',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Demo Player',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past}];
@@ -24,7 +25,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events')return [room,archivedRoom];
   if(pathname==='/events/'+archivedRoom.id+'/reopen'&&method==='POST')return {ok:true};
   if(pathname==='/events/'+room.id)return {...room,members};
-  if(pathname==='/events/'+room.id+'/games')return [upcoming,finished];
+  if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [finished];
   if(pathname==='/events/'+room.id+'/join-requests')return {requests:[]};
@@ -237,6 +238,15 @@ async function test(){
          if(!table.wide||table.width<=table.height)errors.push(size.name+' live table did not change to wide oval: '+JSON.stringify(table));
        }
      }
+     if(item.id==='schedule'){
+       const liveCount=await page.locator('.pkr-schedule-counts').textContent();
+       if(liveCount&&!liveCount.includes('0 live now'))
+         errors.push(size.name+' historical unfinished game counted as live');
+       await page.getByLabel('Filter by game status').selectOption('unfinished');
+       if(!await page.getByText('Unfinished',{exact:true}).count())
+         errors.push(size.name+' unfinished game not discoverable via Schedule');
+       await page.getByLabel('Filter by game status').selectOption('all');
+     }
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
      }
@@ -278,6 +288,17 @@ async function test(){
          await search.fill('');
        }
       }
+      await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();
+      await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
+      if(await page.locator('.pkr-standings-row').count()!==2)
+        errors.push(size.name+' Standings did not show both synthetic players');
+      const playerSearch=page.getByLabel('Search standings by player name');
+      await playerSearch.fill('Demo');
+      if(await page.locator('.pkr-standings-row').count()!==1)
+        errors.push(size.name+' Standings search did not filter players');
+      await playerSearch.fill('');
+      await page.getByLabel('Sort player standings').selectOption('average');
+      await page.screenshot({path:path.join(output,size.name+'-standings.png'),fullPage:false});
      }
      // Interactions may scroll the page: capture consistently at its top.
      if(item.id!=='live-table')await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));

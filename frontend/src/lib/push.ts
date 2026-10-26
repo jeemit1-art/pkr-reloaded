@@ -49,17 +49,12 @@ export async function isPushSubscribedToEvent(eventId:string):Promise<boolean> {
     if(!reg) return false;
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return false;
-    const stored = localStorage.getItem(`pkr_push_${eventId}`);
-    try {
-      const result=await api.events.pushStatus(eventId,sub.endpoint);
-      if(result.subscribed)localStorage.setItem(`pkr_push_${eventId}`,sub.endpoint);
-      else localStorage.removeItem(`pkr_push_${eventId}`);
-      return result.subscribed;
-    } catch {
-      // Compatibility with existing Workers before the v2 status endpoint
-      // is deployed. Older clients stored only the device endpoint locally.
-      return stored === sub.endpoint;
-    }
+    const result=await api.events.pushStatus(eventId,sub.endpoint);
+    if(result.subscribed)localStorage.setItem(`pkr_push_${eventId}`,sub.endpoint);
+    else localStorage.removeItem(`pkr_push_${eventId}`);
+    // Only the authenticated server can confirm a per-room subscription.
+    // Local storage alone must never imply alerts are enabled.
+    return result.subscribed;
   } catch { return false; }
 }
 
@@ -94,7 +89,7 @@ export async function unsubscribePush(eventId:string):Promise<boolean> {
       // Only the server-side association for this room is removed.
     }
     localStorage.removeItem(`pkr_push_${eventId}`);
-    return true; // was incorrectly returning false
+    return true; // Request completed; caller should set this room's status to false.
   } catch(e) { console.error('Push unsubscribe failed',e); return false; }
 }
 

@@ -30,14 +30,14 @@ export default function TVPage(){
   const tc=secs<60?'#e74c3c':secs<120?'#f39c12':'#f0e6c8';
   return<div style={{minHeight:'100vh',background:bg,display:'flex',flexDirection:'column',fontFamily:'DM Sans,sans-serif'}}>
     <div style={{background:'rgba(0,0,0,0.4)',padding:'10px 32px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:gold,fontWeight:700}}>PKR</div>
+      <a href={'/games/'+gameId} style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:gold,fontWeight:700,textDecoration:'none'}} aria-label="Back to poker game">PKR <span style={{fontFamily:'sans-serif',fontSize:11,color:'#d5c69c'}}>← Game</span></a>
       <div style={{fontSize:13,color:isRun?'#2ecc71':'#6b8c6e',fontWeight:600}}>{isRun?'● LIVE':ts?.status?.toUpperCase()}</div>
       <div style={{fontSize:12,color:'#6b8c6e'}}>{lvs.length} levels</div>
     </div>
-    <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:'20px 40px'}}>
+    <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:'clamp(12px,3vw,40px)'}}>
       {lv&&<div style={{fontSize:'clamp(14px,2vw,18px)',textTransform:'uppercase',letterSpacing:'4px',color:isBreak?'#6aaaee':gold,fontWeight:600}}>{isBreak?'☕ BREAK':`LEVEL ${ts?.current_level} OF ${lvs.filter((l:any)=>!l.is_break).length}`}</div>}
-      <div style={{fontSize:'clamp(80px,18vw,160px)',fontWeight:700,color:tc,letterSpacing:'4px',fontFamily:'monospace',lineHeight:1}}>{ft(secs)}</div>
-      {lv&&!isBreak&&<div style={{display:'flex',gap:48,alignItems:'center'}}>
+      <div style={{fontSize:'clamp(46px,13vw,160px)',fontWeight:700,color:tc,letterSpacing:'4px',fontFamily:'monospace',lineHeight:1}}>{ft(secs)}</div>
+      {lv&&!isBreak&&<div style={{display:'flex',gap:'clamp(12px,4vw,48px)',alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
         <div style={{textAlign:'center'}}><div style={{fontSize:'clamp(10px,1.5vw,14px)',color:'#6b8c6e',textTransform:'uppercase',letterSpacing:'2px',marginBottom:6}}>Blinds</div>
         <div style={{fontSize:'clamp(36px,7vw,72px)',fontWeight:700,color:'#f0e6c8'}}>{lv.small_blind}/{lv.big_blind}</div></div>
         {lv.ante>0&&<><div style={{width:1,height:60,background:'rgba(255,255,255,0.1)'}}/>
@@ -49,7 +49,7 @@ export default function TVPage(){
         <span style={{fontSize:'clamp(13px,1.8vw,16px)',color:'#f0e6c8',fontWeight:600}}>{nxt.is_break?'Break':`${nxt.small_blind}/${nxt.big_blind}${nxt.ante?` ante ${nxt.ante}`:''}`}</span>
       </div>}
     </div>
-    <div style={{background:'rgba(0,0,0,0.3)',borderTop:'1px solid rgba(255,255,255,0.05)',padding:'10px 32px',display:'flex',gap:6,overflowX:'auto',justifyContent:'center'}}>
+    <div style={{background:'rgba(0,0,0,0.3)',borderTop:'1px solid rgba(255,255,255,0.05)',padding:'10px 12px',display:'flex',gap:6,overflowX:'auto',justifyContent:'center'}}>
       {lvs.map((l:any)=>{const cur=l.level_num===ts?.current_level,past=l.level_num<(ts?.current_level||0);
       return<div key={l.level_num} style={{padding:'4px 10px',borderRadius:6,flexShrink:0,background:cur?(l.is_break?'rgba(106,170,238,0.15)':'rgba(201,168,76,0.15)'):'transparent',border:`1px solid ${cur?(l.is_break?'#6aaaee':gold):'rgba(255,255,255,0.06)'}`,opacity:past?0.3:1}}>
         <div style={{fontSize:11,color:cur?(l.is_break?'#6aaaee':gold):'#6b8c6e',fontWeight:cur?700:400}}>{l.is_break?'☕':`${l.small_blind}/${l.big_blind}`}</div>

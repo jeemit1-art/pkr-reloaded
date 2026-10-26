@@ -13,6 +13,7 @@ import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
 import {playPkrSound} from '@/lib/sounds';
+import {isCurrentGame,isUnfinishedGame,isLiveGame} from '@/lib/game-status';
 
 function DashboardInner() {
   const router = useRouter();
@@ -32,6 +33,7 @@ function DashboardInner() {
   const [scanning, setScanning] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
   const [featuredGames,setFeaturedGames]=useState<Game[]>([]);
+  const [preferredRoomId,setPreferredRoomId]=useState('');
   const [featuredHistory,setFeaturedHistory]=useState<Game[]>([]);
   const [featuredMembers,setFeaturedMembers]=useState<EventMember[]>([]);
   const [search,setSearch]=useState('');
@@ -39,6 +41,10 @@ function DashboardInner() {
   const [reopeningRoomId,setReopeningRoomId]=useState<string|null>(null);
   const [pendingByRoom,setPendingByRoom]=useState<Record<string,number>>({});
   const previousPendingTotal=useRef<number|null>(null);
+
+  useEffect(()=>{
+    try{setPreferredRoomId(localStorage.getItem('pkr_preferred_room')||'');}catch{}
+  },[]);
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -291,7 +297,7 @@ function DashboardInner() {
   },[events]);
   const archivedRooms = events.filter(evt => evt.status === 'ended');
   // Exclude ended rooms from active/featured dashboard content by default.
-  const featuredRoom = activeRooms[0] || null;
+  const featuredRoom = activeRooms.find(room=>room.id===preferredRoomId)||activeRooms[0]||null;
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
   useEffect(()=>{
     if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);return;}
@@ -305,7 +311,8 @@ function DashboardInner() {
     });
     return()=>{active=false};
   },[featuredRoom?.id]);
-  const upcomingGames=featuredGames.filter(g=>['scheduled','lobby','active'].includes(g.status)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
+  const upcomingGames=featuredGames.filter(g=>isCurrentGame(g)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
+  const unfinishedGames=featuredGames.filter(g=>isUnfinishedGame(g)).sort((a,b)=>b.scheduled_at-a.scheduled_at);
   const nextGame=upcomingGames[0];
   const recentResults=featuredHistory.slice().sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,4);
   const searchedRooms=activeRooms.filter(room=>room.name.toLowerCase().includes(search.toLowerCase().trim()));
@@ -319,7 +326,7 @@ function DashboardInner() {
     const archived=evt.status==='ended';
     return (
       <article key={evt.id} className={'pkr-room-card'+(archived?' pkr-room-archived':'')}>
-        <button type="button" className="pkr-room-main" onClick={() => router.push('/events/' + evt.id)}
+        <button type="button" className="pkr-room-main" onClick={() => {try{localStorage.setItem('pkr_preferred_room',evt.id);}catch{} setPreferredRoomId(evt.id);router.push('/events/' + evt.id);}}
           aria-label={(archived?'View archived poker room ':'Open poker room ') + evt.name}>
           <span className="pkr-room-icon" aria-hidden="true">♠</span>
           <span className="pkr-room-copy">
@@ -499,6 +506,12 @@ function DashboardInner() {
               <button type="button" onClick={()=>router.push('/games/'+nextGame.id)}>View Details →</button>
             </div>
           </section>}
+          {unfinishedGames.length>0&&<div className="pkr-unfinished-note" role="status">
+            <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
+            <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
+            <button type="button" onClick={()=>featuredRoom&&router.push('/events/'+featuredRoom.id+'?tab=games')}
+              style={{marginTop:8,padding:'8px 12px',color:'#f8db9e',border:'1px solid #b9965f',borderRadius:8,background:'#153324'}}>Review unfinished games</button>
+          </div>}
           <div className="pkr-pro-hero">
             <div className="pkr-pro-hero-content">
               <span className="pkr-eyebrow">♠ YOUR POKER ROOM</span>
@@ -541,7 +554,7 @@ function DashboardInner() {
             </div></section>
             <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>ϟ Recent Activity</h2><button onClick={()=>router.push('/schedule')}>All games →</button></div>
               {recentResults.length||upcomingGames.length?<div className="pkr-pro-activity-list">
-                {upcomingGames.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>▦</span><span><strong>Game {g.status==='active'?'in progress':'scheduled'}</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
+                {upcomingGames.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>▦</span><span><strong>Game {isLiveGame(g)?'in progress':'scheduled'}</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
                 {recentResults.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>♛</span><span><strong>Game settled</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
               </div>:<p className="pkr-pro-empty">Game activity will appear here as your club plays.</p>}
             </section>

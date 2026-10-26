@@ -1,0 +1,86 @@
+/* Standings, historical-session labels and targeted mobile readability refresh. */
+.pkr-standings-board{display:grid;gap:18px}
+.pkr-standings-heading{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.pkr-standings-heading h2{font:650 clamp(25px,3.5vw,35px)/1.2 var(--font-display),Georgia,serif;color:#fff4de;margin:7px 0}
+.pkr-standings-heading p{font-size:13px;line-height:1.6;color:#b9cfc1;max-width:570px}
+.pkr-standings-updated{border:1px solid #a98449;border-radius:999px;padding:8px 12px;color:#f6d58e;font-size:11px;white-space:nowrap}
+.pkr-standings-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pkr-standings-summary>div{display:grid;gap:8px;padding:17px;background:linear-gradient(140deg,#102b22,#071b15);border:1px solid #3c5944;border-radius:13px}
+.pkr-standings-summary span{font-size:11px;color:#c6d3c7}
+.pkr-standings-summary strong{font:650 29px/1.05 var(--font-display),Georgia,serif;color:#ffe0a0}
+.pkr-standings-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pkr-standings-podium-card{min-width:0;min-height:160px;display:grid;justify-items:center;align-content:center;gap:8px;border:1px solid #3f553f;border-radius:14px;padding:17px 9px;background:linear-gradient(155deg,#143429,#071913);color:#f4f0e5;cursor:pointer;text-align:center}
+.pkr-standings-podium-1{border-color:#d4ae65;background:radial-gradient(ellipse at 50% -8%,rgba(247,201,101,.22),transparent 70%),linear-gradient(145deg,#17392a,#0b1c14)}
+.pkr-standings-podium-card:hover,.pkr-standings-podium-card:focus-visible{border-color:#ffda85;outline-offset:2px}
+.pkr-standings-medal{font-size:24px;color:#f0c477}
+.pkr-standings-rank-label{letter-spacing:.12em;font-size:10px;color:#dfbf80}
+.pkr-standings-podium-card>strong{font:600 clamp(13px,1.8vw,17px)/1.25 var(--font-display),Georgia,serif;overflow-wrap:anywhere}
+.pkr-standings-podium-card>b{font-size:21px;line-height:1.2}
+.pkr-standings-podium-card>small{font-size:11px;color:#b8c9bb}
+.pkr-standings-money .gain,.pkr-standings-podium-card .gain{color:#64e3a8}
+.pkr-standings-money .loss,.pkr-standings-podium-card .loss{color:#ff9e95}
+.pkr-standings-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:10px}
+.pkr-standings-toolbar label{display:grid;gap:6px;font-size:12px;color:#c7d6c8}
+.pkr-standings-toolbar input[type=search],.pkr-standings-toolbar select{background:#0b221a;border:1px solid #497052;color:#f8f6ed;border-radius:9px;min-height:43px;padding:10px 12px;font-size:13px;width:100%}
+.pkr-standings-search{flex:1 1 200px}.pkr-standings-sort{flex:0 1 200px}
+.pkr-standings-toolbar .pkr-standings-minimum{display:flex;align-items:center;gap:8px;min-height:43px;padding:8px 10px;border:1px solid #46654d;border-radius:9px;cursor:pointer}
+.pkr-standings-minimum input{accent-color:#d9b46a;width:17px;height:17px}
+.pkr-standings-list{display:grid;gap:7px}
+.pkr-standings-row{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:13px 15px;border-radius:12px;border:1px solid rgba(229,189,107,.18);background:linear-gradient(110deg,#10291f,#081b15);color:#fff0d4;cursor:pointer}
+.pkr-standings-row:hover,.pkr-standings-row:focus-visible{border-color:#e0b56c;background:#163b2b}
+.pkr-standings-row-rank{width:24px;text-align:center;color:#f3d08d;font-weight:800;font-size:14px;flex-shrink:0}
+.pkr-standings-avatar{width:40px;height:40px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;color:#ffe5aa;background:#234c39;border:1px solid #527155;font-family:Georgia,serif;font-size:20px}
+.pkr-standings-player{min-width:0;flex:1;display:grid;gap:6px}
+.pkr-standings-player>strong{font:600 15px/1.25 var(--font-display),Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pkr-standings-player>small{font-size:11px;color:#b7cbbc}
+.pkr-standings-track{display:block;height:4px;max-width:230px;background:#244436;border-radius:5px;overflow:hidden}
+.pkr-standings-track i{display:block;height:100%;border-radius:5px}
+.pkr-standings-track .gain{background:#46d39a}.pkr-standings-track .loss{background:#d77773}
+.pkr-standings-money{display:grid;text-align:right;gap:5px;flex-shrink:0}
+.pkr-standings-money>strong{font-size:16px;white-space:nowrap}
+.pkr-standings-money>small{font-size:10px;color:#b6c5bb}
+.pkr-standings-open{font-size:20px;color:#d3b273}
+.pkr-standings-footnote{font-size:12px;line-height:1.7;color:#acbdb2}
+.pkr-standings-empty{display:grid;justify-items:center;text-align:center;gap:12px;padding:36px 20px;border:1px dashed #557658;border-radius:12px;color:#bdcec0}
+.pkr-standings-empty>span{font-size:34px}.pkr-standings-empty h3{font:600 21px var(--font-display),Georgia,serif;color:#f4e4c0}
+.pkr-standings-empty button{color:#ffe3aa;background:#123d2a;border:1px solid #b6995b;border-radius:8px;padding:9px 14px}
+.pkr-unfinished-note{border:1px solid rgba(230,186,98,.4);border-radius:12px;background:rgba(154,109,36,.1);padding:13px 15px;color:#e8d7b3;font-size:12px;line-height:1.6}
+.pkr-unfinished-label{display:inline-block;background:rgba(210,171,102,.15);color:#ffe1a7;border:1px solid rgba(210,171,102,.42);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700}
+.pkr-insights-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0}
+.pkr-insights-pagination button{border:1px solid #8b7144;border-radius:9px;color:#ffe3ab;background:#102d20;min-height:39px;padding:8px 13px}
+.pkr-insights-pagination button:disabled{opacity:.4;cursor:not-allowed}
+.pkr-insights-pagination span{color:#c5d7c6;font-size:12px}
+.pkr-profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 16px}
+.pkr-profile-stats div{display:grid;gap:4px;border:1px solid #3e5545;border-radius:8px;padding:10px;background:#10231b}
+.pkr-profile-stats small{font-size:10px;color:#b9cdbc}
+.pkr-profile-stats strong{color:#f9d99a;font-size:16px}
+@media(max-width:700px){
+ .pkr-standings-heading{display:block}
+ .pkr-standings-updated{display:inline-block;margin-top:12px}
+ .pkr-standings-summary>div{padding:11px}
+ .pkr-standings-summary strong{font-size:24px}
+ .pkr-standings-podium-card{padding:12px 5px;min-height:151px}
+ .pkr-standings-podium-card>small{font-size:10px}
+ .pkr-standings-podium-card>b{font-size:16px}
+ .pkr-standings-rank-label{font-size:9px}
+ .pkr-standings-toolbar .pkr-standings-sort{flex:1 1 130px}
+ .pkr-standings-row{gap:8px;padding:11px 8px}
+ .pkr-standings-avatar{width:31px;height:31px;font-size:15px}
+ .pkr-standings-row-rank{width:16px;font-size:12px}
+ .pkr-standings-player>strong{font-size:13px}
+ .pkr-standings-player>small{font-size:10px}
+ .pkr-standings-money>strong{font-size:13px}
+ .pkr-standings-open{display:none}
+ .pkr-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-insights-refresh .pkr-insights-kpi-copy>small,.pkr-insights-refresh .pkr-insights-balance-tiles span{font-size:12px!important}
+ .pkr-game-detail .pkr-game-metrics div:last-child,.pkr-event .pkr-event-metric small{letter-spacing:.01em!important;font-size:11px!important}
+}
+
+/* The first mobile screen should show actionable information, not just artwork. */
+@media(max-width:700px){
+ .pkr-event .pkr-event-overview,.pkr-event .pkr-event-overview-inner{min-height:285px!important}
+ .pkr-vnext-insights-top{min-height:182px!important}
+ .pkr-schedule-hero{min-height:165px!important}
+ .pkr-event .pkr-event-tabs .tab{font-size:12px!important}
+ .pkr-insights-refresh .pkr-insights-payment-help,.pkr-insights-refresh .pkr-vnext-card-heading p{font-size:12px!important;line-height:1.5}
+}

@@ -9,6 +9,8 @@ import CasinoArtwork from '@/components/CasinoArtwork';
 import InviteQRCode from '@/components/InviteQRCode';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import {playPkrSound} from '@/lib/sounds';
+import StandingsBoard from '@/components/StandingsBoard';
+import {isCurrentGame,isLiveGame,isUnfinishedGame,gameStatusLabel} from '@/lib/game-status';
 
 type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
@@ -73,11 +75,15 @@ export default function EventPage() {
   const [endingEvent, setEndingEvent] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [pushError,setPushError] = useState('');
+  const [expandedHistory,setExpandedHistory] = useState<string[]>([]);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(()=>{
     const query=new URLSearchParams(window.location.search);
-    if(query.get('tab')==='members')setTab('members');
+    const requestedTab=query.get('tab');
+    if(requestedTab==='games'||requestedTab==='leaderboard'||requestedTab==='history'||requestedTab==='members')
+      setTab(requestedTab);
     const section=query.get('view');
     if(section==='requests'||section==='invite'||section==='roster'||section==='notifications')
       setMemberSection(section);
@@ -173,7 +179,8 @@ export default function EventPage() {
         big_blind: form.big_blind ? Math.round(parseFloat(form.big_blind)*100) : undefined,
         starting_chips: form.starting_chips ? parseInt(form.starting_chips) : undefined,
       });
-      setGames(gs=>[g,...gs]);
+      // Include every generated session when Weekly/Fortnightly recurrence is selected.
+      await api.games.list(id).then(setGames).catch(()=>setGames(gs=>[g,...gs]));
       setShowCreate(false);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
     } catch(e:any){ alert(e.message); }
@@ -217,27 +224,30 @@ export default function EventPage() {
   }
 
   async function togglePush() {
+    setPushError('');
     if(!canUsePush()||(iosDevice&&!isPWA)){
-      router.push('/install?group='+encodeURIComponent(id));
-      return;
+      router.push('/install?group='+encodeURIComponent(id));return;
     }
     if(typeof Notification!=='undefined'&&Notification.permission==='denied'){
-      alert('Notifications are blocked in device settings. Allow PKR notifications and try again.');
+      setPushError('Notifications are blocked in your device settings. Allow PKR notifications, then try again.');
       return;
     }
     setPushLoading(true);
-    try {
-      if (pushEnabled) {
-        const result = await unsubscribePush(id);
-        setPushEnabled(result);
-      } else {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          const result = await subscribePush(id, user?.id, user?.name);
-          setPushEnabled(result);
-        }
+    try{
+      if(pushEnabled){
+        const succeeded=await unsubscribePush(id);
+        if(succeeded)setPushEnabled(false);
+        else setPushError('Unable to disable alerts for this room. Please try again.');
+      }else{
+        const permission=await Notification.requestPermission();
+        if(permission==='granted'){
+          const succeeded=await subscribePush(id,user?.id,user?.name);
+          if(succeeded)setPushEnabled(true);
+          else setPushError('Unable to subscribe. Confirm you are a member of this room and try again.');
+        }else setPushError('Notification permission was not granted.');
       }
-    } finally { setPushLoading(false); }
+    }catch{setPushError('Could not update notification settings. Please try again.');}
+    finally{setPushLoading(false);}
   }
 
   async function removeMember(userId: string, name: string) {
@@ -256,7 +266,8 @@ export default function EventPage() {
 
   if (!event) return null;
 
-  const upcoming = games.filter(g=>g.status==='scheduled'||g.status==='lobby'||g.status==='active');
+  const upcoming = games.filter(g=>isCurrentGame(g)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
+  const unfinished = games.filter(g=>isUnfinishedGame(g)).sort((a,b)=>b.scheduled_at-a.scheduled_at);
   const selectedGameId=upcoming.some(g=>g.id===selectedInviteGameId)?selectedInviteGameId:upcoming[0]?.id;
   const settled  = games.filter(g=>g.status==='settled');
   const visibleMembers=(event.members||[]).filter((m:any)=>{
@@ -277,6 +288,9 @@ export default function EventPage() {
   const TABS_NAV = ['games','leaderboard','history','members'];
   const selectTab = (next: Tab) => {
     setTab(next);
+    const url=new URL(window.location.href);
+    url.searchParams.set('tab',next);
+    window.history.replaceState(window.history.state,'',url.pathname+url.search);
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -349,6 +363,7 @@ export default function EventPage() {
       </nav>
 
       <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
+        {pushError&&<div role="alert" className="pkr-unfinished-note" style={{marginBottom:12}}>{pushError}</div>}
 
         {/* ── Games tab ── */}
         {tab==='games' && (
@@ -360,7 +375,7 @@ export default function EventPage() {
                 <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('member');}}>+ Member</button>
               </div>
             )}
-            {upcoming.length===0 && settled.length===0 && (
+            {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
                 <div className="empty-state-icon">♠</div>
                 <div className="empty-state-text">No games scheduled yet.</div>
@@ -370,7 +385,7 @@ export default function EventPage() {
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
                 <div><span className="pkr-eyebrow">Game nights</span><h2>Upcoming &amp; live</h2></div>
-                <span>{upcoming.filter(g=>g.status==='active').length} live</span>
+                <span>{upcoming.filter(g=>isLiveGame(g)).length} live</span>
               </div>
             )}
             {upcoming.map(g=>(
@@ -382,6 +397,18 @@ export default function EventPage() {
                 onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
                 onInviteMembers={()=>{setSelectedInviteGameId(g.id);setTab('members');}}/>
             ))}
+            {unfinished.length>0&&<section aria-label="Unfinished game sessions" style={{margin:'20px 0'}}>
+              <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
+                <p>These historical sessions have been preserved. They are not counted as live or upcoming; open a game to review its records.</p>
+              </div>
+              {unfinished.map(g=><GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost}
+                onClick={()=>router.push('/games/'+g.id)}
+                onOpenTable={()=>router.push('/games/'+g.id+'/play')}
+                onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
+                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true)}}
+                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);setTab('members')}}/>)}
+            </section>}
             {settled.length>0 && (
               <>
                 <div style={{fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--faint)',margin:'20px 0 10px',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
@@ -410,39 +437,8 @@ export default function EventPage() {
           </div>
         )}
 
-        {/* ── Leaderboard tab ── */}
-        {tab==='leaderboard' && (
-          <div>
-            {leaders.length===0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon">🏆</div>
-                <div className="empty-state-text">No results yet. Settle a game to see the leaderboard.</div>
-              </div>
-            )}
-            {leaders.length>0 && (
-              <div className="card">
-                {leaders.map((l,i)=>(
-                  <div key={l.user_id} onClick={()=>setSelectedPlayer(l.display_name)}
-                    style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<leaders.length-1?'1px solid var(--border-sub)':'none',
-                    cursor:'pointer',transition:'background 0.12s'}}
-                    onMouseEnter={e=>(e.currentTarget.style.background='rgba(201,168,76,0.04)')}
-                    onMouseLeave={e=>(e.currentTarget.style.background='')}>
-                    <div style={{width:28,textAlign:'center',fontSize:i<3?18:13,color:i===0?'var(--gold)':i===1?'var(--ivory)':i===2?'var(--amber)':'var(--faint)'}}>
-                      {i===0?'♛':i===1?'♝':i===2?'♞':`${i+1}`}
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:i===0?600:400}}>{l.display_name}</div>
-                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{l.games_played} game{l.games_played!==1?'s':''} · best {fmtSign(l.biggest_win)}</div>
-                    </div>
-                    <div className="display" style={{fontSize:20,color:l.total_net>0?'var(--green)':l.total_net<0?'var(--red)':'var(--muted)',fontWeight:500}}>
-                      {fmtSign(l.total_net)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* All-time player standings — derived from settled game records. */}
+        {tab==='leaderboard'&&<StandingsBoard leaders={leaders} settledGames={settled.length} onSelectPlayer={setSelectedPlayer}/>}
 
         {/* ── Members tab ── */}
         {tab==='members' && (
@@ -726,7 +722,7 @@ export default function EventPage() {
                     {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
                     {((g as any).top_players||[]).length>0 && (
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                        {((g as any).top_players||[]).map((p:any,i:number)=>(
+                        {((g as any).top_players||[]).slice(0,expandedHistory.includes(g.id)?undefined:3).map((p:any,i:number)=>(
                           <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
                             background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
                             border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
@@ -737,6 +733,11 @@ export default function EventPage() {
                         ))}
                       </div>
                     )}
+                    {((g as any).top_players||[]).length>3&&
+                      <button type="button" onClick={e=>{e.stopPropagation();setExpandedHistory(old=>old.includes(g.id)?old.filter(x=>x!==g.id):[...old,g.id]);}}
+                        style={{marginTop:9,padding:'8px 11px',borderRadius:8,border:'1px solid var(--border-hi)',background:'var(--bg3)',color:'var(--gold)',fontSize:12}}>
+                        {expandedHistory.includes(g.id)?'Show top 3':'Show all '+((g as any).top_players||[]).length+' results'}
+                      </button>}
                   </div>
                   {isHost && (
                     <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
@@ -858,64 +859,14 @@ export default function EventPage() {
                   ))}
                 </div>
               </div>
-              <div>
-                <div className="lbl" style={{marginBottom:8}}>Format</div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {([
-                    {v:'cash',       l:'💰 Cash'},
-                    {v:'tournament', l:'🏆 Tournament'},
-                    {v:'rebuy',      l:'♻️ Rebuy'},
-                    {v:'freezeout',  l:'❄️ Freezeout'},
-                  ]).map(f=>(
-                    <button key={f.v} onClick={()=>setForm(fm=>({...fm,format:f.v}))}
-                      style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
-                        background:form.format===f.v?'var(--gold)':'var(--bg3)',
-                        color:form.format===f.v?'#0e0e0f':'var(--muted)',
-                        border:form.format===f.v?'1px solid var(--gold)':'1px solid var(--border-sub)',
-                        fontFamily:'var(--font-body),sans-serif'}}>
-                      {f.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
-              <div>
-                <div className="lbl" style={{marginBottom:8}}>Stakes (optional)</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                  <div>
-                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Small blind ($)</div>
-                    <input className="inp" placeholder="e.g. 0.50" type="number" step="0.25" min="0"
-                      value={form.small_blind}
-                      onChange={e=>{
-                        const sb = e.target.value;
-                        const bb = sb && !isNaN(parseFloat(sb)) ? String(parseFloat(sb)*2) : form.big_blind;
-                        setForm(f=>({...f,small_blind:sb,big_blind:bb}));
-                      }}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Big blind ($)</div>
-                    <input className="inp" placeholder="e.g. 1.00" type="number" step="0.25" min="0"
-                      value={form.big_blind}
-                      onChange={e=>setForm(f=>({...f,big_blind:e.target.value}))}/>
-                  </div>
-                </div>
-                {form.small_blind && !isNaN(parseFloat(form.small_blind)) && (
-                  <div style={{marginTop:8}}>
-                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:4,fontFamily:'var(--font-body),sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>Starting chips per player</div>
-                    <input className="inp" placeholder="e.g. 50" type="number" min="1"
-                      value={form.starting_chips}
-                      onChange={e=>setForm(f=>({...f,starting_chips:e.target.value}))}/>
-                    {form.starting_chips && !isNaN(parseInt(form.starting_chips)) && (
-                      <div style={{fontSize:11,color:'var(--gold)',marginTop:4,fontFamily:'var(--font-body),sans-serif'}}>
-                        Each chip = ${parseFloat(form.small_blind||'0').toFixed(2)} · buy-in ≈ ${(parseInt(form.starting_chips)*parseFloat(form.small_blind||'0')).toFixed(2)}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            <p className="pkr-unfinished-note" style={{marginTop:12}}>
+              Repeating schedules create four weekly or fortnightly games. Cash sessions are scheduled here;
+              tournament blind levels and stacks are configured in the tournament setup before play.
+            </p>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>
-                {saving?'Scheduling…':'Schedule & Notify'}
+                {saving?'Scheduling…':form.repeat==='none'?'Schedule & Notify':'Schedule 4 Games & Notify'}
               </button>
               <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
             </div>
@@ -1098,7 +1049,8 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
   const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
-  const isLive = game.status === 'active';
+  const isLive = isLiveGame(game);
+  const isUnfinished = isUnfinishedGame(game);
   const statusBg:Record<string,string> = {
     scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
     lobby:'rgba(201,168,76,0.12)', settled:'transparent',
@@ -1107,12 +1059,13 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
     scheduled:'var(--amber)', active:'var(--green)', lobby:'var(--gold)', settled:'var(--muted)',
   };
   return (
-    <div className={"card pkr-game-card " + (game.status === "active" ? "is-live" : "")} style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
+    <div className={"card pkr-game-card " + (isLive ? "is-live" : "")} style={{marginBottom:8,background:statusBg[game.status]||'transparent'}}>
       <div role="button" tabIndex={0} aria-label={'Open game ' + fmtDate(game.scheduled_at)}
           style={{padding:'18px 20px',display:'flex',alignItems:'flex-start',gap:14,cursor:'pointer'}}
           onClick={onClick} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}}}>
         <div style={{flex:1,minWidth:0}}>
           {isLive && <div className="pkr-live-chip" aria-label="Game currently live"><span className="pkr-live-dot" />LIVE NOW</div>}
+          {isUnfinished && <div className="pkr-unfinished-label">{gameStatusLabel(game)} · review</div>}
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
             {!isLive && <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>}
             <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{fmtDate(game.scheduled_at)}</div>
@@ -1127,7 +1080,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
             </span>
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
-            <span className={`badge badge-${game.status}`}>{game.status}</span>
+            <span className={`badge badge-${isUnfinished?'settled':game.status}`}>{gameStatusLabel(game)}</span>
             <span style={{fontSize:10,color:'var(--faint)',fontFamily:'var(--font-body),sans-serif'}}>
               {typeof game.player_count === 'number' ? `${game.player_count} players · ` : ''}{game.seats||9} seats
             </span>
@@ -1176,7 +1129,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
             📱 Invite approved group members
           </button>}
-          {liveUrl && game.status==='active' && (
+          {liveUrl && isLive && (
             <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--green)'}}>
               📡 Live Link
@@ -1197,7 +1150,10 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
 }) {
   const playerGames = history.filter((g:any)=>
     (g.top_players||[]).some((p:any)=>p.display_name===player)
-  );
+  ).sort((a:any,b:any)=>b.scheduled_at-a.scheduled_at);
+  const nets=playerGames.map((g:any)=>(g.top_players||[]).find((p:any)=>p.display_name===player)?.net).filter((n:any)=>typeof n==='number') as number[];
+  const positive=nets.filter(n=>n>0).length;
+  const average=nets.length?Math.round(nets.reduce((a,b)=>a+b,0)/nets.length):0;
   return (
     <div style={{marginTop:12,background:'var(--bg2)',border:'1px solid var(--border-hi)',borderRadius:3,overflow:'hidden'}}>
       <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -1212,6 +1168,11 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         <button onClick={onClose}
           style={{background:'none',border:'none',color:'var(--faint)',fontSize:18,cursor:'pointer',padding:'2px 6px'}}>✕</button>
       </div>
+      {nets.length>0&&<div className="pkr-profile-stats">
+        <div><small>Settled games</small><strong>{nets.length}</strong></div>
+        <div><small>Profitable</small><strong>{positive} / {nets.length}</strong></div>
+        <div><small>Average net</small><strong>{fmtSign(average)}</strong></div>
+      </div>}
       {playerGames.length===0 && (
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
       )}

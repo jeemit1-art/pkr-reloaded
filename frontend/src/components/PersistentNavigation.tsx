@@ -25,7 +25,22 @@ export default function PersistentNavigation(){
  const [hasSession,setHasSession]=useState(false);
  const [gameEventId,setGameEventId]=useState<string|null>(null);
  const [roomTab,setRoomTab]=useState('games');
+ const [preferredRoomId,setPreferredRoomId]=useState('');
  const [insightsHash,setInsightsHash]=useState('');
+ useEffect(()=>{
+   try{setPreferredRoomId(localStorage.getItem('pkr_preferred_room')||'')}catch{}
+ },[]);
+ useEffect(()=>{
+   const room=pathname.match(/^\/events\/([^/]+)/)?.[1];
+   if(!room)return;
+   setPreferredRoomId(room);
+   try{localStorage.setItem('pkr_preferred_room',room)}catch{}
+ },[pathname]);
+ useEffect(()=>{
+   if(!gameEventId)return;
+   setPreferredRoomId(gameEventId);
+   try{localStorage.setItem('pkr_preferred_room',gameEventId)}catch{}
+ },[gameEventId]);
  useEffect(()=>{
    const sync=()=>setInsightsHash(window.location.hash);
    sync();
@@ -44,7 +59,7 @@ export default function PersistentNavigation(){
    window.addEventListener('pkr:select-room-tab',onRoomTab);
    return()=>window.removeEventListener('pkr:select-room-tab',onRoomTab);
  },[]);
- const isActiveGameplay=/^\/games\/[^/]+\/play\/?$/.test(pathname);
+ const isActiveGameplay=/^\/games\/[^/]+\/(play|tv)\/?$/.test(pathname);
  const allowed=/^\/(dashboard|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname) && !/^\/games\/live\//.test(pathname) && !isActiveGameplay;
  useEffect(()=>{setHasSession(Boolean(getToken()));},[pathname]);
  useEffect(()=>{if(!allowed||!hasSession)return;let live=true;api.events.list().then(r=>{if(live)setRooms(r)}).catch(()=>{});return()=>{live=false};},[allowed,hasSession]);
@@ -58,7 +73,8 @@ export default function PersistentNavigation(){
   return()=>{live=false};
  },[pathname,hasSession]);
  if(!allowed||!hasSession)return null;
- const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]||gameEventId||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
+ const preferredRoom=rooms.find(r=>r.id===preferredRoomId);
+ const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]||gameEventId||preferredRoom?.id||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
  // Exactly one active item per navigation; room tabs and Insights sections are mutually exclusive.
  const inRoom=pathname.startsWith('/events/');

@@ -44,8 +44,11 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
-  const { scheduled_at, location, notes, seats, game_password } = await c.req.json();
-  if (!scheduled_at) return c.json({error:'scheduled_at required'},400);
+  const { scheduled_at, location, notes, seats, game_password, repeat } = await c.req.json();
+  if (!Number.isSafeInteger(scheduled_at) || scheduled_at <= 0)
+    return c.json({error:'A valid scheduled date and time are required'},400);
+  if (repeat != null && !['none','weekly','fortnightly'].includes(repeat))
+    return c.json({error:'Invalid recurrence. Choose once, weekly or fortnightly.'},400);
 
   // ── Plan gate: check seat limit ──────────────────────────────────────────
   const userId = c.get('userId');
@@ -73,20 +76,30 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const id = generateId();
-  const liveToken = generateId();
-  await c.env.DB.prepare(
-    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
-  ).bind(id,eventId,scheduled_at,location||null,notes||null,requestedSeats,game_password||null,liveToken,'scheduled').run();
-
-  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
-  const dt = new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'});
-  c.executionCtx.waitUntil(sendPushToEvent(c.env, eventId, {
-    title:`🃏 ${event?.name||'PKR'} — Game Scheduled`,
-    body:`${dt}${location?' · '+location:''}`,
-    data:{ gameId:id, eventId, type:'game_scheduled', scheduled_at, location:location||null },
+  // Materialise a bounded four-session series for weekly/fortnightly.
+  // No new DB columns, no changes to existing games, and one notification only.
+  const gapDays = repeat==='weekly'?7:repeat==='fortnightly'?14:0;
+  const count = gapDays?4:1;
+  const sessions=Array.from({length:count},(_,i)=>({
+    id:generateId(),liveToken:generateId(),scheduledAt:scheduled_at+i*gapDays*86400,
   }));
-  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(id).first();
+  const statements=sessions.map(session=>c.env.DB.prepare(
+    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
+  ).bind(session.id,eventId,session.scheduledAt,location||null,notes||null,requestedSeats,game_password||null,session.liveToken,'scheduled'));
+  // Preserve the single-game write path for existing clients. D1.batch executes
+  // multi-session schedules together, avoiding partial four-game series.
+  if(count===1)await statements[0].run();
+  else await c.env.DB.batch(statements);
+
+  const first=sessions[0];
+  const event=await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
+  const dt=new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'});
+  c.executionCtx.waitUntil(sendPushToEvent(c.env,eventId,{
+    title:`🃏 ${event?.name||'PKR'} — ${count===1?'Game Scheduled':count+' Games Scheduled'}`,
+    body:`${dt}${location?' · '+location:''}${count>1?' · '+count+' '+(gapDays===7?'weekly':'fortnightly')+' sessions':''}`,
+    data:{gameId:first.id,eventId,type:'game_scheduled',scheduled_at,location:location||null},
+  }));
+  const game=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(first.id).first();
   return c.json(game ? clientSafeGame(game) : null,201);
 });
 
