@@ -224,21 +224,22 @@ tournament.post('/games/:id/tournament/advance-due',authMiddleware,async(c)=>{
   const current=await c.env.DB.prepare(
     'SELECT duration_secs FROM tournament_levels WHERE game_id=? AND level_num=?'
   ).bind(gameId,state.current_level).first<{duration_secs:number}>();
-  if(!current||!Number.isSafeInteger(state.level_started_at))
+  const startedAt=state.level_started_at;
+  if(!current||typeof startedAt!=='number'||!Number.isSafeInteger(startedAt))
     return c.json({error:'Current blind stage is missing'},409);
   const now=Math.floor(Date.now()/1000);
-  if(now<state.level_started_at+current.duration_secs)
-    return c.json({ok:true,advanced:false,seconds_remaining:state.level_started_at+current.duration_secs-now});
+  if(now<startedAt+current.duration_secs)
+    return c.json({ok:true,advanced:false,seconds_remaining:startedAt+current.duration_secs-now});
   const next=await c.env.DB.prepare(
     'SELECT * FROM tournament_levels WHERE game_id=? AND level_num=?'
   ).bind(gameId,state.current_level+1).first<any>();
   if(!next)return c.json({ok:true,advanced:false,structure_complete:true});
   const result=await c.env.DB.prepare(
     "UPDATE tournament_state SET current_level=?,level_started_at=? WHERE game_id=? AND status='running' AND current_level=? AND level_started_at=?"
-  ).bind(next.level_num,now,gameId,state.current_level,state.level_started_at).run();
+  ).bind(next.level_num,now,gameId,state.current_level,startedAt).run();
   return c.json({ok:true,advanced:!!result.meta.changes,
     current_level:result.meta.changes?next.level_num:state.current_level,
-    level_started_at:result.meta.changes?now:state.level_started_at,
+    level_started_at:result.meta.changes?now:startedAt,
     level:result.meta.changes?next:null});
 });
 
