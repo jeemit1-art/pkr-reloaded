@@ -484,3 +484,39 @@ body:has(.pkr-persistent-nav) {background:#141416}
  background-image:radial-gradient(ellipse at 90% 0%,#74504a4b,transparent 64%),linear-gradient(145deg,#30272a,#1e1c1f)!important
  }
 }
+
+
+/* Screenshot QA follow-up: remove remaining gold navigation and green info tiles. */
+.pkr-persistent-brand span {color:#f2a28f!important}
+.pkr-persistent-nav nav button.active,
+.pkr-persistent-nav nav button[aria-current="page"] {
+ background:#483136!important;border-color:#bd7c6f!important;color:#ffe3d7!important;
+ box-shadow:inset 3px 0 0 #f09d8a,0 6px 22px #0002!important
+}
+.pkr-persistent-nav nav button.active svg {color:#f2a28f!important}
+.pkr-persistent-nav nav button:hover {color:#fff7f0!important;background:#3b3032!important}
+.pkr-persistent-nav nav button svg {color:#d3c3bc!important}
+.pkr-persistent-room {background:#302b2e!important;border-color:#665353!important}
+.pkr-persistent-nav nav button {color:#d6d0ca!important}
+.pkr-dashboard .pkr-pro-feature-game,
+.pkr-dashboard .pkr-pro-member-stats>div {
+ background:#322b2f!important;border:1px solid #584748!important
+}
+.pkr-dashboard .pkr-pro-feature-game strong,
+.pkr-dashboard .pkr-pro-member-stats strong {color:#fff8f3!important}
+.pkr-dashboard .pkr-pro-panel-head button {color:#f5a18e!important}
+.pkr-dashboard .pkr-pro-member>span:not(.pkr-pro-member-avatar) {background:#4b3437!important;color:#ffd7ca!important;border-color:#8c6059!important}
+.pkr-dashboard .pkr-pro-member>span:first-child:not(:has(img)) {background:#453135!important;border-color:#8f6059!important;color:#ffc5b5!important}
+.pkr-dashboard .pkr-pro-topbar :is(.pkr-pro-upgrade,.pkr-pro-plan-badge) {background:#3c2c2f!important;color:#ffad9b!important}
+.pkr-dashboard .pkr-pro-hero p,.pkr-dashboard .pkr-pro-panel p {color:#d9cbc5}
+.pkr-vnext-insights .pkr-vnext-card {background:#252326!important;border-color:#4e4242!important}
+.pkr-vnext-insights .pkr-vnext-card-heading button {color:#f3a28f!important}
+#gameScreen.pkr-casino-live-table .topbar button.share-btn,
+#gameScreen.pkr-casino-live-table .share-btn {
+ background:#ef8976!important;background-color:#ef8976!important;background-image:none!important;
+ color:#2b1512!important;border-color:#ffb6a6!important;
+ box-shadow:0 4px 12px #0004!important
+}
+#gameScreen.pkr-casino-live-table .bank-icon {background:#f19e8e!important;color:#2c1714!important}
+#gameScreen.pkr-casino-live-table .game-tabs .game-tab {color:#e8d9d1!important}
+#gameScreen.pkr-casino-live-table .game-tabs .game-tab[aria-selected="true"] {color:#ffa28f!important}
