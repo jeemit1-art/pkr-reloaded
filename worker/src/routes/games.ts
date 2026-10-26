@@ -118,7 +118,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
 /* ── Update game ── */
 games.put('/games/:id', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
-  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  const game = await c.env.DB.prepare('SELECT event_id,status,scheduled_at,location FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled' || game.status==='cancelled') {
     return c.json({error:'Cannot modify a settled or cancelled game.'},409);
@@ -156,7 +156,18 @@ games.put('/games/:id', authMiddleware, async (c) => {
     WHERE id=? AND status NOT IN ('settled','cancelled')`
   ).bind(scheduled_at||null,location||null,notes||null,seats||null,game_password||null,gameId).run();
   if (result.meta.changes === 0) return c.json({error:'Game state changed, reload before editing'},409);
-  const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
+  const updated = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if(updated && (Number(updated.scheduled_at)!==Number(game.scheduled_at)
+    || String(updated.location||'')!==String(game.location||''))){
+    const eventName=await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
+      .bind(game.event_id).first<{name:string}>();
+    try{c.executionCtx.waitUntil(sendPushToEvent(c.env,game.event_id,{
+      title:'Poker game updated — '+(eventName?.name||'PKR'),
+      body:'The game time or location changed. Check your updated RSVP.',
+      data:{type:'game_changed',gameId,eventId:game.event_id,url:'/games/'+gameId+'/rsvp',
+        notificationId:gameId+':'+String(updated.scheduled_at)+':'+String(updated.location||'')}
+    }));}catch{}
+  }
   return c.json(updated ? clientSafeGame(updated) : null);
 });
 
@@ -175,6 +186,14 @@ games.post('/games/:id/cancel', authMiddleware, async (c) => {
     "UPDATE games SET status='cancelled' WHERE id=? AND status IN ('scheduled','lobby','active')"
   ).bind(gameId).run();
   if (result.meta.changes === 0) return c.json({error:'Game state changed, reload before cancelling'},409);
+  const eventName=await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
+    .bind(game.event_id).first<{name:string}>();
+  try{c.executionCtx.waitUntil(sendPushToEvent(c.env,game.event_id,{
+    title:'Game cancelled — '+(eventName?.name||'PKR'),
+    body:'This scheduled game has been cancelled. Open PKR for details.',
+    data:{type:'game_cancelled',gameId,eventId:game.event_id,url:'/games/'+gameId,
+      notificationId:gameId}
+  }));}catch{}
   return c.json({ok:true,status:'cancelled'});
 });
 

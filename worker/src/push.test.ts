@@ -1,5 +1,5 @@
 import {describe,it,expect,vi,afterEach} from 'vitest';
-import {vapidJWT,sendPushToPlayer} from './push';
+import {vapidJWT,sendPushToPlayer,sendPushToHosts} from './push';
 
 function b64url(data:Uint8Array):string {
   return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
@@ -72,6 +72,33 @@ describe('VAPID signing and push dispatch (synthetic keys and subscribers only)'
     expect(accepted).toBe(1);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][0]).toBe('https://push.example.invalid/send/synthetic');
+  });
+  it('targets only subscribed verified hosts and uses the multi-room table when enabled',async()=>{
+    const f=await fixture();
+    const receiver=await crypto.subtle.generateKey(
+      {name:'ECDH',namedCurve:'P-256'},true,['deriveBits']) as CryptoKeyPair;
+    const p256dh=b64url(new Uint8Array(await crypto.subtle.exportKey('raw',receiver.publicKey) as ArrayBuffer));
+    const auth=b64url(crypto.getRandomValues(new Uint8Array(16)));
+    let sql='';
+    const env:any={PKR_ENV:'production',PKR_PHONE_MEMBERS_V1:'1',PKR_PUSH_ROOMS_V2:'1',
+      VAPID_PRIVATE_KEY:f.privateRaw,VAPID_PUBLIC_KEY:f.publicRaw,VAPID_EMAIL:'test@example.invalid',
+      DB:{prepare:(query:string)=>{sql=query;return {bind:()=>({all:async()=>({results:[{
+        endpoint:'https://push.example.invalid/synthetic-host',p256dh,auth_key:auth
+      }]})})};}}
+    };
+    const fetchMock=vi.fn(async()=>new Response('',{status:201}));
+    vi.stubGlobal('fetch',fetchMock);
+    const sent=await sendPushToHosts(env,'test-room',{
+      title:'New approval',body:'A player is waiting.',data:{type:'join_request'}
+    });
+    expect(sent).toBe(1);
+    expect(sql).toContain('push_room_subscriptions');
+    expect(sql).toContain('JOIN event_members');
+    expect(sql).toContain('em.role IN (?)');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(await sendPushToHosts({...env,PKR_ENV:'staging'},'room',{
+      title:'No staging push',body:'Never delivered'
+    })).toBe(0);
   });
   it('never sends production push in staging',async()=>{
     const accepted=await sendPushToPlayer(

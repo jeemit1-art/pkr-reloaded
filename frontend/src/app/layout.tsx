@@ -7,6 +7,7 @@ import './pre-game.css';
 import './pkr-reference-polish.css';
 import './pkr-approved-banner.css';
 import './pkr-secondary-ui.css';
+import './pkr-interaction-refresh.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

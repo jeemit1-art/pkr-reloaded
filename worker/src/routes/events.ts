@@ -168,11 +168,20 @@ events.post('/:id/join', async (c) => {
 events.post('/:id/subscribe', optionalAuth, async (c) => {
   const eventId = c.req.param('id');
   const { endpoint, keys, userId, display_name } = await c.req.json();
+  if(c.env.PKR_PUSH_ROOMS_V2==='1'&&c.env.PKR_PHONE_MEMBERS_V1!=='1')
+    return c.json({error:'Verified membership is required for multi-room push'},503);
   if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,eventId,'member'))
     return c.json({error:'Private group membership required for notifications'},403);
   if (!endpoint||!keys?.p256dh||!keys?.auth) return c.json({error:'Invalid subscription'},400);
   const event = await c.env.DB.prepare('SELECT id FROM events WHERE id=?').bind(eventId).first();
   if (!event) return c.json({error:'Event not found'},404);
+  if(c.env.PKR_PUSH_ROOMS_V2==='1'){
+    await c.env.DB.prepare(
+      'INSERT INTO push_room_subscriptions(event_id,endpoint,user_id,p256dh,auth_key) VALUES(?,?,?,?,?) ' +
+      'ON CONFLICT(event_id,endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth_key=excluded.auth_key'
+    ).bind(eventId,endpoint,c.get('userId'),keys.p256dh,keys.auth).run();
+    return c.json({ok:true});
+  }
   await c.env.DB.prepare(`
     INSERT INTO push_subscriptions(id,event_id,user_id,display_name,endpoint,p256dh,auth_key) VALUES(?,?,?,?,?,?,?)
     ON CONFLICT(endpoint) DO UPDATE SET
@@ -184,9 +193,29 @@ events.post('/:id/subscribe', optionalAuth, async (c) => {
   return c.json({ok:true});
 });
 
+events.post('/:id/subscribe-status', authMiddleware, async(c)=>{
+  const eventId=c.req.param('id');
+  if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Private group membership required'},403);
+  const body=await c.req.json().catch(()=>({})) as {endpoint?:unknown};
+  const endpoint=typeof body.endpoint==='string'?body.endpoint:'';
+  if(!endpoint)return c.json({error:'Push endpoint is required'},400);
+  const query=c.env.PKR_PUSH_ROOMS_V2==='1'
+    ?'SELECT 1 AS active FROM push_room_subscriptions WHERE event_id=? AND endpoint=? AND user_id=?'
+    :'SELECT 1 AS active FROM push_subscriptions WHERE event_id=? AND endpoint=? AND user_id=?';
+  const row=await c.env.DB.prepare(query).bind(eventId,endpoint,c.get('userId')).first();
+  return c.json({subscribed:!!row});
+});
+
 events.post('/:id/unsubscribe', optionalAuth, async (c) => {
   const { endpoint } = await c.req.json();
   if (!endpoint) return c.json({error:'endpoint required'},400);
+  if(c.env.PKR_PUSH_ROOMS_V2==='1'){
+    if(c.env.PKR_PHONE_MEMBERS_V1!=='1'||!await requireEventRole(c as any,c.req.param('id'),'member'))
+      return c.json({error:'Private group membership required'},403);
+    await c.env.DB.prepare('DELETE FROM push_room_subscriptions WHERE endpoint=? AND event_id=? AND user_id=?')
+      .bind(endpoint,c.req.param('id'),c.get('userId')).run();
+    return c.json({ok:true});
+  }
   if(c.env.PKR_PHONE_MEMBERS_V1==='1'){
     if(!await requireEventRole(c as any,c.req.param('id'),'member'))return c.json({error:'Private group membership required'},403);
     await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=? AND event_id=? AND user_id=?')

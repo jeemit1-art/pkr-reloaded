@@ -18,23 +18,29 @@ self.addEventListener('push', event => {
     game_reminder:'♠ POKER NIGHT REMINDER',
     rsvp_confirmed:'✓ RSVP CONFIRMED',
     join_request:'♟ NEW PLAYER JOIN REQUEST',
+    member_joined:'✓ NEW MEMBER READY',
+    rsvp_changed:'♟ RSVP UPDATED',
+    game_changed:'♠ GAME DETAILS CHANGED',
+    game_cancelled:'♠ POKER NIGHT CANCELLED',
     member_approved:'✓ YOU CAN JOIN YOUR ROOM',
     buyin:'🪙 BUY-IN RECORDED',
     rebuy:'🪙 REBUY RECORDED',
     cashout:'💵 CASH-OUT RECORDED',
     game_settled:'📋 GAME SETTLED — REVIEW PAYMENT',
     payment_status:'📋 PAYMENT STATUS UPDATED',
+    payment_reminder:'💳 PAYMENT FOLLOW-UP',
+    test:'✓ PKR ALERT TEST',
   };
   const heading=headings[kind] || data.title || 'PKR Reloaded';
   const route=kind==='game_scheduled'&&data.data?.gameId ? '/games/'+data.data.gameId+'/rsvp' : null;
   event.waitUntil(self.registration.showNotification(heading, {
     body: data.body,
     icon: '/icon-192.png',
-    badge: '/badge-72.png',
+    badge: '/icon-192.png',
     tag: kind + ':' + (data.data?.gameId || data.data?.eventId || 'general') + ':' + (data.data?.notificationId || 'latest'),
     renotify:true,
-    requireInteraction: kind === 'cashout' || kind === 'game_settled',
-    vibrate:kind==='buyin'?[90,55,90,55,160]:kind==='cashout'||kind==='game_settled'?[260,100,260,100,260]:[200,100,200],
+    requireInteraction: kind === 'cashout' || kind === 'game_settled' || kind === 'join_request',
+    vibrate:kind==='join_request'?[180,80,180,80,250]:kind==='buyin'?[90,55,90,55,160]:kind==='cashout'||kind==='game_settled'?[260,100,260,100,260]:[200,100,200],
     data: {...(data.data || {}),url:route || data.data?.url},
     actions: [{ action:'view', title:'View' }, { action:'dismiss', title:'Dismiss' }],
   }));

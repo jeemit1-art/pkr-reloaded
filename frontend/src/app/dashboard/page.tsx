@@ -6,12 +6,13 @@
 //  - "Upgrade" button in nav when on trial/expired
 //  - <UpgradeModal /> renders at bottom (catches all 402s globally on this page)
 //  - create() error handling now distinguishes 402 (modal handles it) vs other errors
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
+import {playPkrSound} from '@/lib/sounds';
 
 function DashboardInner() {
   const router = useRouter();
@@ -37,6 +38,7 @@ function DashboardInner() {
   const [showArchivedRooms,setShowArchivedRooms]=useState(false);
   const [reopeningRoomId,setReopeningRoomId]=useState<string|null>(null);
   const [pendingByRoom,setPendingByRoom]=useState<Record<string,number>>({});
+  const previousPendingTotal=useRef<number|null>(null);
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -152,18 +154,32 @@ function DashboardInner() {
           if (code?.data) {
             found = true;
             stream.getTracks().forEach(t=>t.stop());
-            const url = code.data;
-            const match = url.match(/\/invite\/([a-zA-Z0-9_-]+)/);
-            if (match) {
-              setScanStatus('Joining event...');
-              try {
-                const result = await api.events.redeemInvite(match[1]);
-                if (result?.event?.id) {
-                  setScanStatus('✅ Joined ' + (result.event.name||'event') + '! Taking you there...');
-                  setTimeout(() => { setShowScanner(false); router.push('/events/' + result.event.id); }, 2000);
-                }
-              } catch(e) { setScanStatus('Invalid or expired invite.'); setScanning(false); }
-            } else { setScanStatus('Not a valid PKR invite QR code.'); setScanning(false); }
+            const value = code.data.trim();
+            try {
+              const parsed = new URL(value,window.location.origin);
+              if(parsed.origin!==window.location.origin)throw new Error('Not a PKR invitation');
+              const phone=parsed.pathname.match(/^\/phone-invite\/([a-zA-Z0-9_-]+)\/?$/);
+              const email=parsed.pathname.match(/^\/invite\/([a-zA-Z0-9_-]+)\/?$/);
+              if(phone){
+                // Personal QR codes must go through the explicit host-approval
+                // flow, never the legacy immediate membership redemption API.
+                setScanStatus('Opening your private join request…');
+                setShowScanner(false);setScanning(false);
+                router.push('/phone-invite/'+encodeURIComponent(phone[1]));
+              }else if(email){
+                setScanStatus('Checking the invited account…');
+                try{
+                  const result=await api.events.redeemInvite(email[1]);
+                  if(result?.event?.id){
+                    setScanStatus('Invite accepted. Opening your poker room…');
+                    setTimeout(()=>{setShowScanner(false);router.push('/events/'+result.event.id);},800);
+                  }else{setScanStatus('Invitation unavailable.');setScanning(false);}
+                }catch{setScanStatus('This invite is expired or for another account.');setScanning(false);}
+              }else throw new Error('Not a supported PKR invite');
+            }catch{
+              setScanStatus('Not a valid PKR invitation QR. Ask your host for a personal invite.');
+              setScanning(false);
+            }
             return;
           }
         }
@@ -261,7 +277,13 @@ function DashboardInner() {
         try{const result=await api.events.joinRequests(room.id);return [room.id,result.requests.length] as const;}
         catch{return [room.id,0] as const;}
       }));
-      if(active)setPendingByRoom(Object.fromEntries(counts));
+      if(active){
+        const total=counts.reduce((sum,[,n])=>sum+n,0);
+        if(previousPendingTotal.current!==null&&total>previousPendingTotal.current)
+          playPkrSound('new-request');
+        previousPendingTotal.current=total;
+        setPendingByRoom(Object.fromEntries(counts));
+      }
     };
     void refresh();
     const timer=window.setInterval(()=>void refresh(),15000);
@@ -445,6 +467,21 @@ function DashboardInner() {
                 </button>
               ))}
             </div>
+          </section>
+        )}
+        {featuredRoom && activeRooms.every(room=>room.role!=='host') && (
+          <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid rgba(201,168,76,.28)',
+            borderRadius:12,background:'linear-gradient(115deg,rgba(21,47,32,.97),rgba(7,17,11,.97))',
+            padding:'17px 19px',display:'flex',gap:15,justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
+            <div><span className="pkr-eyebrow">YOUR PLAYER SETUP</span>
+              <h2 style={{margin:'4px 0',fontSize:20,fontFamily:'var(--font-display),serif',color:'var(--white)'}}>Ready for poker night?</h2>
+              <p style={{margin:0,fontSize:12,color:'var(--muted)',maxWidth:440}}>
+                Install PKR, enable game alerts and check your RSVP in one place.</p>
+            </div>
+            <button type="button" className="btn btn-primary"
+              onClick={()=>router.push('/install?group='+encodeURIComponent(featuredRoom.id))}>
+              Finish phone setup →
+            </button>
           </section>
         )}
         <section className="pkr-pro-home" aria-label="Poker room overview">

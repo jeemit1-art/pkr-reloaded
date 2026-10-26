@@ -1,7 +1,8 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {canUsePush,isIOS,isSafari,isPWAInstalled,isPushSubscribedToEvent,subscribePush} from '@/lib/push';
+import {canUsePush,isIOS,isSafari,isPWAInstalled,isPushSubscribedToEvent,subscribePush,showTestNotification} from '@/lib/push';
+import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import {api} from '@/lib/api';
 
 type Platform='ios'|'android'|'desktop';
@@ -62,6 +63,11 @@ export default function InstallGuide(){
   }catch{setNotice('Unable to activate notifications on this device.')}
   finally{setBusy(false)}
  }
+ async function previewAlert(){
+   const shown=await showTestNotification();
+   setNotice(shown?'Test notification requested. Check your device notification centre. This checks display, not future server delivery.':
+     'Unable to display the test. Install PKR and allow its notifications in your device settings first.');
+ }
  const doneNotifications=permission==='granted' && subscribed;
  return <main className="pkr-onboarding pkr-install-vnext">
   <header className="pkr-install-hero"><a href="/dashboard" className="pkr-install-brand">♠ PKR</a><span className="pkr-eyebrow">YOUR PRIVATE POKER CLUB</span><h1>Your poker night. One tap away.</h1><p>Keep your games, RSVP board, table and results on your phone. Install PKR without visiting an app store.</p></header>
@@ -79,7 +85,13 @@ export default function InstallGuide(){
     <p className="pkr-install-meta">Notifications: <strong>{doneNotifications?'Enabled for this poker room':permission==='granted'?'Permission granted — subscription required':permission}</strong></p>
     {group?<button className="pkr-install-primary" onClick={enableNotifications} disabled={busy||doneNotifications||permission==='denied'||(platform==='ios'&&!installed)}>{busy?'Enabling…':doneNotifications?'✓ Alerts enabled':permission==='denied'?'Notifications blocked in browser settings':'Enable game alerts'}</button>:<p className="pkr-install-footnote">Open this guide from your poker room to subscribe to that group's notifications.</p>}
     {permission==='denied'&&<p className="pkr-install-footnote" role="status">Notifications are blocked for this site. Allow notifications in your browser's site permissions, then return to PKR and try again.</p>}
-    <p className="pkr-install-footnote">Sounds and vibration depend on your phone settings; websites cannot force custom background alerts.</p>
+    {doneNotifications&&<button className="pkr-install-secondary" type="button"
+      onClick={()=>void previewAlert()} style={{marginTop:10}}>▶ Test a device notification</button>}
+    <div style={{marginTop:16,padding:'14px 12px',borderRadius:10,
+      border:'1px solid var(--border-sub)',background:'rgba(0,0,0,.14)'}}>
+      <ForegroundSoundToggle/>
+    </div>
+    <p className="pkr-install-footnote">Device push alerts work when PKR is closed where supported. Sounds and vibration depend on your phone and Focus settings; PKR cannot force a custom background alert sound. Optional in-app chimes only play while this page or app is open.</p>
   </section>
   <section className="pkr-install-card"><div className="pkr-install-card-title"><span className="step">3</span><div><h2>Open your poker room</h2><p>See games, members, seating, results and settlement.</p></div></div><button className="pkr-install-primary" onClick={()=>router.push(group?'/events/'+encodeURIComponent(group):'/dashboard')}>Go to my poker room →</button></section>
   {notice&&<p className="pkr-install-notice" role="status">{notice}</p>}

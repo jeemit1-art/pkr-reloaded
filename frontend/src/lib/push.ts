@@ -50,7 +50,16 @@ export async function isPushSubscribedToEvent(eventId:string):Promise<boolean> {
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return false;
     const stored = localStorage.getItem(`pkr_push_${eventId}`);
-    return stored === sub.endpoint;
+    try {
+      const result=await api.events.pushStatus(eventId,sub.endpoint);
+      if(result.subscribed)localStorage.setItem(`pkr_push_${eventId}`,sub.endpoint);
+      else localStorage.removeItem(`pkr_push_${eventId}`);
+      return result.subscribed;
+    } catch {
+      // Compatibility with existing Workers before the v2 status endpoint
+      // is deployed. Older clients stored only the device endpoint locally.
+      return stored === sub.endpoint;
+    }
   } catch { return false; }
 }
 
@@ -81,9 +90,25 @@ export async function unsubscribePush(eventId:string):Promise<boolean> {
     const sub = await reg.pushManager.getSubscription();
     if (sub) {
       await api.events.unsubscribe(eventId, sub.endpoint);
-      await sub.unsubscribe(); // actually remove the subscription from the push service
+      // Keep the browser's device subscription: it may serve other poker rooms.
+      // Only the server-side association for this room is removed.
     }
     localStorage.removeItem(`pkr_push_${eventId}`);
     return true; // was incorrectly returning false
   } catch(e) { console.error('Push unsubscribe failed',e); return false; }
+}
+
+/** Local device preview only: tests OS display, not server-to-device delivery. */
+export async function showTestNotification():Promise<boolean> {
+  if(!canUsePush() || Notification.permission!=='granted')return false;
+  try{
+    const reg=await getSwReg();
+    if(!reg)return false;
+    await reg.showNotification('♠ PKR notifications are on',{
+      body:'Test alert: poker-night updates will appear here when your device receives them.',
+      icon:'/icon-192.png',badge:'/icon-192.png',tag:'pkr-test-alert',
+      data:{type:'test',url:'/dashboard'}
+    });
+    return true;
+  }catch{return false;}
 }

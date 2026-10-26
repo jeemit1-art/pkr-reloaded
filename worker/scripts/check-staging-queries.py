@@ -55,6 +55,9 @@ def main():
     # Private mobile roster is optional until verified on STAGING.
     phone_migration = ROOT / "migrations/20261025_staging_phone_members.sql"
     connection.executescript(phone_migration.read_text(encoding="utf-8"))
+    # Optional multi-room push schema is compiled on an in-memory upgrade only.
+    push_migration = ROOT / "migrations/20261026_push_rooms.sql"
+    connection.executescript(push_migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []

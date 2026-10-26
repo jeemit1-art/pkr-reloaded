@@ -5,6 +5,7 @@ import {Hono} from 'hono';
 import type {Env} from '../types';
 import {authMiddleware,generateId,requireEventRole} from '../middleware';
 import {signJWT} from '../jwt';
+import {sendPushToHosts} from '../push';
 import {normalizeMobile,phoneLookup,encryptPhone,decryptPhone,randomToken,
   maskMobile,phoneMembersReady} from '../phone-security';
 
@@ -165,6 +166,17 @@ router.post('/phone-invites/:token/request-approval',async c=>{
     role:invite.role,display_name:name,claim_hash:hash,requested_at:Date.now()
   }),{expirationTtl:86400});
   await c.env.KV.put(rateKey,'1',{expirationTtl:300});
+  // An invite is only a request, not a membership. Notify the authorised
+  // room host after writing the pending approval, never a name-only recipient.
+  try {
+    c.executionCtx.waitUntil(sendPushToHosts(c.env,invite.event_id,{
+      title:'New player waiting for approval',
+      body:'A player requested access to '+invite.event_name+'. Open Members to verify and approve or reject.',
+      data:{type:'join_request',eventId:invite.event_id,
+        url:'/events/'+encodeURIComponent(invite.event_id)+'?tab=members&view=requests',
+        notificationId:invite.id}
+    }));
+  } catch { /* Unit test request contexts do not provide waitUntil. */ }
   privateHeaders(c);
   return c.json({ok:true,claim,status:'pending',message:'The host must approve your request before you can join.'},202);
 });
@@ -243,6 +255,17 @@ router.post('/phone-invites/complete-approval',async c=>{
   const results=await c.env.DB.batch(writes);
   if(!results[contact.user_id?0:1]?.meta.changes)return c.json({error:'Invitation already redeemed'},409);
   await c.env.KV.delete('approved-join:'+hash);
+  // Successful registration is useful for the host to know; never include
+  // a phone number in a lock-screen notification.
+  try {
+    c.executionCtx.waitUntil(sendPushToHosts(c.env,state.event_id,{
+      title:'Player joined your poker room',
+      body:'An approved player has completed setup. Open Members to see the roster.',
+      data:{type:'member_joined',eventId:state.event_id,
+        url:'/events/'+encodeURIComponent(state.event_id)+'?tab=members&view=roster',
+        notificationId:state.invite_id}
+    }));
+  } catch {}
   privateHeaders(c);
   return c.json({ok:true,token:await signJWT({sub:userId,email:'',name},c.env.JWT_SECRET),
     event_id:state.event_id});

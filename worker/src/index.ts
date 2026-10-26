@@ -12,7 +12,7 @@ import hands      from './routes/hands';
 import tournament from './routes/tournament';
 import analysis   from './routes/analysis';
 import payments   from './routes/payments';
-import { sendPaymentReminders } from './reminders';
+import { sendPaymentReminders,sendGameReminders } from './reminders';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -57,6 +57,6 @@ export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     if (env.PKR_ENV === 'staging') return;
-    ctx.waitUntil(sendPaymentReminders(env));
+    ctx.waitUntil(Promise.allSettled([sendPaymentReminders(env),sendGameReminders(env)]).then(()=>{}));
   },
 };

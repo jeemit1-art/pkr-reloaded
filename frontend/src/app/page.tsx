@@ -18,6 +18,18 @@ const features=[
 export default function HomePage(){
   const router=useRouter();
   const [loginOpen,setLoginOpen]=useState(false);
+  const [inviteLink,setInviteLink]=useState('');
+  const [inviteError,setInviteError]=useState('');
+  function joinWithLink(){
+    setInviteError('');
+    try{
+      const parsed=new URL(inviteLink.trim(),window.location.origin);
+      if(parsed.origin!==window.location.origin)throw new Error('Use a mypkr.app invitation link.');
+      if(!/^\/(phone-invite|invite)\/[a-zA-Z0-9_-]+\/?$/.test(parsed.pathname))
+        throw new Error('Paste the personal invitation link provided by your host.');
+      router.push(parsed.pathname);
+    }catch(e:any){setInviteError(e.message||'Invalid invitation link.');}
+  }
   useEffect(()=>{
     if(localStorage.getItem('pkr_token'))router.replace('/dashboard');
   },[router]);
@@ -48,7 +60,18 @@ export default function HomePage(){
             <button className="pkr-landing-primary" onClick={()=>setLoginOpen(true)}>Create a poker room <span>→</span></button>
             <a className="pkr-landing-outline" href="#how-it-works">See how it works</a>
           </div>
-          <div className="pkr-landing-note">Hosts use Google · Players join through a host-sent WhatsApp invitation</div>
+          <div className="pkr-landing-note">Hosts use Google · Players join through a host-sent QR or WhatsApp invitation</div>
+          <form className="pkr-landing-join" onSubmit={e=>{e.preventDefault();joinWithLink();}}>
+            <label htmlFor="pkr-landing-invite-link">Already invited? Join your poker room</label>
+            <div className="pkr-landing-join-controls">
+              <input id="pkr-landing-invite-link" type="url" autoComplete="url"
+                value={inviteLink} onChange={e=>setInviteLink(e.target.value)}
+                placeholder="Paste your personal PKR invitation link"/>
+              <button type="submit" disabled={!inviteLink.trim()}>Join room →</button>
+            </div>
+            {inviteError&&<span role="alert">{inviteError}</span>}
+            <small>Useful after installing PKR on iPhone: open the new app and paste the invite here to finish joining inside it.</small>
+          </form>
         </div>
         <div className="pkr-landing-demo" aria-label="Illustration of the PKR live RSVP experience">
           <div className="pkr-landing-demo-top">
