@@ -155,7 +155,7 @@ export function MobileProductShowcase(){
     {src:'/demo/mobile-live-table.webp',title:'The poker table',alt:'PKR live poker table mobile screenshot with a graphite table rail and green felt'},
     {src:'/demo/mobile-insights.webp',title:'Insights and results',alt:'PKR mobile Insights dashboard screenshot with sample game balances and totals'},
    ].map(item=><figure className="pkr-mobile-device" key={item.src}>
-      <div className="pkr-mobile-device-shell"><div className="pkr-mobile-device-speaker" aria-hidden="true"/><img src={item.src} width="390" height="844" alt={item.alt} loading="lazy" decoding="async"/></div>
+      <div className="pkr-mobile-device-shell"><div className="pkr-mobile-device-speaker" aria-hidden="true"/><img src={item.src} width="390" height="844" alt={item.alt} loading="eager" decoding="async"/></div>
       <figcaption>{item.title} <span>· Demo</span></figcaption>
     </figure>)}
   </div>
