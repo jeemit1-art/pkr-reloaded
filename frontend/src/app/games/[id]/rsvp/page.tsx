@@ -88,7 +88,23 @@ export default function RsvpPage(){
     }catch(e:any){setError(e.message||'Could not save your RSVP.');await load();}
     finally{setSaving(false);}
   }
+  function addArrivalTime(){
+    const used = new Set(times);
+    for (let hour = 17; hour <= 23; hour++) {
+      for (const minute of ['00', '30']) {
+        const candidate = String(hour).padStart(2, '0') + ':' + minute;
+        if (!used.has(candidate)) {
+          setTimes(previous => [...previous, candidate]);
+          setTimesDirty(true);
+          return;
+        }
+      }
+    }
+    setError('No additional arrival slots are available in the evening range.');
+  }
   async function saveTimes(){
+    if(new Set(times).size!==times.length){setError('Arrival times must be unique. Change or remove the duplicate time.');return;}
+    if(times.some(t=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))){setError('Choose valid arrival times.');return;}
     setUpdatingTimes(true);setError('');
     try{
       const result=await api.games.setRsvpTimes(id,times);
@@ -158,7 +174,7 @@ export default function RsvpPage(){
         <div className="pkr-guest-stats">
           <div><strong>{attending.length}</strong><span>Coming</span></div>
           <div><strong>{board.guests.filter(r=>r.status==='no').length}</strong><span>Not coming</span></div>
-          <div><strong>{Math.max(0,board.game.seats-unavailable.size-(guest?.id&&seat&&!unavailable.has(seat)?1:0))}</strong><span>Seats available</span></div>
+          <div><strong>{Math.max(0,board.game.seats-unavailable.size-(guest?.id&&mySummary?.status==='yes'&&mySummary.seat_number&&!unavailable.has(mySummary.seat_number)?1:0))}</strong><span>Seats available</span></div>
         </div>
       </section>
       <div className="pkr-guest-grid">
@@ -254,7 +270,7 @@ export default function RsvpPage(){
             </div>
             <div className="pkr-guest-host-actions">
               <button className="pkr-guest-outline" disabled={closed||times.length>=8}
-                onClick={()=>{setTimes(v=>[...v,'18:30']);setTimesDirty(true);}}>+ Add time</button>
+                onClick={addArrivalTime}>+ Add time</button>
               <button className="pkr-guest-button" disabled={closed||updatingTimes||!timesDirty}
                 onClick={saveTimes}>{updatingTimes?'Saving…':'Save times'}</button>
             </div>

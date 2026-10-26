@@ -1,9 +1,17 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import {calculateTournamentPayouts,TournamentPayoutError} from '../tournament-payouts';
 
 const tournament = new Hono<{ Bindings: Env }>();
+
+async function checkProHost(c:any, eventId:string):Promise<boolean>{
+  const group=await c.env.DB.prepare('SELECT host_id FROM events WHERE id=?')
+    .bind(eventId).first() as {host_id:string}|null;
+  if(!group?.host_id)return false;
+  const status=await getPlanStatus(c.env.DB,group.host_id);
+  return status.is_active&&(status.plan==='pro'||status.plan==='lifetime');
+}
 
 async function getGameAndVerify(c: any, gameId: string) {
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
@@ -51,6 +59,9 @@ tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
   const gameId=c.req.param('id');
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
+  if(!await checkProHost(c,game.event_id))
+    return c.json({error:'An active Pro subscription is required for new tournament sessions.',
+      code:'UPGRADE_REQUIRED',feature:'tournament'},402);
   if(game.status==='settled'||game.status==='cancelled')
     return c.json({error:'Game is closed'},409);
   const current=await c.env.DB.prepare(
@@ -133,6 +144,9 @@ tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
   const gameId=c.req.param('id');
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
+  if(!await checkProHost(c,game.event_id))
+    return c.json({error:'An active Pro subscription is required to start tournaments.',
+      code:'UPGRADE_REQUIRED',feature:'tournament'},402);
   if(game.status==='settled'||game.status==='cancelled')
     return c.json({error:'Game is closed'},409);
   const state=await c.env.DB.prepare(
@@ -191,6 +205,42 @@ tournament.post('/games/:id/tournament/next-level', authMiddleware, async (c) =>
     code:'TOURNAMENT_STATE_CONFLICT',
   },409);
   return c.json({ok:true,level,current_level:nextLevel,level_started_at:now});
+});
+
+/** Server-authoritative, idempotent automatic advance for an open host panel.
+ * An expired local browser timer alone can never skip a level.
+ */
+tournament.post('/games/:id/tournament/advance-due',authMiddleware,async(c)=>{
+  const gameId=c.req.param('id');
+  const game=await getGameAndVerify(c,gameId);
+  if(!game)return c.json({error:'Forbidden'},403);
+  if(game.status==='settled'||game.status==='cancelled')
+    return c.json({error:'Game is closed'},409);
+  const state=await c.env.DB.prepare(
+    'SELECT status,current_level,level_started_at FROM tournament_state WHERE game_id=?'
+  ).bind(gameId).first<{status:string;current_level:number;level_started_at:number|null}>();
+  if(!state||state.status!=='running')
+    return c.json({ok:true,advanced:false,reason:'not-running'});
+  const current=await c.env.DB.prepare(
+    'SELECT duration_secs FROM tournament_levels WHERE game_id=? AND level_num=?'
+  ).bind(gameId,state.current_level).first<{duration_secs:number}>();
+  const startedAt=state.level_started_at;
+  if(!current||typeof startedAt!=='number'||!Number.isSafeInteger(startedAt))
+    return c.json({error:'Current blind stage is missing'},409);
+  const now=Math.floor(Date.now()/1000);
+  if(now<startedAt+current.duration_secs)
+    return c.json({ok:true,advanced:false,seconds_remaining:startedAt+current.duration_secs-now});
+  const next=await c.env.DB.prepare(
+    'SELECT * FROM tournament_levels WHERE game_id=? AND level_num=?'
+  ).bind(gameId,state.current_level+1).first<any>();
+  if(!next)return c.json({ok:true,advanced:false,structure_complete:true});
+  const result=await c.env.DB.prepare(
+    "UPDATE tournament_state SET current_level=?,level_started_at=? WHERE game_id=? AND status='running' AND current_level=? AND level_started_at=?"
+  ).bind(next.level_num,now,gameId,state.current_level,startedAt).run();
+  return c.json({ok:true,advanced:!!result.meta.changes,
+    current_level:result.meta.changes?next.level_num:state.current_level,
+    level_started_at:result.meta.changes?now:startedAt,
+    level:result.meta.changes?next:null});
 });
 
 tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {

@@ -68,6 +68,7 @@ export default function EventPage() {
   const [selectedInviteGameId,setSelectedInviteGameId]=useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
+  const [arrivalTimes,setArrivalTimes]=useState<string[]>(['19:00','20:00','21:00']);
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [removingMember, setRemovingMember] = useState(false);
@@ -192,6 +193,11 @@ export default function EventPage() {
 
   async function createGame() {
     if (!form.scheduled_at) return;
+    if(arrivalTimes.length<1||arrivalTimes.length>8||
+      arrivalTimes.some(t=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))||
+      new Set(arrivalTimes).size!==arrivalTimes.length){
+      alert('Choose 1–8 different RSVP arrival times before scheduling.');return;
+    }
     setSaving(true);
     try {
       const ts = Math.floor(new Date(form.scheduled_at).getTime()/1000);
@@ -201,6 +207,7 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
+        rsvp_arrival_times: arrivalTimes,
         small_blind: form.small_blind ? Math.round(parseFloat(form.small_blind)*100) : undefined,
         big_blind: form.big_blind ? Math.round(parseFloat(form.big_blind)*100) : undefined,
         starting_chips: form.starting_chips ? parseInt(form.starting_chips) : undefined,
@@ -208,7 +215,9 @@ export default function EventPage() {
       // Include every generated session when Weekly/Fortnightly recurrence is selected.
       await api.games.list(id).then(setGames).catch(()=>setGames(gs=>[g,...gs]));
       setShowCreate(false);
+      setArrivalTimes(['19:00','20:00','21:00']);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
+      router.push('/games/'+g.id);
     } catch(e:any){ alert(e.message); }
     finally { setSaving(false); }
   }
@@ -506,13 +515,13 @@ export default function EventPage() {
                 <div className="pkr-host-push-overview" aria-label="Member notification registrations">
                   <div className="pkr-host-push-overview-head">
                     <div>
-                      <strong>Room members' notification devices</strong>
+                      <strong>Notification setup (not member availability)</strong>
                       <p>
                         {pushRegistrationLoading?'Checking registrations…'
-                          :pushRegistrationError?'Registration status unavailable'
+                          :pushRegistrationError?'Unable to check notification registrations'
                           :pushRegistrationStatus
                             ?(event.members||[]).filter((member:any)=>(pushRegistrationStatus[member.id]||0)>0).length+
-                              ' of '+(event.members||[]).length+' members have a registered device'
+                              ' of '+(event.members||[]).length+' members have a registered notification device'
                             :'Not checked yet'}
                       </p>
                     </div>
@@ -522,7 +531,7 @@ export default function EventPage() {
                     </button>
                   </div>
                   {pushRegistrationError&&<p role="alert" className="pkr-host-push-error">{pushRegistrationError}</p>}
-                  <p className="pkr-host-push-disclaimer">Registered means a device subscribed to this room. It does not guarantee notifications are currently enabled in phone settings or will be delivered. Pending invitations are not yet members.</p>
+                  <p className="pkr-host-push-disclaimer">A missing registration does not mean the player is unavailable or has declined the game. It only means this room has no recorded notification device for them. RSVP attendance is tracked separately. Registration does not guarantee delivery.</p>
                 </div>
               )}
             </section>
@@ -678,11 +687,16 @@ export default function EventPage() {
                       </div>
                       {isGroupOwner&&(
                         <div className="pkr-member-push-state" aria-label={'Notification registration for '+m.name}>
-                          {pushRegistrationLoading||!pushRegistrationStatus
-                            ?<span className="pkr-member-push-unknown">{pushRegistrationError?'Status unavailable':'Checking notification status…'}</span>
-                            :(pushRegistrationStatus[m.id]||0)>0
-                              ?<span className="pkr-member-push-on">🔔 Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</span>
-                              :<span className="pkr-member-push-off">🔕 No room device registered</span>}
+                          <span className="pkr-member-push-on">✓ Approved member</span>
+                          <span style={{marginLeft:8}}>
+                            {pushRegistrationLoading
+                              ?'Checking notification setup…'
+                              :pushRegistrationStatus
+                                ?(pushRegistrationStatus[m.id]||0)>0
+                                  ?'🔔 Registered on '+pushRegistrationStatus[m.id]+' device'+(pushRegistrationStatus[m.id]===1?'':'s')
+                                  :'Notifications not enabled on this member’s device'
+                                :'Notification setup not available'}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -889,6 +903,57 @@ export default function EventPage() {
                 <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
               </div>
               <div>
+                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
+                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
+                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
+                </p>
+                <div style={{display:'grid',gap:8}}>
+                  {arrivalTimes.map((time,index)=>(
+                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
+                        value={time} style={{minWidth:0,flex:1}}
+                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
+                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
+                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
+                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
+                  disabled={arrivalTimes.length>=8} onClick={()=>{
+                    const used=new Set(arrivalTimes);
+                    for(let hour=17;hour<24;hour++){
+                      for(const minute of ['00','30']){
+                        const next=String(hour).padStart(2,'0')+':'+minute;
+                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
+                      }
+                    }
+                  }}>+ Add arrival time</button>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>Game format *</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:8}} role="group" aria-label="Game format">
+                  {([{key:'cash',label:'Cash game'},{key:'tournament',label:'Tournament'},{key:'rebuy',label:'Rebuy tournament'},{key:'freezeout',label:'Freezeout'}] as const).map(option=>(
+                    <button type="button" key={option.key} aria-pressed={form.format===option.key}
+                      onClick={()=>setForm(previous=>({...previous,format:option.key}))}
+                      style={{minHeight:44,padding:'9px 12px',borderRadius:7,cursor:'pointer',fontSize:12,
+                        border:form.format===option.key?'1px solid var(--gold)':'1px solid var(--border-sub)',
+                        color:form.format===option.key?'var(--gold)':'var(--muted)',background:'var(--bg3)'}}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {form.format!=='cash'&&<p style={{fontSize:12,color:'var(--muted)',marginTop:8}}>
+                  PKR will prepare editable blind levels and a tournament timer. Players must record their buy-ins before tournament start.
+                </p>}
+              </div>
+              {form.format!=='cash'&&<div>
+                <label className="lbl" htmlFor="pkr-create-starting-chips" style={{display:'block',marginBottom:6}}>Starting chips per player</label>
+                <input id="pkr-create-starting-chips" className="inp" type="number" min="100" max="1000000000" step="100"
+                  value={form.starting_chips||'10000'}
+                  onChange={e=>setForm(previous=>({...previous,starting_chips:e.target.value}))}/>
+              </div>}
+              <div>
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
@@ -922,8 +987,8 @@ export default function EventPage() {
               </div>
             </div>
             <p className="pkr-unfinished-note" style={{marginTop:12}}>
-              Repeating schedules create four weekly or fortnightly games. Cash sessions are scheduled here;
-              tournament blind levels and stacks are configured in the tournament setup before play.
+              Repeating schedules create four weekly or fortnightly games. Tournament formats include editable blinds and chip stacks;
+              open the game after scheduling to confirm RSVP arrival times and send invitations.
             </p>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!form.scheduled_at||saving} onClick={createGame}>

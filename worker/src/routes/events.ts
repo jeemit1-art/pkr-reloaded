@@ -32,7 +32,7 @@ events.post('/', authMiddleware, async (c) => {
 
   if (!planStatus.is_active) {
     return c.json({
-      error: 'Your free trial has ended. Upgrade to create groups.',
+      error: 'A paid host subscription is required to create groups.',
       code: 'UPGRADE_REQUIRED',
       plan: planStatus.plan,
       feature: 'create_group',
@@ -203,10 +203,10 @@ events.get('/:id/push-registrations', authMiddleware, async(c)=>{
   if(c.env.PKR_PUSH_ROOMS_V2!=='1')
     return c.json({error:'Per-room notification registration status is unavailable'},503);
   const records=await c.env.DB.prepare(
-    'SELECT em.user_id, COUNT(s.endpoint) AS device_count '+
-    'FROM event_members em LEFT JOIN push_room_subscriptions s '+
-    'ON s.event_id=em.event_id AND s.user_id=em.user_id '+
-    'WHERE em.event_id=? GROUP BY em.user_id'
+    `SELECT em.user_id, COUNT(s.endpoint) AS device_count
+     FROM event_members em LEFT JOIN push_room_subscriptions s
+       ON s.event_id=em.event_id AND s.user_id=em.user_id
+     WHERE em.event_id=? GROUP BY em.user_id`
   ).bind(eventId).all<{user_id:string;device_count:number}>();
   return c.json({
     members:records.results.map(r=>({

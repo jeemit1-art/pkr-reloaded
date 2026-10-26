@@ -269,3 +269,18 @@
 @media(prefers-reduced-motion:reduce){
  .pkr-landing *, .pkr-guest * {transition-duration:.01ms !important;animation-duration:.01ms !important}
 }
+
+/* Responsive safeguards for public landing and guest RSVP surfaces only.
+   Deliberately excludes the live poker table and its approved geometry. */
+@media (max-width: 600px) {
+  .pkr-landing, .pkr-guest { width: 100%; max-width: 100%; overflow-x: clip; }
+  .pkr-landing-nav { height: auto; min-height: 72px; gap: 12px; padding: 12px 16px; flex-wrap: wrap; }
+  .pkr-landing-navlinks { flex-wrap: wrap; }
+  .pkr-landing-hero, .pkr-landing-flow, .pkr-landing-rsvp, .pkr-landing-finish { max-width: 100%; }
+  .pkr-landing-join-controls { flex-wrap: wrap; }
+  .pkr-landing-join-controls input, .pkr-landing-join-controls button { min-width: 0; max-width: 100%; }
+  .pkr-guest-shell, .pkr-guest-grid, .pkr-guest-card, .pkr-guest-hero { min-width: 0; max-width: 100%; }
+  .pkr-guest-top { flex-wrap: wrap; gap: 8px; }
+  .pkr-guest-options { display: flex; flex-wrap: wrap; }
+  .pkr-guest-choice, .pkr-guest-button { min-height: 44px; }
+}

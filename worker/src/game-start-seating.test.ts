@@ -50,6 +50,14 @@ describe('Capacity-safe RSVP plan',()=>{
     ],[{id:'requested',display_name:'Alex',seat_number:2}]);
     expect(plan.newPlayers[0].seat_number).toBe(1);
   });
+  it('keeps a reserved seat when the RSVP already belongs to an unseated player',()=>{
+    const plan=planStartSeating(4,[
+      {user_id:'r',display_name:'Robin',seat_number:null},
+      {user_id:'q',display_name:'Quick',seat_number:null},
+    ],[{id:'booked',display_name:'Robin',seat_number:3},{id:'fresh',display_name:'Dana',seat_number:2}]);
+    expect(plan.existingMoves).toEqual([{user_id:'r',seat_number:3},{user_id:'q',seat_number:1}]);
+    expect(plan.newPlayers).toEqual([{id:'fresh',display_name:'Dana',whatsapp:null,seat_number:2}]);
+  });
   it('rejects invalid capacities rather than inventing seats',()=>{
     expect(()=>planStartSeating(0,[],[])).toThrow(/capacity/);
     expect(()=>planStartSeating(3.5,[],[])).toThrow(/capacity/);

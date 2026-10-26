@@ -3,7 +3,8 @@ vi.mock('../middleware',async(importOriginal)=>{
   const original=await importOriginal<typeof import('../middleware')>();
   return {...original,
     authMiddleware:async(c:any,next:any)=>{c.set('userId','synthetic-host');await next();},
-    requireEventRole:async()=>true};
+    requireEventRole:async()=>true,
+    getPlanStatus:async()=>({is_active:true,plan:'pro',trial_active:false,max_groups:null,max_seats:15})};
 });
 import tournament from './tournament';
 const config={
@@ -38,6 +39,7 @@ function fixture(){
     return {sql,args,
       async first():Promise<any>{
         if(sql.includes('FROM games WHERE id=?'))return {...game};
+        if(sql.includes('SELECT host_id FROM events WHERE id=?'))return {host_id:'synthetic-host'};
         if(sql.includes('SELECT status FROM tournament_state WHERE game_id=?'))
           return {status:state.status};
         if(sql.includes('FROM tournament_state WHERE game_id=?'))return {...state};
@@ -63,7 +65,8 @@ function fixture(){
           return {meta:{changes:1}};
         }
         if(sql.includes('SET current_level=?,level_started_at=?')){
-          if(state.status!=='running'||state.current_level!==args[3])
+          if(state.status!=='running'||state.current_level!==args[3]||
+             (sql.includes('AND level_started_at=?')&&state.level_started_at!==args[4]))
             return {meta:{changes:0}};
           state.current_level=args[0];state.level_started_at=args[1];
           return {meta:{changes:1}};
@@ -149,6 +152,22 @@ describe('tournament start, setup and server prize calculations',()=>{
       tournament.request(url+'/next-level',post(),f.env,execution),
     ]);
     expect([a.status,b.status].sort()).toEqual([200,409]);
+    expect(f.state.current_level).toBe(2);
+  });
+  it('advances only when the server clock says a stage has expired',async()=>{
+    const f=fixture();f.state.status='running';
+    f.state.level_started_at=Math.floor(Date.now()/1000)-899;
+    const premature=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect(premature.status).toBe(200);
+    expect((await premature.json() as any).advanced).toBe(false);
+    expect(f.state.current_level).toBe(1);
+    f.state.level_started_at=Math.floor(Date.now()/1000)-905;
+    const next=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect(next.status).toBe(200);
+    expect((await next.json() as any).advanced).toBe(true);
+    expect(f.state.current_level).toBe(2);
+    const duplicate=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect((await duplicate.json() as any).advanced).toBe(false);
     expect(f.state.current_level).toBe(2);
   });
   it('derives paused time from the Worker rather than a client-supplied value',async()=>{

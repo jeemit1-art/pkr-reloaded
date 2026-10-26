@@ -26,7 +26,7 @@ function extractGen(){
 }
 const gen=extractGen();
 test('long tournaments generate progressively more blind stages',()=>{
-  const counts=[2,3,4,5,6,8,10,12].map(hours=>gen(10000,hours).length);
+  const counts=[2,3,4,5,6,8,10,12,16,20,24].map(hours=>gen(10000,hours).length);
   assert.ok(counts.every((n,i)=>n>=8&&n<=100&&(i===0||n>counts[i-1])),counts.join(','));
 });
 test('each generated level is valid for the existing API (including breaks)',()=>{
@@ -41,10 +41,17 @@ test('each generated level is valid for the existing API (including breaks)',()=
     });
   }
 });
-test('12-hour preset has enough play time and breaks',()=>{
+test('twelve-hour preset has enough play time and breaks',()=>{
   const levels=gen(10000,12);
   assert.ok(levels.reduce((a,l)=>a+l.duration_secs,0)>=12*3600);
   assert.ok(levels.filter(l=>l.is_break).length>=4);
+});
+test('all presets fit the chosen time including breaks exactly',()=>{
+  for(const hours of [2,3,4,5,6,8,10,12,16,20,24]){
+    const levels=gen(10000,hours);
+    assert.equal(levels.reduce((total,level)=>total+level.duration_secs,0),hours*3600);
+    assert.ok(levels.length<=100);
+  }
 });
 test('saved setup renders Start Tournament and does not return to initial introduction',()=>{
   assert.ok(js.includes("if(!state||!state.status){"));

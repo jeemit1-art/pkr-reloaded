@@ -27,6 +27,7 @@ var ts = {
   view:'main', state:null, levels:[], rebuys:[], eliminations:[],
   payouts:[],prizePoolCents:null,payoutError:null,
   timerInterval:null, secsRemaining:0,
+  autoAdvance:true,advancePending:false,nextAdvanceAttempt:0,
   voiceEnabled:true, voiceWarningDone:false, voiceWarningMinutes:2,
   setupLevels:JSON.parse(JSON.stringify(DEFAULT_LEVELS)),
   setupConfig:{starting_chips:10000,buy_in_amount:0,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,addon_chips:5000,
@@ -65,6 +66,24 @@ function updateTimerCalc(){
     ts.voiceWarningDone=true;
     speak('Attention players. '+ts.voiceWarningMinutes+' minutes remaining on level '+ts.state.current_level+'.');
   }
+  // The host's open panel can request the next blind stage. The Worker
+  // verifies that the prior stage has genuinely expired before advancing.
+  if(ts.secsRemaining===0&&ts.autoAdvance&&!ts.advancePending&&
+     ts.levels.some(function(l){return l.level_num===ts.state.current_level+1;})&&
+     Date.now()>=ts.nextAdvanceAttempt){
+    ts.advancePending=true;
+    ts.nextAdvanceAttempt=Date.now()+10000;
+    tApi('/games/'+getGameId()+'/tournament/advance-due',{method:'POST'})
+      .then(function(result){
+        if(result.advanced){
+          ts._lastNotifiedLevel=null;
+          ts.voiceWarningDone=false;
+          return loadTournament();
+        }
+      })
+      .catch(function(err){console.warn('Tournament auto-advance:',err.message);})
+      .finally(function(){ts.advancePending=false;});
+  }
   if(ts.secsRemaining===0&&ts._lastNotifiedLevel!==ts.state.current_level){
     ts._lastNotifiedLevel=ts.state.current_level;
     var next=ts.levels.find(function(l){return l.level_num===ts.state.current_level+1;});
@@ -96,19 +115,25 @@ function buildAnn(lv, next) {
 }
 
 function genBlinds(chips, hours) {
-  // Each duration preset creates enough stages for that tournament length.
-  // Include regular breaks and respect the server's 100-level maximum.
-  var targetMinutes=Math.max(120,Math.min(720,Math.round(Number(hours||3)*60)));
-  var dur=15,breakMinutes=10;
-  var playable=Math.max(8,Math.ceil(targetMinutes/(dur+breakMinutes/6)));
+  // Generate a structure that fits the requested duration, up to 24 hours.
+  // Preserve consecutive level numbers and the Worker's 100-stage limit.
+  var targetMinutes=Math.max(120,Math.min(1440,Math.round(Number(hours||3)*60)));
+  var breakMinutes=10, breakEvery=6;
+  var playable=Math.max(8,Math.min(90,Math.ceil(targetMinutes/18)));
+  var breaks=Math.floor((playable-1)/breakEvery);
+  var playingSeconds=Math.max(playable*30,targetMinutes*60-breaks*breakMinutes*60);
+  var perLevel=Math.floor(playingSeconds/playable);
+  var extraSeconds=playingSeconds%playable;
+  // Distribute remaining seconds so the generated schedule matches its
+  // selected duration exactly, including scheduled breaks.
   var lvs=[],s=Math.max(25,Math.round((Number(chips)||10000)/400/25)*25);
   for(var count=0;count<playable&&lvs.length<100;count++){
-    if(count>0&&count%6===0&&lvs.length<99)
+    if(count>0&&count%breakEvery===0&&lvs.length<99)
       lvs.push({level_num:lvs.length+1,small_blind:0,big_blind:0,ante:0,duration_secs:breakMinutes*60,is_break:true});
     var small=Math.max(25,Math.round(s/25)*25);
     lvs.push({level_num:lvs.length+1,small_blind:small,big_blind:small*2,
       ante:count>=5?Math.max(25,Math.round(small*.125/25)*25):0,
-      duration_secs:dur*60,is_break:false});
+      duration_secs:perLevel+(count<extraSeconds?1:0),is_break:false});
     s=Math.max(small+25,Math.round(small*1.35/25)*25);
   }
   return lvs;
@@ -258,6 +283,18 @@ function renderMain(body){
     if(nextLv)cr.appendChild(mkB('\u23ed Next Level','flex:1;padding:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);color:var(--gold);border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:DM Sans,sans-serif;font-weight:600',window.tNextLevel));
     body.appendChild(cr);
   }
+  if(state.status==='running'||state.status==='paused'){
+    var auto=document.createElement('div');
+    auto.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px';
+    var explanation=document.createElement('span');
+    explanation.style.cssText='font-size:0.75rem;color:var(--muted);flex:1;min-width:150px';
+    explanation.textContent='Advance blinds automatically while this host panel is open';
+    auto.appendChild(explanation);
+    auto.appendChild(mkB(ts.autoAdvance?'Auto levels ON':'Auto levels OFF',
+      'padding:8px 10px;min-height:40px;background:rgba(201,168,76,.08);border:1px solid var(--gold);color:var(--gold);border-radius:7px;cursor:pointer;font-size:0.76rem',
+      function(){ts.autoAdvance=!ts.autoAdvance;renderBody();}));
+    body.appendChild(auto);
+  }
   // Players
   var ps=document.createElement('div');ps.style.cssText='background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px';
   var ph=document.createElement('div');ph.style.cssText='padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center';
@@ -317,7 +354,7 @@ function renderSetup(body){
   var ab=document.createElement('div');ab.style.cssText='background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px';
   var abH=document.createElement('div');abH.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;font-weight:600';abH.textContent='✨ Auto-generate structure';ab.appendChild(abH);
   var abR=document.createElement('div');abR.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-  ['2h','3h','4h','5h','6h','8h','10h','12h'].forEach(function(h){
+  ['2h','3h','4h','5h','6h','8h','10h','12h','16h','20h','24h'].forEach(function(h){
     var btn=document.createElement('button');
     btn.style.cssText='flex:1 0 20%;padding:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif';
     btn.textContent=h;

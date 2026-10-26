@@ -9,6 +9,16 @@ const journey=[
   {n:'03',icon:'◷',title:'Get the plan together',detail:'Players choose an arrival time and available seat. The group sees live responses.'},
   {n:'04',icon:'♣',title:'Open the table',detail:'Record buy-ins, track hands and settle up with a clear audit trail.'},
 ];
+const capabilities=[
+  {name:'Private poker groups',detail:'Create member-only rooms with host and co-host controls.'},
+  {name:'Scheduling and invitations',detail:'Plan a game, share personal invitations and manage participation.'},
+  {name:'RSVP and seating',detail:'Collect arrivals, late responses and seat choices before game night.'},
+  {name:'Live poker table',detail:'Run the game with seats, chips, buy-ins and hand tracking.'},
+  {name:'Cash-out and settlement',detail:'Record results and review the end-of-night settlement.'},
+  {name:'History and leaderboards',detail:'Review previous sessions and group player performance.'},
+  {name:'Tournament tools',detail:'Tournament and blind controls are being improved; availability depends on plan.'},
+  {name:'Mobile access',detail:'Use the host and player flows on phones and larger screens.'},
+];
 const features=[
   {icon:'◷',name:'Live arrivals',description:'7 pm, 8 pm, 9 pm, late or not coming — you decide the options.'},
   {icon:'♠',name:'Choose a seat',description:'Players see the seating plan before they arrive.'},
@@ -44,11 +54,11 @@ export default function HomePage(){
     <nav className="pkr-landing-nav" aria-label="Primary navigation">
       <a className="pkr-landing-logo" href="/" aria-label="PKR home"><span>♠</span>PKR</a>
       <div className="pkr-landing-navlinks">
-        <a href="#how-it-works">How it works</a>
+        <a href="#how-it-works">How it works</a><a href="#features">Features</a><a href="#pricing">Pricing</a>
         <a href="#rsvp">Live RSVP</a>
         <a href="#game-night">Game night</a>
       </div>
-      <button className="pkr-landing-outline" onClick={()=>setLoginOpen(true)}>Host sign in</button>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><a className="pkr-landing-outline" href="/mobile-login">Player access</a><button className="pkr-landing-outline" onClick={()=>setLoginOpen(true)}>Host sign in</button></div>
     </nav>
     <main>
       <section className="pkr-landing-hero">
@@ -83,10 +93,10 @@ export default function HomePage(){
             <div><strong>5</strong><span>Coming</span></div><div><strong>1</strong><span>Late</span></div><div><strong>3</strong><span>Seats free</span></div>
           </div>
           <div className="pkr-landing-demo-title">GROUP RSVP BOARD <span>Illustrative</span></div>
-          {[{i:'M',name:'Marcus',t:'7:00 pm',seat:'01'},
-            {i:'J',name:'Jai',t:'8:00 pm',seat:'02'},
-            {i:'R',name:'Rob',t:'Running late',seat:'05'},
-            {i:'A',name:'Alex',t:'7:00 pm',seat:'06'}].map(x=>
+          {[{i:'1',name:'Example Player 1',t:'7:00 pm',seat:'01'},
+            {i:'2',name:'Example Player 2',t:'8:00 pm',seat:'02'},
+            {i:'3',name:'Example Player 3',t:'Running late',seat:'05'},
+            {i:'4',name:'Example Player 4',t:'7:00 pm',seat:'06'}].map(x=>
             <div className="pkr-landing-demo-player" key={x.name}>
               <span className="pkr-landing-demo-avatar">{x.i}</span>
               <span><strong>{x.name}</strong><small>{x.t}</small></span>
@@ -109,6 +119,19 @@ export default function HomePage(){
             <h3>{item.title}</h3><p>{item.detail}</p>
           </article>)}
         </div>
+      </section>
+      <section id="features" className="pkr-landing-flow" aria-labelledby="pkr-features-heading">
+        <div className="pkr-landing-section-head">
+          <span className="pkr-landing-kicker">MORE THAN A POKER TABLE</span>
+          <h2 id="pkr-features-heading">Everything around <em>game night.</em></h2>
+          <p>Organise the group, prepare the session, play and review results in one place.</p>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:16,maxWidth:1120,margin:'0 auto'}}>
+          {capabilities.map(item=><article key={item.name} className="pkr-landing-step" style={{minWidth:0}}>
+            <h3>{item.name}</h3><p>{item.detail}</p>
+          </article>)}
+        </div>
+        <p style={{textAlign:'center',marginTop:20,opacity:.65}}>All examples on this page are fictional illustrations. No real player records are displayed.</p>
       </section>
       <section className="pkr-landing-rsvp" id="rsvp">
         <div className="pkr-landing-rsvp-copy">
@@ -137,6 +160,23 @@ export default function HomePage(){
           </div>
         </div>
       </section>
+      <section id="pricing" className="pkr-landing-flow" aria-labelledby="pkr-pricing-heading">
+        <div className="pkr-landing-section-head"><span className="pkr-landing-kicker">HOST SUBSCRIPTIONS</span>
+          <h2 id="pkr-pricing-heading">Choose your <em>PKR plan.</em></h2>
+          <p>Hosting requires a subscription. Invited players can join their host's private room without purchasing a separate host plan.</p>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:18,maxWidth:840,margin:'0 auto'}}>
+          {[
+            {name:'Starter',price:'$9.99',text:'1 group · Up to 9 seats · Core game-night management'},
+            {name:'Pro',price:'$19.99',text:'Multiple groups · Up to 15 seats · Advanced features'},
+          ].map(p=><article key={p.name} className="pkr-landing-step" style={{minWidth:0}}>
+            <span className="pkr-landing-kicker">{p.name}</span>
+            <h3 style={{fontSize:32,marginTop:12}}>{p.price}<small style={{fontSize:14,fontWeight:400}}> AUD/month</small></h3>
+            <p>{p.text}</p><button className="pkr-landing-primary" style={{marginTop:20,maxWidth:'100%'}} onClick={()=>setLoginOpen(true)}>Choose {p.name} →</button>
+          </article>)}
+        </div>
+        <p style={{textAlign:'center',marginTop:18,opacity:.65}}>Subscriptions are processed through Stripe. Final payment activation and plan enforcement are subject to release checks.</p>
+      </section>
       <section className="pkr-landing-finish" id="game-night">
         <span className="pkr-landing-kicker">WHEN EVERYONE ARRIVES</span>
         <h2>Then the night <em>belongs to the table.</em></h2>
@@ -145,7 +185,7 @@ export default function HomePage(){
       </section>
     </main>
     <footer className="pkr-landing-footer"><a className="pkr-landing-logo" href="/"><span>♠</span>PKR</a>
-      <span>Private poker night management</span><a href="#how-it-works">How it works</a></footer>
+      <span>Private poker night management</span><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a></footer>
     {loginOpen&&<div className="pkr-landing-dialog-back" onClick={e=>{if(e.currentTarget===e.target)setLoginOpen(false);}}>
       <section className="pkr-landing-dialog" role="dialog" aria-modal="true" aria-label="Host sign in">
         <button className="pkr-landing-close" aria-label="Close sign in" onClick={()=>setLoginOpen(false)}>×</button>
