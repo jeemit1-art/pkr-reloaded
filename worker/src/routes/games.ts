@@ -333,6 +333,11 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     const game=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
     if (!game) return c.json({error:'Game not found'},404);
     if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+    // Existing scheduled games cannot bypass the paid-host requirement.
+    // Settlement, history and cancellations remain available to preserve records.
+    const owner=await c.env.DB.prepare('SELECT host_id FROM events WHERE id=?').bind(game.event_id).first<{host_id:string}>();
+    if (!owner || !(await getPlanStatus(c.env.DB,owner.host_id)).is_active)
+      return c.json({error:'An active paid host subscription is required to start a game.',code:'UPGRADE_REQUIRED',feature:'start_game'},402);
     if (game.status==='settled'||game.status==='cancelled')
       return c.json({error:'Cannot start a settled or cancelled game'},409);
     if (game.status==='active') return c.json({error:'Game already active'},409);
