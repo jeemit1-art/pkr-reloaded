@@ -35,7 +35,8 @@ function fixture(options?:{
               if(sql.includes('FROM games WHERE id=?'))return {...game};
               if(sql.includes('SELECT host_id FROM events WHERE id=?'))return {host_id:'synthetic-host'};
               if(sql.includes('SELECT plan, trial_started_at, plan_expires_at FROM users WHERE id=?'))
-                return {plan:options?.unpaidHost?'trial':'pro',trial_started_at:1,plan_expires_at:null};
+                return {plan:options?.unpaidHost?'trial':'pro',trial_started_at:1,
+                  plan_expires_at:Math.floor(Date.now()/1000)+86400,stripe_subscription_id:'sub_synthetic_paid'};
               if(sql.includes('FROM event_players WHERE event_id=?'))return null;
               return null;
             },
