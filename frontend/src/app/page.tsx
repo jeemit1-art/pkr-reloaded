@@ -140,7 +140,7 @@ export default function HomePage() {
               <div className="pkr-hero-mobile" aria-hidden="true">
                 <img src="/demo/mobile-insights.webp" alt="" width="390" height="844" loading="eager"/>
               </div>
-              <div className="pkr-hero-real-label"><i aria-hidden="true"/> PKR APP · FICTIONAL DEMO DATA</div>
+              <div className="pkr-hero-real-label"><i aria-hidden="true"/> PKR · REAL APP PREVIEW</div>
             </div>
           </div>
           <span className="pkr-l2-hero-annotation">HOME POKER TRACKING · CASH GAMES · TOURNAMENTS · SETTLEMENTS</span>
