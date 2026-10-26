@@ -1,12 +1,14 @@
 // @refresh
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
 import InviteQRCode from '@/components/InviteQRCode';
+import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
+import {playPkrSound} from '@/lib/sounds';
 
 type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
@@ -49,6 +51,9 @@ export default function EventPage() {
   const [inviteRole, setInviteRole] = useState('cohost');
   const [isGroupOwner,setIsGroupOwner]=useState(false);
   const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>);
+  const previousRequestCount=useRef<number|null>(null);
+  const memberDeepLinkScroll=useRef(false);
+  const [memberSection,setMemberSection]=useState<'invite'|'requests'|'roster'|'notifications'>('invite');
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
@@ -73,6 +78,9 @@ export default function EventPage() {
   useEffect(()=>{
     const query=new URLSearchParams(window.location.search);
     if(query.get('tab')==='members')setTab('members');
+    const section=query.get('view');
+    if(section==='requests'||section==='invite'||section==='roster'||section==='notifications')
+      setMemberSection(section);
     if(query.get('inviteGame'))setSelectedInviteGameId(query.get('inviteGame')||'');
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
       setEvent(e as any); setUser(u as any);
@@ -91,10 +99,30 @@ export default function EventPage() {
 
   useEffect(()=>{
     if(!isGroupOwner)return;
-    const refresh=()=>api.events.joinRequests(id).then(r=>setJoinRequests(r.requests)).catch(()=>{});
+    const refresh=()=>api.events.joinRequests(id).then(r=>{
+      const newCount=r.requests.length;
+      if(previousRequestCount.current!==null && newCount>previousRequestCount.current)
+        playPkrSound('new-request');
+      previousRequestCount.current=newCount;
+      setJoinRequests(r.requests);
+    }).catch(()=>{});
     refresh();const timer=setInterval(refresh,15000);
     return()=>clearInterval(timer);
   },[isGroupOwner,id]);
+  function focusMemberSection(section:'invite'|'requests'|'roster'|'notifications'){
+    setTab('members');setMemberSection(section);
+    window.setTimeout(()=>{
+      document.getElementById('pkr-members-'+section)?.scrollIntoView({behavior:'smooth',block:'start'});
+    },40);
+  }
+  useEffect(()=>{
+    if(tab!=='members'||!event||memberDeepLinkScroll.current)return;
+    const section=new URLSearchParams(window.location.search).get('view');
+    if(section==='requests'||section==='roster'||section==='notifications'||section==='invite'){
+      memberDeepLinkScroll.current=true;
+      window.setTimeout(()=>document.getElementById('pkr-members-'+section)?.scrollIntoView({behavior:'smooth',block:'start'}),300);
+    }
+  },[tab,event]);
   async function decideJoin(requestId:string,approve:boolean){
     try{await api.events.decideJoin(id,requestId,approve);setJoinRequests(v=>v.filter(r=>r.id!==requestId));}
     catch(e:any){alert(e.message||'Unable to review request');}
@@ -189,6 +217,14 @@ export default function EventPage() {
   }
 
   async function togglePush() {
+    if(!canUsePush()||(iosDevice&&!isPWA)){
+      router.push('/install?group='+encodeURIComponent(id));
+      return;
+    }
+    if(typeof Notification!=='undefined'&&Notification.permission==='denied'){
+      alert('Notifications are blocked in device settings. Allow PKR notifications and try again.');
+      return;
+    }
     setPushLoading(true);
     try {
       if (pushEnabled) {
@@ -416,7 +452,40 @@ export default function EventPage() {
               <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
               <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
             </header>
+            <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
+              {([
+                {id:'invite',text:'＋ Invite & QR',visible:isGroupOwner},
+                {id:'requests',text:'🔔 Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),visible:isGroupOwner},
+                {id:'roster',text:'♟ Players ('+(event.members?.length||0)+')',visible:true},
+                {id:'notifications',text:'🔊 Alerts & sound',visible:true},
+              ] as const).filter(action=>action.visible).map(action=>
+                <button type="button" key={action.id} className={memberSection===action.id?'active':''}
+                  onClick={()=>focusMemberSection(action.id)}>{action.text}</button>)}
+            </nav>
+            <section className="pkr-members-alert-panel" id="pkr-members-notifications" aria-label="Member notification settings">
+              <div className="pkr-members-alert-head">
+                <div><span className="pkr-eyebrow">STAY IN THE LOOP</span>
+                  <h3>{isGroupOwner?'Host notifications':'Your poker notifications'}</h3>
+                  <p>{isGroupOwner
+                    ?'Get a push alert when someone requests membership, plus game and RSVP updates.'
+                    :'Get alerts for games, results and important updates on this device.'}</p>
+                </div>
+                <button type="button" className="btn btn-primary" disabled={pushLoading}
+                  onClick={()=>void togglePush()}>
+                  {pushLoading?'Updating…':pushEnabled?'🔔 Alerts on — disable':'🔔 Enable push alerts'}
+                </button>
+              </div>
+              <ForegroundSoundToggle/>
+              <a href={'/install?group='+encodeURIComponent(id)} className="pkr-members-setup-link">Phone setup & notification test →</a>
+            </section>
+           <div id="pkr-members-requests" className="pkr-members-anchor" />
+           {isGroupOwner&&joinRequests.length===0&&<section className="pkr-member-empty-approvals">
+             <strong>✓ No approvals waiting</strong>
+             <p>When a player scans their private invitation, their request will appear here.
+               If host push alerts are enabled, you will also receive a notification.</p>
+           </section>}
            {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
+            <div id="pkr-members-invite" className="pkr-members-anchor" />
             {isGroupOwner&&<section className="pkr-member-invite" style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
               borderRadius:10,marginBottom:16}}>
               <div style={{fontSize:11,color:'var(--gold)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:7}}>
@@ -519,6 +588,7 @@ export default function EventPage() {
                 </div>
               </div>
             )}
+            <div id="pkr-members-roster" className="pkr-members-anchor" />
             <div className="pkr-member-search-tools">
               <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span>⌕</span>
                 <input id="pkr-member-search" type="search" aria-label="Search members" placeholder="Search members…" value={memberQuery} onChange={e=>setMemberQuery(e.target.value)}/>
