@@ -44,7 +44,7 @@ function fixture(status: string = 'active', cached?: { game_id: string; payload_
             async first(): Promise<any> {
               if (sql.includes('FROM settlements WHERE idempotency_key=?')) return cached ?? null;
               if (sql.includes('FROM settlements WHERE game_id=?')) return null;
-              if (sql.includes('FROM games WHERE id=?')) return game;
+              if (sql.includes('FROM games WHERE id=?') || sql.includes('FROM games g WHERE g.id=?')) return game;
               if (sql.includes('FROM events WHERE id=?')) return event;
               if (sql.includes('FROM events e WHERE e.id=?')) return event;
               return null;
