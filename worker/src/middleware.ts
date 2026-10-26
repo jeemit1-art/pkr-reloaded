@@ -42,7 +42,7 @@ export async function requireEventRole(
 // ── Plan status helper — used by gates in events.ts and games.ts ──────────────
 export interface PlanStatus {
   plan: string;
-  is_active: boolean;    // trial active OR paid plan
+  is_active: boolean;    // verified paid subscription or grandfathered lifetime
   trial_active: boolean;
   max_groups: number | null;   // null = unlimited
   max_seats: number;
@@ -50,8 +50,8 @@ export interface PlanStatus {
 
 export async function getPlanStatus(db: D1Database, userId: string): Promise<PlanStatus> {
   const user = await db.prepare(
-    'SELECT plan, trial_started_at, plan_expires_at FROM users WHERE id=?'
-  ).bind(userId).first<{ plan: string; trial_started_at: number | null; plan_expires_at: number | null }>();
+    'SELECT plan, trial_started_at, plan_expires_at, stripe_subscription_id FROM users WHERE id=?'
+  ).bind(userId).first<{ plan: string; trial_started_at: number | null; plan_expires_at: number | null;stripe_subscription_id:string|null }>();
 
   if (!user) return { plan: 'trial', is_active: false, trial_active: false, max_groups: 1, max_seats: 9 };
 
@@ -75,7 +75,10 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
     await db.prepare("UPDATE users SET plan='trial' WHERE id=?").bind(userId).run();
   }
 
-  const isActive = plan === 'lifetime' || plan === 'starter' || plan === 'pro';
+  const isPaid = (plan==='starter'||plan==='pro') &&
+    !!user.stripe_subscription_id?.startsWith('sub_') &&
+    Number.isSafeInteger(user.plan_expires_at) && Number(user.plan_expires_at)>now;
+  const isActive = plan === 'lifetime' || isPaid;
   const isPro = plan === 'pro' || plan === 'lifetime';
 
   return {
