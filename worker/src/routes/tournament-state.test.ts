@@ -65,7 +65,8 @@ function fixture(){
           return {meta:{changes:1}};
         }
         if(sql.includes('SET current_level=?,level_started_at=?')){
-          if(state.status!=='running'||state.current_level!==args[3])
+          if(state.status!=='running'||state.current_level!==args[3]||
+             (sql.includes('AND level_started_at=?')&&state.level_started_at!==args[4]))
             return {meta:{changes:0}};
           state.current_level=args[0];state.level_started_at=args[1];
           return {meta:{changes:1}};
@@ -151,6 +152,22 @@ describe('tournament start, setup and server prize calculations',()=>{
       tournament.request(url+'/next-level',post(),f.env,execution),
     ]);
     expect([a.status,b.status].sort()).toEqual([200,409]);
+    expect(f.state.current_level).toBe(2);
+  });
+  it('advances only when the server clock says a stage has expired',async()=>{
+    const f=fixture();f.state.status='running';
+    f.state.level_started_at=Math.floor(Date.now()/1000)-899;
+    const premature=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect(premature.status).toBe(200);
+    expect((await premature.json() as any).advanced).toBe(false);
+    expect(f.state.current_level).toBe(1);
+    f.state.level_started_at=Math.floor(Date.now()/1000)-905;
+    const next=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect(next.status).toBe(200);
+    expect((await next.json() as any).advanced).toBe(true);
+    expect(f.state.current_level).toBe(2);
+    const duplicate=await tournament.request(url+'/advance-due',post(),f.env,execution);
+    expect((await duplicate.json() as any).advanced).toBe(false);
     expect(f.state.current_level).toBe(2);
   });
   it('derives paused time from the Worker rather than a client-supplied value',async()=>{
