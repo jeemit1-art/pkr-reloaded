@@ -177,7 +177,7 @@ auth.get('/me', authMiddleware, async (c) => {
 
   const TRIAL_DAYS = 5;
   const trialEnd = user.trial_started_at + TRIAL_DAYS * 86400;
-  const trialActive = user.plan === 'trial' && now < trialEnd;
+  const trialActive = false; // Unpaid trials cannot host games.
   const trialDaysLeft = user.plan === 'trial' ? Math.max(0, Math.ceil((trialEnd - now) / 86400)) : 0;
 
   // Check expired paid plan
@@ -187,11 +187,7 @@ auth.get('/me', authMiddleware, async (c) => {
     await c.env.DB.prepare("UPDATE users SET plan='trial' WHERE id=?").bind(user.id).run();
   }
 
-  const isActive =
-    effectivePlan === 'lifetime' ||
-    effectivePlan === 'starter' ||
-    effectivePlan === 'pro' ||
-    trialActive;
+  const isActive = effectivePlan === 'lifetime' || effectivePlan === 'starter' || effectivePlan === 'pro';
 
   return c.json({
     id: user.id,
@@ -206,7 +202,7 @@ auth.get('/me', authMiddleware, async (c) => {
     is_active: isActive,
     has_payment: !!user.stripe_customer_id,
     // Computed limits
-    max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : (isActive ? null : 1),
+    max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
     max_seats: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? 15 : 9,
   });
 });
