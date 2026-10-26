@@ -1,4 +1,4 @@
-name: Refresh PKR product screenshots (fictional data only)
+name: Refresh PKR public screenshots from redesigned app
 
 on:
   push:
@@ -9,12 +9,16 @@ on:
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
-  refresh-demo-captures:
+  capture-real-pkr-ui:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 30
+    env:
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_PKR_ENV: staging
+      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,33 +28,37 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm final theme and known synthetic browser capture
+      - name: Confirm latest PKR graphite design
         run: |
           grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
           ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
           test -f frontend/src/app/pkr-2026-graphite.css
-      - name: Install pinned application image optimiser
+      - name: Install pinned frontend dependencies
         working-directory: frontend
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Retrieve genuine PKR screenshots with fictional data
-        env:
-          GH_TOKEN: ${{ github.token }}
+        run: npm ci --no-audit --no-fund
+      - name: Install visual browser test runner
+        working-directory: frontend
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - name: Install isolated Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Start staging-only PKR application
+        working-directory: frontend
         run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/pkr-capture"
-          # Captured on the graphite-design branch with realistic fictional fixtures.
-          # Run 40414528436 ran full browser scenarios. Its only test failure was an
-          # obsolete expected initial, fixed in the current branch before publishing.
-          gh run download 40414528436 \
-            --repo jeemit1-art/pkr-reloaded \
-            --name pkr-viewport-smoke \
-            --dir "$RUNNER_TEMP/pkr-capture"
-          test -f "$RUNNER_TEMP/pkr-capture/desktop-live-table.png"
-          test -f "$RUNNER_TEMP/pkr-capture/phone-insights.png"
-      - name: Optimise screenshots from the actual app
+          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/pkr-graphite-next.log
+          exit 1
+      - name: Capture and test genuine PKR interface with fictional data
         working-directory: frontend
-        run: node scripts/publish-demo-shots.cjs "$RUNNER_TEMP/pkr-capture"
-      - name: Commit refreshed public assets to design branch
+        run: node tests/viewport-smoke.cjs
+      - name: Optimise real app screenshots
+        working-directory: frontend
+        run: node scripts/publish-demo-shots.cjs ../artifacts/viewport-smoke
+      - name: Update only demonstration screenshots in design branch
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
@@ -58,9 +66,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/demo/
           if git diff --cached --quiet; then
-            echo "Product screenshot assets already current"
+            echo "No screenshot changes"
           else
-            git commit -m "assets: real graphite PKR screens with fictional sample data"
+            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
             git fetch origin design/charcoal-blue-refresh-20261027
             git rebase origin/design/charcoal-blue-refresh-20261027
             git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
