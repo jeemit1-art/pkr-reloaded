@@ -269,11 +269,11 @@ async function sendPushToManagers(
 ): Promise<number> {
   if (env.PKR_ENV === 'staging' || env.PKR_PHONE_MEMBERS_V1 !== '1') return 0;
   const table=env.PKR_PUSH_ROOMS_V2==='1'?'push_room_subscriptions':'push_subscriptions';
-  const subs = await env.DB.prepare(
+  const managerSql =
     "SELECT DISTINCT s.endpoint,s.p256dh,s.auth_key FROM "+table+" s " +
     "JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id " +
-    "WHERE s.event_id=? AND em.role IN (" + roles.map(() => '?').join(',') + ")"
-  ).bind(eventId,...roles).all<{endpoint:string;p256dh:string;auth_key:string}>();
+    "WHERE s.event_id=? AND em.role IN (" + roles.map(() => '?').join(',') + ")";
+  const subs = await env.DB.prepare(managerSql).bind(eventId,...roles).all<{endpoint:string;p256dh:string;auth_key:string}>();
   if (!subs.results.length) return 0;
   const body = JSON.stringify({
     title:payload.title, body:payload.body, icon:'/icon-192.png',
