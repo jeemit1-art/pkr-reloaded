@@ -71,7 +71,7 @@ function fixture(){
         'stripe-signature':overrideSignature??await signature(payload)},body:payload,
     },env);
   }
-  return {user,sub,send};
+  return {user,sub,send,env};
 }
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -113,6 +113,18 @@ describe('paid Stripe webhook lifecycle with only synthetic events',()=>{
     const current=await f.send('customer.subscription.deleted',{
       id:'sub_synthetic',metadata:{pkr_user_id:'synthetic-host'}});
     expect(current.status).toBe(200);expect(f.user.plan).toBe('trial');
+    expect(f.user.stripe_subscription_id).toBeNull();
+  });
+  it('fails closed for test-mode subscriptions when production PKR_ENV is unset',async()=>{
+    const f=fixture();
+    delete f.env.PKR_ENV;
+    f.sub.livemode=false;
+    const response=await f.send('checkout.session.completed',{
+      mode:'subscription',payment_status:'paid',customer:'cus_synthetic',
+      subscription:'sub_synthetic',metadata:{pkr_user_id:'synthetic-host'},
+    });
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(f.user.plan).toBe('trial');
     expect(f.user.stripe_subscription_id).toBeNull();
   });
   it('rejects invalid webhook signatures without changing the account',async()=>{
