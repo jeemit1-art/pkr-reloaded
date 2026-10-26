@@ -85,6 +85,9 @@ async function test(){
       if(landing.scrollWidth>landing.viewportWidth+5)
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
       if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
+      const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+      if(landingCTAColour!=='rgb(239, 137, 118)')
+        errors.push(size.name+' landing CTA reverted to rejected brand colour: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
@@ -227,6 +230,11 @@ async function test(){
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'){
+       const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+       if(primary!=='rgb(239, 137, 118)')
+         errors.push(size.name+' dashboard primary control is not coral: '+primary);
+     }
+     if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
        const fallback=page.locator('.pkr-pro-member').filter({hasText:'Jordan Lee'}).locator('.pkr-pro-member-avatar');
        if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard not displaying member avatar_url');
@@ -336,6 +344,12 @@ async function test(){
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
        if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
+       const share=page.locator('#gameScreen .share-btn');
+       if(await share.count()){
+         const shareColour=await share.first().evaluate(el=>getComputedStyle(el).backgroundColor);
+         if(shareColour!=='rgb(239, 137, 118)')
+           errors.push(size.name+' live game Share control retains gold: '+shareColour);
+       }
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
