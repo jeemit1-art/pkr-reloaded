@@ -1,0 +1,57 @@
+name: Generate public demo screenshots from synthetic PKR tests
+
+on:
+  push:
+    branches:
+      - codex/pkr-actual-product-home-20261027
+    paths:
+      - '.github/workflows/pkr-product-screenshots.yml'
+      - 'frontend/scripts/publish-demo-shots.cjs'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  product-demo-screenshots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install pinned Next.js dependencies (sharp included)
+        working-directory: frontend
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Retrieve synthetic test screenshot artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkr-synthetic-capture"
+          gh run download 40403274702 \
+            --repo jeemit1-art/pkr-reloaded \
+            --name pkr-viewport-smoke \
+            --dir "$RUNNER_TEMP/pkr-synthetic-capture"
+          test -f "$RUNNER_TEMP/pkr-synthetic-capture/desktop-live-table.png"
+          test -f "$RUNNER_TEMP/pkr-synthetic-capture/phone-insights.png"
+      - name: Generate compressed app product screenshots
+        working-directory: frontend
+        run: node scripts/publish-demo-shots.cjs "$RUNNER_TEMP/pkr-synthetic-capture"
+      - name: Commit only safe demo screenshots to this release branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/codex/pkr-actual-product-home-20261027"
+          git config user.name "PKR Screenshot Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/demo/
+          if git diff --cached --quiet; then
+            echo "Product screenshot assets already up to date"
+          else
+            git commit -m "assets: publish synthetic-only real PKR app screenshots"
+            git push origin HEAD:refs/heads/codex/pkr-actual-product-home-20261027
+          fi

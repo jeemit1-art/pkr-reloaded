@@ -87,6 +87,41 @@ async function test(){
       if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
+      // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
+      const actualHero=guestPage.locator('.pkr-hero-desktop img');
+      await actualHero.waitFor({state:'visible',timeout:10000});
+      await actualHero.evaluate(async img=>{
+        if(img instanceof HTMLImageElement)await img.decode().catch(()=>{});
+      });
+      const actualHeroOk=await actualHero.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>1000);
+      if(!actualHeroOk)errors.push(size.name+' real live-table hero screenshot missing');
+      if(await guestPage.locator('.pkr-proof-card img').count()!==3)
+        errors.push(size.name+' product screenshot proof cards missing');
+      if(await guestPage.locator('.pkr-mobile-device img').count()!==3)
+        errors.push(size.name+' authentic mobile screenshot gallery missing');
+      const tabs=guestPage.getByRole('tablist',{name:'PKR app features'});
+      if(await tabs.getByRole('tab').count()!==6)
+        errors.push(size.name+' product tour must show all six actual app features');
+      await tabs.getByRole('tab',{name:/Insights & settlement/i}).click();
+      const insightsImage=guestPage.locator('#pkr-tour-panel picture img');
+      await insightsImage.waitFor({state:'visible',timeout:10000});
+      const selectedImage=await insightsImage.getAttribute('src');
+      if(selectedImage!=='/demo/insights.webp')
+        errors.push(size.name+' interactive product tour did not switch to Insights screenshot');
+      await tabs.getByRole('tab',{name:/Live poker table/i}).click();
+      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/live-table.webp')
+        errors.push(size.name+' interactive product tour did not switch back to live table');
+      const productWidth=await guestPage.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
+      if(productWidth.scroll>productWidth.viewport+5)
+        errors.push(size.name+' product screenshot gallery introduces horizontal overflow');
+      if(size.name==='desktop'){
+        for(const asset of ['/demo/live-table.webp','/demo/host-dashboard.webp','/demo/rsvp-board.webp','/demo/insights.webp','/demo/mobile-live-table.webp']){
+          const response=await guestPage.request.get(BASE+asset);
+          if(!response.ok()||(await response.body()).length<10000)
+            errors.push('Real product screenshot not available: '+asset);
+        }
+      }
+
       await guestPage.getByRole('button',{name:/Host sign in/i}).first().click();
       await guestPage.getByRole('dialog',{name:'Host sign in'}).waitFor({state:'visible'});
       await guestPage.keyboard.press('Escape');

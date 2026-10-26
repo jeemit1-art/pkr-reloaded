@@ -11,6 +11,7 @@ import './pkr-interaction-refresh.css';
 import './pkr-standings.css';
 import './pkr-landing-premium.css';
 import './pkr-marketing-pages.css';
+import './pkr-product-gallery.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
