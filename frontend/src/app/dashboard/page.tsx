@@ -154,18 +154,32 @@ function DashboardInner() {
           if (code?.data) {
             found = true;
             stream.getTracks().forEach(t=>t.stop());
-            const url = code.data;
-            const match = url.match(/\/invite\/([a-zA-Z0-9_-]+)/);
-            if (match) {
-              setScanStatus('Joining event...');
-              try {
-                const result = await api.events.redeemInvite(match[1]);
-                if (result?.event?.id) {
-                  setScanStatus('✅ Joined ' + (result.event.name||'event') + '! Taking you there...');
-                  setTimeout(() => { setShowScanner(false); router.push('/events/' + result.event.id); }, 2000);
-                }
-              } catch(e) { setScanStatus('Invalid or expired invite.'); setScanning(false); }
-            } else { setScanStatus('Not a valid PKR invite QR code.'); setScanning(false); }
+            const value = code.data.trim();
+            try {
+              const parsed = new URL(value,window.location.origin);
+              if(parsed.origin!==window.location.origin)throw new Error('Not a PKR invitation');
+              const phone=parsed.pathname.match(/^\/phone-invite\/([a-zA-Z0-9_-]+)\/?$/);
+              const email=parsed.pathname.match(/^\/invite\/([a-zA-Z0-9_-]+)\/?$/);
+              if(phone){
+                // Personal QR codes must go through the explicit host-approval
+                // flow, never the legacy immediate membership redemption API.
+                setScanStatus('Opening your private join request…');
+                setShowScanner(false);setScanning(false);
+                router.push('/phone-invite/'+encodeURIComponent(phone[1]));
+              }else if(email){
+                setScanStatus('Checking the invited account…');
+                try{
+                  const result=await api.events.redeemInvite(email[1]);
+                  if(result?.event?.id){
+                    setScanStatus('Invite accepted. Opening your poker room…');
+                    setTimeout(()=>{setShowScanner(false);router.push('/events/'+result.event.id);},800);
+                  }else{setScanStatus('Invitation unavailable.');setScanning(false);}
+                }catch{setScanStatus('This invite is expired or for another account.');setScanning(false);}
+              }else throw new Error('Not a supported PKR invite');
+            }catch{
+              setScanStatus('Not a valid PKR invitation QR. Ask your host for a personal invite.');
+              setScanning(false);
+            }
             return;
           }
         }
