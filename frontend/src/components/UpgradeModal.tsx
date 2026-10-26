@@ -34,7 +34,7 @@ export default function UpgradeModal() {
   useEffect(() => {
     if (open) {
       api.billing.plan().then(p => {
-        setHasSubscription(p.has_payment && (p.plan === 'starter' || p.plan === 'pro'));
+        setHasSubscription(p.is_active && p.has_payment && (p.plan === 'starter' || p.plan === 'pro'));
       }).catch(() => {});
     }
   }, [open]);
