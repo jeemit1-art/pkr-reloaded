@@ -506,13 +506,13 @@ export default function EventPage() {
                 <div className="pkr-host-push-overview" aria-label="Member notification registrations">
                   <div className="pkr-host-push-overview-head">
                     <div>
-                      <strong>Room members' notification devices</strong>
+                      <strong>Notification setup (not member availability)</strong>
                       <p>
                         {pushRegistrationLoading?'Checking registrations…'
-                          :pushRegistrationError?'Registration status unavailable'
+                          :pushRegistrationError?'Unable to check notification registrations'
                           :pushRegistrationStatus
                             ?(event.members||[]).filter((member:any)=>(pushRegistrationStatus[member.id]||0)>0).length+
-                              ' of '+(event.members||[]).length+' members have a registered device'
+                              ' of '+(event.members||[]).length+' members have a registered notification device'
                             :'Not checked yet'}
                       </p>
                     </div>
@@ -522,7 +522,7 @@ export default function EventPage() {
                     </button>
                   </div>
                   {pushRegistrationError&&<p role="alert" className="pkr-host-push-error">{pushRegistrationError}</p>}
-                  <p className="pkr-host-push-disclaimer">Registered means a device subscribed to this room. It does not guarantee notifications are currently enabled in phone settings or will be delivered. Pending invitations are not yet members.</p>
+                  <p className="pkr-host-push-disclaimer">A missing registration does not mean the player is unavailable or has declined the game. It only means this room has no recorded notification device for them. RSVP attendance is tracked separately. Registration does not guarantee delivery.</p>
                 </div>
               )}
             </section>
