@@ -127,7 +127,7 @@ async function test(){
       await guestPage.keyboard.press('Escape');
       if(await guestPage.getByRole('dialog',{name:'Host sign in'}).count())
         errors.push(size.name+' landing host sign-in dialog did not close');
-      await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:false});
+      await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:(size.name==='desktop'||size.name==='phone')});
       if(size.name==='phone'||size.name==='desktop'){
         for(const route of ['/pricing','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement']){
           await guestPage.goto(BASE+route,{waitUntil:'domcontentloaded',timeout:40000});
