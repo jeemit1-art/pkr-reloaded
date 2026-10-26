@@ -1,9 +1,17 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { authMiddleware, requireEventRole, generateId } from '../middleware';
+import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import {calculateTournamentPayouts,TournamentPayoutError} from '../tournament-payouts';
 
 const tournament = new Hono<{ Bindings: Env }>();
+
+async function checkProHost(c:any, eventId:string):Promise<boolean>{
+  const group=await c.env.DB.prepare('SELECT host_id FROM events WHERE id=?')
+    .bind(eventId).first<{host_id:string}>();
+  if(!group?.host_id)return false;
+  const status=await getPlanStatus(c.env.DB,group.host_id);
+  return status.is_active&&(status.plan==='pro'||status.plan==='lifetime');
+}
 
 async function getGameAndVerify(c: any, gameId: string) {
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first();
@@ -51,6 +59,9 @@ tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
   const gameId=c.req.param('id');
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
+  if(!await checkProHost(c,game.event_id))
+    return c.json({error:'An active Pro subscription is required for new tournament sessions.',
+      code:'UPGRADE_REQUIRED',feature:'tournament'},402);
   if(game.status==='settled'||game.status==='cancelled')
     return c.json({error:'Game is closed'},409);
   const current=await c.env.DB.prepare(
