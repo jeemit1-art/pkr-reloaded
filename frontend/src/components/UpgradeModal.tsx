@@ -137,7 +137,7 @@ export default function UpgradeModal() {
             To {blockedFeature}, choose a plan
           </div>
           <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', fontFamily:'DM Sans,sans-serif', lineHeight:1.6}}>
-            {detail.error || 'Start a 5-day free trial — no credit card required.'}
+            {detail.error || 'A paid host subscription is required to create rooms and schedule games.'}
           </div>
         </div>
 
@@ -171,7 +171,7 @@ export default function UpgradeModal() {
                   onClick={() => checkout('starter')}
                   disabled={!!loading}
                 >
-                  {loading==='starter' ? 'Redirecting…' : 'Start 5-Day Free Trial →'}
+                  {loading==='starter' ? 'Redirecting…' : 'Subscribe →'}
                 </button>
               </div>
 
@@ -193,7 +193,7 @@ export default function UpgradeModal() {
                   onClick={() => checkout('pro')}
                   disabled={!!loading}
                 >
-                  {loading==='pro' ? 'Redirecting…' : 'Start 5-Day Free Trial →'}
+                  {loading==='pro' ? 'Redirecting…' : 'Subscribe →'}
                 </button>
               </div>
 
@@ -201,7 +201,7 @@ export default function UpgradeModal() {
                 fontSize:11, color:'rgba(255,255,255,0.3)', textAlign:'center',
                 fontFamily:'DM Sans,sans-serif', marginTop:8, lineHeight:1.6,
               }}>
-                No credit card required for trial · Cancel anytime · AUD pricing
+                Paid monthly subscription · Cancel anytime · AUD pricing
               </div>
             </>
           )}
