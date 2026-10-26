@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
+import {ProductTour,MobileProductShowcase} from '@/components/ProductShowcase';
 
 const steps = [
   {number:'01',symbol:'♠',title:'Create your private room',detail:'Keep your regular players, hosts and upcoming games together.'},
@@ -33,11 +34,6 @@ const structuredData = {
   ]
 };
 
-const previewGuests = [
-  {initials:'AJ',name:'Alex',note:'7:00 pm',kind:'yes'},
-  {initials:'RM',name:'Riley',note:'8:00 pm',kind:'yes'},
-  {initials:'SK',name:'Sam',note:'Running late',kind:'late'},
-];
 
 export default function HomePage() {
   const router = useRouter();
@@ -109,7 +105,7 @@ export default function HomePage() {
         <div className="pkr-l2-nav-inner">
           <a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem" aria-hidden="true">♠</span><span>PKR<small>PRIVATE POKER CLUB</small></span></a>
           <nav className="pkr-l2-navlinks" aria-label="Landing page">
-            <a href="#features">The experience</a>
+            <a href="#product-tour">See the app</a>
             <a href="#how-it-works">How it works</a>
             <a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
           </nav>
@@ -126,27 +122,25 @@ export default function HomePage() {
           <div className="pkr-l2-hero-vignette" aria-hidden="true"/>
           <div className="pkr-l2-hero-inner">
             <div className="pkr-l2-hero-copy">
-              <span className="pkr-l2-eyebrow"><i/> YOUR HOME POKER GAME, SORTED</span>
-              <h1 id="pkr-l2-main-heading">Spend less time<br/>keeping score.<br/><em>More time playing.</em></h1>
-              <p>Host cash games and tournaments, record buy-ins and rebuys, track every player and settle up with confidence. All your home poker nights, in one place.</p>
+              <span className="pkr-l2-eyebrow"><i/> THE PRIVATE HOME GAME · MADE SIMPLE</span>
+              <h1 id="pkr-l2-main-heading">Run your poker night.<br/><em>Not a spreadsheet.</em></h1>
+              <p>Plan the night, invite your players, run the table, manage tournaments and settle the results. See exactly how PKR works in the real app screens below.</p>
               <div className="pkr-l2-hero-actions">
                 <button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start hosting with PKR <span aria-hidden="true">↗</span></button>
-                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#features">Explore PKR <span aria-hidden="true">↓</span></a>
+                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">See PKR in action <span aria-hidden="true">↓</span></a>
               </div>
               <div className="pkr-l2-hero-trust"><span>♠ Private groups</span><span>♣ Live game tracking</span><span>♛ Clear settlements</span></div>
             </div>
 
-            <div className="pkr-l2-preview" aria-label="Illustrative poker night RSVP preview">
-              <div className="pkr-l2-preview-head"><span><i/> TONIGHT'S GAME</span><span>PRIVATE ROOM</span></div>
-              <div className="pkr-l2-preview-title"><span>FRIDAY NIGHT POKER</span><strong>Everyone's in the loop.</strong><small>Friday · 7:00 PM</small></div>
-              <div className="pkr-l2-preview-counts"><div><strong>06</strong><span>Coming</span></div><div><strong>02</strong><span>Arriving late</span></div><div><strong>03</strong><span>Seats free</span></div></div>
-              <div className="pkr-l2-preview-subheading">ARRIVAL BOARD <span>Example</span></div>
-              {previewGuests.map(guest=><div className="pkr-l2-preview-guest" key={guest.name}>
-                <span className="pkr-l2-preview-avatar">{guest.initials}</span>
-                <span><strong>{guest.name}</strong><small>{guest.note}</small></span>
-                <span className={'pkr-l2-preview-guest-status '+guest.kind}>{guest.kind==='late'?'LATE':'GOING'}</span>
-              </div>)}
-              <div className="pkr-l2-preview-footer">♠ Table set. Your people are on their way.</div>
+            <div className="pkr-hero-real" aria-label="Real PKR desktop poker table and mobile Insights screens, with demo data">
+              <div className="pkr-hero-desktop">
+                <div className="pkr-hero-desktop-header"><span>PKR · THE LIVE TABLE</span><span>REAL APP SCREEN</span></div>
+                <img src="/demo/live-table.webp" alt="Actual PKR green felt oval poker table with host controls and eight player seats, sample data" width="1440" height="900" fetchPriority="high"/>
+              </div>
+              <div className="pkr-hero-mobile" aria-hidden="true">
+                <img src="/demo/mobile-insights.webp" alt="" width="390" height="844" loading="eager"/>
+              </div>
+              <div className="pkr-hero-real-label"><i aria-hidden="true"/> REAL PKR SCREENS · SAMPLE DATA</div>
             </div>
           </div>
           <span className="pkr-l2-hero-annotation">HOME POKER TRACKING · CASH GAMES · TOURNAMENTS · SETTLEMENTS</span>
@@ -158,6 +152,8 @@ export default function HomePage() {
           <div><span className="pkr-l2-ribbon-icon">03</span><strong>After the game</strong><small>Results · Balances · History</small></div>
         </section>
 
+        <ProductTour />
+
         <section id="features" className="pkr-l2-section pkr-l2-feature-intro">
           <div className="pkr-l2-intro-copy">
             <span className="pkr-l2-section-kicker">THE PKR EXPERIENCE</span>
@@ -165,47 +161,37 @@ export default function HomePage() {
             <p>A good game should not end with missing buy-ins or an argument over payouts. Keep player records, arrivals, tournament blinds, results and settlement together.</p>
             <div className="pkr-l2-intro-highlights"><span><b>✓</b> Private room management</span><span><b>✓</b> Cash games and tournaments</span><span><b>✓</b> Full player history</span></div>
           </div>
-          <div className="pkr-l2-feature-photo">
-            <img src="/images/pkr-approved-hero-desktop.webp" alt="Illustrated dark green poker felt with gold casino details" loading="lazy" decoding="async"/>
-            <div className="pkr-l2-photo-overlay"><span>THE TABLE</span><strong>All the atmosphere.<br/>None of the chaos.</strong><small>PKR approved poker artwork</small></div>
+          <div className="pkr-feature-photo-real">
+            <img src="/demo/host-dashboard.webp" alt="Actual PKR host dashboard showing a private poker room, upcoming games, members and results using sample data" width="1225" height="845" loading="lazy" decoding="async"/>
+            <span>THE HOST DASHBOARD · ACTUAL APP SCREEN</span>
           </div>
         </section>
 
         <section className="pkr-l2-section pkr-l2-features">
           <div className="pkr-l2-section-heading">
-            <span className="pkr-l2-section-kicker">DESIGNED FOR EVERY STAGE OF THE NIGHT</span>
+            <span className="pkr-l2-section-kicker">NOT CONCEPT ART — REAL PRODUCT SCREENS</span>
             <h2>From first buy-in<br/><em>to final result.</em></h2>
-            <p>Useful tools that feel like part of the game, not another job for the host.</p>
+            <p>Screenshots from PKR itself. Every player and balance shown is fictional demonstration data.</p>
           </div>
           <div className="pkr-l2-feature-grid">
             <article className="pkr-l2-feature-card">
-              <div className="pkr-l2-feature-visual pkr-l2-rsvp-illustration" aria-label="Example guest arrival and seating board">
-                <div className="pkr-l2-demo-mini-label">FRIDAY NIGHT · RSVP BOARD <span>● LIVE</span></div>
-                <div className="pkr-l2-demo-avatar-row"><span>AJ</span><span>RM</span><span>SK</span><span>+3</span></div>
-                <div className="pkr-l2-demo-arrival"><span>7:00 pm</span><strong>✓ Confirmed</strong></div>
-                <div className="pkr-l2-demo-seats"><i>01</i><i>02</i><i className="empty">03</i><i>04</i><i className="empty">05</i></div>
-                <small>Illustrative preview</small>
+              <div className="pkr-real-feature-image">
+                <img src="/demo/rsvp-board.webp" alt="Real PKR RSVP screen with private room invitations and response choices" width="1225" height="845" loading="lazy" decoding="async"/>
+                <span>REAL RSVP SCREEN · SAMPLE DATA</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>01 / BEFORE</span><h3>Know who&apos;s coming.</h3><p>Collect RSVPs and arrival times, offer available seats and stop chasing the group chat.</p></div>
             </article>
             <article className="pkr-l2-feature-card">
-              <div className="pkr-l2-feature-visual pkr-l2-tourney-illustration" aria-label="Example tournament blind stages">
-                <div className="pkr-l2-demo-mini-label">TOURNAMENT CONTROL <span>LEVEL 04</span></div>
-                <div className="pkr-l2-tourney-time">12:45 <small>REMAINING</small></div>
-                <div className="pkr-l2-blind-pair"><div><small>SMALL BLIND</small><strong>100</strong></div><div><small>BIG BLIND</small><strong>200</strong></div></div>
-                <div className="pkr-l2-tourney-next">NEXT LEVEL <b>150 / 300</b></div>
-                <small>Illustrative preview</small>
+              <div className="pkr-real-feature-image">
+                <img src="/demo/game-detail.webp" alt="Real PKR game details screen showing a scheduled game and Start Game controls" width="1225" height="845" loading="lazy" decoding="async"/>
+                <span>REAL GAME SETUP SCREEN · SAMPLE DATA</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>02 / DURING</span><h3>Run a better game.</h3><p>Keep buy-ins, player seating, blind levels and tournament progress together.</p></div>
             </article>
             <article className="pkr-l2-feature-card">
-              <div className="pkr-l2-feature-visual pkr-l2-results-illustration" aria-label="Example settled poker results">
-                <div className="pkr-l2-demo-mini-label">ROOM INSIGHTS <span>SETTLED</span></div>
-                <div className="pkr-l2-result-line"><span>Alex</span><i><b style={{width:'87%'}}/></i><strong>+$240</strong></div>
-                <div className="pkr-l2-result-line"><span>Riley</span><i><b style={{width:'53%'}}/></i><strong>+$145</strong></div>
-                <div className="pkr-l2-result-line"><span>Sam</span><i><b className="down" style={{width:'30%'}}/></i><strong className="down">−$85</strong></div>
-                <div className="pkr-l2-results-footer">History. Rankings. A clear record.</div>
-                <small>Illustrative preview</small>
+              <div className="pkr-real-feature-image">
+                <img src="/demo/insights.webp" alt="Real PKR Insights screen showing demo game totals, player balances and settlement records" width="1225" height="845" loading="lazy" decoding="async"/>
+                <span>REAL INSIGHTS SCREEN · SAMPLE DATA</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>03 / AFTER</span><h3>Finish with clarity.</h3><p>Record cash-outs, review settlements and see every recorded player&apos;s results.</p></div>
             </article>
@@ -225,13 +211,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="pkr-l2-section pkr-l2-gallery" id="game-night">
-          <div className="pkr-l2-gallery-image"><img src="/images/pkr-approved-hero-mobile.webp" alt="PKR's approved poker table art in its mobile composition" loading="lazy" decoding="async"/><span>DESIGNED FOR THE TABLE AND YOUR PHONE</span></div>
-          <div className="pkr-l2-gallery-copy"><span className="pkr-l2-section-kicker">YOUR POKER ROOM, ANYWHERE</span><h2>Made for your<br/><em>Friday-night ritual.</em></h2><p>Set up the evening on your laptop. Check arrivals on your phone. Take the whole game to the table without losing the room, the players or the record.</p><a className="pkr-l2-btn pkr-l2-btn-outline" href="/install">See how to install PKR <span aria-hidden="true">↗</span></a></div>
-        </section>
+        <MobileProductShowcase />
 
         <section id="pricing" className="pkr-l2-section pkr-l2-pricing">
-          <div className="pkr-l2-section-heading"><span className="pkr-l2-section-kicker">STRAIGHTFORWARD HOST PRICING · PLAYERS JOIN FREE</span><h2>Try the workflow.<br/><em>Choose your host plan.</em></h2><p>One host subscription gives your private group a place to play. Members never need a separate hosting plan to join.</p></div>
+          <div className="pkr-l2-section-heading"><span className="pkr-l2-section-kicker">STRAIGHTFORWARD HOST PRICING · PLAYERS JOIN FREE</span><h2>Seen the app?<br/><em>Make it your game.</em></h2><p>One host subscription gives your private group a place to play. Members never need a separate hosting plan to join.</p></div>
           <div className="pkr-l2-plan-grid">
             <article className="pkr-l2-plan"><span className="pkr-l2-plan-name">STARTER</span><h3>Make every game night count.</h3><div className="pkr-l2-price">$9.99 <small>AUD / month</small></div><p>For one regular private poker group.</p><ul><li>One active poker group</li><li>Up to 9 seats</li><li>Scheduling, RSVPs and core game tracking</li><li>Results, balances and room history</li></ul><button type="button" className="pkr-l2-btn pkr-l2-btn-outline" onClick={()=>choosePlan('starter')}>Choose Starter <span aria-hidden="true">↗</span></button></article>
             <article className="pkr-l2-plan pkr-l2-plan-featured"><span className="pkr-l2-plan-badge">FOR THE REGULAR HOST</span><span className="pkr-l2-plan-name">PRO</span><h3>Everything your poker crew needs.</h3><div className="pkr-l2-price">$19.99 <small>AUD / month</small></div><p>More room for bigger games and more groups.</p><ul><li>Multiple poker groups</li><li>Up to 15 seats</li><li>Advanced game-night controls</li><li>Room history and player performance</li></ul><button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>choosePlan('pro')}>Choose Pro <span aria-hidden="true">↗</span></button></article>

@@ -1,0 +1,292 @@
+/* True PKR app screenshots and visual product tour.
+   Never style the actual poker table, game HTML, room screen or authenticated app. */
+.pkr-landing-v2 .pkr-hero-real{
+ position:relative;isolation:isolate;min-width:0;width:min(100%,675px);
+ justify-self:end;padding:12px 15px 62px 0;
+ filter:drop-shadow(0 32px 48px #010d088c);
+}
+.pkr-landing-v2 .pkr-hero-real::before{
+ content:"";position:absolute;z-index:-1;inset:4% -3% 9% 2%;
+ border-radius:40%;background:radial-gradient(ellipse at 50% 50%,#a8793e35,transparent 65%);
+ filter:blur(20px);
+}
+.pkr-landing-v2 .pkr-hero-desktop{
+ background:linear-gradient(150deg,#183b2a,#071a15);
+ border:1px solid #e5c67b9f;border-radius:16px;padding:5px;
+ box-shadow:0 0 0 1px #dcb77029,0 19px 75px #000a,0 0 65px #efbd5530;overflow:hidden;
+}
+.pkr-landing-v2 .pkr-hero-desktop-header{
+ min-height:29px;display:flex;justify-content:space-between;align-items:center;
+ padding:6px 12px;color:#d5dccc;font:800 9px var(--font-landing-body),sans-serif;letter-spacing:.08em;
+}
+.pkr-landing-v2 .pkr-hero-desktop-header span:first-child::before{
+ content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#6fecb2;
+ margin-right:9px;box-shadow:0 0 0 3px #52d79b25;
+}
+.pkr-landing-v2 .pkr-hero-desktop img {display:block;width:100%;height:auto;aspect-ratio:8/5;object-fit:cover;object-position:center;border-radius:8px}
+.pkr-landing-v2 .pkr-hero-mobile{
+ position:absolute;right:-10px;bottom:10px;z-index:3;width:clamp(107px,16vw,169px);
+ aspect-ratio:390/844;overflow:hidden;padding:7px 5px 8px;background:#09150f;
+ border:3px solid #bfa36c;border-radius:25px;box-shadow:0 22px 38px #000b,0 0 0 3px #121a13;
+ transform:rotate(5deg);
+}
+.pkr-landing-v2 .pkr-hero-mobile::before{
+ content:"";position:absolute;z-index:2;top:5px;left:35%;width:30%;height:9px;
+ border-radius:0 0 9px 9px;background:#050909;
+}
+.pkr-landing-v2 .pkr-hero-mobile img {display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:16px}
+.pkr-landing-v2 .pkr-hero-real-label{
+ position:absolute;left:18px;bottom:15px;padding:9px 15px;display:flex;align-items:center;gap:9px;
+ color:#ffe5b1;background:#0c291eef;border:1px solid #d4b26994;border-radius:50px;
+ font:800 10px var(--font-landing-body),sans-serif;letter-spacing:.07em;white-space:nowrap;
+ box-shadow:0 5px 18px #0007;
+}
+.pkr-landing-v2 .pkr-hero-real-label i{width:7px;height:7px;border-radius:50%;background:#66edad;box-shadow:0 0 0 3px #66edad1c}
+
+/* Standalone, screenshot-forward marketing product tour. */
+.pkr-landing-v2 .pkr-product-tour{
+ background:radial-gradient(ellipse 50% 50% at 10% 35%,#164b2c66,transparent 65%),linear-gradient(180deg,#081a14,#102b1d 60%,#071b15);
+ border-top:1px solid #d8b46d44;border-bottom:1px solid #d8b46d44;
+ padding:93px clamp(20px,4vw,64px) 98px;
+}
+.pkr-landing-v2 .pkr-product-tour-header{max-width:840px;margin:0 auto 35px;text-align:center}
+.pkr-landing-v2 .pkr-tour-overline{
+ color:#efca83;letter-spacing:.18em;font:850 11px/1.5 var(--font-landing-body),Arial,sans-serif;
+ text-transform:uppercase;
+}
+.pkr-landing-v2 .pkr-tour-overline>span{color:#72e9a9;letter-spacing:0;margin-right:6px}
+.pkr-landing-v2 .pkr-product-tour-header h2{
+ font:790 clamp(36px,5vw,62px)/1.06 var(--font-landing-display),Arial,sans-serif;
+ letter-spacing:-.048em;color:#fff4df;margin:17px 0;
+}
+.pkr-landing-v2 .pkr-product-tour-header h2 em{color:#f1c879;font-style:normal}
+.pkr-landing-v2 .pkr-product-tour-header>p{font-size:15px;line-height:1.7;color:#c9dbc8;max-width:640px;margin:0 auto}
+.pkr-landing-v2 .pkr-tour-tabs{
+ max-width:1300px;margin:0 auto 16px;display:flex;gap:7px;align-items:center;
+ overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#b3925b transparent;
+ padding:5px 2px 13px;
+}
+.pkr-landing-v2 .pkr-tour-tab{
+ flex:1 0 auto;min-height:49px;background:#102a1e;border:1px solid #4d684f;
+ color:#becfbe;border-radius:10px;padding:11px 13px;
+ font:800 12px var(--font-landing-body),sans-serif;letter-spacing:-.015em;white-space:nowrap;
+ display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:background .18s,color .18s,border-color .18s;
+}
+.pkr-landing-v2 .pkr-tour-tab>span{font-size:10px;color:#9fae9f;letter-spacing:.06em}
+.pkr-landing-v2 .pkr-tour-tab:hover{background:#1a412b;border-color:#e4b96e}
+.pkr-landing-v2 .pkr-tour-tab.selected{
+ background:#eac27a;color:#0c2116;border-color:#ffe3a6;box-shadow:0 3px 21px #dea94f36;
+}
+.pkr-landing-v2 .pkr-tour-tab.selected>span{color:#344b36}
+.pkr-landing-v2 .pkr-tour-panel{
+ position:relative;max-width:1300px;margin:0 auto;display:grid;grid-template-columns:minmax(260px,.68fr) minmax(0,1.35fr);
+ gap:clamp(26px,3.5vw,54px);align-items:stretch;min-height:535px;
+ border:1px solid #d0b17b79;border-radius:22px;padding:clamp(20px,3vw,45px);
+ background:linear-gradient(115deg,#0e3322,#071d17 65%);
+ box-shadow:0 26px 67px #0006;overflow:hidden;
+}
+.pkr-landing-v2 .pkr-tour-panel::before{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(ellipse 70% 55% at 90% 30%,#bf984423,transparent 80%);
+}
+.pkr-landing-v2 .pkr-tour-copy{z-index:1;align-self:center;min-width:0;max-width:500px}
+.pkr-landing-v2 .pkr-tour-copy h3{
+ font:780 clamp(31px,3.25vw,49px)/1.08 var(--font-landing-display),Arial,sans-serif;
+ color:#fff5dd;letter-spacing:-.042em;margin:18px 0 18px;
+}
+.pkr-landing-v2 .pkr-tour-copy p{color:#c8dace;font-size:14px;line-height:1.76;margin:0 0 20px}
+.pkr-landing-v2 .pkr-tour-copy ul{display:grid;gap:13px;list-style:none;padding:0;margin:25px 0}
+.pkr-landing-v2 .pkr-tour-copy li{display:flex;align-items:flex-start;gap:10px;color:#e1eae0;font-size:12px;line-height:1.55}
+.pkr-landing-v2 .pkr-tour-copy li>span{color:#77e8b0;font-weight:900;flex:none}
+.pkr-landing-v2 .pkr-tour-cta{
+ color:#102519!important;background:linear-gradient(125deg,#ffe5a5,#e7bb67);
+ min-height:48px;display:inline-flex;align-items:center;justify-content:space-between;gap:33px;
+ border-radius:10px;text-decoration:none;padding:12px 16px;font:850 12px var(--font-landing-body),sans-serif;
+ box-shadow:0 9px 25px #e2b45d18;transition:transform .15s;
+}
+.pkr-landing-v2 .pkr-tour-cta:hover{transform:translateY(-2px)}
+.pkr-landing-v2 .pkr-tour-cta span{font-size:17px}
+.pkr-landing-v2 .pkr-tour-nav{margin-top:32px;display:flex;align-items:center;gap:15px;color:#d3c7a2;font-size:11px}
+.pkr-landing-v2 .pkr-tour-nav button{
+ width:37px;height:37px;background:#16432d;border:1px solid #a98e5970;color:#f1d99d;
+ border-radius:50%;font-size:19px;display:grid;place-items:center;
+}
+.pkr-landing-v2 .pkr-tour-nav button:hover{background:#296042}
+.pkr-landing-v2 .pkr-tour-nav span{letter-spacing:.11em;font-weight:800}
+.pkr-landing-v2 .pkr-tour-nav b{font-weight:400;color:#809f87}
+.pkr-landing-v2 .pkr-tour-visual{
+ z-index:1;position:relative;min-width:0;max-height:660px;align-self:center;
+ background:#07140f;border:1px solid #bba06c;border-radius:15px;overflow:hidden;
+ box-shadow:0 17px 62px #0009,0 0 0 3px #d7b86e1a;
+}
+.pkr-landing-v2 .pkr-tour-screen-top{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ min-height:32px;background:linear-gradient(110deg,#173525,#0e1e19);
+ border-bottom:1px solid #dac38337;padding:6px 12px;color:#c9d5be;
+ font:800 9px var(--font-landing-body),sans-serif;letter-spacing:.07em;
+}
+.pkr-landing-v2 .pkr-tour-screen-top>span:last-child{color:#8aedba;white-space:nowrap}
+.pkr-landing-v2 .pkr-tour-browser-dots{display:flex;gap:5px}
+.pkr-landing-v2 .pkr-tour-browser-dots i{width:7px;height:7px;background:#c4a468;border-radius:50%;opacity:.8}
+.pkr-landing-v2 .pkr-tour-browser-dots i:nth-child(2){background:#789d82}
+.pkr-landing-v2 .pkr-tour-browser-dots i:nth-child(3){background:#56d6a1}
+.pkr-landing-v2 .pkr-tour-visual picture{display:block;min-width:0}
+.pkr-landing-v2 .pkr-tour-visual picture img{
+ display:block;width:100%;height:auto;object-fit:contain;object-position:top center;
+ min-width:0;max-height:610px;
+}
+.pkr-landing-v2 .pkr-tour-sample-note{
+ display:flex;gap:8px;justify-content:center;align-items:center;background:#0a2118;
+ border-top:1px solid #6f94613c;min-height:28px;padding:7px 12px;
+ color:#c3cdb5;font:800 9px var(--font-landing-body),sans-serif;letter-spacing:.09em;
+}
+.pkr-landing-v2 .pkr-tour-sample-note>span:first-child{color:#86e5ab}
+.pkr-landing-v2 .pkr-product-proof{
+ max-width:1300px;margin:23px auto 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px;
+}
+.pkr-landing-v2 .pkr-proof-card{
+ display:block;min-width:0;overflow:hidden;color:#e7f0df!important;text-decoration:none;
+ border:1px solid #b89f6970;background:#0a2118;border-radius:15px;
+ box-shadow:0 12px 38px #0003;transition:transform .2s,border-color .2s;
+}
+.pkr-landing-v2 .pkr-proof-card:hover{transform:translateY(-4px);border-color:#f3c67a}
+.pkr-landing-v2 .pkr-proof-card-image{height:clamp(145px,16vw,227px);overflow:hidden;background:#10281e;border-bottom:1px solid #dbc17e3c}
+.pkr-landing-v2 .pkr-proof-card-image img{width:100%;height:100%;object-fit:cover;object-position:50% 10%;display:block}
+.pkr-landing-v2 .pkr-proof-card-copy{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:19px}
+.pkr-landing-v2 .pkr-proof-card-copy>div{display:grid;gap:7px;min-width:0}
+.pkr-landing-v2 .pkr-proof-card-copy span:not(.pkr-proof-card-arrow){font:800 9px var(--font-landing-body),sans-serif;letter-spacing:.11em;color:#d5b878}
+.pkr-landing-v2 .pkr-proof-card-copy strong{font:750 clamp(15px,1.5vw,20px)/1.1 var(--font-landing-display),Arial,sans-serif;letter-spacing:-.02em}
+.pkr-landing-v2 .pkr-proof-card-arrow{
+ display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:50%;
+ border:1px solid #d6af6d74;color:#f6d28c;font-size:18px;
+}
+
+/* Real screenshot tiles inside existing benefits/feature cards. */
+.pkr-landing-v2 .pkr-real-feature-image{
+ position:relative;min-height:235px;aspect-ratio:1.54;overflow:hidden;background:#0a2118;
+ border-bottom:1px solid #d4ab6942;
+}
+.pkr-landing-v2 .pkr-real-feature-image img{
+ display:block;width:100%;height:100%;object-fit:cover;object-position:50% 20%;
+}
+.pkr-landing-v2 .pkr-real-feature-image::after{
+ content:"";position:absolute;inset:auto 0 0;height:50px;
+ background:linear-gradient(0deg,#07150fee,transparent);pointer-events:none;
+}
+.pkr-landing-v2 .pkr-real-feature-image>span{
+ position:absolute;z-index:1;bottom:10px;left:14px;display:inline-flex;align-items:center;
+ gap:5px;color:#f7ddb5;font:800 9px var(--font-landing-body),sans-serif;
+ letter-spacing:.1em;text-shadow:0 2px 4px #000b;
+}
+.pkr-landing-v2 .pkr-real-feature-image>span::before{content:"●";color:#65e9a4}
+
+/* Phone / tablet app showcase */
+.pkr-landing-v2 .pkr-mobile-product-showcase{
+ max-width:none;background:#0b2119;padding:90px clamp(20px,4vw,65px) 106px;
+ border-top:1px solid #dfba7948;border-bottom:1px solid #dfba7948;
+}
+.pkr-landing-v2 .pkr-mobile-product-intro{max-width:850px;text-align:center;margin:0 auto 42px}
+.pkr-landing-v2 .pkr-mobile-product-intro h2{
+ font:780 clamp(38px,5vw,60px)/1.08 var(--font-landing-display),Arial,sans-serif;
+ letter-spacing:-.045em;margin:17px 0;color:#fff1d7;
+}
+.pkr-landing-v2 .pkr-mobile-product-intro h2 em{color:#f3cd83}
+.pkr-landing-v2 .pkr-mobile-product-intro p{font-size:15px;line-height:1.75;color:#c1d5c5;margin:0 auto 23px;max-width:630px}
+.pkr-landing-v2 .pkr-mobile-devices{
+ max-width:930px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ align-items:start;justify-items:center;gap:clamp(14px,4vw,60px);
+}
+.pkr-landing-v2 .pkr-mobile-device{width:min(100%,256px);min-width:0;display:grid;gap:17px;text-align:center;margin:0}
+.pkr-landing-v2 .pkr-mobile-device:nth-child(2){transform:translateY(19px)}
+.pkr-landing-v2 .pkr-mobile-device-shell{
+ position:relative;width:100%;aspect-ratio:390/844;
+ padding:9px 7px 10px;background:#040906;overflow:hidden;
+ border:3px solid #ba9a65;border-radius:28px;
+ box-shadow:0 20px 55px #0009,0 0 0 4px #d7b6741e;
+}
+.pkr-landing-v2 .pkr-mobile-device-speaker{
+ z-index:3;position:absolute;top:7px;left:36%;width:28%;height:10px;
+ border-radius:0 0 12px 12px;background:#020706;
+}
+.pkr-landing-v2 .pkr-mobile-device-shell img{
+ display:block;width:100%;height:100%;border-radius:19px;object-fit:cover;object-position:top;
+}
+.pkr-landing-v2 .pkr-mobile-device figcaption{color:#fff0d2;font-weight:800;font-size:12px}
+.pkr-landing-v2 .pkr-mobile-device figcaption span{font-size:10px;font-weight:450;color:#a9c4b1}
+.pkr-landing-v2 .pkr-feature-photo-real{
+ position:relative;aspect-ratio:1.54;border:1px solid #c6a36891;border-radius:20px;
+ overflow:hidden;box-shadow:0 20px 60px #0007;
+}
+.pkr-landing-v2 .pkr-feature-photo-real img{
+ display:block;width:100%;height:100%;object-fit:cover;object-position:50% 20%;
+}
+.pkr-landing-v2 .pkr-feature-photo-real::after{
+ content:"";position:absolute;inset:55% 0 0;background:linear-gradient(0deg,#071d14c9,transparent);
+}
+.pkr-landing-v2 .pkr-feature-photo-real span{
+ position:absolute;bottom:20px;left:24px;z-index:1;color:#fff0cf;
+ font:850 11px var(--font-landing-body),sans-serif;letter-spacing:.09em;text-shadow:0 2px 6px #000;
+}
+@media(max-width:1150px){
+ .pkr-landing-v2 .pkr-tour-panel{grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr);gap:25px}
+ .pkr-landing-v2 .pkr-tour-copy h3{font-size:clamp(29px,3.2vw,39px)}
+ .pkr-landing-v2 .pkr-tour-tab{flex:0 0 auto}
+ .pkr-landing-v2 .pkr-tour-visual picture img{max-height:520px}
+}
+@media(max-width:860px){
+ .pkr-landing-v2 .pkr-hero-real{justify-self:center;margin:0 auto;max-width:690px}
+ .pkr-landing-v2 .pkr-hero-mobile{width:clamp(115px,22vw,167px)}
+ .pkr-landing-v2 .pkr-tour-panel{grid-template-columns:1fr;gap:26px;min-height:0}
+ .pkr-landing-v2 .pkr-tour-copy{max-width:none}
+ .pkr-landing-v2 .pkr-tour-copy h3{max-width:720px}
+ .pkr-landing-v2 .pkr-tour-copy p{max-width:700px}
+ .pkr-landing-v2 .pkr-tour-nav{margin-top:20px}
+ .pkr-landing-v2 .pkr-tour-visual picture img{max-height:630px}
+ .pkr-landing-v2 .pkr-product-proof{gap:11px}
+ .pkr-landing-v2 .pkr-proof-card-image{height:clamp(125px,18vw,180px)}
+}
+@media(max-width:620px){
+ .pkr-landing-v2 .pkr-hero-real{width:100%;padding:5px 7px 56px 0;margin:0 auto}
+ .pkr-landing-v2 .pkr-hero-mobile{width:clamp(100px,25vw,136px);bottom:5px;right:-7px;border-radius:20px}
+ .pkr-landing-v2 .pkr-hero-desktop-header{min-height:23px;padding:4px 7px;font-size:7px}
+ .pkr-landing-v2 .pkr-hero-real-label{font-size:8px;left:6px;bottom:8px;padding:7px 10px}
+ .pkr-landing-v2 .pkr-product-tour{padding:65px 17px 68px}
+ .pkr-landing-v2 .pkr-product-tour-header h2{font-size:clamp(34px,8vw,45px)}
+ .pkr-landing-v2 .pkr-product-tour-header p{font-size:13px}
+ .pkr-landing-v2 .pkr-tour-tab{font-size:11px;min-height:43px;padding:9px 10px}
+ .pkr-landing-v2 .pkr-tour-panel{padding:18px 13px;border-radius:14px;gap:18px}
+ .pkr-landing-v2 .pkr-tour-copy h3{font-size:clamp(29px,8vw,40px);margin:11px 0}
+ .pkr-landing-v2 .pkr-tour-copy p{font-size:13px}
+ .pkr-landing-v2 .pkr-tour-copy ul{gap:8px;margin:14px 0}
+ .pkr-landing-v2 .pkr-tour-copy li{font-size:11px}
+ .pkr-landing-v2 .pkr-tour-visual{border-radius:10px;max-height:none}
+ .pkr-landing-v2 .pkr-tour-screen-top{font-size:7px;gap:5px;padding:5px 7px;min-height:28px}
+ .pkr-landing-v2 .pkr-tour-visual picture{display:flex;justify-content:center;background:#081d17}
+ .pkr-landing-v2 .pkr-tour-visual picture img{width:auto;max-width:100%;height:auto;max-height:670px;object-fit:contain}
+ .pkr-landing-v2 .pkr-tour-visual.is-table picture img{width:auto;max-width:100%;max-height:680px}
+ .pkr-landing-v2 .pkr-tour-sample-note{font-size:7px}
+ .pkr-landing-v2 .pkr-product-proof{grid-template-columns:1fr;gap:13px;margin-top:19px}
+ .pkr-landing-v2 .pkr-proof-card-image{height:clamp(180px,54vw,245px)}
+ .pkr-landing-v2 .pkr-proof-card-copy{padding:15px}
+ .pkr-landing-v2 .pkr-real-feature-image{min-height:0;aspect-ratio:1.65}
+ .pkr-landing-v2 .pkr-mobile-product-showcase{padding:68px 18px 78px}
+ .pkr-landing-v2 .pkr-mobile-product-intro h2{font-size:clamp(37px,9vw,45px)}
+ .pkr-landing-v2 .pkr-mobile-devices{
+  display:grid;grid-auto-flow:column;grid-auto-columns:minmax(188px,215px);
+  grid-template-columns:none;justify-items:stretch;gap:20px;overflow-x:auto;
+  scroll-snap-type:x mandatory;scroll-padding-inline:5px;
+  max-width:100%;padding:12px 5px 24px;scrollbar-width:thin;scrollbar-color:#c09d5e transparent;
+ }
+ .pkr-landing-v2 .pkr-mobile-device{scroll-snap-align:center;width:100%}
+ .pkr-landing-v2 .pkr-mobile-device:nth-child(2){transform:none}
+ .pkr-landing-v2 .pkr-mobile-product-intro p{font-size:13px}
+}
+@media (max-width:375px){
+ .pkr-landing-v2 .pkr-hero-mobile{width:93px}
+ .pkr-landing-v2 .pkr-hero-real-label{font-size:7px}
+ .pkr-landing-v2 .pkr-tour-copy h3{font-size:29px}
+}
+@media (prefers-reduced-motion:reduce){
+ .pkr-landing-v2 .pkr-tour-cta,.pkr-landing-v2 .pkr-proof-card,.pkr-landing-v2 .pkr-tour-tab{transition:none}
+ .pkr-landing-v2 .pkr-tour-cta:hover,.pkr-landing-v2 .pkr-proof-card:hover{transform:none}
+}
