@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useParams,useRouter} from 'next/navigation';
 import {api,saveToken} from '@/lib/api';
 import {playPkrSound} from '@/lib/sounds';
+import {isIOS,isPWAInstalled} from '@/lib/push';
 
 type Preview={event_name:string;masked_phone:string;role:string;expires_at:number};
 
@@ -16,8 +17,11 @@ export default function PhoneInvite(){
  const [busy,setBusy]=useState(false);
  const [checking,setChecking]=useState(false);
  const [error,setError]=useState('');
+ const [installFirst,setInstallFirst]=useState(false);
+ const [copied,setCopied]=useState(false);
  const checkingRef=useRef(false),completedRef=useRef(false);
 
+ useEffect(()=>{setInstallFirst(isIOS()&&!isPWAInstalled());},[]);
  useEffect(()=>{
    api.phoneInvites.preview(token).then(setData).catch(e=>setError(e.message||'Invitation expired or unavailable.'));
    try{const value=localStorage.getItem('pkr:join-claim:'+token);if(value)setClaim(value);}catch{}
@@ -78,6 +82,20 @@ export default function PhoneInvite(){
      </div>
      {data&&<p style={{fontSize:12}}>Private invite for <strong style={{color:'var(--ivory)'}}>{data.masked_phone}</strong>
        {' · '}{data.role==='cohost'?'Co-host':'Player'} access</p>}
+     {!claim&&installFirst&&<div style={{margin:'15px 0',padding:14,borderRadius:9,
+       border:'1px solid rgba(201,168,76,.32)',background:'rgba(201,168,76,.07)'}}>
+       <strong style={{color:'var(--gold)',fontSize:13}}>iPhone: install PKR before joining</strong>
+       <p>For reliable app notifications and sign-in, install PKR to your Home Screen first,
+         open the new app and paste your invitation on the welcome screen. Safari and a Home Screen app
+         may not share your login.</p>
+       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+         <button type="button" className="btn btn-outline" onClick={async()=>{
+           try{await navigator.clipboard.writeText(window.location.href);setCopied(true);}
+           catch{setStatus('Copy the link from your browser address bar and paste it in the installed PKR app.');}
+         }}>{copied?'✓ Link copied':'Copy my invitation link'}</button>
+         <a className="btn btn-ghost" href="/install" style={{textDecoration:'none'}}>How to install →</a>
+       </div>
+     </div>}
      {!claim?
        <form onSubmit={e=>{e.preventDefault();void ask();}} className="pkr-pending-actions">
          <label htmlFor="join-name" style={{color:'var(--ivory)',fontSize:13,fontWeight:600}}>What name will your host recognise?</label>
