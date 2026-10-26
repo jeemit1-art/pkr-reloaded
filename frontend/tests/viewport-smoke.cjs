@@ -18,7 +18,7 @@ const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURICompone
 const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Jordan Lee',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
 const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
 const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'}]};
-const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',trial_active:false,trial_days_left:0};
+const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
 const fixture=(pathname,method)=>{
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
@@ -173,6 +173,8 @@ async function test(){
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
+     // Publish dashboard before mutation tests (which reopen an archived room).
+     if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
      // The old synthetic test missed a real regression: Insights/Schedule rendered
@@ -450,7 +452,7 @@ async function test(){
        const number=await page.locator('.pkr-persistent-nav button.active').count();
        if(number!==1)errors.push(size.name+' '+item.id+' has '+number+' selected sidebar items');
      }
-     await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
+     if(item.id!=='dashboard') await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
     }catch(e){errors.push(size.name+' '+item.id+': '+(e?.message||e));}
    }
    await context.close();
