@@ -3,7 +3,8 @@ vi.mock('../middleware',async(importOriginal)=>{
   const original=await importOriginal<typeof import('../middleware')>();
   return {...original,
     authMiddleware:async(c:any,next:any)=>{c.set('userId','synthetic-host');await next();},
-    requireEventRole:async()=>true};
+    requireEventRole:async()=>true,
+    getPlanStatus:async()=>({is_active:true,plan:'pro',trial_active:false,max_groups:null,max_seats:15})};
 });
 import tournament from './tournament';
 const config={
@@ -38,6 +39,7 @@ function fixture(){
     return {sql,args,
       async first():Promise<any>{
         if(sql.includes('FROM games WHERE id=?'))return {...game};
+        if(sql.includes('SELECT host_id FROM events WHERE id=?'))return {host_id:'synthetic-host'};
         if(sql.includes('SELECT status FROM tournament_state WHERE game_id=?'))
           return {status:state.status};
         if(sql.includes('FROM tournament_state WHERE game_id=?'))return {...state};
