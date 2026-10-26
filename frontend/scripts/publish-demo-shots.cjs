@@ -33,7 +33,7 @@ async function run(){
   if(kind==='phone' && (meta.width!==390 || meta.height!==844))throw Error('Unexpected phone dimensions for '+input);
   if(kind!=='phone' && (meta.width!==1440 || meta.height!==900))throw Error('Unexpected desktop dimensions for '+input);
   const pipeline=sharp(file).removeAlpha();
-  // Keep the actual approved poker table exactly captured, without alterations.
+  // Preserve the actual table and its seats; only the app chrome changes in source CSS.
   if(kind==='desktop')pipeline.extract({left:205,top:28,width:1225,height:845}).resize({width:1225});
   else if(kind==='table')pipeline.resize({width:1440});
   const out=path.join(output,name);
@@ -48,8 +48,8 @@ async function run(){
   'These are real screenshots of the PKR application from the six-viewport Playwright suite.',
   'All players, rooms, balances, timestamps and games are synthetic fixtures.',
   '',
-  '- Source: GitHub Actions run 40403274702, artifact pkr-viewport-smoke.',
-  '- The game table and approved colours are the actual PKR application UI.',
+  '- Source: synthetic browser test capture produced on this design branch.',
+  '- Screenshots reflect the current PKR interface including the refreshed design theme.',
   '- Label the screenshots as sample data wherever shown publicly.',
   '- Never replace them with client screenshots or private account data.',
   '- Sharp converts PNG captures to optimised WebP files and removes metadata.',
