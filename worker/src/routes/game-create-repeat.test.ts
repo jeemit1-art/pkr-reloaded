@@ -13,20 +13,25 @@ import {sendPushToEvent} from '../push';
 
 function fixture(){
   const created:Array<{id:string;timestamp:number;seats:number}>=[];
+  const tournamentStates:any[]=[];
+  const tournamentLevels:any[]=[];
   const DB={
     prepare(sql:string){
       return {bind(...args:any[]){
         return {
           async first(){
+            if(sql.includes('SELECT host_id,name,buy_in FROM events'))return {host_id:'host-test',name:'Test Room',buy_in:2000};
             if(sql.includes('SELECT name FROM events'))return {name:'Test Room'};
-            if(sql.includes('SELECT * FROM games WHERE id='))return {
+            if(sql.includes('FROM games g WHERE g.id=') || sql.includes('SELECT * FROM games WHERE id='))return {
               id:created[0]?.id,event_id:'room-test',scheduled_at:created[0]?.timestamp,
               seats:created[0]?.seats,status:'scheduled'};
             return null;
           },
           async run(){
-            if(!sql.startsWith('INSERT INTO games('))throw Error('Unexpected D1 write: '+sql);
-            created.push({id:args[0],timestamp:args[2],seats:args[5]});
+            if(sql.startsWith('INSERT INTO games('))created.push({id:args[0],timestamp:args[2],seats:args[5]});
+            else if(sql.startsWith('INSERT INTO tournament_state('))tournamentStates.push(args);
+            else if(sql.startsWith('INSERT INTO tournament_levels('))tournamentLevels.push(args);
+            else throw Error('Unexpected D1 write: '+sql);
             return {meta:{changes:1}};
           }
         };
@@ -39,7 +44,7 @@ function fixture(){
   const post=(body:Record<string,unknown>)=>games.request('https://example.invalid/events/room-test/games',{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),
   },env,ctx);
-  return {created,post};
+  return {created,tournamentStates,tournamentLevels,post};
 }
 beforeEach(()=>vi.clearAllMocks());
 
@@ -65,6 +70,16 @@ describe('bounded repeating poker-night scheduling',()=>{
       expect(sendPushToEvent).toHaveBeenCalledTimes(1);
     }
   );
+  it('creates a full tournament structure alongside the scheduled game',async()=>{
+    const f=fixture();
+    const res=await f.post({scheduled_at:start,seats:9,format:'tournament',starting_chips:15000});
+    expect(res.status).toBe(201);
+    expect(f.created).toHaveLength(1);
+    expect(f.tournamentStates).toHaveLength(1);
+    expect(f.tournamentStates[0][3]).toBe(15000);
+    expect(f.tournamentLevels).toHaveLength(20);
+    expect(f.tournamentLevels.map(row=>row[2])).toEqual(Array.from({length:20},(_,i)=>i+1));
+  });
   it('rejects unknown recurrence and never creates records',async()=>{
     const f=fixture();
     const res=await f.post({scheduled_at:start,repeat:'every-day'});
