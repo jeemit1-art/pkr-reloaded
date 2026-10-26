@@ -144,6 +144,9 @@ tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
   const gameId=c.req.param('id');
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
+  if(!await checkProHost(c,game.event_id))
+    return c.json({error:'An active Pro subscription is required to start tournaments.',
+      code:'UPGRADE_REQUIRED',feature:'tournament'},402);
   if(game.status==='settled'||game.status==='cancelled')
     return c.json({error:'Game is closed'},409);
   const state=await c.env.DB.prepare(
