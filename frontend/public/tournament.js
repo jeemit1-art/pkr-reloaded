@@ -121,9 +121,11 @@ function genBlinds(chips, hours) {
   var breakMinutes=10, breakEvery=6;
   var playable=Math.max(8,Math.min(90,Math.ceil(targetMinutes/18)));
   var breaks=Math.floor((playable-1)/breakEvery);
-  var playingMinutes=Math.max(playable,targetMinutes-breaks*breakMinutes);
-  var duration=Math.max(1,Math.ceil(playingMinutes/playable));
-  // Ensure advertised structure never exceeds the selected duration by more than a stage.
+  var playingSeconds=Math.max(playable*30,targetMinutes*60-breaks*breakMinutes*60);
+  var perLevel=Math.floor(playingSeconds/playable);
+  var extraSeconds=playingSeconds%playable;
+  // Distribute remaining seconds so the generated schedule matches its
+  // selected duration exactly, including scheduled breaks.
   var lvs=[],s=Math.max(25,Math.round((Number(chips)||10000)/400/25)*25);
   for(var count=0;count<playable&&lvs.length<100;count++){
     if(count>0&&count%breakEvery===0&&lvs.length<99)
@@ -131,7 +133,7 @@ function genBlinds(chips, hours) {
     var small=Math.max(25,Math.round(s/25)*25);
     lvs.push({level_num:lvs.length+1,small_blind:small,big_blind:small*2,
       ante:count>=5?Math.max(25,Math.round(small*.125/25)*25):0,
-      duration_secs:duration*60,is_break:false});
+      duration_secs:perLevel+(count<extraSeconds?1:0),is_break:false});
     s=Math.max(small+25,Math.round(small*1.35/25)*25);
   }
   return lvs;
