@@ -66,7 +66,7 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
   }
 
   const trialEnd = trialStart + TRIAL_DAYS * 86400;
-  const trialActive = user.plan === 'trial' && now < trialEnd;
+  const trialActive = false; // Paid hosting only; historical trials remain recorded but grant no hosting access.
 
   let plan = user.plan;
   // Expire paid plan if period ended
@@ -75,7 +75,7 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
     await db.prepare("UPDATE users SET plan='trial' WHERE id=?").bind(userId).run();
   }
 
-  const isActive = plan === 'lifetime' || plan === 'starter' || plan === 'pro' || trialActive;
+  const isActive = plan === 'lifetime' || plan === 'starter' || plan === 'pro';
   const isPro = plan === 'pro' || plan === 'lifetime';
 
   return {
@@ -83,7 +83,7 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
     is_active: isActive,
     trial_active: trialActive,
     // Pro: unlimited groups; Trial/Starter while active: unlimited; expired trial: 1
-    max_groups: isPro ? null : (isActive ? null : 1),
+    max_groups: isPro ? null : 1,
     max_seats: isPro ? 15 : 9,
   };
 }
