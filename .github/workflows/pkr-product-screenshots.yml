@@ -69,5 +69,7 @@ jobs:
             echo "Screenshots already match current theme"
           else
             git commit -m "assets: refresh authentic PKR screens in graphite theme"
+            git fetch origin design/charcoal-blue-refresh-20261027
+            git rebase origin/design/charcoal-blue-refresh-20261027
             git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
           fi
