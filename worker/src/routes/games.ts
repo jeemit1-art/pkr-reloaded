@@ -56,7 +56,7 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
 
   if (!planStatus.is_active) {
     return c.json({
-      error: 'Your free trial has ended. Upgrade to create new games.',
+      error: 'A paid host subscription is required to create games.',
       code: 'UPGRADE_REQUIRED',
       plan: planStatus.plan,
       feature: 'create_game',
