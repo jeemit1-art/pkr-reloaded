@@ -62,6 +62,15 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   if(!['cash','tournament','rebuy','freezeout'].includes(format))
     return c.json({error:'Choose cash or a supported tournament format'},400);
   const tournamentMode=format!=='cash';
+  const requestedArrivals=body.rsvp_arrival_times;
+  if(requestedArrivals!==undefined&&c.env.PKR_RSVP_V2!=='1')
+    return c.json({error:'Live RSVP setup is not activated for this room yet.',code:'RSVP_BOARD_NOT_READY'},503);
+  if(requestedArrivals!==undefined&&(
+    !Array.isArray(requestedArrivals)||requestedArrivals.length<1||requestedArrivals.length>8||
+    requestedArrivals.some((time:unknown)=>typeof time!=='string'||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))||
+    new Set(requestedArrivals).size!==requestedArrivals.length))
+    return c.json({error:'Choose 1–8 unique arrival times in HH:MM format'},400);
+  const arrivalTimes=Array.isArray(requestedArrivals)?[...requestedArrivals].sort():['19:00','20:00','21:00'];
   const startingChips=body.starting_chips==null||body.starting_chips===''?10000:body.starting_chips;
   if(tournamentMode&&(!Number.isSafeInteger(startingChips)||startingChips<100||startingChips>1000000000))
     return c.json({error:'Starting chips must be a whole number from 100 to 1,000,000,000'},400);
@@ -115,6 +124,11 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     const actions:D1PreparedStatement[]=[c.env.DB.prepare(
       'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
     ).bind(session.id,eventId,session.scheduledAt,location||null,notes||null,requestedSeats,game_password||null,session.liveToken,'scheduled')];
+    if(c.env.PKR_RSVP_V2==='1'){
+      actions.push(c.env.DB.prepare(
+        'INSERT INTO game_rsvp_arrivals(game_id,options_json) VALUES(?,?)'
+      ).bind(session.id,JSON.stringify(arrivalTimes)));
+    }
     if(tournamentMode){
       actions.push(c.env.DB.prepare(
         'INSERT INTO tournament_state(game_id,status,current_level,starting_chips,buy_in_amount,rebuy_allowed,rebuy_levels,addon_allowed,addon_chips,payout_structure,total_chips_in_play) VALUES(?,?,?,?,?,?,?,?,?,?,0)'
