@@ -180,7 +180,9 @@ async function sendToSub(
 export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<number> {
   if (env.PKR_ENV === 'staging') return 0;
   const subs = await env.DB.prepare(
-    env.PKR_PHONE_MEMBERS_V1==='1'
+    env.PKR_PUSH_ROOMS_V2==='1'
+      ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
+      :env.PKR_PHONE_MEMBERS_V1==='1'
       ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
       :'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
   ).bind(eventId).all<{endpoint:string; p256dh:string; auth_key:string}>();
@@ -196,7 +198,23 @@ export async function sendPushToPlayer(env: Env, eventId: string, displayName: s
   const name = displayName.toLowerCase().trim();
   const firstName = name.split(/\s+/)[0];
 
-  // Match on: exact, prefix (Jim->Jimmy), contains (Jimmy->Jim), first name, or Google account name
+  // V2 subscriptions are tied to authenticated event membership, with exact
+  // member-name matching rather than fuzzy private financial notifications.
+  if(env.PKR_PUSH_ROOMS_V2==='1'){
+    const subs=await env.DB.prepare(
+      "SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s " +
+      "JOIN users u ON u.id=s.user_id " +
+      "JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id " +
+      "WHERE s.event_id=? AND LOWER(TRIM(u.name))=?"
+    ).bind(eventId,name).all<{endpoint:string;p256dh:string;auth_key:string}>();
+    if(!subs.results.length)return 0;
+    const body=JSON.stringify({title:payload.title,body:payload.body,icon:'/icon-192.png',
+      badge:'/icon-192.png',data:payload.data||{}});
+    const results=await Promise.allSettled(subs.results.map(sub=>sendToSub(env,sub,body)));
+    return results.filter(x=>x.status==='fulfilled'&&x.value===true).length;
+  }
+
+  // Legacy mode: match on exact/prefix/first-name, subject to membership flag.
   const subs = await env.DB.prepare(`
     SELECT endpoint, p256dh, auth_key FROM push_subscriptions
     WHERE event_id=? AND (
@@ -248,8 +266,9 @@ async function sendPushToManagers(
   env: Env, eventId: string, roles: readonly string[], payload: PushPayload
 ): Promise<number> {
   if (env.PKR_ENV === 'staging' || env.PKR_PHONE_MEMBERS_V1 !== '1') return 0;
+  const table=env.PKR_PUSH_ROOMS_V2==='1'?'push_room_subscriptions':'push_subscriptions';
   const subs = await env.DB.prepare(
-    "SELECT DISTINCT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s " +
+    "SELECT DISTINCT s.endpoint,s.p256dh,s.auth_key FROM "+table+" s " +
     "JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id " +
     "WHERE s.event_id=? AND em.role IN (" + roles.map(() => '?').join(',') + ")"
   ).bind(eventId,...roles).all<{endpoint:string;p256dh:string;auth_key:string}>();
