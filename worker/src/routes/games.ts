@@ -25,6 +25,17 @@ async function getPlayers(db:D1Database,gameId:string,enabled:boolean){
 }
 
 
+// Tournament setup is persisted with its existing dedicated tables, not a
+// phantom games.format column. A host may edit these stages before starting.
+const initialTournamentLevels = [
+  [25,50,0,900],[50,100,0,900],[75,150,25,900],[100,200,25,900],
+  [0,0,0,600],[150,300,50,900],[200,400,50,900],[300,600,75,900],
+  [400,800,100,900],[500,1000,100,900],[600,1200,200,900],
+  [800,1600,200,900],[1000,2000,300,900],[1500,3000,300,900],
+  [0,0,0,600],[2000,4000,500,900],[3000,6000,500,900],
+  [4000,8000,1000,900],[5000,10000,1000,900],[7500,15000,1500,900],
+] as const;
+
 /* ═══════════════════════════════════════════
    CORE GAME CRUD
 ═══════════════════════════════════════════ */
@@ -33,10 +44,10 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const { status } = c.req.query();
-  let q = 'SELECT * FROM games WHERE event_id=?';
+  let q = "SELECT g.*,CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format FROM games g WHERE g.event_id=?";
   const b: unknown[] = [eventId];
-  if (status) { q+=' AND status=?'; b.push(status); }
-  q+=' ORDER BY scheduled_at DESC';
+  if (status) { q+=' AND g.status=?'; b.push(status); }
+  q+=' ORDER BY g.scheduled_at DESC';
   const rows = await c.env.DB.prepare(q).bind(...b).all();
   return c.json(rows.results.map(clientSafeGame));
 });
@@ -44,15 +55,28 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
-  const { scheduled_at, location, notes, seats, game_password, repeat } = await c.req.json();
+  const body=await c.req.json().catch(()=>null) as any;
+  if(!body||typeof body!=='object')return c.json({error:'Valid game details required'},400);
+  const { scheduled_at, location, notes, seats, game_password, repeat } = body;
+  const format=body.format??'cash';
+  if(!['cash','tournament','rebuy','freezeout'].includes(format))
+    return c.json({error:'Choose cash or a supported tournament format'},400);
+  const tournamentMode=format!=='cash';
+  const startingChips=body.starting_chips==null||body.starting_chips===''?10000:body.starting_chips;
+  if(tournamentMode&&(!Number.isSafeInteger(startingChips)||startingChips<100||startingChips>1000000000))
+    return c.json({error:'Starting chips must be a whole number from 100 to 1,000,000,000'},400);
   if (!Number.isSafeInteger(scheduled_at) || scheduled_at <= 0)
     return c.json({error:'A valid scheduled date and time are required'},400);
   if (repeat != null && !['none','weekly','fortnightly'].includes(repeat))
     return c.json({error:'Invalid recurrence. Choose once, weekly or fortnightly.'},400);
 
   // ── Plan gate: check seat limit ──────────────────────────────────────────
-  const userId = c.get('userId');
-  const planStatus = await getPlanStatus(c.env.DB, userId);
+  // Entitlements belong to the event owner; a paid co-host must not unlock
+  // an unpaid room or be forced to buy a second subscription for a paid room.
+  const event=await c.env.DB.prepare('SELECT host_id,name,buy_in FROM events WHERE id=?')
+    .bind(eventId).first<{host_id:string;name:string;buy_in:number}>();
+  if(!event)return c.json({error:'Group not found'},404);
+  const planStatus = await getPlanStatus(c.env.DB, event.host_id);
 
   if (!planStatus.is_active) {
     return c.json({
@@ -63,8 +87,10 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     }, 402);
   }
 
-  const requestedSeats = seats || 9;
-  if (requestedSeats > planStatus.max_seats) {
+  const requestedSeats=seats??9;
+  if(!Number.isSafeInteger(requestedSeats)||requestedSeats<2||requestedSeats>15)
+    return c.json({error:'Select between 2 and 15 seats'},400);
+  if(requestedSeats>planStatus.max_seats) {
     return c.json({
       error: `Your plan supports up to ${planStatus.max_seats} seats. Upgrade to Pro for up to 15 seats.`,
       code: 'UPGRADE_REQUIRED',
@@ -83,30 +109,42 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const sessions=Array.from({length:count},(_,i)=>({
     id:generateId(),liveToken:generateId(),scheduledAt:scheduled_at+i*gapDays*86400,
   }));
-  const statements=sessions.map(session=>c.env.DB.prepare(
-    'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
-  ).bind(session.id,eventId,session.scheduledAt,location||null,notes||null,requestedSeats,game_password||null,session.liveToken,'scheduled'));
-  // Preserve the single-game write path for existing clients. D1.batch executes
-  // multi-session schedules together, avoiding partial four-game series.
-  if(count===1)await statements[0].run();
+  const statements=sessions.flatMap(session=>{
+    const actions:D1PreparedStatement[]=[c.env.DB.prepare(
+      'INSERT INTO games(id,event_id,scheduled_at,location,notes,seats,game_password,live_token,status) VALUES(?,?,?,?,?,?,?,?,?)'
+    ).bind(session.id,eventId,session.scheduledAt,location||null,notes||null,requestedSeats,game_password||null,session.liveToken,'scheduled')];
+    if(tournamentMode){
+      actions.push(c.env.DB.prepare(
+        'INSERT INTO tournament_state(game_id,status,current_level,starting_chips,buy_in_amount,rebuy_allowed,rebuy_levels,addon_allowed,addon_chips,payout_structure,total_chips_in_play) VALUES(?,?,?,?,?,?,?,?,?,?,0)'
+      ).bind(session.id,'setup',1,startingChips,event.buy_in||0,format==='rebuy'?1:0,4,0,0,JSON.stringify([{place:1,pct:50},{place:2,pct:30},{place:3,pct:20}])));
+      initialTournamentLevels.forEach((level,index)=>{
+        actions.push(c.env.DB.prepare(
+          'INSERT INTO tournament_levels(id,game_id,level_num,small_blind,big_blind,ante,duration_secs,is_break) VALUES(?,?,?,?,?,?,?,?)'
+        ).bind(generateId(),session.id,index+1,level[0],level[1],level[2],level[3],level[0]===0?1:0));
+      });
+    }
+    return actions;
+  });
+  // A tournament's session, state and blind stages must commit atomically.
+  // Cash-game single inserts retain the existing behaviour.
+  if(statements.length===1)await statements[0].run();
   else await c.env.DB.batch(statements);
 
   const first=sessions[0];
-  const event=await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(eventId).first<{name:string}>();
   const dt=new Date(scheduled_at*1000).toLocaleString('en-AU',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'});
   c.executionCtx.waitUntil(sendPushToEvent(c.env,eventId,{
     title:`🃏 ${event?.name||'PKR'} — ${count===1?'Game Scheduled':count+' Games Scheduled'}`,
     body:`${dt}${location?' · '+location:''}${count>1?' · '+count+' '+(gapDays===7?'weekly':'fortnightly')+' sessions':''}`,
     data:{gameId:first.id,eventId,type:'game_scheduled',scheduled_at,location:location||null},
   }));
-  const game=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(first.id).first();
+  const game=await c.env.DB.prepare("SELECT g.*,CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format FROM games g WHERE g.id=?").bind(first.id).first();
   return c.json(game ? clientSafeGame(game) : null,201);
 });
 
 /* ── Get single game (with players + rsvps) ── */
 games.get('/games/:id', authMiddleware, async (c) => {
   const gameId = c.req.param('id');
-  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  const game = await c.env.DB.prepare("SELECT g.*,CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format FROM games g WHERE g.id=?").bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
   const players = await getPlayers(c.env.DB,gameId,revisionMode(c.env));
