@@ -194,7 +194,7 @@ export default function EventPage() {
   async function createGame() {
     if (!form.scheduled_at) return;
     if(arrivalTimes.length<1||arrivalTimes.length>8||
-      arrivalTimes.some(t=>!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t))||
+      arrivalTimes.some(t=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))||
       new Set(arrivalTimes).size!==arrivalTimes.length){
       alert('Choose 1–8 different RSVP arrival times before scheduling.');return;
     }
