@@ -7,7 +7,7 @@ const tournament = new Hono<{ Bindings: Env }>();
 
 async function checkProHost(c:any, eventId:string):Promise<boolean>{
   const group=await c.env.DB.prepare('SELECT host_id FROM events WHERE id=?')
-    .bind(eventId).first<{host_id:string}>();
+    .bind(eventId).first() as {host_id:string}|null;
   if(!group?.host_id)return false;
   const status=await getPlanStatus(c.env.DB,group.host_id);
   return status.is_active&&(status.plan==='pro'||status.plan==='lifetime');
