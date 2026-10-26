@@ -384,8 +384,8 @@ async function test(){
       }
       await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();
       await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
-      if(await page.locator('.pkr-standings-row').count()!==2)
-        errors.push(size.name+' Standings did not show both synthetic players');
+      if(await page.locator('.pkr-standings-row').count()!==leaders.length)
+        errors.push(size.name+' Standings did not show every synthetic player');
       const playerSearch=page.getByLabel('Search standings by player name');
       await playerSearch.fill('Demo');
       if(await page.locator('.pkr-standings-row').count()!==1)

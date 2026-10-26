@@ -318,3 +318,18 @@
 @media (max-width:370px){
  .pkr-landing-v2 .pkr-l2-hero h1 {font-size:42px}
 }
+
+/* iOS-installed PKR: an opaque status-bar scrim keeps scrolled Insights
+   rows from appearing under the system time / camera area. Not applied
+   to the live poker table or ordinary browser tabs. */
+@media (max-width:700px) and (display-mode:standalone) {
+ body:has(.pkr-insights-refresh)::after{
+  content:"";position:fixed;top:0;left:0;right:0;
+  height:max(52px,env(safe-area-inset-top));
+  background:#071c15;z-index:449;pointer-events:none;
+ }
+ .pkr-insights-refresh{
+  padding-top:max(54px,calc(env(safe-area-inset-top) + 12px))!important;
+  scroll-padding-top:max(54px,calc(env(safe-area-inset-top) + 12px));
+ }
+}
