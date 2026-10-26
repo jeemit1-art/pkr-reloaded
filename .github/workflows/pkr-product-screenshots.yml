@@ -35,6 +35,8 @@ jobs:
           test -f frontend/src/app/pkr-2026-graphite.css
           grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
           grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
+          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
+          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
       - name: Install pinned frontend dependencies
         working-directory: frontend
         run: npm ci --no-audit --no-fund
