@@ -6,6 +6,7 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from 
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
+import InviteQRCode from '@/components/InviteQRCode';
 
 type Tab = 'games' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
@@ -287,6 +288,11 @@ export default function EventPage() {
             <div className="pkr-event-metric"><strong>{event.member_count || 1}</strong><small>Members</small></div>
             <div className="pkr-event-metric"><strong>{upcoming[0]?new Date(upcoming[0].scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></div>
           </div>
+          {isGroupOwner && joinRequests.length > 0 && <button type="button"
+            onClick={() => selectTab('members')}
+            style={{width:'100%',margin:'10px 0',padding:13,borderRadius:9,background:'rgba(201,168,76,.15)',border:'1px solid var(--gold)',color:'var(--gold)',fontWeight:700,cursor:'pointer'}}>
+            🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} waiting for approval — Review in Members
+          </button>}
           <div className="pkr-event-hero-actions">
             {upcoming[0]&&<button type="button" onClick={()=>router.push('/games/'+encodeURIComponent(upcoming[0].id))}>▶ View next game</button>}
             <button type="button" onClick={()=>selectTab('members')}>♟ {isHost?'Invite Players':'View Members'}</button>
@@ -416,9 +422,9 @@ export default function EventPage() {
               <div style={{fontSize:11,color:'var(--gold)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:7}}>
                 Private members · Mobile first
               </div>
-              <h2 style={{fontFamily:'var(--font-display),serif',fontSize:21,marginBottom:6}}>Invite by WhatsApp number</h2>
+              <h2 style={{fontFamily:'var(--font-display),serif',fontSize:21,marginBottom:6}}>Invite a player by QR or WhatsApp</h2>
               <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:15}}>
-                The number identifies this member privately in your group. They receive a personal WhatsApp link and request host approval. Free invitations do not verify phone ownership.
+                Enter the player's name and mobile number to generate a personal QR code and WhatsApp link. The player scans the QR with their phone camera, requests to join, and waits for your approval. A personal QR cannot be reused to admit other players. Free invitations do not verify phone ownership.
                 Other groups cannot see your contacts.
               </p>
               <div style={{display:'grid',gap:9,marginBottom:12}}>
@@ -435,7 +441,7 @@ export default function EventPage() {
               </div>
               <button className="btn btn-primary" disabled={phoneBusy||!phoneName.trim()||!phoneNumber.trim()}
                 style={{width:'100%',padding:'12px'}} onClick={()=>void inviteMobile()}>
-                {phoneBusy?'Creating invite…':'Create private WhatsApp invitation'}
+                {phoneBusy?'Creating invite…':'Generate QR & WhatsApp invitation'}
               </button>
               {phoneError&&<p role="alert" style={{fontSize:12,marginTop:12,color:'var(--amber)'}}>{phoneError}</p>}
               {phoneContacts.length>0&&<div style={{marginTop:20}}>
@@ -474,7 +480,15 @@ export default function EventPage() {
                 <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
                 <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
                   The host must approve the person's join request. This free flow does not verify phone ownership.</p>
-                <div className="pkr-invite-preview" aria-label="Private invitation preview">
+                <div style={{marginBottom:14,padding:12,background:'var(--bg3)',borderRadius:10}}>
+                <InviteQRCode url={phoneShare.url} />
+                <p style={{fontSize:12,color:'var(--muted)',marginTop:10,textAlign:'center',lineHeight:1.6}}>
+                  Have {phoneShare.name} scan this code with their phone camera. The request will appear in
+                  this room under Members → Pending join requests. Approve or Reject it there.
+                  The player must then tap “Check approval and join PKR”.
+                </p>
+              </div>
+              <div className="pkr-invite-preview" aria-label="Private invitation preview">
                   <span>♠ PKR · PRIVATE INVITATION</span>
                   <strong>{event.name}</strong>
                   <p>Hi {phoneShare.name}, you have been invited to join our poker room on PKR. Your host will review the request before access is granted.</p>
