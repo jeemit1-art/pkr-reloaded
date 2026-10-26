@@ -93,10 +93,10 @@ export default function HomePage(){
             <div><strong>5</strong><span>Coming</span></div><div><strong>1</strong><span>Late</span></div><div><strong>3</strong><span>Seats free</span></div>
           </div>
           <div className="pkr-landing-demo-title">GROUP RSVP BOARD <span>Illustrative</span></div>
-          {[{i:'M',name:'Marcus',t:'7:00 pm',seat:'01'},
-            {i:'J',name:'Jai',t:'8:00 pm',seat:'02'},
-            {i:'R',name:'Rob',t:'Running late',seat:'05'},
-            {i:'A',name:'Alex',t:'7:00 pm',seat:'06'}].map(x=>
+          {[{i:'1',name:'Example Player 1',t:'7:00 pm',seat:'01'},
+            {i:'2',name:'Example Player 2',t:'8:00 pm',seat:'02'},
+            {i:'3',name:'Example Player 3',t:'Running late',seat:'05'},
+            {i:'4',name:'Example Player 4',t:'7:00 pm',seat:'06'}].map(x=>
             <div className="pkr-landing-demo-player" key={x.name}>
               <span className="pkr-landing-demo-avatar">{x.i}</span>
               <span><strong>{x.name}</strong><small>{x.t}</small></span>
