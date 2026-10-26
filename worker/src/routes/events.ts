@@ -193,6 +193,30 @@ events.post('/:id/subscribe', optionalAuth, async (c) => {
   return c.json({ok:true});
 });
 
+// Host-only view of registered room notification devices.
+// A database registration is NOT proof the device permission remains granted
+// or that a push notification will be delivered. Never expose endpoints/keys.
+events.get('/:id/push-registrations', authMiddleware, async(c)=>{
+  const eventId=c.req.param('id');
+  if(!await requireEventRole(c,eventId,'host'))
+    return c.json({error:'Only the room host can view member notification registrations'},403);
+  if(c.env.PKR_PUSH_ROOMS_V2!=='1')
+    return c.json({error:'Per-room notification registration status is unavailable'},503);
+  const records=await c.env.DB.prepare(
+    'SELECT em.user_id, COUNT(s.endpoint) AS device_count '+
+    'FROM event_members em LEFT JOIN push_room_subscriptions s '+
+    'ON s.event_id=em.event_id AND s.user_id=em.user_id '+
+    'WHERE em.event_id=? GROUP BY em.user_id'
+  ).bind(eventId).all<{user_id:string;device_count:number}>();
+  return c.json({
+    members:records.results.map(r=>({
+      user_id:r.user_id,
+      device_count:Number(r.device_count)||0,
+    })),
+    definition:'registered_devices_not_delivery_confirmation',
+  });
+});
+
 events.post('/:id/subscribe-status', authMiddleware, async(c)=>{
   const eventId=c.req.param('id');
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Private group membership required'},403);

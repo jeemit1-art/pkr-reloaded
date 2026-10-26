@@ -76,6 +76,10 @@ export default function EventPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError,setPushError] = useState('');
+  const [pushRegistrationStatus,setPushRegistrationStatus] = useState<Record<string,number>|null>(null);
+  const [pushRegistrationLoading,setPushRegistrationLoading] = useState(false);
+  const [pushRegistrationError,setPushRegistrationError] = useState('');
+  const [pushRegistrationRefresh,setPushRegistrationRefresh] = useState(0);
   const [expandedHistory,setExpandedHistory] = useState<string[]>([]);
   useEffect(()=>{
     if(tab!=='leaderboard')setSelectedPlayer(null);
@@ -105,6 +109,25 @@ export default function EventPage() {
   useEffect(()=>{
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
+
+  // Only the host sees registered devices; endpoints and keys stay private.
+  useEffect(()=>{
+    if(tab!=='members'||!isGroupOwner)return;
+    let alive=true;
+    setPushRegistrationLoading(true);
+    setPushRegistrationError('');
+    api.events.pushRegistrations(id).then(result=>{
+      if(!alive)return;
+      const statuses:Record<string,number>={};
+      for(const member of result.members)statuses[member.user_id]=member.device_count;
+      setPushRegistrationStatus(statuses);
+    }).catch(error=>{
+      if(!alive)return;
+      setPushRegistrationStatus(null);
+      setPushRegistrationError(error?.message||'Notification registration status is unavailable.');
+    }).finally(()=>{if(alive)setPushRegistrationLoading(false)});
+    return()=>{alive=false};
+  },[id,tab,isGroupOwner,pushRegistrationRefresh]);
 
   useEffect(()=>{
     if(!isGroupOwner)return;
@@ -250,7 +273,10 @@ export default function EventPage() {
         }else setPushError('Notification permission was not granted.');
       }
     }catch{setPushError('Could not update notification settings. Please try again.');}
-    finally{setPushLoading(false);}
+    finally{
+      setPushLoading(false);
+      if(isGroupOwner)setPushRegistrationRefresh(n=>n+1);
+    }
   }
 
   async function removeMember(userId: string, name: string) {
@@ -476,6 +502,29 @@ export default function EventPage() {
               </div>
               <ForegroundSoundToggle/>
               <a href={'/install?group='+encodeURIComponent(id)} className="pkr-members-setup-link">Phone setup & notification test →</a>
+              {isGroupOwner&&(
+                <div className="pkr-host-push-overview" aria-label="Member notification registrations">
+                  <div className="pkr-host-push-overview-head">
+                    <div>
+                      <strong>Room members' notification devices</strong>
+                      <p>
+                        {pushRegistrationLoading?'Checking registrations…'
+                          :pushRegistrationError?'Registration status unavailable'
+                          :pushRegistrationStatus
+                            ?(event.members||[]).filter((member:any)=>(pushRegistrationStatus[member.id]||0)>0).length+
+                              ' of '+(event.members||[]).length+' members have a registered device'
+                            :'Not checked yet'}
+                      </p>
+                    </div>
+                    <button type="button" className="btn btn-outline" disabled={pushRegistrationLoading}
+                      onClick={()=>setPushRegistrationRefresh(n=>n+1)}>
+                      {pushRegistrationLoading?'Checking…':'↻ Refresh'}
+                    </button>
+                  </div>
+                  {pushRegistrationError&&<p role="alert" className="pkr-host-push-error">{pushRegistrationError}</p>}
+                  <p className="pkr-host-push-disclaimer">Registered means a device subscribed to this room. It does not guarantee notifications are currently enabled in phone settings or will be delivered. Pending invitations are not yet members.</p>
+                </div>
+              )}
             </section>
            <div id="pkr-members-requests" className="pkr-members-anchor" />
            {isGroupOwner&&joinRequests.length===0&&<section className="pkr-member-empty-approvals">
@@ -627,6 +676,15 @@ export default function EventPage() {
                         }}>{m.role}</span>
                         {m.email && <span style={{marginLeft:8}}>{m.email}</span>}
                       </div>
+                      {isGroupOwner&&(
+                        <div className="pkr-member-push-state" aria-label={'Notification registration for '+m.name}>
+                          {pushRegistrationLoading||!pushRegistrationStatus
+                            ?<span className="pkr-member-push-unknown">{pushRegistrationError?'Status unavailable':'Checking notification status…'}</span>
+                            :(pushRegistrationStatus[m.id]||0)>0
+                              ?<span className="pkr-member-push-on">🔔 Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</span>
+                              :<span className="pkr-member-push-off">🔕 No room device registered</span>}
+                        </div>
+                      )}
                     </div>
                     {isHost && m.role !== 'host' && (
                       <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}

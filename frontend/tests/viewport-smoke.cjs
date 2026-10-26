@@ -34,6 +34,10 @@ const fixture=(pathname,method)=>{
     ],
   }];
   if(pathname==='/events/'+room.id+'/join-requests')return {requests:[]};
+  if(pathname==='/events/'+room.id+'/push-registrations')return {
+    members:[{user_id:'test-user',device_count:2},{user_id:'member-2',device_count:0}],
+    definition:'registered_devices_not_delivery_confirmation'
+  };
   if(pathname==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
   if(pathname==='/games/'+upcoming.id)return {...upcoming,players:[],rsvps:[]};
   if(pathname==='/games/'+finished.id)return {...finished,players:[],rsvps:[]};
@@ -284,6 +288,16 @@ async function test(){
          await nav.filter({hasText:'Members'}).first().click();
          await page.waitForTimeout(130);
        }
+       const registration=page.getByLabel('Member notification registrations');
+       await registration.waitFor({state:'visible',timeout:5000});
+       if(!await registration.getByText('1 of 2 members have a registered device').count())
+         errors.push(size.name+' host notification summary did not show synthetic registration count');
+       const badges=page.locator('.pkr-member-push-state');
+       if(await badges.count()!==2 || !await badges.first().getByText('Registered on 2 devices').count()
+          || !await badges.last().getByText('No room device registered').count())
+         errors.push(size.name+' registered/unregistered member badges were not rendered');
+       await registration.getByRole('button',{name:'↻ Refresh'}).click();
+       await registration.getByText('1 of 2 members have a registered device').waitFor({state:'visible',timeout:5000});
        const search=page.locator('#pkr-member-search');
        if(await search.count()){
          await search.fill('Demo');

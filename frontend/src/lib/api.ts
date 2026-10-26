@@ -104,6 +104,7 @@ export const api = {
       req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),
     removePhoneContact:(id:string,contactId:string)=>req<{ok:boolean}>(`/events/${id}/phone-contacts/${contactId}`,{method:'DELETE'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
+    pushRegistrations:(eventId:string)=>req<{members:Array<{user_id:string;device_count:number}>;definition:string}>(`/events/${eventId}/push-registrations`),
     pushStatus:     (eventId:string,endpoint:string)=>req<{subscribed:boolean}>(`/events/${eventId}/subscribe-status`,{
       method:'POST',body:JSON.stringify({endpoint})
     }),

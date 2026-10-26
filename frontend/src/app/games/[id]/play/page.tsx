@@ -585,6 +585,67 @@ var SK      = 'pokerState_'   + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var HIST_K  = 'pokerHistory_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
 
+// ── Rebuild display-only transaction rows from authoritative integer cents ──
+// D1 stores buy-in COUNT and TOTAL, not individual bank transaction amounts.
+// Do not divide total by count: 325/12 yields fictitious $27.083333 banks.
+// Reconstructed mixed-value banks are estimates and must be clearly labelled.
+function pkrBuildBankTransactions(player, defaultDollars) {
+  var count = Number(player.buy_ins || 0);
+  var unitCents = Math.round(Number(defaultDollars || 0) * 100);
+  if (!Number.isSafeInteger(count) || count < 0 || count > 10000 ||
+      !Number.isSafeInteger(unitCents) || unitCents <= 0) return [];
+  if (count === 0) return [];
+  var storedCents = player.buy_in_total;
+  var totalCents = Number.isSafeInteger(storedCents) && storedCents > 0
+    ? storedCents : count * unitCents;
+  if (!Number.isSafeInteger(totalCents) || totalCents < 0) return [];
+  var exact = totalCents === count * unitCents;
+  var remaining = totalCents - (count - 1) * unitCents;
+  var cents = [];
+  if (remaining > 0) {
+    for (var i = 0; i < count - 1; i++) cents.push(unitCents);
+    cents.push(remaining);
+  } else {
+    var even = Math.floor(totalCents / count);
+    var extra = totalCents % count;
+    for (var j = 0; j < count; j++) cents.push(even + (j < extra ? 1 : 0));
+  }
+  return cents.map(function(value, index) {
+    return {
+      type: 'buyin', amount: value / 100,
+      ts: Date.now() - (count - index - 1) * 60000,
+      pkrReconstructed: true,
+      pkrEstimated: !exact
+    };
+  });
+}
+
+// Repair ONLY an unmistakable old local 'average' placeholder (fractional cents).
+// Retain real cash-outs, edits and queued financial changes. Never write money
+// to D1 during hydration or infer a transaction history as factual.
+function pkrRepairLegacyAveragedBanks(local, server, unit) {
+  if (!local || !Array.isArray(local.transactions)) return false;
+  var oldBanks = local.transactions.filter(function(tx){ return tx.type !== 'cashout'; });
+  if (!oldBanks.length || oldBanks.length !== server.buy_ins) return false;
+  var first = Number(oldBanks[0].amount);
+  if (!Number.isFinite(first) || first <= 0) return false;
+  var isOldAverage = oldBanks.every(function(tx){
+    return !tx.pkrReconstructed && Number.isFinite(Number(tx.amount)) &&
+      Math.abs(Number(tx.amount) - first) < 0.00001;
+  }) && Math.abs(first * 100 - Math.round(first * 100)) > 0.00001;
+  if (!isOldAverage) return false;
+  var replacement = pkrBuildBankTransactions(server, unit);
+  if (replacement.length !== oldBanks.length) return false;
+  var index = 0;
+  local.transactions = local.transactions.map(function(tx) {
+    if (tx.type === 'cashout') return tx;
+    var clean = replacement[index++];
+    return Object.assign({}, tx, {amount:clean.amount,
+      pkrReconstructed:true, pkrEstimated:clean.pkrEstimated});
+  });
+  return true;
+}
+
 // ── State ──
 var state = { game: null, players: {} };
 window.state = state;
@@ -1747,6 +1808,14 @@ function buildPanel(sid) {
   body.appendChild(txSec);
   var txList = document.createElement('div');
   var txs = p.transactions || [];
+  if (txs.some(function(tx){return tx.pkrReconstructed;})) {
+    var note = document.createElement('div');
+    note.style.cssText = 'font-size:0.76rem;line-height:1.5;color:#e9c788;padding:8px 10px;margin:6px 0;border:1px solid #846f3b;border-radius:8px;background:#1b2419';
+    note.textContent = txs.some(function(tx){return tx.pkrEstimated;})
+      ? 'Bank amounts reconstructed from the saved total. Individual amounts are estimated; check against the paper record before editing or settling.'
+      : 'Bank rows reconstructed from the saved buy-in count and standard bank amount. Original transaction timestamps were not saved.';
+    body.appendChild(note);
+  }
   if (!txs.length) {
     txList.innerHTML = '<div style="font-size:0.85rem;color:var(--muted);padding:10px 0;text-align:center">No transactions yet</div>';
   } else {
@@ -1764,7 +1833,10 @@ function buildPanel(sid) {
       var saveTxAmt = function() {
         var v = parseFloat(amt.value);
         if (isNaN(v) || v < 0) return;
-        p.transactions[capturedIdx].amount = v; window.saveState(); refreshPanelSummary(sid); renderTable();
+        p.transactions[capturedIdx].amount = v;
+        p.transactions[capturedIdx].pkrEstimated = false;
+        p.transactions[capturedIdx].pkrReconstructed = false;
+        window.saveState(); refreshPanelSummary(sid); renderTable();
       };
       amt.addEventListener('blur', saveTxAmt);
       amt.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); amt.blur(); } });
@@ -2552,12 +2624,7 @@ if (ctx && ctx.gameId) {
         if (!state.players[sid] || !state.players[sid].name) {
           var txns = [];
           if (p.buy_ins > 0) {
-            // Use buy_in_total from DB if available, else fall back to count * default
-            var totalBuyInDollars = p.buy_in_total ? p.buy_in_total / 100 : (p.buy_ins * state.game.defaultBuyin);
-            var perBuyin = totalBuyInDollars / p.buy_ins;
-            for (var b = 0; b < p.buy_ins; b++) {
-              txns.push({ type: 'buyin', amount: perBuyin, ts: Date.now() - b * 60000 });
-            }
+            txns = pkrBuildBankTransactions(p, state.game.defaultBuyin);
           }
           if (p.cashout != null && p.cashout >= 0) txns.push({ type: 'cashout', amount: p.cashout / 100, ts: Date.now() });
           state.players[sid] = { name: p.display_name, userId: p.user_id, transactions: txns };
@@ -2570,6 +2637,28 @@ if (ctx && ctx.gameId) {
       _origSaveState();
       _pkrLastSnapshot = _pkrSnapshotPlayers();
     }
+    // Some returning browsers still have the old synthetic $27.083333 rows in
+    // localStorage. Only rewrite those fractional-cent placeholders once the
+    // server has loaded and there are no unsynced changes.
+    var restoredBanks = 0;
+    if (game.status !== 'settled' && game.status !== 'cancelled' &&
+        !_syncConflictCode && _offlineQueue.length === 0 &&
+        state.game && Number(state.game.defaultBuyin) > 0) {
+      (game.players || []).forEach(function(p) {
+        var existing = Object.values(state.players || {}).find(function(candidate){
+          return candidate && candidate.name &&
+            candidate.name.toLowerCase() === p.display_name.toLowerCase();
+        });
+        if (existing && pkrRepairLegacyAveragedBanks(existing,p,state.game.defaultBuyin)) {
+          restoredBanks++;
+        }
+      });
+      if (restoredBanks) {
+        // Local placeholder only: no window.saveState, no DB or network write.
+        _origSaveState();
+        _pkrLastSnapshot = _pkrSnapshotPlayers();
+      }
+    }
     // Update topbar title
     var titleEl = document.getElementById('topbarTitle');
     if (titleEl && state.game) titleEl.textContent = state.game.name;
@@ -2580,6 +2669,7 @@ if (ctx && ctx.gameId) {
     renderTable();
     updateSaveResultsBtn();
     maybeShowNotifBanner();
+    if (restoredBanks) toast('Restored whole-cent bank amounts from PKR. Check reconstructed bank rows before settling.');
   }).catch(function(e) {
     console.warn('Could not load game from PKR:', e.message);
     if (state.game) { renderTable(); }

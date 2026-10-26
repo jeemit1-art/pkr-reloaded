@@ -122,3 +122,23 @@
     border-radius:15px;
   }
 }
+
+/* Only the room host can see counts of verified per-room push registrations. */
+.pkr-host-push-overview{margin-top:16px;padding:16px;background:linear-gradient(135deg,#122b21,#091d16);border:1px solid rgba(223,188,108,.36);border-radius:12px}
+.pkr-host-push-overview-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.pkr-host-push-overview-head strong{font-size:14px;color:#f3e0bb;line-height:1.45}
+.pkr-host-push-overview-head p{font-size:12px;color:#ccdecf;margin:5px 0 0}
+.pkr-host-push-overview-head button{font-size:12px;min-height:38px}
+.pkr-host-push-disclaimer{margin:12px 0 0;font-size:11px;color:#b2cabb;line-height:1.55}
+.pkr-host-push-error{margin-top:10px;color:#f1a99c;font-size:12px}
+.pkr-member-push-state{margin-top:8px;line-height:1.5}
+.pkr-member-push-state span{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:600;letter-spacing:.01em}
+.pkr-member-push-on{background:rgba(41,188,126,.12);color:#8ce7b7;border:1px solid rgba(55,196,135,.35)}
+.pkr-member-push-off{background:rgba(201,168,76,.09);color:#e2c69a;border:1px solid rgba(201,168,76,.28)}
+.pkr-member-push-unknown{background:rgba(151,166,160,.12);color:#c2cec5;border:1px solid rgba(151,166,160,.2)}
+@media(max-width:600px){
+ .pkr-host-push-overview{padding:12px}
+ .pkr-host-push-overview-head{align-items:stretch}
+ .pkr-host-push-overview-head button{width:100%}
+ .pkr-member-push-state span{font-size:10px}
+}
