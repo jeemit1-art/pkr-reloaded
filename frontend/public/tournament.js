@@ -96,19 +96,23 @@ function buildAnn(lv, next) {
 }
 
 function genBlinds(chips, hours) {
-  // Each duration preset creates enough stages for that tournament length.
-  // Include regular breaks and respect the server's 100-level maximum.
-  var targetMinutes=Math.max(120,Math.min(720,Math.round(Number(hours||3)*60)));
-  var dur=15,breakMinutes=10;
-  var playable=Math.max(8,Math.ceil(targetMinutes/(dur+breakMinutes/6)));
+  // Generate a structure that fits the requested duration, up to 24 hours.
+  // Preserve consecutive level numbers and the Worker's 100-stage limit.
+  var targetMinutes=Math.max(120,Math.min(1440,Math.round(Number(hours||3)*60)));
+  var breakMinutes=10, breakEvery=6;
+  var playable=Math.max(8,Math.min(90,Math.ceil(targetMinutes/18)));
+  var breaks=Math.floor((playable-1)/breakEvery);
+  var playingMinutes=Math.max(playable,targetMinutes-breaks*breakMinutes);
+  var duration=Math.max(1,Math.ceil(playingMinutes/playable));
+  // Ensure advertised structure never exceeds the selected duration by more than a stage.
   var lvs=[],s=Math.max(25,Math.round((Number(chips)||10000)/400/25)*25);
   for(var count=0;count<playable&&lvs.length<100;count++){
-    if(count>0&&count%6===0&&lvs.length<99)
+    if(count>0&&count%breakEvery===0&&lvs.length<99)
       lvs.push({level_num:lvs.length+1,small_blind:0,big_blind:0,ante:0,duration_secs:breakMinutes*60,is_break:true});
     var small=Math.max(25,Math.round(s/25)*25);
     lvs.push({level_num:lvs.length+1,small_blind:small,big_blind:small*2,
       ante:count>=5?Math.max(25,Math.round(small*.125/25)*25):0,
-      duration_secs:dur*60,is_break:false});
+      duration_secs:duration*60,is_break:false});
     s=Math.max(small+25,Math.round(small*1.35/25)*25);
   }
   return lvs;
@@ -317,7 +321,7 @@ function renderSetup(body){
   var ab=document.createElement('div');ab.style.cssText='background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px';
   var abH=document.createElement('div');abH.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;font-weight:600';abH.textContent='✨ Auto-generate structure';ab.appendChild(abH);
   var abR=document.createElement('div');abR.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-  ['2h','3h','4h','5h','6h','8h','10h','12h'].forEach(function(h){
+  ['2h','3h','4h','5h','6h','8h','10h','12h','16h','20h','24h'].forEach(function(h){
     var btn=document.createElement('button');
     btn.style.cssText='flex:1 0 20%;padding:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif';
     btn.textContent=h;
