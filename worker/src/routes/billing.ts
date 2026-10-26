@@ -3,7 +3,6 @@
 import { Hono } from 'hono';
 import { Env, User } from '../types';
 import { authMiddleware } from '../middleware';
-import {getPlanStatus} from '../middleware';
 import {HOST_PRICES,isConfiguredAudPrice,verifiedPaidSubscription,type PaidPlan} from '../billing-entitlement';
 
 const billing = new Hono<{ Bindings: Env }>();
@@ -43,7 +42,7 @@ async function stripe(
 // ── GET /billing/plan — current plan status for logged-in user ────────────────
 billing.get('/plan', authMiddleware, async (c) => {
   const user = await c.env.DB.prepare(
-    'SELECT id, email, name, plan, trial_started_at, plan_expires_at FROM users WHERE id=?'
+    'SELECT id, email, name, plan, trial_started_at, plan_expires_at, stripe_customer_id, stripe_subscription_id FROM users WHERE id=?'
   ).bind(c.get('userId')).first<User>();
   if (!user) return c.json({ error: 'Not found' }, 404);
 
@@ -58,7 +57,7 @@ billing.get('/plan', authMiddleware, async (c) => {
   const TRIAL_DAYS = 5;
   const trialEnd = user.trial_started_at + TRIAL_DAYS * 86400;
   const trialActive = false; // No complimentary hosting access.
-  const trialDaysLeft = user.plan === 'trial' ? Math.max(0, Math.ceil((trialEnd - now) / 86400)) : 0;
+  const trialDaysLeft = 0;
 
   // Check if a paid plan has expired
   let effectivePlan = user.plan;
@@ -67,7 +66,10 @@ billing.get('/plan', authMiddleware, async (c) => {
     await c.env.DB.prepare('UPDATE users SET plan=? WHERE id=?').bind('trial', user.id).run();
   }
 
-  const isActive = effectivePlan === 'lifetime' || effectivePlan === 'starter' || effectivePlan === 'pro';
+  const paid=(effectivePlan==='starter'||effectivePlan==='pro')&&
+    !!user.stripe_subscription_id?.startsWith('sub_')&&
+    Number.isSafeInteger(user.plan_expires_at)&&Number(user.plan_expires_at)>now;
+  const isActive=effectivePlan==='lifetime'||paid;
 
   return c.json({
     plan: effectivePlan,
@@ -76,6 +78,7 @@ billing.get('/plan', authMiddleware, async (c) => {
     trial_end: trialEnd,
     plan_expires_at: user.plan_expires_at,
     is_active: isActive,
+    has_payment: !!user.stripe_customer_id&&!!user.stripe_subscription_id,
     // What this plan allows:
     max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
     max_seats: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? 15 : 9,
