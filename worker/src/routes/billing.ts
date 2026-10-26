@@ -55,7 +55,7 @@ billing.get('/plan', authMiddleware, async (c) => {
 
   const TRIAL_DAYS = 5;
   const trialEnd = user.trial_started_at + TRIAL_DAYS * 86400;
-  const trialActive = user.plan === 'trial' && now < trialEnd;
+  const trialActive = false; // No complimentary hosting access.
   const trialDaysLeft = user.plan === 'trial' ? Math.max(0, Math.ceil((trialEnd - now) / 86400)) : 0;
 
   // Check if a paid plan has expired
@@ -65,11 +65,7 @@ billing.get('/plan', authMiddleware, async (c) => {
     await c.env.DB.prepare('UPDATE users SET plan=? WHERE id=?').bind('trial', user.id).run();
   }
 
-  const isActive =
-    effectivePlan === 'lifetime' ||
-    effectivePlan === 'starter' ||
-    effectivePlan === 'pro' ||
-    trialActive;
+  const isActive = effectivePlan === 'lifetime' || effectivePlan === 'starter' || effectivePlan === 'pro';
 
   return c.json({
     plan: effectivePlan,
@@ -79,7 +75,7 @@ billing.get('/plan', authMiddleware, async (c) => {
     plan_expires_at: user.plan_expires_at,
     is_active: isActive,
     // What this plan allows:
-    max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : (trialActive ? null : 1),
+    max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
     max_seats: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? 15 : 9,
   });
 });
@@ -124,6 +120,8 @@ billing.post('/checkout', authMiddleware, async (c) => {
     cancel_url: `${front}/dashboard?upgrade_cancelled=1`,
     'subscription_data[metadata][pkr_user_id]': user.id,
     'subscription_data[metadata][plan]': plan,
+    'metadata[pkr_user_id]': user.id,
+    'metadata[plan]': plan,
     'allow_promotion_codes': 'true',
   });
 
@@ -169,7 +167,7 @@ billing.post('/webhook', async (c) => {
         || session.metadata?.pkr_user_id;
       const plan = session.subscription_data?.metadata?.plan
         || session.metadata?.plan;
-      if (!userId || !plan) break;
+      if (!userId || !['starter','pro'].includes(plan) || session.payment_status !== 'paid') break;
       await c.env.DB.prepare(
         'UPDATE users SET plan=?, stripe_subscription_id=?, plan_expires_at=NULL WHERE id=?'
       ).bind(plan, session.subscription, userId).run();
@@ -180,17 +178,16 @@ billing.post('/webhook', async (c) => {
       const sub = event.data.object;
       const userId = sub.metadata?.pkr_user_id;
       const plan = sub.metadata?.plan;
-      if (!userId || !plan) break;
-      const now = Math.floor(Date.now() / 1000);
+      if (!userId || !['starter','pro'].includes(plan)) break;
       if (sub.status === 'active' || sub.status === 'trialing') {
         await c.env.DB.prepare(
           'UPDATE users SET plan=?, plan_expires_at=NULL WHERE id=?'
         ).bind(plan, userId).run();
-      } else if (sub.status === 'canceled' || sub.status === 'unpaid') {
+      } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'past_due' || sub.status === 'incomplete_expired') {
         // Grace: keep access until period end
         await c.env.DB.prepare(
           'UPDATE users SET plan_expires_at=? WHERE id=?'
-        ).bind(sub.current_period_end, userId).run();
+        ).bind(Math.max(Math.floor(Date.now()/1000),Number(sub.current_period_end)||0), userId).run();
       }
       break;
     }
