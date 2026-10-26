@@ -49,12 +49,13 @@ export async function sendGameReminders(env:Env):Promise<void> {
     {key:'soon',seconds:2*3600,text:'about 2 hours'},
   ];
   for(const slot of slots){
-    const games=await env.DB.prepare(
-      "SELECT g.id,g.event_id,g.scheduled_at,g.location,e.name AS event_name " +
-      "FROM games g JOIN events e ON e.id=g.event_id " +
-      "WHERE g.status IN ('scheduled','lobby') AND e.status!='ended' " +
-      "AND g.scheduled_at>=? AND g.scheduled_at<? ORDER BY g.scheduled_at LIMIT 100"
-    ).bind(now+slot.seconds,now+slot.seconds+3600).all<{
+    const games=await env.DB.prepare(`
+      SELECT g.id,g.event_id,g.scheduled_at,g.location,e.name AS event_name
+      FROM games g JOIN events e ON e.id=g.event_id
+      WHERE g.status IN ('scheduled','lobby') AND e.status!='ended'
+        AND g.scheduled_at>=? AND g.scheduled_at<?
+      ORDER BY g.scheduled_at LIMIT 100
+    `).bind(now+slot.seconds,now+slot.seconds+3600).all<{
       id:string;event_id:string;scheduled_at:number;location:string|null;event_name:string
     }>();
     for(const g of games.results){
