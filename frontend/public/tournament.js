@@ -27,6 +27,7 @@ var ts = {
   view:'main', state:null, levels:[], rebuys:[], eliminations:[],
   payouts:[],prizePoolCents:null,payoutError:null,
   timerInterval:null, secsRemaining:0,
+  autoAdvance:true,advancePending:false,nextAdvanceAttempt:0,
   voiceEnabled:true, voiceWarningDone:false, voiceWarningMinutes:2,
   setupLevels:JSON.parse(JSON.stringify(DEFAULT_LEVELS)),
   setupConfig:{starting_chips:10000,buy_in_amount:0,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,addon_chips:5000,
@@ -64,6 +65,24 @@ function updateTimerCalc(){
   if(ts.secsRemaining===ts.voiceWarningMinutes*60&&!ts.voiceWarningDone){
     ts.voiceWarningDone=true;
     speak('Attention players. '+ts.voiceWarningMinutes+' minutes remaining on level '+ts.state.current_level+'.');
+  }
+  // The host's open panel can request the next blind stage. The Worker
+  // verifies that the prior stage has genuinely expired before advancing.
+  if(ts.secsRemaining===0&&ts.autoAdvance&&!ts.advancePending&&
+     ts.levels.some(function(l){return l.level_num===ts.state.current_level+1;})&&
+     Date.now()>=ts.nextAdvanceAttempt){
+    ts.advancePending=true;
+    ts.nextAdvanceAttempt=Date.now()+10000;
+    tApi('/games/'+getGameId()+'/tournament/advance-due',{method:'POST'})
+      .then(function(result){
+        if(result.advanced){
+          ts._lastNotifiedLevel=null;
+          ts.voiceWarningDone=false;
+          return loadTournament();
+        }
+      })
+      .catch(function(err){console.warn('Tournament auto-advance:',err.message);})
+      .finally(function(){ts.advancePending=false;});
   }
   if(ts.secsRemaining===0&&ts._lastNotifiedLevel!==ts.state.current_level){
     ts._lastNotifiedLevel=ts.state.current_level;
@@ -261,6 +280,18 @@ function renderMain(body){
     cr.appendChild(mkB(state.status==='paused'?'\u25b6 Resume':'\u23f8 Pause','flex:1;padding:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--cream);border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:DM Sans,sans-serif;font-weight:600',window.tPause));
     if(nextLv)cr.appendChild(mkB('\u23ed Next Level','flex:1;padding:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);color:var(--gold);border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:DM Sans,sans-serif;font-weight:600',window.tNextLevel));
     body.appendChild(cr);
+  }
+  if(state.status==='running'||state.status==='paused'){
+    var auto=document.createElement('div');
+    auto.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px';
+    var explanation=document.createElement('span');
+    explanation.style.cssText='font-size:0.75rem;color:var(--muted);flex:1;min-width:150px';
+    explanation.textContent='Advance blinds automatically while this host panel is open';
+    auto.appendChild(explanation);
+    auto.appendChild(mkB(ts.autoAdvance?'Auto levels ON':'Auto levels OFF',
+      'padding:8px 10px;min-height:40px;background:rgba(201,168,76,.08);border:1px solid var(--gold);color:var(--gold);border-radius:7px;cursor:pointer;font-size:0.76rem',
+      function(){ts.autoAdvance=!ts.autoAdvance;renderBody();}));
+    body.appendChild(auto);
   }
   // Players
   var ps=document.createElement('div');ps.style.cssText='background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px';
