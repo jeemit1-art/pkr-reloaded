@@ -236,3 +236,37 @@ export async function sendPushToPlayer(env: Env, eventId: string, displayName: s
   const delivered=await Promise.allSettled(subs.results.map(s=>sendToSub(env,s,body)));
   return delivered.filter(x=>x.status==='fulfilled'&&x.value===true).length;
 }
+
+/**
+ * Moderation alerts go only to authenticated room management accounts.
+ * Do NOT use display-name matching here: invite requests and RSVPs are
+ * private, and a caller-supplied subscriber user_id can be spoofed in the
+ * legacy opt-in route when phone membership enforcement is disabled.
+ */
+async function sendPushToManagers(
+  env: Env, eventId: string, roles: readonly string[], payload: PushPayload
+): Promise<number> {
+  if (env.PKR_ENV === 'staging' || env.PKR_PHONE_MEMBERS_V1 !== '1') return 0;
+  const subs = await env.DB.prepare(
+    "SELECT DISTINCT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s " +
+    "JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id " +
+    "WHERE s.event_id=? AND em.role IN (" + roles.map(() => '?').join(',') + ")"
+  ).bind(eventId,...roles).all<{endpoint:string;p256dh:string;auth_key:string}>();
+  if (!subs.results.length) return 0;
+  const body = JSON.stringify({
+    title:payload.title, body:payload.body, icon:'/icon-192.png',
+    badge:'/icon-192.png',data:payload.data||{}
+  });
+  const results = await Promise.allSettled(subs.results.map(sub=>sendToSub(env,sub,body)));
+  return results.filter(r=>r.status==='fulfilled'&&r.value===true).length;
+}
+
+/** Only the room owner can review and approve private membership requests. */
+export function sendPushToHosts(env:Env,eventId:string,payload:PushPayload):Promise<number> {
+  return sendPushToManagers(env,eventId,['host'],payload);
+}
+
+/** Host and co-host game management updates; never broadcast every RSVP to players. */
+export function sendPushToModerators(env:Env,eventId:string,payload:PushPayload):Promise<number> {
+  return sendPushToManagers(env,eventId,['host','cohost'],payload);
+}
