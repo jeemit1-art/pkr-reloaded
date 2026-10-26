@@ -92,9 +92,12 @@ billing.post('/checkout', authMiddleware, async (c) => {
   if (!plan || !PLANS[plan]) return c.json({ error: 'Invalid plan' }, 400);
 
   const userId = c.get('userId');
-  const user = await c.env.DB.prepare('SELECT id, email, name, stripe_customer_id FROM users WHERE id=?')
+  const user = await c.env.DB.prepare('SELECT id, email, name, stripe_customer_id, stripe_subscription_id, plan_expires_at FROM users WHERE id=?')
     .bind(userId).first<User>();
   if (!user) return c.json({ error: 'Not found' }, 404);
+  if(user.stripe_subscription_id&&Number(user.plan_expires_at)>Math.floor(Date.now()/1000))
+    return c.json({error:'An active subscription already exists. Use Manage Subscription to change plans.',
+      code:'ALREADY_SUBSCRIBED'},409);
 
   const priceId = plan === 'starter'
     ? (c.env as any).STRIPE_PRICE_STARTER
