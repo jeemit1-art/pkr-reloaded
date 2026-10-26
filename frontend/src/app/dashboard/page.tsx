@@ -589,7 +589,7 @@ function DashboardInner() {
               {searchedArchivedRooms.map(renderRoomCard)}
             </div>
             {searchedArchivedRooms.length===0&&<p className="pkr-pro-empty">No archived rooms match your search.</p>}
-          </section>
+          </section>}
 
         {/* End event confirm modal */}
         {confirmEndEventId && (
