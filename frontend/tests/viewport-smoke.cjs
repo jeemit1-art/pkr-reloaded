@@ -237,7 +237,7 @@ async function test(){
          if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover'||details.position!=='absolute')
            errors.push(size.name+' dashboard member portrait is not properly displayed: '+JSON.stringify(details));
        }
-       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='D'||await fallback.locator('img').count())
+       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='J'||await fallback.locator('img').count())
          errors.push(size.name+' dashboard member without a photo did not retain initials');
      }
      if(item.id==='dashboard'){
