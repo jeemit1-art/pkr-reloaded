@@ -248,16 +248,23 @@ export default function InsightsPage(){
    </div>
    <div className="pkr-insights-players-grid">
     <section className="pkr-vnext-card pkr-insights-players">
-     <div className="pkr-vnext-card-heading"><div><h2>▥ Player Performance</h2><p>Recorded results for the selected room.</p></div><button type="button" onClick={()=>router.push(roomUrl('leaderboard'))}>All players →</button></div>
-     {leaders.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>Player</th><th>Games</th><th>Profitable</th><th>Profitable %</th><th>Net result</th></tr></thead>
-      <tbody>{leadersByNet.slice(0,8).map((p,i)=><tr key={p.user_id}><td><span className="pkr-insights-player-name"><span className="pkr-insights-rank">{i+1}</span>{p.display_name}</span></td>
+     <div className="pkr-vnext-card-heading"><div><h2>▥ Player Performance</h2><p>All {leaders.length} players with settled results in this room. Members without a settled game are not ranked.</p></div><button type="button" onClick={()=>router.push(roomUrl('leaderboard'))}>All players →</button></div>
+     {leaders.length?<><div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>Player</th><th>Games</th><th>Profitable</th><th>Profitable %</th><th>Net result</th></tr></thead>
+      <tbody>{leadersByNet.map((p,i)=><tr key={p.user_id}><td><span className="pkr-insights-player-name"><span className="pkr-insights-rank">{i+1}</span>{p.display_name}</span></td>
        <td>{p.games_played}</td><td>{p.games_won}</td><td>{p.games_played?Math.round(p.games_won/p.games_played*100)+'%':'—'}</td>
        <td className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</td></tr>)}</tbody>
-     </table></div>:<p className="pkr-vnext-empty">Player results appear after a game is settled.</p>}
+     </table></div>
+       <div className="pkr-insights-player-mobile-list" role="list" aria-label="All recorded player performance">
+        {leadersByNet.map((p,i)=><div role="listitem" className="pkr-insights-player-mobile-row" key={p.user_id||p.display_name}>
+         <span className="pkr-insights-rank" aria-label={'Rank '+(i+1)}>{i+1}</span>
+         <span className="pkr-insights-player-mobile-info"><strong>{p.display_name}</strong><small>{p.games_played} games · {p.games_won} profitable · {p.games_played?Math.round(p.games_won/p.games_played*100):0}%</small></span>
+         <strong className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</strong>
+        </div>)}
+       </div></>:<p className="pkr-vnext-empty">Player results appear after a game is settled.</p>}
     </section>
     <section className="pkr-vnext-card pkr-insights-results">
-     <div className="pkr-vnext-card-heading"><h2>♛ Player Net Results</h2><span>Lifetime in this room</span></div>
-     {leaders.length?<div className="pkr-vnext-performance">{leadersByNet.slice(0,10).map(p=><div className="pkr-vnext-performance-row" key={p.user_id}>
+     <div className="pkr-vnext-card-heading"><h2>♛ Player Net Results</h2><span>All {leaders.length} recorded players · lifetime in this room</span></div>
+     {leaders.length?<div className="pkr-vnext-performance">{leadersByNet.map(p=><div className="pkr-vnext-performance-row" key={p.user_id}>
       <span>{p.display_name}</span><div><i className={p.total_net<0?'loss':'gain'} style={{width:(Math.max(3,Math.abs(p.total_net)/maxNet*100))+'%'}}/></div>
       <strong className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</strong>
      </div>)}</div>:<p className="pkr-vnext-empty">No settled player results recorded yet.</p>}

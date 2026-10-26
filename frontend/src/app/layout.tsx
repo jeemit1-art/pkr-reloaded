@@ -9,6 +9,7 @@ import './pkr-approved-banner.css';
 import './pkr-secondary-ui.css';
 import './pkr-interaction-refresh.css';
 import './pkr-standings.css';
+import './pkr-landing-premium.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
