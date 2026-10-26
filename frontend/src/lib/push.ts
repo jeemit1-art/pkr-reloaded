@@ -87,3 +87,18 @@ export async function unsubscribePush(eventId:string):Promise<boolean> {
     return true; // was incorrectly returning false
   } catch(e) { console.error('Push unsubscribe failed',e); return false; }
 }
+
+/** Local device preview only: tests OS display, not server-to-device delivery. */
+export async function showTestNotification():Promise<boolean> {
+  if(!canUsePush() || Notification.permission!=='granted')return false;
+  try{
+    const reg=await getSwReg();
+    if(!reg)return false;
+    await reg.showNotification('♠ PKR notifications are on',{
+      body:'Test alert: poker-night updates will appear here when your device receives them.',
+      icon:'/icon-192.png',badge:'/icon-192.png',tag:'pkr-test-alert',
+      data:{type:'test',url:'/dashboard'}
+    });
+    return true;
+  }catch{return false;}
+}
