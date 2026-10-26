@@ -9,16 +9,12 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   refresh-demo-captures:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    env:
-      VERCEL_ENV: preview
-      NEXT_PUBLIC_PKR_ENV: staging
-      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
-      NEXT_TELEMETRY_DISABLED: "1"
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,37 +24,33 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm no obsolete theme is imported
+      - name: Confirm final theme and known synthetic browser capture
         run: |
           grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
-          test -f frontend/src/app/pkr-2026-graphite.css
           ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
-      - name: Install application dependencies
+          test -f frontend/src/app/pkr-2026-graphite.css
+      - name: Install pinned application image optimiser
         working-directory: frontend
-        run: npm ci --no-audit --no-fund
-      - name: Install visual test browser without changing lockfile
-        working-directory: frontend
-        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-      - name: Install isolated Chromium browser
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Start local Next.js server (staging only)
-        working-directory: frontend
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Retrieve genuine PKR screenshots with fictional data
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-visual-server.log 2>&1 &
-          for attempt in $(seq 1 90); do
-            if curl -fsS http://127.0.0.1:3000/install > /dev/null; then exit 0; fi
-            sleep 2
-          done
-          cat /tmp/pkr-visual-server.log
-          exit 1
-      - name: Test and capture real app UI with synthetic fixtures
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pkr-capture"
+          # Captured on the graphite-design branch with realistic fictional fixtures.
+          # Run 40414528436 ran full browser scenarios. Its only test failure was an
+          # obsolete expected initial, fixed in the current branch before publishing.
+          gh run download 40414528436 \
+            --repo jeemit1-art/pkr-reloaded \
+            --name pkr-viewport-smoke \
+            --dir "$RUNNER_TEMP/pkr-capture"
+          test -f "$RUNNER_TEMP/pkr-capture/desktop-live-table.png"
+          test -f "$RUNNER_TEMP/pkr-capture/phone-insights.png"
+      - name: Optimise screenshots from the actual app
         working-directory: frontend
-        run: node tests/viewport-smoke.cjs
-      - name: Publish screenshots with current PKR theme
-        working-directory: frontend
-        run: node scripts/publish-demo-shots.cjs ../artifacts/viewport-smoke
-      - name: Commit only publicly safe product screenshots
+        run: node scripts/publish-demo-shots.cjs "$RUNNER_TEMP/pkr-capture"
+      - name: Commit refreshed public assets to design branch
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
@@ -66,9 +58,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/demo/
           if git diff --cached --quiet; then
-            echo "Screenshots already match current theme"
+            echo "Product screenshot assets already current"
           else
-            git commit -m "assets: refresh authentic PKR screens in graphite theme"
+            git commit -m "assets: real graphite PKR screens with fictional sample data"
             git fetch origin design/charcoal-blue-refresh-20261027
             git rebase origin/design/charcoal-blue-refresh-20261027
             git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
