@@ -158,7 +158,7 @@ export default function RsvpPage(){
         <div className="pkr-guest-stats">
           <div><strong>{attending.length}</strong><span>Coming</span></div>
           <div><strong>{board.guests.filter(r=>r.status==='no').length}</strong><span>Not coming</span></div>
-          <div><strong>{Math.max(0,board.game.seats-unavailable.size-(guest?.id&&seat&&!unavailable.has(seat)?1:0))}</strong><span>Seats available</span></div>
+          <div><strong>{Math.max(0,board.game.seats-unavailable.size-(guest?.id&&mySummary?.status==='yes'&&mySummary.seat_number&&!unavailable.has(mySummary.seat_number)?1:0))}</strong><span>Seats available</span></div>
         </div>
       </section>
       <div className="pkr-guest-grid">
