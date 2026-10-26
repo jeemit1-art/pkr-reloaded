@@ -179,15 +179,15 @@ billing.post('/webhook', async (c) => {
       const userId = sub.metadata?.pkr_user_id;
       const plan = sub.metadata?.plan;
       if (!userId || !['starter','pro'].includes(plan)) break;
-      if (sub.status === 'active' || sub.status === 'trialing') {
+      if (sub.status === 'active') {
         await c.env.DB.prepare(
           'UPDATE users SET plan=?, plan_expires_at=NULL WHERE id=?'
         ).bind(plan, userId).run();
-      } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'past_due' || sub.status === 'incomplete_expired') {
+      } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'past_due' || sub.status === 'incomplete_expired' || sub.status === 'incomplete' || sub.status === 'trialing') {
         // Grace: keep access until period end
         await c.env.DB.prepare(
           'UPDATE users SET plan_expires_at=? WHERE id=?'
-        ).bind(Math.max(Math.floor(Date.now()/1000),Number(sub.current_period_end)||0), userId).run();
+        ).bind(sub.status === 'canceled' ? Math.max(Math.floor(Date.now()/1000),Number(sub.current_period_end)||0) : Math.floor(Date.now()/1000)-1, userId).run();
       }
       break;
     }
