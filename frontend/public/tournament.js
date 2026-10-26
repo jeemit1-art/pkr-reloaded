@@ -12,6 +12,16 @@ var DEFAULT_LEVELS = [
   {level_num:8, small_blind:300, big_blind:600, ante:75, duration_secs:900, is_break:false},
   {level_num:9, small_blind:400, big_blind:800, ante:100,duration_secs:900, is_break:false},
   {level_num:10,small_blind:500, big_blind:1000,ante:100,duration_secs:900, is_break:false},
+  {level_num:11,small_blind:600, big_blind:1200,ante:200,duration_secs:900, is_break:false},
+  {level_num:12,small_blind:800, big_blind:1600,ante:200,duration_secs:900, is_break:false},
+  {level_num:13,small_blind:1000,big_blind:2000,ante:300,duration_secs:900, is_break:false},
+  {level_num:14,small_blind:1500,big_blind:3000,ante:300,duration_secs:900, is_break:false},
+  {level_num:15,small_blind:0,   big_blind:0,   ante:0,  duration_secs:600, is_break:true},
+  {level_num:16,small_blind:2000,big_blind:4000,ante:500,duration_secs:900, is_break:false},
+  {level_num:17,small_blind:3000,big_blind:6000,ante:500,duration_secs:900, is_break:false},
+  {level_num:18,small_blind:4000,big_blind:8000,ante:1000,duration_secs:900, is_break:false},
+  {level_num:19,small_blind:5000,big_blind:10000,ante:1000,duration_secs:900, is_break:false},
+  {level_num:20,small_blind:7500,big_blind:15000,ante:1500,duration_secs:900, is_break:false},
 ];
 var ts = {
   view:'main', state:null, levels:[], rebuys:[], eliminations:[],
@@ -86,14 +96,20 @@ function buildAnn(lv, next) {
 }
 
 function genBlinds(chips, hours) {
-  var dur=Math.round((hours||2)*60/10)*60, brk=Math.min(600,dur);
-  var sb=Math.round(chips/400/25)*25; if(sb<25)sb=25;
-  var lvs=[],s=sb;
-  for(var i=1;i<=10;i++){
-    if(i===5){lvs.push({level_num:i,small_blind:0,big_blind:0,ante:0,duration_secs:brk,is_break:true});continue;}
-    var ln=i<5?i:i-1;
-    lvs.push({level_num:i,small_blind:s,big_blind:s*2,ante:ln>=4?Math.round(s*0.25/25)*25:0,duration_secs:dur,is_break:false});
-    s=Math.round(s*(ln<=3?1.5:2)/25)*25;
+  // Each duration preset creates enough stages for that tournament length.
+  // Include regular breaks and respect the server's 100-level maximum.
+  var targetMinutes=Math.max(120,Math.min(720,Math.round(Number(hours||3)*60)));
+  var dur=15,breakMinutes=10;
+  var playable=Math.max(8,Math.ceil(targetMinutes/(dur+breakMinutes/6)));
+  var lvs=[],s=Math.max(25,Math.round((Number(chips)||10000)/400/25)*25);
+  for(var count=0;count<playable&&lvs.length<100;count++){
+    if(count>0&&count%6===0&&lvs.length<99)
+      lvs.push({level_num:lvs.length+1,small_blind:0,big_blind:0,ante:0,duration_secs:breakMinutes*60,is_break:true});
+    var small=Math.max(25,Math.round(s/25)*25);
+    lvs.push({level_num:lvs.length+1,small_blind:small,big_blind:small*2,
+      ante:count>=5?Math.max(25,Math.round(small*.125/25)*25):0,
+      duration_secs:dur*60,is_break:false});
+    s=Math.max(small+25,Math.round(small*1.35/25)*25);
   }
   return lvs;
 }
@@ -101,10 +117,24 @@ function loadTournament(){
   return tApi('/games/'+getGameId()+'/tournament').then(function(d){
     ts.state=d.state;ts.levels=d.levels||[];ts.rebuys=d.rebuys||[];ts.eliminations=d.eliminations||[];
     ts.payouts=d.payouts||[];ts.prizePoolCents=d.prize_pool_cents;ts.payoutError=d.payout_error;
-    if(ts.state)ts.setupConfig.buy_in_amount=ts.state.buy_in_amount||0;
+    if(ts.state){
+      ts.setupConfig.starting_chips=ts.state.starting_chips||10000;
+      ts.setupConfig.buy_in_amount=ts.state.buy_in_amount||0;
+      ts.setupConfig.rebuy_allowed=!!ts.state.rebuy_allowed;
+      ts.setupConfig.rebuy_levels=ts.state.rebuy_levels||4;
+      ts.setupConfig.addon_allowed=!!ts.state.addon_allowed;
+      ts.setupConfig.addon_chips=ts.state.addon_chips||5000;
+      try{ts.setupConfig.payout_structure=JSON.parse(ts.state.payout_structure||'[]');}catch(e){}
+      if(ts.levels.length)ts.setupLevels=JSON.parse(JSON.stringify(ts.levels));
+    }
     if(ts.state&&ts.state.status==='running')startLocalTimer();
+    else stopLocalTimer();
+    if(ts.state&&ts.state.status==='paused'){
+      var current=ts.levels.find(function(l){return l.level_num===ts.state.current_level;});
+      ts.secsRemaining=Math.max(0,(current?current.duration_secs:0)-(ts.state.paused_elapsed||0));
+    }
     renderBody();
-  }).catch(function(e){console.warn('loadTournament:',e.message);renderBody();});
+  }).catch(function(e){console.warn('loadTournament:',e.message);toast('Tournament could not load: '+e.message);renderBody();});
 }
 window.openTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.add('open');loadTournament();};
 window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');stopLocalTimer();};
@@ -199,7 +229,7 @@ function renderBody(){
 }
 function renderMain(body){
   var state=ts.state;
-  if(!state||state.status==='setup'||!state.status){
+  if(!state||!state.status){
     var intro=document.createElement('div');intro.style.cssText='text-align:center;padding:30px 0';
     intro.innerHTML='<div style="font-size:2rem;margin-bottom:12px">\ud83c\udfc6</div><div style="font-size:1rem;font-weight:700;color:var(--cream);margin-bottom:6px">Tournament Mode</div><div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px;line-height:1.5">Blind timer \u00b7 levels \u00b7 eliminations \u00b7 payouts</div>';
     body.appendChild(intro);
@@ -286,10 +316,10 @@ function renderSetup(body){
   rtog.textContent=ts.setupConfig.rebuy_allowed?'ON':'OFF';rtog.addEventListener('click',function(){ts.setupConfig.rebuy_allowed=!ts.setupConfig.rebuy_allowed;renderBody();});reRow.appendChild(rtog);body.appendChild(reRow);
   var ab=document.createElement('div');ab.style.cssText='background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px';
   var abH=document.createElement('div');abH.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;font-weight:600';abH.textContent='✨ Auto-generate structure';ab.appendChild(abH);
-  var abR=document.createElement('div');abR.style.cssText='display:flex;gap:6px';
-  ['2h','3h','4h','5h'].forEach(function(h){
+  var abR=document.createElement('div');abR.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
+  ['2h','3h','4h','5h','6h','8h','10h','12h'].forEach(function(h){
     var btn=document.createElement('button');
-    btn.style.cssText='flex:1;padding:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif';
+    btn.style.cssText='flex:1 0 20%;padding:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif';
     btn.textContent=h;
     btn.addEventListener('click',function(){
       abR.querySelectorAll('button').forEach(function(b){b.style.background='rgba(255,255,255,0.04)';b.style.color='var(--muted)';b.style.borderColor='rgba(255,255,255,0.1)';});
@@ -301,6 +331,10 @@ function renderSetup(body){
   });
   ab.appendChild(abR);body.appendChild(ab);
   var lvHdr=document.createElement('div');lvHdr.style.cssText='font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin:14px 0 8px;font-weight:600';lvHdr.textContent='Blind Levels';body.appendChild(lvHdr);
+  var totalSeconds=ts.setupLevels.reduce(function(n,l){return n+l.duration_secs;},0);
+  var info=document.createElement('p');info.style.cssText='color:var(--muted);font-size:12px;line-height:1.5;margin-bottom:10px';
+  info.textContent=ts.setupLevels.length+' stages · approx. '+(totalSeconds/3600).toFixed(1)+' hours · edit blinds and minutes per stage';
+  body.appendChild(info);
   ts.setupLevels.forEach(function(lv,idx){
     var row=document.createElement('div');row.style.cssText='display:flex;gap:4px;align-items:center;margin-bottom:4px;padding:6px 8px;background:'+(lv.is_break?'rgba(58,106,170,0.08)':'rgba(255,255,255,0.02)')+';border-radius:6px;border:1px solid var(--border)';
     var num=document.createElement('span');num.style.cssText='font-size:0.7rem;color:var(--muted);min-width:20px;flex-shrink:0';num.textContent=lv.level_num;row.appendChild(num);
@@ -313,6 +347,30 @@ function renderSetup(body){
     var dur=document.createElement('input');dur.type='text';dur.value=Math.round(lv.duration_secs/60)+'m';dur.style.cssText='width:36px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:var(--muted);padding:3px 4px;font-size:0.7rem;border-radius:4px;text-align:center;font-family:DM Sans,sans-serif';dur.dataset.idx=idx;dur.addEventListener('change',function(){ts.setupLevels[parseInt(this.dataset.idx)].duration_secs=(parseInt(this.value)||15)*60;});row.appendChild(dur);
     body.appendChild(row);
   });
+  // Manual extension for tournaments exceeding the selected duration.
+  var extension=document.createElement('div');extension.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px';
+  extension.appendChild(mkB('+ Add Blind Level','flex:1;padding:11px;background:rgba(201,168,76,.08);border:1px solid var(--gold);color:var(--gold);border-radius:8px;cursor:pointer',function(){
+    if(ts.setupLevels.length>=100){toast('Maximum 100 stages');return;}
+    var prev=ts.setupLevels.slice().reverse().find(function(l){return !l.is_break;})||DEFAULT_LEVELS[0];
+    var small=Math.max(25,Math.round(prev.big_blind*0.75/25)*25);
+    ts.setupLevels.push({level_num:ts.setupLevels.length+1,small_blind:small,big_blind:small*2,ante:prev.ante||0,duration_secs:prev.duration_secs||900,is_break:false});
+    renderBody();
+  }));
+  extension.appendChild(mkB('+ Add Break','flex:1;padding:11px;background:rgba(106,170,238,.08);border:1px solid #6aaaee;color:#6aaaee;border-radius:8px;cursor:pointer',function(){
+    if(ts.setupLevels.length>=100){toast('Maximum 100 stages');return;}
+    ts.setupLevels.push({level_num:ts.setupLevels.length+1,small_blind:0,big_blind:0,ante:0,duration_secs:600,is_break:true});
+    renderBody();
+  }));
+  extension.appendChild(mkB('Remove Last','flex:1;padding:11px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--cream);border-radius:8px;cursor:pointer',function(){
+    if(ts.setupLevels.length<=1){toast('At least one stage is required');return;}
+    ts.setupLevels.pop();renderBody();
+  }));
+  body.appendChild(extension);
+  if(ts.state&&ts.state.status!=='setup'){
+    var lock=document.createElement('p');lock.style.cssText='font-size:12px;line-height:1.6;color:#f0d393;margin:14px 0 0';
+    lock.textContent='This tournament has started. The saved structure cannot be overwritten. Existing levels and results are preserved.';
+    body.appendChild(lock);return;
+  }
   body.appendChild(mkB('\u2705 Save & Configure','width:100%;padding:14px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--green);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:700;font-family:DM Sans,sans-serif;margin-top:12px',window.tSetup));
 }
 function renderPayouts(body){
