@@ -32,21 +32,27 @@ export function planStartSeating(
     for(let n=1;n<=capacity;n++)if(!used.has(n)&&!reserved.has(n)){used.add(n);return n;}
     return null;
   }
-  // Honour RSVP seat picks first. Host-assigned seats remain authoritative;
-  // other unseated players use the remaining positions.
-  const eligible=confirmed.filter(r=>{
-    const name=typeof r.display_name==='string'?r.display_name.trim().toLowerCase():'';
-    return name && !names.has(name);
-  });
+  // Honour RSVP seat picks first, including those of already registered
+  // players who have not yet been allocated a physical seat.
+  const unseatedNames=new Set(existing.filter(p=>p.seat_number===null).map(p=>p.display_name.trim().toLowerCase()));
   const reserved=new Set<number>();
-  for(const r of eligible){
+  const preferences=new Map<string,number>();
+  for(const r of confirmed){
+    const name=typeof r.display_name==='string'?r.display_name.trim().toLowerCase():'';
     const seat=r.seat_number;
-    if(typeof seat==='number'&&Number.isSafeInteger(seat)&&seat>=1&&seat<=capacity&&!used.has(seat))reserved.add(seat);
+    if(!name||(names.has(name)&&!unseatedNames.has(name))||
+       typeof seat!=='number'||!Number.isSafeInteger(seat)||seat<1||seat>capacity||used.has(seat)||reserved.has(seat))continue;
+    reserved.add(seat);
+    preferences.set(name,seat);
   }
   const existingMoves:SeatPlan['existingMoves']=[];
   for(const player of existing){
     if(player.seat_number!==null)continue;
-    const seat=vacant();
+    const wanted=preferences.get(player.display_name.trim().toLowerCase());
+    let seat:number|null;
+    if(wanted!==undefined&&reserved.has(wanted)&&!used.has(wanted)){
+      seat=wanted;reserved.delete(wanted);used.add(wanted);
+    }else seat=vacant();
     if(seat!==null)existingMoves.push({user_id:player.user_id,seat_number:seat});
   }
   const newPlayers:SeatPlan['newPlayers']=[];
