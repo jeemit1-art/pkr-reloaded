@@ -67,7 +67,7 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     return c.json({error:'Live RSVP setup is not activated for this room yet.',code:'RSVP_BOARD_NOT_READY'},503);
   if(requestedArrivals!==undefined&&(
     !Array.isArray(requestedArrivals)||requestedArrivals.length<1||requestedArrivals.length>8||
-    requestedArrivals.some((time:unknown)=>typeof time!=='string'||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))||
+    requestedArrivals.some((time:unknown)=>typeof time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))||
     new Set(requestedArrivals).size!==requestedArrivals.length))
     return c.json({error:'Choose 1–8 unique arrival times in HH:MM format'},400);
   const arrivalTimes=Array.isArray(requestedArrivals)?[...requestedArrivals].sort():['19:00','20:00','21:00'];
