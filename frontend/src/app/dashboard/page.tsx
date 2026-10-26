@@ -36,6 +36,7 @@ function DashboardInner() {
   const [search,setSearch]=useState('');
   const [showArchivedRooms,setShowArchivedRooms]=useState(false);
   const [reopeningRoomId,setReopeningRoomId]=useState<string|null>(null);
+  const [pendingByRoom,setPendingByRoom]=useState<Record<string,number>>({});
 
   useEffect(()=>{
     const handler = (e:any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
@@ -250,6 +251,22 @@ function DashboardInner() {
   const onTrial = user && user.plan === 'trial' && user.trial_active;
   const isPaid = user && (user.plan === 'starter' || user.plan === 'pro' || user.plan === 'lifetime');
   const activeRooms = events.filter(evt => evt.status !== 'ended');
+  const totalPending = Object.values(pendingByRoom).reduce((sum,count)=>sum+count,0);
+  // Only hosts can read the private approval queue. The backend enforces host access.
+  useEffect(()=>{
+    const ownedRooms=events.filter(evt=>evt.status!=='ended' && evt.role==='host');
+    let active=true;
+    const refresh=async()=>{
+      const counts=await Promise.all(ownedRooms.map(async room=>{
+        try{const result=await api.events.joinRequests(room.id);return [room.id,result.requests.length] as const;}
+        catch{return [room.id,0] as const;}
+      }));
+      if(active)setPendingByRoom(Object.fromEntries(counts));
+    };
+    void refresh();
+    const timer=window.setInterval(()=>void refresh(),15000);
+    return()=>{active=false;window.clearInterval(timer)};
+  },[events]);
   const archivedRooms = events.filter(evt => evt.status === 'ended');
   // Exclude ended rooms from active/featured dashboard content by default.
   const featuredRoom = activeRooms[0] || null;
@@ -415,6 +432,21 @@ function DashboardInner() {
       </nav>
 
       <div className="pkr-content" style={{maxWidth:1600,margin:'0 auto',padding:'22px 22px 45px',position:'relative',zIndex:1}}>
+        {totalPending > 0 && (
+          <section aria-label="Pending membership approvals" role="status"
+            style={{padding:'14px 17px',marginBottom:17,border:'1px solid var(--gold)',
+              background:'rgba(201,168,76,.12)',borderRadius:10,color:'var(--ivory)'}}>
+            <strong style={{color:'var(--gold)'}}>🔔 {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>
+            <div style={{display:'flex',gap:9,flexWrap:'wrap',marginTop:10}}>
+              {activeRooms.filter(room=>pendingByRoom[room.id]>0).map(room=>(
+                <button key={room.id} type="button" className="btn btn-primary"
+                  onClick={()=>router.push('/events/'+room.id+'?tab=members')}>
+                  Review {room.name} ({pendingByRoom[room.id]})
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
         <section className="pkr-pro-home" aria-label="Poker room overview">
           {nextGame&&<section className="pkr-mobile-featured" aria-label="Next game">
             <span className="pkr-eyebrow">♠ NEXT GAME</span>
