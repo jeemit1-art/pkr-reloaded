@@ -68,6 +68,7 @@ export default function EventPage() {
   const [selectedInviteGameId,setSelectedInviteGameId]=useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
+  const [arrivalTimes,setArrivalTimes]=useState<string[]>(['19:00','20:00','21:00']);
   const [saving, setSaving] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState(null as any);
   const [removingMember, setRemovingMember] = useState(false);
@@ -192,6 +193,11 @@ export default function EventPage() {
 
   async function createGame() {
     if (!form.scheduled_at) return;
+    if(arrivalTimes.length<1||arrivalTimes.length>8||
+      arrivalTimes.some(t=>!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t))||
+      new Set(arrivalTimes).size!==arrivalTimes.length){
+      alert('Choose 1–8 different RSVP arrival times before scheduling.');return;
+    }
     setSaving(true);
     try {
       const ts = Math.floor(new Date(form.scheduled_at).getTime()/1000);
@@ -201,6 +207,7 @@ export default function EventPage() {
         game_password:form.game_password||undefined,
         repeat: form.repeat !== 'none' ? form.repeat : undefined,
         format: form.format,
+        rsvp_arrival_times: arrivalTimes,
         small_blind: form.small_blind ? Math.round(parseFloat(form.small_blind)*100) : undefined,
         big_blind: form.big_blind ? Math.round(parseFloat(form.big_blind)*100) : undefined,
         starting_chips: form.starting_chips ? parseInt(form.starting_chips) : undefined,
@@ -208,6 +215,7 @@ export default function EventPage() {
       // Include every generated session when Weekly/Fortnightly recurrence is selected.
       await api.games.list(id).then(setGames).catch(()=>setGames(gs=>[g,...gs]));
       setShowCreate(false);
+      setArrivalTimes(['19:00','20:00','21:00']);
       setForm({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
       router.push('/games/'+g.id);
     } catch(e:any){ alert(e.message); }
@@ -893,6 +901,34 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Location</div>
                 <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
+              </div>
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
+                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
+                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
+                </p>
+                <div style={{display:'grid',gap:8}}>
+                  {arrivalTimes.map((time,index)=>(
+                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
+                        value={time} style={{minWidth:0,flex:1}}
+                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
+                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
+                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
+                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
+                  disabled={arrivalTimes.length>=8} onClick={()=>{
+                    const used=new Set(arrivalTimes);
+                    for(let hour=17;hour<24;hour++){
+                      for(const minute of ['00','30']){
+                        const next=String(hour).padStart(2,'0')+':'+minute;
+                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
+                      }
+                    }
+                  }}>+ Add arrival time</button>
               </div>
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Game format *</div>
