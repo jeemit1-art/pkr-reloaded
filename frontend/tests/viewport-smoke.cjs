@@ -16,7 +16,7 @@ const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:pas
 const oldUnfinished={...upcoming,id:'test-old-unfinished',status:'active',scheduled_at:past-90*86400,created_at:past-90*86400,player_count:0};
 const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#214b37"/><circle cx="32" cy="25" r="13" fill="#e9c783"/><path d="M10 64c0-30 44-30 44 0" fill="#e9c783"/></svg>');
 const members=[{id:'test-user',name:'Test Host',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Demo Player',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
-const leaders=[{user_id:'test-user',display_name:'Test Host',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Demo Player',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past}];
+const leaders=[{user_id:'test-user',display_name:'Test Host',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Demo Player',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:'Guest '+String(i+3).padStart(2,'0'),games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
 const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Demo Player',to:'test-user',to_name:'Test Host',amount:7500,status:'owed'}]};
 const user={id:'test-user',name:'Test Host',email:'test@invalid.example',avatar_url:null,plan:'pro',trial_active:false,trial_days_left:0};
 const fixture=(pathname,method)=>{
@@ -60,7 +60,69 @@ async function test(){
  const errors=[];
  try{
   for(const size of sizes){
-   const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
+   // Check the public landing page before adding the synthetic logged-in token.
+    const guestContext=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
+    const guestPage=await guestContext.newPage();
+    try{
+      await guestPage.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:40000});
+      await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
+      await guestPage.locator('.pkr-l2-hero-art').evaluate(async image=>{
+        if(image instanceof HTMLImageElement && !image.complete){
+          await new Promise(resolve=>{
+            image.addEventListener('load',resolve,{once:true});
+            image.addEventListener('error',resolve,{once:true});
+          });
+        }
+      });
+      const landing=await guestPage.evaluate(()=>{
+        const hero=document.querySelector('.pkr-l2-hero-art');
+        return {
+          scrollWidth:document.documentElement.scrollWidth,
+          viewportWidth:document.documentElement.clientWidth,
+          imageReady:hero instanceof HTMLImageElement&&hero.complete&&hero.naturalWidth>0,
+        };
+      });
+      if(landing.scrollWidth>landing.viewportWidth+5)
+        errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
+      if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
+      if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
+        errors.push(size.name+' landing visual feature cards missing');
+      await guestPage.getByRole('button',{name:/Host sign in/i}).first().click();
+      await guestPage.getByRole('dialog',{name:'Host sign in'}).waitFor({state:'visible'});
+      await guestPage.keyboard.press('Escape');
+      if(await guestPage.getByRole('dialog',{name:'Host sign in'}).count())
+        errors.push(size.name+' landing host sign-in dialog did not close');
+      await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:false});
+      if(size.name==='phone'||size.name==='desktop'){
+        for(const route of ['/pricing','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement']){
+          await guestPage.goto(BASE+route,{waitUntil:'domcontentloaded',timeout:40000});
+          await guestPage.locator('.pkr-marketing-hero h1').waitFor({state:'visible',timeout:25000});
+          const measured=await guestPage.evaluate(()=>({
+            width:document.documentElement.scrollWidth,
+            viewport:document.documentElement.clientWidth,
+            canonical:document.querySelector('link[rel=canonical]')?.getAttribute('href')||''
+          }));
+          if(measured.width>measured.viewport+5)errors.push(size.name+' marketing '+route+' horizontal overflow');
+          if(!measured.canonical.endsWith(route))errors.push(size.name+' marketing '+route+' canonical missing');
+        }
+        await guestPage.goto(BASE+'/pricing',{waitUntil:'domcontentloaded'});
+        await guestPage.getByRole('link',{name:/Choose Starter/i}).click();
+        await guestPage.getByRole('dialog',{name:'Host sign in'}).waitFor({state:'visible',timeout:5000});
+        if(!(await guestPage.getByRole('dialog',{name:'Host sign in'}).textContent())?.includes('Starter'))
+          errors.push(size.name+' Starter selection not preserved through marketing sign-in');
+      }
+      if(size.name==='desktop'){
+        const map=await guestPage.request.get(BASE+'/sitemap.xml');
+        if(!map.ok()||!(await map.text()).includes('/poker-tournament-manager'))
+          errors.push('Public marketing sitemap missing tournament manager');
+        const robots=await guestPage.request.get(BASE+'/robots.txt');
+        if(!robots.ok()||!(await robots.text()).includes('Sitemap:'))
+          errors.push('robots.txt missing sitemap declaration');
+      }
+    }catch(e){errors.push(size.name+' landing: '+(e?.message||e));}
+    finally{await guestContext.close();}
+
+    const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
    const page=await context.newPage();
    page.on('request',request=>{if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))errors.push('PRODUCTION API REQUEST BLOCKED: '+request.url());});
@@ -179,6 +241,19 @@ async function test(){
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});
        await page.locator('.pkr-insights-settle-tabs').waitFor({state:'visible'});
        if(await page.locator('.pkr-insights-kpis .pkr-insights-kpi').count()!==5)errors.push(size.name+' insights KPI count mismatch');
+        // Regression: both sections must show ALL 14 synthetic players, not the first 8/10.
+        await page.locator('.pkr-vnext-performance-row').first().waitFor({state:'visible',timeout:10000});
+        if(await page.locator('.pkr-vnext-performance-row').count()!==leaders.length)
+          errors.push(size.name+' net results truncated to fewer than '+leaders.length+' players');
+        if(size.width<=700){
+          if(await page.locator('.pkr-insights-player-mobile-row').count()!==leaders.length)
+            errors.push(size.name+' mobile player performance truncated to fewer than '+leaders.length+' players');
+          const first=page.locator('.pkr-insights-player-mobile-row').first();
+          if(!await first.isVisible())errors.push(size.name+' mobile player performance invisible');
+        }else{
+          if(await page.locator('.pkr-insights-players tbody tr').count()!==leaders.length)
+            errors.push(size.name+' desktop player performance truncated to fewer than '+leaders.length+' players');
+        }
        await page.getByRole('tab',{name:'Player Balances'}).click();
        if(!await page.getByRole('tab',{name:'Player Balances'}).getAttribute('aria-selected').then(v=>v==='true'))errors.push(size.name+' settlement balances tab did not activate');
        await page.getByRole('tab',{name:'Who Pays Who'}).click();
@@ -309,8 +384,8 @@ async function test(){
       }
       await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();
       await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
-      if(await page.locator('.pkr-standings-row').count()!==2)
-        errors.push(size.name+' Standings did not show both synthetic players');
+      if(await page.locator('.pkr-standings-row').count()!==leaders.length)
+        errors.push(size.name+' Standings did not show every synthetic player');
       const playerSearch=page.getByLabel('Search standings by player name');
       await playerSearch.fill('Demo');
       if(await page.locator('.pkr-standings-row').count()!==1)

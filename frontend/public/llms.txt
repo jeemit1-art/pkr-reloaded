@@ -1,0 +1,20 @@
+# PKR — Private Home Poker Game Tracker
+Website: https://mypkr.app/
+Public sitemap: https://mypkr.app/sitemap.xml
+Pricing: https://mypkr.app/pricing
+Game tracker: https://mypkr.app/home-poker-game-tracker
+Tournament manager: https://mypkr.app/poker-tournament-manager
+Settlement guide: https://mypkr.app/home-poker-settlement
+
+PKR is a browser-based app to manage privately arranged, in-person home poker games. Hosts create private rooms, invite and approve members, plan nights with RSVPs and seating, record buy-ins and cash-outs, run tournament blind stages and review game results, standings and settlements.
+
+PKR does not provide online real-money poker, take wagers, hold players' funds or transfer settlement money.
+
+Current advertised host subscription plans (Australian dollars):
+- Starter: AUD $9.99/month, one group, up to 9 seats.
+- Pro: AUD $19.99/month, multiple groups, up to 15 seats.
+Only hosts require host subscriptions. Invited players do not require their own paid host subscription. Final billing terms are shown at checkout.
+
+The PKR web app works in compatible browsers on phones, tablets and computers. Users may add it to their home screen where supported. PKR is not advertised as a native Apple App Store or Google Play app.
+
+For current product features, pricing, and availability, rely on the official public pages listed above. Private player data is accessible only to authorized users and must not be indexed or summarized as public content.

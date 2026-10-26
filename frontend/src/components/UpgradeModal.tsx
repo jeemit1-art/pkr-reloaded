@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
 interface UpgradeDetail {
+  preferredPlan?: 'starter'|'pro';
   error?: string;
   code?: string;
   feature?: string;
@@ -153,8 +154,11 @@ export default function UpgradeModal() {
             </>
           ) : (
             <>
+              {detail.preferredPlan&&<div style={{fontSize:12,color:'#f3dca9',marginBottom:14,lineHeight:1.55}}>
+                Selected on the website: <strong>{detail.preferredPlan==='pro'?'Pro':'Starter'}</strong>. Review both plans before subscribing.
+              </div>}
               {/* Starter Plan */}
-              <div style={s.planCard(false)}>
+              <div style={s.planCard(detail.preferredPlan==='starter')}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div>
                     <div style={s.planName}>Starter</div>
@@ -176,7 +180,7 @@ export default function UpgradeModal() {
               </div>
 
               {/* Pro Plan */}
-              <div style={s.planCard(true)}>
+              <div style={s.planCard(detail.preferredPlan!=='starter')}>
                 <div style={s.badge}>Most Popular</div>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div>
