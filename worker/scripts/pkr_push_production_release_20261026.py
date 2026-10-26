@@ -47,7 +47,21 @@ BASELINE_SQL = '''SELECT
  (SELECT COUNT(*) FROM group_phone_contacts) AS contacts,
  (SELECT COUNT(*) FROM group_phone_invites) AS invitations,
  (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='push_room_subscriptions') AS push_v2_table,
- (SELECT COUNT(*) FROM games WHERE status='active') AS active_games
+ (SELECT COUNT(*) FROM games WHERE status='active') AS active_games,
+ (SELECT COUNT(*) FROM games g WHERE g.status='active' AND (
+    g.scheduled_at >= unixepoch()-604800
+    OR g.created_at >= unixepoch()-604800
+    OR EXISTS(SELECT 1 FROM game_players p
+              WHERE p.game_id=g.id AND p.created_at>=unixepoch()-604800)
+    OR EXISTS(SELECT 1 FROM game_rsvps r
+              WHERE r.game_id=g.id AND r.created_at>=unixepoch()-604800)
+    OR EXISTS(SELECT 1 FROM hands h
+              WHERE h.game_id=g.id AND h.created_at>=unixepoch()-604800)
+    OR EXISTS(SELECT 1 FROM hand_actions a JOIN hands h ON h.id=a.hand_id
+              WHERE h.game_id=g.id AND a.created_at>=unixepoch()-604800)
+    OR EXISTS(SELECT 1 FROM tournament_rebuys t
+              WHERE t.game_id=g.id AND t.created_at>=unixepoch()-604800)
+ )) AS recent_active_games
 '''
 
 def run(*args, input_text=None, show=False, cwd=WORKER):
@@ -163,7 +177,22 @@ def main():
                  '--remote', '--output', str(probe), input_text='y\n')
         if not probe.is_file() or probe.stat().st_size < 100:
             raise RuntimeError('STOP: staging D1 export returned no usable SQL file')
-    print('Staging D1 export compatibility: PASS')
+        stage_restored = sqlite3.connect(Path(scratch)/'staging-restore.sqlite')
+        try:
+            stage_restored.executescript(probe.read_text(encoding='utf-8'))
+            if stage_restored.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
+                raise RuntimeError('STOP: staging SQL export could not be restored cleanly')
+        finally:
+            stage_restored.close()
+    # Wrangler 3 supports --yes on D1 execute, unlike D1 export.
+    stage_readonly = json_from_output(wrangler(
+        'd1','execute','DB','--config','wrangler.staging.toml','--remote',
+        '--yes','--json','--command','SELECT 1 AS ok'))
+    stage_blocks = stage_readonly if isinstance(stage_readonly,list) else [stage_readonly]
+    if not any(isinstance(b,dict) and b.get('results')==[{'ok':1}]
+               for b in stage_blocks):
+        raise RuntimeError('STOP: staging D1 execute --yes preflight failed')
+    print('Staging D1 SQL export, local restore and --yes compatibility: PASS')
     if status('/phone-invites/not-a-real-token') != 404:
         raise RuntimeError('Private phone invitation gate is not available')
 
@@ -205,8 +234,12 @@ def main():
     source = database_baseline()
     if int(source['push_v2_table']) != 0:
         raise RuntimeError('STOP: multi-room table already exists; review before changing anything')
-    if int(source['active_games']) != 0:
-        raise RuntimeError('STOP: at least one game is active; do not deploy during gameplay')
+    if int(source['recent_active_games']) != 0:
+        raise RuntimeError('STOP: active games have activity within the last seven days; do not deploy during gameplay')
+    if int(source['active_games']):
+        print('Preserving', source['active_games'], 'historical unfinished games with active status.')
+        print('No recently scheduled, created or recorded activity was found for those games.')
+        print('Do not deploy while anyone is actually playing an older game.')
     (target/'baseline-before.json').write_text(json.dumps(source, indent=2))
     export = target/'production-before.sql'
     # Wrangler 3.114.17 does not accept --skip-confirmation on d1 export.
