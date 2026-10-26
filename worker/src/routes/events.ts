@@ -32,7 +32,7 @@ events.post('/', authMiddleware, async (c) => {
 
   if (!planStatus.is_active) {
     return c.json({
-      error: 'Your free trial has ended. Upgrade to create groups.',
+      error: 'A paid host subscription is required to create groups.',
       code: 'UPGRADE_REQUIRED',
       plan: planStatus.plan,
       feature: 'create_group',
