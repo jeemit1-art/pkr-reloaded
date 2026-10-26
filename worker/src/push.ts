@@ -162,7 +162,9 @@ async function sendToSub(
     });
 
     if (res.status === 410 || res.status === 404) {
-      await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(sub.endpoint).run();
+      await env.DB.prepare(env.PKR_PUSH_ROOMS_V2==='1'
+        ?'DELETE FROM push_room_subscriptions WHERE endpoint=?'
+        :'DELETE FROM push_subscriptions WHERE endpoint=?').bind(sub.endpoint).run();
       return false;
     }
     if (!res.ok) {
