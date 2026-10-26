@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
-import { sendPushToEvent } from '../push';
+import { sendPushToModerators } from '../push';
 
 const board = new Hono<{Bindings:Env}>();
 const DEFAULT_TIMES = ['19:00','20:00','21:00'];
@@ -181,15 +181,15 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       }catch{return conflict(c);}
       c.header('Cache-Control','no-store');
       // Push is opt-in, event-scoped and already disabled by the push module in staging.
-      try{c.executionCtx.waitUntil(sendPushToEvent(c.env,game.event_id,{
-        title:'Poker night RSVP updated',body:name+' · '+(status==='no'?'Not coming':arrival==='late'?'Late':arrival),
-        data:{url:'/games/'+game.id+'/rsvp'},
+      try{c.executionCtx.waitUntil(sendPushToModerators(c.env,game.event_id,{
+        title:'RSVP update — '+(game.event_name||'Poker night'),body:'A player updated attendance or arrival. Review the RSVP board.',
+        data:{type:'rsvp_changed',eventId:game.event_id,gameId:game.id,url:'/games/'+game.id+'/rsvp'},
       }));}catch{/* Locally mocked request contexts need not supply waitUntil. */}
       return c.json({ok:true,id,edit_token:key,status,arrival_option:arrival,seat_number:seat},201);
     }
-    try{c.executionCtx.waitUntil(sendPushToEvent(c.env,game.event_id,{
-      title:'Poker night RSVP updated',body:name+' updated their arrival',
-      data:{url:'/games/'+game.id+'/rsvp'},
+    try{c.executionCtx.waitUntil(sendPushToModerators(c.env,game.event_id,{
+      title:'RSVP changed — '+(game.event_name||'Poker night'),body:'A player changed their attendance. Check the RSVP board.',
+      data:{type:'rsvp_changed',eventId:game.event_id,gameId:game.id,url:'/games/'+game.id+'/rsvp'},
     }));}catch{}
     c.header('Cache-Control','no-store');
     return c.json({ok:true,status,arrival_option:arrival,seat_number:seat});
