@@ -679,11 +679,16 @@ export default function EventPage() {
                       </div>
                       {isGroupOwner&&(
                         <div className="pkr-member-push-state" aria-label={'Notification registration for '+m.name}>
-                          {pushRegistrationLoading||!pushRegistrationStatus
-                            ?<span className="pkr-member-push-unknown">{pushRegistrationError?'Status unavailable':'Checking notification status…'}</span>
-                            :(pushRegistrationStatus[m.id]||0)>0
-                              ?<span className="pkr-member-push-on">🔔 Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</span>
-                              :<span className="pkr-member-push-off">🔕 No room device registered</span>}
+                          <span className="pkr-member-push-on">✓ Approved member</span>
+                          <span style={{marginLeft:8}}>
+                            {pushRegistrationLoading
+                              ?'Checking notification setup…'
+                              :pushRegistrationStatus
+                                ?(pushRegistrationStatus[m.id]||0)>0
+                                  ?'🔔 Registered on '+pushRegistrationStatus[m.id]+' device'+(pushRegistrationStatus[m.id]===1?'':'s')
+                                  :'Notifications not enabled on this member’s device'
+                                :'Notification setup not available'}
+                          </span>
                         </div>
                       )}
                     </div>
