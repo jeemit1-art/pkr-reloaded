@@ -180,6 +180,13 @@ payments.post('/games/:id/transfers/:tid/respond',authMiddleware,async(c)=>{
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Room membership required'},403);
   if(game.status!=='settled')return c.json({error:'Game not settled'},409);
+  const collection=await c.env.DB.prepare(
+    'SELECT enabled FROM settlement_notification_settings WHERE game_id=?'
+  ).bind(game.id).first<{enabled:number}>();
+  if(!collection?.enabled)return c.json({
+    error:'The host has not started settlement notifications for this game.',
+    code:'SETTLEMENT_NOT_STARTED',
+  },409);
   const body=await c.req.json().catch(()=>({})) as {action?:unknown};
   const action=body.action;
   if(action!=='sent'&&action!=='received'&&action!=='not_received')
