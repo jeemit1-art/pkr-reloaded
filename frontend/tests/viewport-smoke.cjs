@@ -329,9 +329,18 @@ async function test(){
        if(await paymentSelect.count()){
          page.once('dialog',dialog=>dialog.accept());
          await paymentSelect.selectOption('paid');
-         await page.waitForTimeout(120);
-         if(await paymentSelect.inputValue()!=='paid')errors.push(size.name+' payment status did not update to paid');
-         if(!await settlement.getByText('Payment status updated to Paid.').count())errors.push(size.name+' payment update confirmation missing');
+         // Status is server-authorised and React controlled: wait for the actual
+         // synthetic API completion instead of assuming it resolves in 120ms.
+         try{
+           await page.waitForFunction(()=>{
+             const select=document.querySelector('.pkr-payment-status-select');
+             const notice=document.querySelector('.pkr-insights-payment-notice');
+             return select instanceof HTMLSelectElement&&select.value==='paid'&&
+               (notice?.textContent||'').includes('Payment status updated to Paid.');
+           },null,{timeout:7000});
+         }catch{
+           errors.push(size.name+' payment status/confirmation did not update after API response');
+         }
        }else errors.push(size.name+' host cannot select payment status in Insights');
        if(size.width>=1100){
          const nav=page.locator('.pkr-persistent-nav button');
