@@ -525,6 +525,12 @@ async function test(){
        }
      }
      if(item.id==='schedule'){
+       // Await the synthetic asynchronous game-list fetch before testing filters.
+       await page.waitForFunction(()=>{
+         const summary=document.querySelector('.pkr-schedule-counts')?.textContent||'';
+         const loading=document.querySelector('.pkr-schedule-empty[role="status"]')?.textContent||'';
+         return !loading.includes('Loading your poker nights') && summary.includes('1 unfinished');
+       },null,{timeout:15000});
        const liveCount=await page.locator('.pkr-schedule-counts').textContent();
        if(liveCount&&!liveCount.includes('0 live now'))
          errors.push(size.name+' historical unfinished game counted as live');
