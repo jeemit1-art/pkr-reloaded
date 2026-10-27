@@ -49,6 +49,7 @@ jobs:
         run: |
           python3 worker/scripts/test-reconcile-authorised-legacy-ci.py
           python3 worker/scripts/test-d1-export-diagnostic-ci.py
+          python3 worker/scripts/test-d1-api-export-fallback-ci.py
           python3 -m py_compile worker/scripts/reconcile-authorised-legacy-ci.py
           python3 -m py_compile worker/scripts/deploy-settlement-v2-production.py
           python3 -m py_compile worker/scripts/settlement-push-dependencies-ci.py
