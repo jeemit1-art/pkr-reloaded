@@ -1,0 +1,67 @@
+name: PKR live verification confirmation - read only
+on:
+  push:
+    branches: [verify/pkr-live-confirmation-20261028]
+permissions:
+  contents: read
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pkr-confirm" --no-audit --no-fund playwright
+          "$RUNNER_TEMP/pkr-confirm/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Await actual sign-in dialog and verify production endpoints without authentication
+        shell: bash
+        run: |
+          mkdir -p artifacts/confirmation
+          node <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const {chromium}=require(path.join(process.env.RUNNER_TEMP,'pkr-confirm/node_modules/playwright'));
+          const base='https://mypkr.app',api='https://pkr-reloaded-worker.jeemit1.workers.dev',out='artifacts/confirmation';
+          const checks=[];const add=(name,pass,details)=>{const v={name,status:pass?'PASS':'FAIL',details};checks.push(v);console.log(JSON.stringify(v));};
+          const sizes=[['phone-small',360,800],['iphone',390,844],['phone-large',430,932],['tablet',768,1024],['laptop',1366,768],['desktop',1440,900]];
+          (async()=>{
+            const browser=await chromium.launch();
+            for(const [name,width,height] of sizes){
+              const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
+              await context.route('**/*',r=>['GET','HEAD','OPTIONS'].includes(r.request().method())?r.continue():r.abort('blockedbyclient'));
+              const page=await context.newPage();
+              try{
+                await page.goto(base+'/?pkr_readonly_confirmation=20261028',{waitUntil:'domcontentloaded',timeout:40000});
+                const open=page.getByRole('button',{name:/Host sign in/i}).first();
+                await open.waitFor({state:'visible',timeout:15000});await open.click();
+                const google=page.getByText('Continue with Google',{exact:true});
+                await google.waitFor({state:'visible',timeout:12000});
+                add(name+' host sign-in dialog',true,{googleButtonVisible:true});
+                await page.screenshot({path:out+'/'+name+'-live-signin.png',fullPage:false});
+                await page.keyboard.press('Escape');await google.waitFor({state:'hidden',timeout:5000});
+                add(name+' sign-in closes with Escape',true,{});
+                await page.getByRole('button',{name:/Start your poker club/i}).first().click();
+                await google.waitFor({state:'visible',timeout:10000});
+                add(name+' main start button opens sign-in',true,{});
+              }catch(e){add(name+' sign-in verification',false,{error:e.message});try{await page.screenshot({path:out+'/'+name+'-signin-failure.png',fullPage:false});fs.writeFileSync(out+'/'+name+'-page-text.txt',await page.locator('body').innerText());}catch{}}
+              await context.close();
+            }
+            await browser.close();
+            for(const path of ['/auth/me','/games/pkr-readonly-confirmation-nonexistent/rsvp-board','/games/pkr-readonly-confirmation-nonexistent/settlement-control']){
+              try{const r=await fetch(api+path,{redirect:'manual',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(15000)});const j=await r.json().catch(()=>({}));add('Production route '+path,r.status===401,{http:r.status,error:j.error,code:j.code});}catch(e){add('Production route '+path,false,{error:e.message})}
+            }
+            const summary={checkedAt:new Date().toISOString(),checks,note:'Explicit waits distinguish a real UI failure from checking React state before render. No sign-in credentials, app records, payments, migrations or deployment settings were changed.'};
+            fs.writeFileSync(out+'/confirmation.json',JSON.stringify(summary,null,2));
+            const text=['# PKR live confirmation','',summary.checkedAt,'',...checks.map(c=>'- '+c.status+' '+c.name+' '+JSON.stringify(c.details)),'',summary.note].join('\n');
+            fs.writeFileSync(out+'/SUMMARY.md',text);fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
+            if(checks.some(c=>c.status==='FAIL'))process.exitCode=1;
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pkr-live-confirmation-20261028
+          path: artifacts/confirmation/
+          retention-days: 7
