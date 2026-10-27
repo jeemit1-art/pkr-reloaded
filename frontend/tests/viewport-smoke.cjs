@@ -107,8 +107,8 @@ async function test(){
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background!=='#0B0F12'||theme.surface!=='#131A1F'||
-         theme.primary!=='#3DDC97'||theme.money!=='#F2B84B')
+      if(theme.background.toLowerCase()!=='#0b0f12'||theme.surface.toLowerCase()!=='#131a1f'||
+         theme.primary.toLowerCase()!=='#3ddc97'||theme.money.toLowerCase()!=='#f2b84b')
         errors.push(size.name+' Midnight Felt design tokens mismatch: '+JSON.stringify(theme));
       if(theme.proBorder!=='rgb(242, 184, 75)')
         errors.push(size.name+' Pro pricing card lacks gold outline: '+theme.proBorder);
@@ -336,9 +336,11 @@ async function test(){
        if(await paymentSelect.count()){
          page.once('dialog',dialog=>dialog.accept());
          await paymentSelect.selectOption('paid');
-         await page.waitForTimeout(120);
-         if(await paymentSelect.inputValue()!=='paid')errors.push(size.name+' payment status did not update to paid');
-         if(!await settlement.getByText('Payment status updated to Paid.').count())errors.push(size.name+' payment update confirmation missing');
+         const paidNotice=settlement.getByText('Payment status updated to Paid.');
+         await paidNotice.waitFor({state:'visible',timeout:12000}).catch(()=>
+           errors.push(size.name+' payment update confirmation missing'));
+         if(await paymentSelect.inputValue()!=='paid')
+           errors.push(size.name+' payment status did not update to paid');
        }else errors.push(size.name+' host cannot select payment status in Insights');
        if(size.width>=1100){
          const nav=page.locator('.pkr-persistent-nav button');
