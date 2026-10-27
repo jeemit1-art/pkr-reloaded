@@ -1,0 +1,159 @@
+name: PKR live production verification - read only
+on:
+  push:
+    branches: [verify/pkr-live-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pkr-readonly-production-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 10fe784b86be70f75d4f0586b1a796f0a4ad6d22
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only live HTTP checks - no account tokens or database writes
+        shell: bash
+        run: |
+          mkdir -p artifacts/production-readonly
+          node <<'NODE'
+          const fs=require('node:fs');
+          const base='https://mypkr.app', api='https://pkr-reloaded-worker.jeemit1.workers.dev';
+          const out='artifacts/production-readonly', checks=[];
+          const add=(name,pass,details)=>{const row={name,status:pass?'PASS':'FAIL',details};checks.push(row);console.log(JSON.stringify(row));};
+          async function read(url,init={}) {
+            const method=init.method||'GET';
+            if(!['GET','HEAD','OPTIONS'].includes(method))throw new Error('Production write prohibited');
+            const res=await fetch(url,{...init,method,redirect:'manual',signal:AbortSignal.timeout(20000),headers:{'Cache-Control':'no-cache',...(init.headers||{})}});
+            const text=await res.text();let json=null;try{json=JSON.parse(text)}catch{}
+            return {res,text,json};
+          }
+          (async()=>{
+            const paths=['/','/pricing','/install','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement','/mobile-login','/robots.txt','/sitemap.xml','/manifest.json','/sw.js','/tournament.js','/hand-tracker.js','/design-version.json'];
+            let home='';
+            for(const path of paths){try{
+              const r=await read(base+path+'?pkr_readonly_audit=20261028');
+              add('Public '+path,r.res.status===200&&r.text.length>20,{http:r.res.status,contentType:r.res.headers.get('content-type'),bytes:r.text.length});
+              if(path==='/')home=r.text;
+              if(path==='/design-version.json'){
+                const expected=JSON.parse(fs.readFileSync('frontend/public/design-version.json','utf8'));
+                add('Live design manifest matches frozen main',!!r.json&&r.json.cssSha256===expected.cssSha256&&r.json.theme===expected.theme,{liveTheme:r.json?.theme,liveHash:r.json?.cssSha256,sourceHash:expected.cssSha256});
+              }
+              if(path==='/manifest.json')add('PWA manifest basics',!!r.json?.start_url&&Array.isArray(r.json?.icons)&&r.json.icons.length>0,{startUrl:r.json?.start_url,display:r.json?.display,icons:r.json?.icons?.length});
+            }catch(e){add('Public '+path,false,{error:e.message})}}
+            if(home){
+              add('Current landing page, not old build',home.includes('More poker.')&&home.includes('/demo/theme-a/live-table.webp')&&!home.includes('Run the table.Own the night.'),{});
+              const assets=[...new Set([...home.matchAll(/(?:src|href)="([^"?]+\.(?:js|css|webp|woff2|png|svg))(?:\?[^" ]*)?"/g)].map(m=>m[1]).filter(p=>p.startsWith('/')))];
+              for(const path of assets){try{const r=await read(base+path);add('Asset '+path,r.res.status===200&&r.text.length>0,{http:r.res.status,bytes:r.text.length});}catch(e){add('Asset '+path,false,{error:e.message})}}
+            }
+            try{const r=await read(api+'/health');add('Production Worker health',r.res.status===200&&r.json?.ok===true&&r.json?.environment==='production'&&r.json?.service==='pkr-reloaded-worker',{http:r.res.status,payload:r.json});}catch(e){add('Production Worker health',false,{error:e.message})}
+            const protectedPaths=['/auth/me','/events','/games/pkr-readonly-audit-nonexistent-20261028/rsvp-board','/games/pkr-readonly-audit-nonexistent-20261028/settlement-control','/events/pkr-readonly-audit-nonexistent-20261028/phone-contacts','/events/pkr-readonly-audit-nonexistent-20261028/join-requests'];
+            for(const path of protectedPaths){try{const r=await read(api+path);add('Unauthenticated access denied '+path,r.res.status===401,{http:r.res.status,error:r.json?.error,code:r.json?.code});}catch(e){add('Unauthenticated access denied '+path,false,{error:e.message})}}
+            try{const r=await read(api+'/phone-invites/'+'0'.repeat(64));add('Private invitation handler ready; nonexistent invite rejected',r.res.status===404&&r.json?.error==='Invitation unavailable or expired.',{http:r.res.status,error:r.json?.error,code:r.json?.code});}catch(e){add('Private invitation handler',false,{error:e.message})}
+            try{const r=await read(api+'/vapid-public-key');add('Public push key configured',r.res.status===200&&typeof r.json?.key==='string'&&r.json.key.length>60,{http:r.res.status,keyPresent:!!r.json?.key});}catch(e){add('Public push key configured',false,{error:e.message})}
+            try{
+              const r=await read(api+'/auth/google');const location=r.res.headers.get('location')||'';const url=location?new URL(location):null;const cookies=r.res.headers.get('set-cookie')||'';
+              add('Google sign-in initiation',r.res.status===302&&url?.hostname==='accounts.google.com'&&url.searchParams.get('redirect_uri')===api+'/auth/callback',{http:r.res.status,destinationHost:url?.hostname,callback:url?.searchParams.get('redirect_uri')});
+              add('OAuth state cookie protections',!!url?.searchParams.get('state')&&/HttpOnly/i.test(cookies)&&/Secure/i.test(cookies)&&/SameSite=Lax/i.test(cookies),{});
+            }catch(e){add('Google sign-in initiation',false,{error:e.message})}
+            for(const origin of [base,'https://pkr-untrusted.invalid']){try{
+              const r=await read(api+'/auth/me',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'authorization'}});
+              const allow=r.res.headers.get('access-control-allow-origin');
+              add('CORS '+origin,r.res.status===204&&(origin===base?allow===base:allow!==origin),{http:r.res.status,allowOrigin:allow});
+            }catch(e){add('CORS '+origin,false,{error:e.message})}}
+            fs.writeFileSync(out+'/http-checks.json',JSON.stringify({checkedAt:new Date().toISOString(),sourceCommit:'10fe784b86be70f75d4f0586b1a796f0a4ad6d22',checks},null,2));
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - name: Install isolated browser tester
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pkr-audit" --no-audit --no-fund playwright
+          "$RUNNER_TEMP/pkr-audit/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Test actual public production screens at six sizes - block all writes
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const {chromium}=require(path.join(process.env.RUNNER_TEMP,'pkr-audit/node_modules/playwright'));
+          const base='https://mypkr.app',out='artifacts/production-readonly',checks=[],blocked=[];
+          const add=(name,pass,details)=>{const row={name,status:pass?'PASS':'FAIL',details};checks.push(row);console.log(JSON.stringify(row));};
+          const sizes=[{name:'phone-small',width:360,height:800},{name:'iphone',width:390,height:844},{name:'phone-large',width:430,height:932},{name:'tablet',width:768,height:1024},{name:'laptop',width:1366,height:768},{name:'desktop',width:1440,height:900}];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            for(const size of sizes){
+              const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1,serviceWorkers:'block'});
+              await context.route('**/*',async route=>{
+                const req=route.request();
+                if(!['GET','HEAD','OPTIONS'].includes(req.method())){blocked.push({method:req.method(),url:new URL(req.url()).origin+new URL(req.url()).pathname});return route.abort('blockedbyclient')}
+                return route.continue();
+              });
+              const page=await context.newPage(),runtime=[];
+              page.on('pageerror',error=>runtime.push(error.message));
+              try{
+                const response=await page.goto(base+'/?pkr_readonly_audit=20261028',{waitUntil:'domcontentloaded',timeout:45000});
+                await page.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:20000});
+                await page.evaluate(()=>document.fonts.ready);
+                for(let n=0;n<24;n++){const end=await page.evaluate(()=>{window.scrollBy(0,Math.max(600,innerHeight));return scrollY+innerHeight>=document.documentElement.scrollHeight-2});await page.waitForTimeout(150);if(end)break;}
+                await page.waitForTimeout(1000);await page.evaluate(()=>scrollTo(0,0));
+                const view=await page.evaluate(()=>{
+                  const style=getComputedStyle(document.documentElement),hero=document.querySelector('.pkr-hero-desktop img'),h1=document.querySelector('.pkr-l2-hero h1');
+                  return {scroll:document.documentElement.scrollWidth,width:document.documentElement.clientWidth,bg:style.getPropertyValue('--pkr-a-bg').trim(),primary:style.getPropertyValue('--pkr-a-primary').trim(),money:style.getPropertyValue('--pkr-a-money').trim(),bodyBackground:getComputedStyle(document.body).backgroundColor,headingFont:h1?getComputedStyle(h1).fontFamily:'',heroSource:hero?.getAttribute('src'),heroReady:hero instanceof HTMLImageElement&&hero.complete&&hero.naturalWidth>1000,brokenImages:[...document.images].filter(img=>img.getBoundingClientRect().width>0&&(!img.complete||img.naturalWidth===0)).map(img=>img.getAttribute('src'))};
+                });
+                add(size.name+' landing HTTP',response?.status()===200,{http:response?.status()});
+                add(size.name+' no horizontal overflow',view.scroll<=view.width+5,{scroll:view.scroll,width:view.width});
+                add(size.name+' Theme A computed colours',view.bg.toLowerCase()==='#0b0f12'&&view.primary.toLowerCase()==='#3ddc97'&&view.money.toLowerCase()==='#f2b84b',view);
+                add(size.name+' heading font',/Bricolage/i.test(view.headingFont),{font:view.headingFont});
+                add(size.name+' actual app screenshot loaded',view.heroReady&&view.heroSource==='/demo/theme-a/live-table.webp',{src:view.heroSource,ready:view.heroReady});
+                add(size.name+' rendered images loaded',view.brokenImages.length===0,{broken:view.brokenImages});
+                await page.screenshot({path:out+'/'+size.name+'-live-homepage.png',fullPage:size.name==='desktop'||size.name==='iphone'});
+                const tabs=page.locator('.pkr-tour-tab');
+                if(await tabs.count()===6){await tabs.last().click();await page.waitForTimeout(300);const src=await page.locator('.pkr-tour-panel img').getAttribute('src');add(size.name+' product tour changes screen',!!src?.includes('insights'),{src});}else add(size.name+' product tour has six tabs',false,{count:await tabs.count()});
+                const signIn=page.getByRole('button',{name:/Host sign in/i}).first();
+                await signIn.click();
+                add(size.name+' sign-in dialog opens',await page.getByText('Continue with Google',{exact:true}).isVisible(),{});
+                await page.keyboard.press('Escape');
+                if(['iphone','desktop'].includes(size.name)){
+                  for(const route of ['/pricing','/install','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement','/mobile-login']){
+                    const res=await page.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(500);
+                    const v=await page.evaluate(()=>({width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,text:document.body.innerText.length}));
+                    add(size.name+' '+route+' rendered',res?.status()===200&&v.text>50&&v.scroll<=v.width+5,{http:res?.status(),...v});
+                    await page.screenshot({path:out+'/'+size.name+route.replaceAll('/','-')+'.png',fullPage:false});
+                  }
+                  await page.goto(base+'/dashboard',{waitUntil:'domcontentloaded',timeout:30000});
+                  await page.waitForURL(url=>url.pathname==='/',{timeout:15000});
+                  add(size.name+' signed-out dashboard redirects to login',new URL(page.url()).pathname==='/',{});
+                }
+              }catch(error){add(size.name+' browser scenario',false,{error:error.message});try{await page.screenshot({path:out+'/'+size.name+'-error.png',fullPage:false})}catch{}}
+              add(size.name+' no uncaught browser errors',runtime.length===0,{errors:runtime});
+              await context.close();
+            }
+            await browser.close();
+            fs.writeFileSync(out+'/browser-checks.json',JSON.stringify({checkedAt:new Date().toISOString(),checks,blockedWriteRequests:blocked,scope:'Public production pages only. No signed-in user workflows or device push delivery tested.'},null,2));
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - name: Summarise confirmed checks and untested areas
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),out='artifacts/production-readonly';let checks=[];
+          for(const name of ['http-checks.json','browser-checks.json']){if(fs.existsSync(out+'/'+name))checks.push(...JSON.parse(fs.readFileSync(out+'/'+name)).checks);else checks.push({name,status:'FAIL',details:{error:'Check results missing'}})}
+          const failures=checks.filter(x=>x.status==='FAIL');
+          const manual=['Authenticated host/member lifecycle, real game writes and settlement acknowledgements','Production Cloudflare version, feature flags and D1 schema/row reconciliation','Historical settlement status and the requested legacy total','Real iPhone/Android push display, sound and 24-hour scheduled reminder delivery','Full visual comparison of signed-in production screens against the approved guide'];
+          const lines=['# PKR read-only production verification','',new Date().toISOString(),'','Frozen source: 10fe784b86be70f75d4f0586b1a796f0a4ad6d22','',checks.filter(x=>x.status==='PASS').length+' passed; '+failures.length+' failed.','','## Failures',...failures.map(x=>'- '+x.name+': '+JSON.stringify(x.details)),'','## Still unverified',...manual.map(x=>'- '+x),'','No application deployment, credentials, production writes or migrations were performed by this workflow.'];
+          fs.writeFileSync(out+'/SUMMARY.md',lines.join('\n')+'\n');fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');console.log(lines.join('\n'));if(failures.length)process.exitCode=1;
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pkr-production-readonly-20261028
+          path: artifacts/production-readonly/
+          retention-days: 7
