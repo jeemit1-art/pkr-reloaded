@@ -1,0 +1,81 @@
+name: PKR owner-directed historical paid audit (334 transfers)
+
+# Independent of the Worker deployment; user explicitly authorised ALL
+# existing historical transfers on 28 October 2026. Does not alter money.
+on:
+  pull_request:
+    paths:
+      - 'worker/scripts/record-owner-authorised-historical-paid-20261028.py'
+      - 'worker/scripts/test-owner-authorised-historical-paid-20261028.py'
+      - '.github/workflows/pkr-owner-historical-paid-20261028.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'worker/scripts/record-owner-authorised-historical-paid-20261028.py'
+      - 'worker/scripts/test-owner-authorised-historical-paid-20261028.py'
+      - '.github/workflows/pkr-owner-historical-paid-20261028.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialise Cloudflare mutations with the production Worker release.
+  group: pkr-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  offline-financial-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test exact owner-authorised 334/$76,059 update on synthetic database only
+        run: |
+          python3 -m py_compile worker/scripts/record-owner-authorised-historical-paid-20261028.py
+          python3 worker/scripts/test-owner-authorised-historical-paid-20261028.py
+
+  production-financial-audit:
+    needs: offline-financial-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install reviewed Worker D1 client without credentials
+        working-directory: worker
+        run: npm ci --no-audit --no-fund
+      - name: Require scoped Cloudflare token without revealing value
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Cloudflare token missing. No changes made."
+            exit 1
+          fi
+      - name: Read-only preflight of exact 334 historical transfers / $76,059
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/record-owner-authorised-historical-paid-20261028.py
+      - name: Independently back up D1, then audit-record all historical transfers paid
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/record-owner-authorised-historical-paid-20261028.py --apply
+      - name: Verify paid statuses and all 334 audit events (idempotent, no writes)
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/record-owner-authorised-historical-paid-20261028.py
