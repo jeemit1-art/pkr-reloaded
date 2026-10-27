@@ -59,6 +59,19 @@ def select_aggregate():
             return int(row["legacy_count"]),int(row["legacy_cents"])
     raise GuardError("Unable to read a single production legacy count/amount result.")
 
+def audit_aggregate():
+    sql=("SELECT COUNT(*) AS audit_count,COALESCE(SUM(t.amount),0) AS audit_cents "
+         "FROM settlement_confirmation_events a "
+         "JOIN settlement_transfers t ON t.id=a.transfer_id "
+         "WHERE a.actor_id='owner-authorised-2026-10-27' "
+         "AND a.action='owner_marked_legacy_paid_without_recipient_confirmation'")
+    for item in parse_json(run("execute",TARGET,"--config","wrangler.toml",
+                               "--remote","--json","--command",sql)):
+        rows=item.get("results") if isinstance(item,dict) else None
+        if isinstance(rows,list) and len(rows)==1:
+            return int(rows[0]["audit_count"]),int(rows[0]["audit_cents"])
+    raise GuardError("Unable to verify owner-authorised audit records.")
+
 def inspect_target():
     config=(ROOT/"wrangler.toml").read_text(encoding="utf-8")
     for expected in (
@@ -140,6 +153,9 @@ def main():
     after=select_aggregate()
     if after!=(0,0):
         raise GuardError("Post-update verification failed. Stop further deployments; consult D1 export.")
+    audit=audit_aggregate()
+    if audit!=before:
+        raise GuardError("Audit record totals do not match all reclassified legacy transfers.")
     print("SUCCESS: all",before[0],"formerly legacy transfer(s), amount",
           before[1],"cents administratively marked paid.")
     print("Sensitive D1 export stored privately at:",export)
