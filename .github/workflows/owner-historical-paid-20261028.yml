@@ -1,0 +1,70 @@
+name: Owner-authorised historical payments - 28 October 2026
+
+# The owner explicitly authorised ALL currently historical transfers as paid.
+# Exact observed batch: 334 transfers / AUD 76,059. No current owed records.
+# Production writes only after the reviewed main merge; never in a PR.
+on:
+  pull_request:
+    paths:
+      - 'worker/scripts/record-owner-authorised-historical-paid-20261028.py'
+      - 'worker/scripts/test-owner-all-historical-paid-20261028.py'
+      - '.github/workflows/owner-historical-paid-20261028.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'worker/scripts/record-owner-authorised-historical-paid-20261028.py'
+      - 'worker/scripts/test-owner-all-historical-paid-20261028.py'
+      - '.github/workflows/owner-historical-paid-20261028.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkr-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify exact batch and atomic audit with synthetic data only
+        run: |
+          python3 -m py_compile worker/scripts/record-owner-authorised-historical-paid-20261028.py
+          python3 worker/scripts/test-owner-all-historical-paid-20261028.py
+          python3 worker/scripts/test-d1-export-diagnostic-ci.py
+          python3 worker/scripts/test-d1-api-export-fallback-ci.py
+
+  record-paid:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: safety
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install locked tooling without production credentials
+        working-directory: worker
+        run: npm ci --no-audit --no-fund
+      - name: Back up, independently restore, audit-record historical transfers paid and verify totals
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/record-owner-authorised-historical-paid-20261028.py --apply
+      - name: Verify grouped statuses after recording without exposing player information
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/read-only-production-settlement-audit.py
