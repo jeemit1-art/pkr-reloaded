@@ -1,4 +1,4 @@
-// Synthetic-only modal tests. Opening and cancelling never contacts billing checkout.
+// Synthetic-only modal tests. No billing writes, camera access or production data.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -54,10 +54,30 @@ fs.mkdirSync(output,{recursive:true});
     await dialog.waitFor({state:'visible'});
     await page.keyboard.press('Escape');
     await dialog.waitFor({state:'hidden',timeout:5000});
+
+    // Mirror the existing inline scanner DOM without invoking getUserMedia.
+    // This verifies its stacking/scroll geometry, not actual QR decoding.
+    await page.evaluate(()=>{
+     const container=document.querySelector('.pkr-dashboard .pkr-content');
+     if(!container)throw new Error('Dashboard content missing');
+     const overlay=document.createElement('div');
+     overlay.id='synthetic-scanner-overlay';
+     overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px';
+     overlay.innerHTML='<div data-testid="scanner-frame" style="width:100%;max-width:360px;overflow:hidden;background:#131A1F;border-radius:12px"><div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><span>Scan Invite QR</span><button aria-label="Close test scanner">Close</button></div><div style="padding:20px"><video id="scanVideo" style="width:100%;height:280px;background:#000;display:block"></video><p>Camera placeholder for layout testing only</p></div></div>';
+     container.appendChild(overlay);
+    });
+    const frame=page.getByTestId('scanner-frame');
+    const scannerBounds=await frame.evaluate(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:innerHeight,overflow:getComputedStyle(el).overflowY};});
+    assert.ok(scannerBounds.top>=0&&scannerBounds.bottom<=scannerBounds.height,JSON.stringify(scannerBounds));
+    assert.equal(scannerBounds.overflow,'auto');
+    const scannerClose=page.getByRole('button',{name:'Close test scanner'});
+    assert.ok(await scannerClose.evaluate(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return hit===el||el.contains(hit);}),'Scanner close button is obstructed');
+    await page.screenshot({path:path.join(output,viewport.width+'x'+viewport.height+'-scanner-fixture.png'),fullPage:false});
+    await page.evaluate(()=>document.getElementById('synthetic-scanner-overlay')?.remove());
    }catch(error){failures.push(viewport.width+'x'+viewport.height+': '+error.message);}
    finally{await context.close();}
   }
  }finally{await browser.close();}
  if(failures.length)throw new Error(failures.join('\n'));
- console.log('PASS: plan modal stays above navigation, scrolls on landscape phones, and closes by button or Escape at all six sizes. No checkout calls.');
+ console.log('PASS: plan and scanner-layout dialogs stay above navigation and scroll within all six viewports. Plan closes by button/Escape. No checkout, production or camera calls.');
 })().catch(error=>{console.error(error.message);process.exitCode=1;});
