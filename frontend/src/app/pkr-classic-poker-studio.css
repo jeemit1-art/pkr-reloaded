@@ -298,7 +298,7 @@
   background:#26232a!important;border-color:#4a3c44!important
 }
 .pkr-app.pkr-casino .pkr-game-summary{
-  background:#272228!important;border-color:#6d4855!important;
+  background-color:#272228!important;border-color:#6d4855!important;
 }
 .pkr-app.pkr-casino .pkr-game-summary :is(.display,strong){color:#fff5ed!important}
 .pkr-app.pkr-casino .pkr-casino-art{background:radial-gradient(circle at 30% 0%,#9f233522,transparent 40%),#131518!important}
