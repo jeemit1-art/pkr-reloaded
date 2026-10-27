@@ -119,6 +119,9 @@ export default function HomePage() {
       <main>
         <section className="pkr-l2-hero" aria-labelledby="pkr-l2-main-heading">
           <img className="pkr-l2-hero-art" src="/images/pkr-hero-premium.svg" alt="" aria-hidden="true" width="1600" height="640" fetchPriority="high"/>
+          <div className="pkr-l2-hero-casino-backdrop" aria-hidden="true">
+            <img src="/images/casino/real-casino-props.webp" alt="" width="1500" height="1000" fetchPriority="high"/>
+          </div>
           <div className="pkr-l2-hero-vignette" aria-hidden="true"/>
           <div className="pkr-l2-hero-inner">
             <div className="pkr-l2-hero-copy">
@@ -153,6 +156,28 @@ export default function HomePage() {
         </section>
 
         <ProductTour />
+
+        <section className="pkr-casino-atmosphere" aria-labelledby="pkr-casino-atmosphere-title">
+          <div className="pkr-casino-atmosphere-head">
+            <span className="pkr-l2-section-kicker">THE FEEL OF A REAL POKER NIGHT</span>
+            <h2 id="pkr-casino-atmosphere-title">The chips. The cards.<br/><em>All the atmosphere.</em></h2>
+            <p>Real poker chips and playing cards give PKR its classic club feel. Underneath the atmosphere is the practical app that keeps every game organised.</p>
+          </div>
+          <div className="pkr-casino-atmosphere-photos">
+            <figure className="pkr-casino-atmosphere-photo pkr-casino-atmosphere-photo-featured">
+              <img src="/images/casino/real-poker-chips.webp" alt="Photograph of a poker player beside stacks of real blue, white, red and green poker chips" width="1500" height="1000" loading="lazy" decoding="async"/>
+              <figcaption><span>01</span><strong>THE CHIPS</strong><small>Every buy-in accounted for</small></figcaption>
+            </figure>
+            <figure className="pkr-casino-atmosphere-photo pkr-casino-atmosphere-photo-cards">
+              <img src="/images/casino/real-casino-props.webp" alt="Real playing cards, red and blue poker chips and dice photographed on a black table" width="1500" height="1000" loading="lazy" decoding="async"/>
+              <figcaption><span>02</span><strong>THE CARDS</strong><small>Game night, sorted</small></figcaption>
+            </figure>
+            <figure className="pkr-casino-atmosphere-photo pkr-casino-atmosphere-photo-detail">
+              <img src="/images/casino/real-chip-closeup.webp" alt="Close-up photograph of physical casino-style poker chips" width="1350" height="900" loading="lazy" decoding="async"/>
+              <figcaption><span>03</span><strong>THE DETAILS</strong><small>A proper poker club feel</small></figcaption>
+            </figure>
+          </div>
+        </section>
 
         <section id="features" className="pkr-l2-section pkr-l2-feature-intro">
           <div className="pkr-l2-intro-copy">
