@@ -478,7 +478,7 @@ async function test(){
         errors.push(size.name+' owner-recorded paid historical transfer not shown as paid');
        if((await page.locator('.pkr-insights-payment-summary').count())&&
           (await page.locator('.pkr-insights-payment-summary').textContent())?.includes('Legacy'))
-        errors.push(size.name+' old historical disclaimer still appears';
+        errors.push(size.name+' old historical disclaimer still appears');
 
         // Regression: both sections must show ALL 14 synthetic players, not the first 8/10.
         await page.locator('.pkr-vnext-performance-row').first().waitFor({state:'visible',timeout:10000});
