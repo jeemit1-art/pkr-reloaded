@@ -134,6 +134,27 @@ def table_names() -> set[str]:
     )}
 
 
+
+def verify_required_columns() -> None:
+    """Fail closed if live D1 predates columns needed by the V2 routes/cron."""
+    needed = {
+        "settlement_transfers": {
+            "id", "game_id", "from_user", "to_user", "from_name", "to_name",
+            "amount", "status", "paid_at", "created_at",
+            "last_reminded_at", "reminder_count",
+        },
+        "games": {"id", "event_id", "status", "results_token"},
+        "events": {"id"},
+    }
+    for table, columns in needed.items():
+        # These table names are fixed literals; no user identifiers are interpolated.
+        actual = {str(row["name"]) for row in remote(
+            "SELECT name FROM pragma_table_info('" + table + "')"
+        )}
+        if not columns.issubset(actual):
+            raise Stop("Production D1 lacks required V2 columns on " + table +
+                       ". Review and migrate the existing schema before deployment.")
+
 def verify_copy(path: Path, expected: tuple[int, ...], migration: str) -> None:
     if not path.exists() or path.stat().st_size < 4096:
         raise Stop("Private full D1 export is missing or suspiciously small.")
@@ -202,6 +223,7 @@ def main() -> None:
         raise Stop("--mark-historical-paid requires --apply.")
     assert_target()
     health()
+    verify_required_columns()
     before = remote_snapshot()
     if before[0] <= 0 or before[2] < 0:
         raise Stop("Live database snapshot does not look like the existing PKR installation.")
