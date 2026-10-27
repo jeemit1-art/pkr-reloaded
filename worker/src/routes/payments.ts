@@ -21,6 +21,10 @@ payments.put('/games/:id/transfers/:tid/status', authMiddleware, async (c) => {
   if (game.status !== 'settled') {
     return c.json({ error: 'Payment status can only be changed on a settled game' }, 409);
   }
+  const prior = c.env.PKR_SETTLEMENT_V2==='1'
+    ? await c.env.DB.prepare('SELECT status FROM settlement_transfers WHERE id=? AND game_id=?')
+        .bind(tid,gameId).first<{status:string}>()
+    : null;
   const now = Math.floor(Date.now() / 1000);
   const result = await c.env.DB.prepare(
     // Legacy migration status means unknown payment history. Refuse to overwrite
@@ -37,6 +41,8 @@ payments.put('/games/:id/transfers/:tid/status', authMiddleware, async (c) => {
     },409);
     return c.json({ error: 'Settlement transfer not found in this game' }, 404);
   }
+  if(c.env.PKR_SETTLEMENT_V2==='1'&&prior?.status!==status)
+    await writeAudit(c,gameId,tid,'host_override',prior?.status||null,status);
   return c.json({ ok: true, status });
 });
 
