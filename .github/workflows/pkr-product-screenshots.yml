@@ -1,79 +1,107 @@
-name: Refresh PKR public screenshots from redesigned app
+name: Refresh verified Midnight Felt product screenshots
 
 on:
   push:
     branches:
-      - design/charcoal-blue-refresh-20261027
+      - design/theme-a-midnight-felt-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
+      - 'frontend/src/**'
+      - 'frontend/scripts/**'
+      - 'frontend/tests/**'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+
+concurrency:
+  group: theme-a-screenshots
+  cancel-in-progress: true
 
 permissions:
   contents: write
 
 jobs:
   capture-real-pkr-ui:
+    if: github.ref == 'refs/heads/design/theme-a-midnight-felt-20261027'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
       VERCEL_ENV: preview
       NEXT_PUBLIC_PKR_ENV: staging
       NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
-      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          persist-credentials: true
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - name: Archive exact reviewed frontend source for visual QA
+        run: git archive --format=tar.gz --output=/tmp/pkr-theme-a-source.tar.gz HEAD frontend
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pkr-theme-a-source
+          path: /tmp/pkr-theme-a-source.tar.gz
+          retention-days: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm latest PKR graphite design
+      - name: Verify Theme A source, not an older design
         run: |
-          grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
-          ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
-          test -f frontend/src/app/pkr-2026-graphite.css
-          grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
-          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
-      - name: Install pinned frontend dependencies
+          grep -Fq "pkr-theme-a" frontend/src/app/layout.tsx
+          grep -Fq '#3DDC97' frontend/src/app/pkr-theme-a-tokens.css
+          grep -Fq '#0B0F12' frontend/src/app/pkr-theme-a-tokens.css
+      - name: Install locked frontend dependencies
         working-directory: frontend
         run: npm ci --no-audit --no-fund
-      - name: Install visual browser test runner
-        working-directory: frontend
-        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-      - name: Install isolated Chromium
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Start staging-only PKR application
+      - name: Install pinned isolated browser runner
         working-directory: frontend
         run: |
-          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
-          for attempt in $(seq 1 90); do
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Build the same optimised application that previews serve
+        working-directory: frontend
+        run: npm run build
+      - name: Start local preview build
+        working-directory: frontend
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/pkr-theme-a-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
             sleep 2
           done
-          cat /tmp/pkr-graphite-next.log
+          cat /tmp/pkr-theme-a-next.log
           exit 1
-      - name: Capture and test genuine PKR interface with fictional data
+      - name: Verify and capture genuine app screens with fictional data
         working-directory: frontend
         run: node tests/viewport-smoke.cjs
-      - name: Optimise real app screenshots
+      - name: Prepare fresh screenshots from this exact build
         working-directory: frontend
         run: node scripts/publish-demo-shots.cjs ../artifacts/viewport-smoke
-      - name: Update only demonstration screenshots in design branch
+      - name: Upload browser evidence for visual review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pkr-theme-a-visual-evidence
+          path: |
+            artifacts/viewport-smoke/
+            frontend/public/demo/
+            /tmp/pkr-theme-a-next.log
+          if-no-files-found: error
+          retention-days: 2
+      - name: Publish verified screenshots to design branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
-          git config user.name "PKR Screenshot Bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          test "$GITHUB_REF" = 'refs/heads/design/theme-a-midnight-felt-20261027'
+          test "$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git "$GITHUB_REF" | cut -f1)" = "$GITHUB_SHA" || {
+            echo 'Source changed during capture; refusing to publish stale screenshots.'
+            exit 1
+          }
+          git config user.name 'PKR Screenshot Bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add frontend/public/demo/
-          if git diff --cached --quiet; then
-            echo "No screenshot changes"
-          else
-            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
-            git fetch origin design/charcoal-blue-refresh-20261027
-            git rebase origin/design/charcoal-blue-refresh-20261027
-            git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
-          fi
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'assets: current Theme A app screenshots with fictional data'
+          gh auth setup-git
+          git push origin HEAD:refs/heads/design/theme-a-midnight-felt-20261027
