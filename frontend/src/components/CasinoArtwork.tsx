@@ -14,7 +14,7 @@ export default function CasinoArtwork({variant='lounge'}:{variant?:'lounge'|'roo
    <img
     className="pkr-photo-scene-main"
     src={variant==='room'?'/images/casino/real-casino-props.webp':'/images/casino/real-poker-chips.webp'}
-    width={1500} height={1000} alt="" loading="lazy" decoding="async"
+    width={1500} height={1000} alt="" loading="eager" decoding="async"
    />
    <div className="pkr-photo-scene-inset">
     <img
