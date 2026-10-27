@@ -277,6 +277,11 @@ function renderMain(body){
   // Controls
   if(state.status==='setup'){
     body.appendChild(mkB('\u25b6 Start Tournament','width:100%;padding:13px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--green);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:700;font-family:DM Sans,sans-serif;margin-bottom:8px',window.tStart));
+    var requirement=document.createElement('p');
+    requirement.style.cssText='font-size:12px;line-height:1.6;color:var(--muted);margin:4px 0 14px';
+    requirement.textContent='To activate: the host must have an active Pro plan, at least two players must be registered with recorded buy-ins, and the blind structure must be saved.';
+    body.appendChild(requirement);
+
   } else if(state.status==='running'||state.status==='paused'){
     var cr=document.createElement('div');cr.style.cssText='display:flex;gap:6px;margin-bottom:8px';
     cr.appendChild(mkB(state.status==='paused'?'\u25b6 Resume':'\u23f8 Pause','flex:1;padding:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--cream);border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:DM Sans,sans-serif;font-weight:600',window.tPause));
@@ -409,6 +414,11 @@ function renderSetup(body){
     body.appendChild(lock);return;
   }
   body.appendChild(mkB('\u2705 Save & Configure','width:100%;padding:14px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--green);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:700;font-family:DM Sans,sans-serif;margin-top:12px',window.tSetup));
+  var hint=document.createElement('p');
+  hint.style.cssText='color:var(--muted);font-size:12px;line-height:1.6;margin-top:9px';
+  hint.textContent='Choose a 2–24 hour preset, or add up to 100 consecutive blind and break stages. Saving does not start the tournament or change existing settled games.';
+  body.appendChild(hint);
+
 }
 function renderPayouts(body){
   body.appendChild(mkB('\u2190 Back','background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;margin-bottom:12px;padding:0;font-family:DM Sans,sans-serif',function(){ts.view='main';renderBody();}));
