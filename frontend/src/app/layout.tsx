@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Playfair_Display, DM_Sans, Outfit, Manrope } from 'next/font/google';
+import { Sora, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import './pkr-app.css';
 import './pkr-casino.css';
@@ -12,25 +12,12 @@ import './pkr-standings.css';
 import './pkr-landing-premium.css';
 import './pkr-marketing-pages.css';
 import './pkr-product-gallery.css';
-import './pkr-2026-graphite.css';
+import './pkr-nightshift.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['400','500','600','700'],
-  style: ['normal','italic'],
-  variable: '--font-display',
-});
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['300','400','500'],
-  variable: '--font-body',
-});
-
-const outfit = Outfit({subsets:['latin'],variable:'--font-landing-display',display:'swap'});
-const manrope = Manrope({subsets:['latin'],variable:'--font-landing-body',display:'swap'});
+const sora = Sora({subsets:['latin'],weight:['400','500','600','700','800'],variable:'--font-display',display:'swap'});
+const jakarta = Plus_Jakarta_Sans({subsets:['latin'],weight:['400','500','600','700','800'],variable:'--font-body',display:'swap'});
 
 export const metadata = {
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
@@ -61,7 +48,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${outfit.variable} ${manrope.variable}`}>
+    <html lang="en" className={`${sora.variable} ${jakarta.variable}`}>
       <body>
         <PersistentNavigation/>
         {children}

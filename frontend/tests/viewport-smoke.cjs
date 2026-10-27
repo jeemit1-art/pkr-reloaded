@@ -86,8 +86,16 @@ async function test(){
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
       if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(239, 137, 118)')
-        errors.push(size.name+' landing CTA reverted to rejected brand colour: '+landingCTAColour);
+      if(landingCTAColour!=='rgb(173, 130, 255)')
+        errors.push(size.name+' landing CTA does not use ultraviolet brand colour: '+landingCTAColour);
+
+      const landingFonts=await guestPage.evaluate(()=>({
+        title:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
+        body:getComputedStyle(document.body).fontFamily,
+        theme:getComputedStyle(document.documentElement).getPropertyValue('--pkr-theme-id').trim(),
+      }));
+      if(landingFonts.theme!=='nightshift-2026'||!landingFonts.title.includes('Sora')||!landingFonts.body.includes('Jakarta'))
+        errors.push(size.name+' marketing theme/font mismatch: '+JSON.stringify(landingFonts));
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
@@ -176,6 +184,25 @@ async function test(){
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
+     // Every route must load the SAME global palette and geometric typography.
+     const theme=await page.evaluate(()=>{
+       const heading=document.querySelector('#gameScreen .tb-title, main h1, .pkr-pro-title h1, .pkr-event h1, h1, h2');
+       return {
+         id:getComputedStyle(document.documentElement).getPropertyValue('--pkr-theme-id').trim(),
+         bodyFont:getComputedStyle(document.body).fontFamily,
+         headingFont:heading?getComputedStyle(heading).fontFamily:'',
+         baseAccent:getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(),
+       };
+     });
+     if(theme.id!=='nightshift-2026')
+       errors.push(size.name+' '+item.id+' does not load unified Nightshift theme: '+JSON.stringify(theme));
+     if(!theme.bodyFont.includes('Jakarta'))
+       errors.push(size.name+' '+item.id+' is not using shared Plus Jakarta Sans UI font: '+theme.bodyFont);
+     if(theme.headingFont&&!theme.headingFont.includes('Sora'))
+       errors.push(size.name+' '+item.id+' is not using shared Sora heading font: '+theme.headingFont);
+     if(theme.baseAccent.toLowerCase()!=='#ad82ff')
+       errors.push(size.name+' '+item.id+' still has old brand accent: '+theme.baseAccent);
+
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
@@ -210,7 +237,7 @@ async function test(){
          return {height:r.height,image:s.backgroundImage};
        });
        if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
-         errors.push(size.name+' game detail hero does not use the redesigned no-gold header: '+JSON.stringify(summary));
+         errors.push(size.name+' game detail hero does not use the redesigned Nightshift header: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -226,13 +253,13 @@ async function test(){
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
        if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
-         errors.push(size.name+' '+item.id+' stale casino photo remains instead of graphite header: '+JSON.stringify(visual));
+         errors.push(size.name+' '+item.id+' stale casino photo remains instead of Nightshift header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(primary!=='rgb(239, 137, 118)')
-         errors.push(size.name+' dashboard primary control is not coral: '+primary);
+       if(primary!=='rgb(173, 130, 255)')
+         errors.push(size.name+' dashboard primary control is not ultraviolet: '+primary);
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
@@ -347,8 +374,8 @@ async function test(){
        const share=page.locator('#gameScreen .share-btn');
        if(await share.count()){
          const shareColour=await share.first().evaluate(el=>getComputedStyle(el).backgroundColor);
-         if(shareColour!=='rgb(239, 137, 118)')
-           errors.push(size.name+' live game Share control retains gold: '+shareColour);
+         if(shareColour!=='rgb(173, 130, 255)')
+           errors.push(size.name+' live game Share control is not ultraviolet: '+shareColour);
        }
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
        if(size.width<=700){

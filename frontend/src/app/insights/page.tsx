@@ -23,6 +23,12 @@ export default function InsightsPage(){
  const [paymentNotice,setPaymentNotice]=useState('');
  const [transferPage,setTransferPage]=useState(0);
  const [period,setPeriod]=useState<'all'|'90d'>('all');
+ const [historicalReviewOpen,setHistoricalReviewOpen]=useState(false);
+ const [historicalCutoff,setHistoricalCutoff]=useState('');
+ const [historicalExpected,setHistoricalExpected]=useState('');
+ const [historicalConfirmed,setHistoricalConfirmed]=useState(false);
+ const [historicalBusy,setHistoricalBusy]=useState(false);
+ const [historicalProgress,setHistoricalProgress]=useState('');
 
  useEffect(()=>{
   let live=true;
@@ -39,6 +45,8 @@ export default function InsightsPage(){
   if(!selected)return;
   let live=true;
   setPaymentNotice('');setPaymentBusy(null);setTransferPage(0);setPeriod('all');
+  setHistoricalReviewOpen(false);setHistoricalCutoff('');setHistoricalExpected('');
+  setHistoricalConfirmed(false);setHistoricalBusy(false);setHistoricalProgress('');
   setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setTransfersPartial(false);setSettlementView('transfers');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
@@ -79,6 +87,21 @@ export default function InsightsPage(){
  const filteredTransfers=period==='all'?transfers:transfers.filter(x=>x.game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400);
  const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid');
  const paid=filteredTransfers.filter(t=>t.transfer.status==='paid');
+ // Historical settlement reconciliation is deliberately initiated by a host.
+ // Never infer that a player's money was transferred, or bulk-mark on page load.
+ const historicalEnd=historicalCutoff?new Date(historicalCutoff+'T23:59:59').getTime():NaN;
+ const historicalRows=Number.isFinite(historicalEnd)
+   ?transfers.filter(row=>row.transfer.status!=='paid'&&
+      row.game.status==='settled'&&row.game.scheduled_at*1000<=historicalEnd)
+   :[];
+ const historicalTotal=historicalRows.reduce((total,row)=>total+row.transfer.amount,0);
+ const enteredExpected=historicalExpected.trim();
+ const enteredExpectedCents=/^\d+(?:\.\d{1,2})?$/.test(enteredExpected)
+   ?Math.round(Number(enteredExpected)*100):NaN;
+ const historicalReady=!!canManagePayments&&!transfersPartial&&!loadingDetails&&!historicalBusy&&
+   paymentBusy===null&&historicalConfirmed&&historicalRows.length>0&&
+   historicalRows.every(row=>!!row.transfer.id)&&
+   Number.isSafeInteger(enteredExpectedCents)&&enteredExpectedCents===historicalTotal;
  const perPage=20;
  const pageCount=Math.max(1,Math.ceil(filteredTransfers.length/perPage));
  const page=Math.min(transferPage,pageCount-1);
@@ -141,6 +164,38 @@ export default function InsightsPage(){
      setPaymentNotice('Could not change payment status: '+(e instanceof Error?e.message:'Please try again.'));
    }finally{setPaymentBusy(null);}
  }
+
+ async function markHistoricalPaid(){
+   // Use a date AND an independently checked exact amount as safety gates.
+   if(!historicalReady||!selected)return;
+   const count=historicalRows.length;
+   if(!window.confirm(
+     'For '+(room?.name||'this poker room')+', mark '+count+' historical transfers totalling '+
+     fmt(historicalTotal)+' as PAID?\\n\\nThis changes your PKR records only. It does not transfer money, and must only be done if these payments were already settled outside PKR.'
+   ))return;
+   setHistoricalBusy(true);setPaymentBusy('historical');setPaymentNotice('');
+   let updated=0;
+   try{
+     for(const row of historicalRows){
+       if(!row.transfer.id)throw new Error('A historical transfer has no record ID.');
+       await api.games.setTransferStatus(row.game.id,row.transfer.id,'paid');
+       updated++;
+       setHistoricalProgress('Confirmed '+updated+' of '+count+' paid records');
+       setTransfers(previous=>previous.map(item=>
+         item.game.id===row.game.id&&item.transfer.id===row.transfer.id
+           ?{...item,transfer:{...item.transfer,status:'paid',paid_at:Math.floor(Date.now()/1000)}}
+           :item));
+     }
+     setHistoricalReviewOpen(false);setHistoricalConfirmed(false);setHistoricalExpected('');
+     setPaymentNotice('Marked '+count+' historical transfers totalling '+fmt(historicalTotal)+' as paid in PKR. No money was transferred.');
+   }catch(error){
+     setPaymentNotice('Updated '+updated+' of '+count+' records. Stopped because: '+
+       (error instanceof Error?error.message:'Request failed')+
+       '. The successful updates were saved; review the remaining entries before trying again.');
+   }finally{
+     setHistoricalProgress('');setHistoricalBusy(false);setPaymentBusy(null);
+   }
+ }
  return <main className="pkr-vnext-insights pkr-casino pkr-insights-refresh">
   <header className="pkr-vnext-insights-top">
    <div className="pkr-insights-intro"><span className="pkr-eyebrow">▥ INSIGHTS &amp; SETTLEMENT</span>
@@ -187,9 +242,9 @@ export default function InsightsPage(){
    <div className="pkr-insights-activity-grid">
     <section className="pkr-vnext-card pkr-insights-settlement" id="pkr-settlement">
      <div className="pkr-vnext-card-heading"><div><h2>＄ Settlement Centre</h2><p>See who pays whom and track recorded payment status across your room.</p></div>
-       <label style={{display:'grid',gap:5,color:'var(--ivory)',fontSize:12}}>Period
+       <label className="pkr-insights-period-label">Period
         <select aria-label="Settlement reporting period" value={period} onChange={e=>{setPeriod(e.target.value as 'all'|'90d');setTransferPage(0)}}
-          style={{background:'#112b20',border:'1px solid #658260',color:'#ffe8b3',borderRadius:8,padding:'8px 11px'}}>
+          className="pkr-insights-period-select">
           <option value="all">All time</option><option value="90d">Last 90 days</option>
         </select></label>
       </div>
@@ -197,6 +252,45 @@ export default function InsightsPage(){
       {([['transfers','Who Pays Who'],['balances','Player Balances'],['status','Payment Status']] as const).map(([key,label])=>
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
+     {canManagePayments&&transfers.some(row=>row.transfer.status!=='paid')&&
+       <div className="pkr-insights-legacy-actions">
+        <div><strong>Already settled older poker nights?</strong>
+         <p>Reconcile historical payments without changing game results or sending money. Review the cutoff date and exact total before recording them as paid.</p></div>
+        <button type="button" disabled={historicalBusy||loadingDetails||paymentBusy!==null}
+          onClick={()=>{setHistoricalReviewOpen(open=>!open);setHistoricalConfirmed(false);}}>
+          {historicalReviewOpen?'Close review':'Review historical payments'}
+        </button>
+       </div>}
+     {historicalReviewOpen&&canManagePayments&&<div className="pkr-insights-legacy-review">
+       <h3>Review historical settlement records</h3>
+       <p>Only payments from settled games dated on or before your chosen cutoff will be included. Payments already marked paid stay untouched.</p>
+       <div className="pkr-insights-legacy-fields">
+        <label>Last historical game date
+         <input type="date" value={historicalCutoff} max={new Date().toISOString().slice(0,10)}
+           disabled={historicalBusy} onChange={e=>{setHistoricalCutoff(e.target.value);setHistoricalConfirmed(false);}}/>
+        </label>
+        <label>Independently verified total (AUD)
+         <input type="text" inputMode="decimal" placeholder="e.g. 75235.00"
+           value={historicalExpected} disabled={historicalBusy}
+           onChange={e=>{setHistoricalExpected(e.target.value);setHistoricalConfirmed(false);}}/>
+        </label>
+       </div>
+       <p role="status"><strong>{historicalRows.length} unpaid transfer{historicalRows.length===1?'':'s'}</strong> across {' '}
+         {new Set(historicalRows.map(row=>row.game.id)).size} historical game{new Set(historicalRows.map(row=>row.game.id)).size===1?'':'s'}.
+         {' '}Calculated total: <strong>{fmt(historicalTotal)}</strong>.</p>
+       {transfersPartial&&<p className="pkr-vnext-warning">Historical data is incomplete. Reload and try again before reconciling.</p>}
+       {!!historicalExpected&&(!Number.isSafeInteger(enteredExpectedCents)||enteredExpectedCents!==historicalTotal)&&
+         <p className="pkr-vnext-warning">Your verified amount does not match the selected transfer total. Nothing can be changed until the amounts match exactly.</p>}
+       <label className="pkr-insights-legacy-confirm">
+         <input type="checkbox" checked={historicalConfirmed} disabled={historicalBusy}
+            onChange={e=>setHistoricalConfirmed(e.target.checked)}/>
+         I confirm these selected historical payments were already settled outside PKR, and their total has been verified.
+       </label>
+       <button type="button" disabled={!historicalReady} onClick={()=>void markHistoricalPaid()}>
+          {historicalBusy?'Updating records…':'Mark verified historical payments as paid'}
+       </button>
+       {historicalProgress&&<p role="status">{historicalProgress}</p>}
+      </div>}
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>

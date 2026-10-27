@@ -1,0 +1,896 @@
+/* PKR unified Nightshift theme. Based on prior covered selectors; supersedes graphite. */
+/* PKR / 2026 graphite refresh.
+   Calm product-first branding: ink, warm ivory and muted coral.
+   Loaded last, so legacy casino gold does not define the brand.
+   The approved poker FELT geometry is deliberately left unchanged. */
+:root {
+  --bg:#0d0f1d;--bg2:#171a2d;--bg3:#22263a;--bg4:#2b2c30;
+  --gold:#ad82ff;--gold-dim:#8b68d9;--gold-pale:#ffe0d7;--gold-glow:rgba(173,130,255,.12);
+  --white:#f7f5f1;--ivory:#e2e5f5;--muted:#b6b2ad;--faint:#77777b;
+  --border:rgba(233,225,215,.16);--border-hi:rgba(173,130,255,.54);--border-sub:rgba(244,240,235,.1);
+}
+body {background:#0d0f1d;color:#f7f5f1;font:400 15px/1.5 var(--font-landing-body),system-ui,sans-serif}
+.display,.serif {font-family:var(--font-landing-display),system-ui,sans-serif;font-style:normal;letter-spacing:-.035em}
+/* Product shell and logged-in app */
+.pkr-app, .pkr-app.pkr-casino {
+ --bg:#0d0f1d;--bg2:#1a1d31;--bg3:#262628;--bg4:#313034;
+ --gold:#ad82ff;--gold-dim:#8b68d9;--gold-pale:#ffe3dc;--gold-glow:rgba(173,130,255,.12);
+ --white:#f7f5f1;--ivory:#e2e5f5;--muted:#b7b3ad;--faint:#848181;
+ --green:#69cfa3;--green-dim:#286f55;--red:#ff818e;--amber:#f0b76f;
+ --border:rgba(238,231,224,.16);--border-hi:rgba(173,130,255,.48);--border-sub:rgba(238,231,224,.09);
+ background:radial-gradient(ellipse 55% 32% at 100% -8%,rgba(196,94,80,.12),transparent 75%),#0d0f1d;
+ font-family:var(--font-landing-body),system-ui,sans-serif;color:var(--white);
+}
+.pkr-app :is(h1,h2,h3,.display,.serif,.stat-value),
+.pkr-casino :is(.display,.serif,.stat-value,.pkr-intro h1,.pkr-list-head h2,.pkr-hero h2,.pkr-event-overview h1,.pkr-room-name) {
+ font-family:var(--font-landing-display),system-ui,sans-serif;font-weight:700;letter-spacing:-.032em
+}
+.pkr-app :is(button,input,select,a) {font-family:var(--font-landing-body),system-ui,sans-serif}
+.pkr-app :is(.card,.card-gold,.card-inset,.pkr-room-card),
+.pkr-casino :is(.card,.card-gold,.pkr-room-card) {
+ background:#1b1e31;border:1px solid rgba(244,240,235,.12);
+ box-shadow:0 12px 34px #0002;border-radius:16px
+}
+.pkr-app .card::after,.pkr-casino .pkr-game-card::after {display:none}
+.pkr-app :is(.btn-primary,.tab.active),
+.pkr-casino :is(.btn-primary,.pkr-hero-action,.tab.active) {
+ background:#ad82ff;color:#25120f;border:1px solid #cab6ff;
+ box-shadow:0 6px 20px rgba(173,130,255,.12);font-weight:800;border-radius:11px
+}
+.pkr-app .btn-primary:hover,.pkr-casino :is(.btn-primary,.pkr-hero-action):hover {
+ background:#ffb09d;color:#25120f;border-color:#e7dfff;box-shadow:0 8px 24px #e879632e
+}
+.pkr-app :is(.btn-ghost,.btn-outline),.pkr-casino :is(.btn-ghost,.btn-outline) {
+ background:#29282b;color:#f1e9e2;border:1px solid rgba(242,231,219,.21);
+}
+.pkr-app :is(.btn-ghost,.btn-outline):hover,.pkr-casino :is(.btn-ghost,.btn-outline):hover {background:#373337;border-color:#ad82ff}
+.pkr-app :is(.inp,select),.pkr-casino :is(.inp,select) {background:#1d2136;border-color:#555055;color:#fbf9f6}
+.pkr-app :is(.nav,.pkr-topbar),.pkr-casino :is(.nav,.pkr-topbar) {
+ background:rgba(17,17,19,.96)!important;border-bottom:1px solid rgba(235,226,216,.13)!important;
+ backdrop-filter:blur(18px)
+}
+.pkr-app .pkr-brand-mark,.pkr-casino .pkr-brand-mark {background:#ad82ff;color:#261713;box-shadow:none}
+.pkr-app .pkr-brand,.pkr-casino .pkr-brand {color:#fff8f3;font-family:var(--font-landing-display),sans-serif}
+.pkr-casino .pkr-brand-sub {color:#c6bcb4}
+.pkr-app .pkr-eyebrow,.pkr-casino .pkr-eyebrow {color:#ffa694}
+.pkr-casino .pkr-room-icon {background:#35272a;color:#d5c0ff;border-color:#6e514c;box-shadow:none}
+.pkr-casino .pkr-room-arrow {color:#ad82ff}
+.pkr-casino .pkr-room-card:hover {background:#2b292b;border-color:#a06960}
+.pkr-casino .pkr-room-end,.pkr-casino .pkr-hero-tag {color:#f0ae9f}
+.pkr-casino .pkr-event-tabs-inner {background:#252327;border-color:#444043}
+.pkr-casino .pkr-event-metric,.pkr-casino .pkr-hero-metric {background:#252327;border-color:#4b4345}
+.pkr-casino .pkr-hero {
+ background:linear-gradient(180deg,transparent 10%,rgba(17,17,19,.12) 25%,rgba(17,17,19,.85) 65%,#131627);
+ border-color:rgba(234,224,211,.22)
+}
+.pkr-casino .pkr-event-overview-inner {background:linear-gradient(180deg,#1b1f34,#18181a);border-color:#51484a}
+.pkr-casino .pkr-game-summary {background:#262326;border-color:#604e4b}
+.pkr-casino .pkr-game-summary .display,.pkr-casino .pkr-event-metric strong,.pkr-casino .pkr-hero-metric strong {color:#f9f5f0!important;font-family:var(--font-landing-display),sans-serif}
+.pkr-casino .pkr-mobile-nav {background:#19191b;border-top:1px solid #514447}
+.pkr-casino .pkr-mobile-nav button[aria-current="page"] {color:#ffa08d}
+.pkr-casino .pkr-mobile-nav button[aria-current="page"] .pkr-nav-icon {background:#ef897621}
+.pkr-casino .pkr-casino-art {
+ background:radial-gradient(circle at 30% 0%,#8d4c3b25,transparent 43%),linear-gradient(160deg,#2b2222,#151b19)
+}
+.pkr-casino .pkr-casino-art-glow {background:radial-gradient(circle,#db786835,transparent 75%)}
+/* Table's playable felt and seats are intentionally not recoloured. */
+.pkr-app :is(button,a,input,select):focus-visible {outline:3px solid #ffac9c;outline-offset:3px}
+/* The marketing site has its own, light-and-dark rhythm. */
+.pkr-landing-v2 {
+ --l2-green:#0d0f1d;--l2-green-2:#1e2236;--l2-gold:#b89aff;
+ --l2-ivory:#faf9ff;--l2-muted:#c7c1ba;
+ background:#0d0f1d;color:#faf9ff;font-family:var(--font-landing-body),sans-serif
+}
+.pkr-landing-v2 .pkr-l2-topbar {background:#101221;border-bottom:1px solid #ffffff20}
+.pkr-landing-v2 .pkr-l2-nav-inner {min-height:78px}
+.pkr-landing-v2 .pkr-l2-brand {color:#faf6f0;font-family:var(--font-landing-display),sans-serif}
+.pkr-landing-v2 .pkr-l2-brand-emblem {background:#b28bff;color:#271714;box-shadow:none}
+.pkr-landing-v2 .pkr-l2-brand small {color:#dbcec4}
+.pkr-landing-v2 .pkr-l2-navlinks a,.pkr-landing-v2 .pkr-l2-player-link {color:#e2ddd7}
+.pkr-landing-v2 .pkr-l2-navlinks a:hover,.pkr-landing-v2 .pkr-l2-player-link:hover {color:#f49f8e}
+.pkr-landing-v2 .pkr-l2-btn {border-radius:12px;min-height:52px;font-weight:800}
+.pkr-landing-v2 .pkr-l2-btn-gold {background:#ad82ff;border:1px solid #d5c0ff;color:#2c1612;box-shadow:0 8px 25px #ef897622}
+.pkr-landing-v2 .pkr-l2-btn-gold:hover {background:#c9b5ff;border-color:#ffd0c4}
+.pkr-landing-v2 .pkr-l2-btn-outline {background:#242325;color:#faf0e8;border:1px solid #7d6d6a}
+.pkr-landing-v2 .pkr-l2-btn-glass {background:#28272a;color:#f9f3ed;border:1px solid #716462}
+.pkr-landing-v2 .pkr-l2-hero {
+ background:radial-gradient(ellipse 50% 70% at 97% 48%,#4730328c,transparent 80%),#0d0f1d
+}
+.pkr-landing-v2 .pkr-l2-hero-art {display:none}
+.pkr-landing-v2 .pkr-l2-hero-vignette {background:linear-gradient(90deg,#0d0f1d 0%,#141416ad 50%,transparent 100%)}
+.pkr-landing-v2 .pkr-l2-hero-inner {max-width:1450px;grid-template-columns:minmax(0,.96fr) minmax(400px,1.12fr);gap:clamp(26px,4vw,64px);padding-top:78px;padding-bottom:94px}
+.pkr-landing-v2 .pkr-l2-hero-copy {max-width:665px}
+.pkr-landing-v2 .pkr-l2-hero h1 {font:790 clamp(53px,6.3vw,100px)/1 var(--font-landing-display),sans-serif;letter-spacing:-.059em;margin:22px 0}
+.pkr-landing-v2 .pkr-l2-hero-copy>p {color:#d2cbc5;font-size:clamp(16px,1.5vw,19px);line-height:1.65}
+.pkr-landing-v2 .pkr-l2-eyebrow,.pkr-landing-v2 .pkr-l2-section-kicker {color:#b89aff}
+.pkr-landing-v2 .pkr-l2-eyebrow i {background:#b89aff;box-shadow:0 0 0 5px #f19b8823}
+.pkr-landing-v2 em {color:#c5b1ff;font-style:normal}
+.pkr-landing-v2 .pkr-l2-hero-trust {color:#cbc5be}
+.pkr-landing-v2 .pkr-l2-hero-trust span::first-letter {color:#d0beff}
+.pkr-landing-v2 .pkr-l2-hero-annotation {color:#cfb3ab}
+.pkr-landing-v2 .pkr-hero-real {filter:drop-shadow(0 24px 44px #000a)}
+.pkr-landing-v2 .pkr-hero-real::before {background:radial-gradient(ellipse,#f1987b31,transparent 65%)}
+.pkr-landing-v2 .pkr-hero-desktop {background:#222123;border:1px solid #6d5a57;box-shadow:0 25px 60px #0007}
+.pkr-landing-v2 .pkr-hero-desktop-header {color:#ded8d2}
+.pkr-landing-v2 .pkr-hero-desktop-header span:first-child::before {background:#ad82ff;box-shadow:0 0 0 3px #ef897623}
+.pkr-landing-v2 .pkr-hero-mobile {background:#181719;border-color:#8c7974;box-shadow:0 25px 44px #0009}
+.pkr-landing-v2 .pkr-hero-real-label {background:#242123;color:#f2eae3;border-color:#8a706b;box-shadow:0 6px 24px #0006}
+.pkr-landing-v2 .pkr-hero-real-label i {background:#ad82ff;box-shadow:none}
+.pkr-landing-v2 .pkr-l2-ribbon {background:#eceef9;color:#1e2236;border-color:#e1dbd1}
+.pkr-landing-v2 .pkr-l2-ribbon>div {border-color:#d8d1c9}
+.pkr-landing-v2 .pkr-l2-ribbon strong {color:#242226}
+.pkr-landing-v2 .pkr-l2-ribbon small {color:#696260}
+.pkr-landing-v2 .pkr-l2-ribbon-icon {color:#b35549}
+.pkr-landing-v2 .pkr-product-tour {
+ background:#f5f5fc;color:#1b1f34;border-top:0;border-bottom:1px solid #e2ddd5;
+ padding-top:92px;padding-bottom:95px
+}
+.pkr-landing-v2 .pkr-tour-overline,.pkr-landing-v2 .pkr-tour-overline>span {color:#724cc6}
+.pkr-landing-v2 .pkr-product-tour-header h2 {color:#1b1f34}
+.pkr-landing-v2 .pkr-product-tour-header h2 em {color:#6c47c6}
+.pkr-landing-v2 .pkr-product-tour-header>p {color:#665f5b}
+.pkr-landing-v2 .pkr-tour-tabs {scrollbar-color:#c4a19a transparent}
+.pkr-landing-v2 .pkr-tour-tab {background:#ede8e0;border:1px solid #d6cec6;color:#3e3836}
+.pkr-landing-v2 .pkr-tour-tab:hover {background:#e5dbd1;border-color:#b46c5d}
+.pkr-landing-v2 .pkr-tour-tab>span {color:#9d6d65}
+.pkr-landing-v2 .pkr-tour-tab.selected {background:#27263d;color:#fbfaff;border-color:#27263d;box-shadow:0 4px 15px #2a222017}
+.pkr-landing-v2 .pkr-tour-tab.selected>span {color:#f6aa99}
+.pkr-landing-v2 .pkr-tour-panel {background:#1e2236;border:1px solid #3b373a;box-shadow:0 26px 70px #29232124;border-radius:24px}
+.pkr-landing-v2 .pkr-tour-panel::before {background:none}
+.pkr-landing-v2 .pkr-tour-copy h3 {color:#fbfaff}
+.pkr-landing-v2 .pkr-tour-copy p {color:#cac3bc}
+.pkr-landing-v2 .pkr-tour-copy li {color:#e6dcd4}
+.pkr-landing-v2 .pkr-tour-copy li>span {color:#f29d89}
+.pkr-landing-v2 .pkr-tour-cta {background:#a87aff;border-color:#ffad9a;color:#2c1612}
+.pkr-landing-v2 .pkr-tour-cta:hover {background:#ffb09c;color:#271411}
+.pkr-landing-v2 .pkr-tour-visual {background:#131627;border-color:#4a3e3d}
+.pkr-landing-v2 .pkr-tour-screen-top {background:#272426;color:#d9d0c9;border-color:#514846}
+.pkr-landing-v2 .pkr-tour-screen-top>span:last-child {color:#f09d8c}
+.pkr-landing-v2 .pkr-tour-sample-note {background:#262123;color:#f2dbd4;border-color:#8b655f}
+.pkr-landing-v2 .pkr-tour-nav button {background:#393437;border-color:#5c5050;color:#fff7f2}
+.pkr-landing-v2 .pkr-tour-nav button:hover {background:#5b3d3d;border-color:#eb8e78}
+.pkr-landing-v2 .pkr-proof-card {background:#ffffff;border-color:#e3dbd1;box-shadow:0 9px 27px #00000013}
+.pkr-landing-v2 .pkr-proof-card:hover {border-color:#b36a5d;transform:translateY(-3px)}
+.pkr-landing-v2 .pkr-proof-card-copy {background:#faf9ff;color:#25283c}
+.pkr-landing-v2 .pkr-proof-card-copy strong {color:#27263d}
+.pkr-landing-v2 .pkr-proof-card-copy span:not(.pkr-proof-card-arrow) {color:#975c54}
+.pkr-landing-v2 .pkr-proof-card-arrow {color:#764ed4}
+.pkr-landing-v2 .pkr-l2-feature-intro {background:#131627;color:#fbf7f1}
+.pkr-landing-v2 .pkr-l2-features {background:#f5f5fc;color:#25283c}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading h2 {color:#25283c}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading h2 em {color:#724cc6}
+.pkr-landing-v2 .pkr-l2-features .pkr-l2-section-heading p {color:#706862}
+.pkr-landing-v2 .pkr-l2-feature-card {background:#ffffff;border:1px solid #ddd5cb;color:#272326;box-shadow:0 9px 29px #00000012}
+.pkr-landing-v2 .pkr-l2-feature-copy h3 {color:#292527}
+.pkr-landing-v2 .pkr-l2-feature-copy p {color:#68605d}
+.pkr-landing-v2 .pkr-l2-feature-copy>span {color:#7952c9}
+.pkr-landing-v2 .pkr-l2-how {background:#202023;color:#faf9ff}
+.pkr-landing-v2 .pkr-l2-step {background:#2b292b;border-color:#4a4141}
+.pkr-landing-v2 .pkr-l2-step-top span,.pkr-landing-v2 .pkr-l2-step-top small {color:#f49d8a}
+.pkr-landing-v2 .pkr-l2-step h3 {color:#fff8f2}
+.pkr-landing-v2 .pkr-l2-step p {color:#c9c1b9}
+.pkr-landing-v2 .pkr-mobile-product-showcase {background:#f5f5fc;color:#252327}
+.pkr-landing-v2 .pkr-mobile-product-intro h2 {color:#262326}
+.pkr-landing-v2 .pkr-mobile-product-intro h2 em {color:#724cc6}
+.pkr-landing-v2 .pkr-mobile-product-intro p {color:#615b56}
+.pkr-landing-v2 .pkr-mobile-device-shell {background:#181719;border-color:#7c7171;box-shadow:0 14px 42px #0003}
+.pkr-landing-v2 .pkr-mobile-device figcaption {color:#4c4743}
+.pkr-landing-v2 .pkr-l2-pricing {background:#0f1222;color:#faf7f1}
+.pkr-landing-v2 .pkr-l2-plan {background:#242225;border-color:#494044;color:#f8f3ed}
+.pkr-landing-v2 .pkr-l2-plan-featured {background:#302529;border-color:#9a71f5;box-shadow:0 0 0 1px #d7827033}
+.pkr-landing-v2 .pkr-l2-plan h3 {color:#fff8f1}
+.pkr-landing-v2 .pkr-l2-plan p,.pkr-landing-v2 .pkr-l2-plan ul {color:#c9c0b9}
+.pkr-landing-v2 .pkr-l2-plan-name,.pkr-landing-v2 .pkr-l2-plan-badge,.pkr-landing-v2 .pkr-l2-price {color:#ffc0b1}
+.pkr-landing-v2 .pkr-l2-join-section {background:#eff0fa;color:#25283c}
+.pkr-landing-v2 .pkr-l2-join-section h2 {color:#25283c}
+.pkr-landing-v2 .pkr-l2-join-section p {color:#6d6460}
+.pkr-landing-v2 .pkr-l2-join-form label {color:#463b39}
+.pkr-landing-v2 .pkr-l2-join-form input {background:#ffffff;color:#27263d;border-color:#cfc5bd}
+.pkr-landing-v2 .pkr-l2-join-form button {background:#25283c;color:#fff8f2}
+.pkr-landing-v2 .pkr-l2-last-call {background:#282124}
+.pkr-landing-v2 .pkr-l2-last-call>img {display:none}
+.pkr-landing-v2 .pkr-l2-last-call::after {background:radial-gradient(ellipse at 85% 10%,#a9574d4c,transparent 67%)}
+.pkr-landing-v2 .pkr-l2-faq {background:#f5f5fc;color:#25283c}
+.pkr-landing-v2 .pkr-l2-faq h2 {color:#25283c}
+.pkr-landing-v2 .pkr-l2-faq h2 em {color:#6c47c6}
+.pkr-landing-v2 .pkr-l2-faq .pkr-l2-section-heading p {color:#6a625d}
+.pkr-landing-v2 .pkr-l2-faq-item {background:#ffffff;border-color:#e1d9d0;color:#27263d}
+.pkr-landing-v2 .pkr-l2-faq-item summary {color:#2c2628}
+.pkr-landing-v2 .pkr-l2-faq-item p {color:#665d57}
+.pkr-landing-v2 .pkr-l2-footer {background:#101221;border-color:#493d3c}
+.pkr-landing-v2 .pkr-l2-footer p {color:#c6bcb4}
+.pkr-landing-v2 .pkr-l2-footer a {color:#ece1d8}
+.pkr-landing-v2 .pkr-landing-dialog {background:#252225;border-color:#72514c;color:#fff8f2}
+.pkr-landing-v2 .pkr-landing-dialog-logo,.pkr-landing-v2 .pkr-landing-primary {background:#f08d79;color:#2c1612}
+.pkr-landing-v2 .pkr-landing-dialog p {color:#d5c7be}
+.pkr-marketing-editorial {
+ --mk-gold:#ed9583;--mk-ink:#fff9f5;--mk-muted:#c5c8de;
+ background:radial-gradient(ellipse 48% 24% at 95% 0%,#5636386a,transparent 85%),#131627;
+ color:var(--mk-ink);font-family:var(--font-landing-body),sans-serif
+}
+.pkr-marketing-editorial em,.pkr-marketing-price {color:#c6b6ff}
+.pkr-marketing-button {background:#2c292c;border:1px solid #6b5552;color:#fbfaff!important}
+.pkr-marketing-button:hover {background:#4b3638}
+.pkr-marketing-button.primary {background:#a87aff;color:#2c1511!important;border-color:#d2bcff}
+.pkr-marketing-button.primary:hover {background:#ffc0af}
+.pkr-marketing-feature-visual {background:#282123;border-color:#604e4c}
+.pkr-marketing-feature-visual::after {background:linear-gradient(90deg,#171719ed,rgba(23,23,25,.35) 75%)}
+.pkr-marketing-plan {background:#282628;border-color:#53494a}
+.pkr-marketing-plan.featured {background:linear-gradient(140deg,#3d292c,#242225);border-color:#eb9682}
+.pkr-marketing-steps article {background:#1d2136;border-color:#574b49}
+.pkr-landing-v2 :is(button,a,input):focus-visible,.pkr-marketing-editorial :is(a,button,summary):focus-visible {outline:3px solid #c8afff;outline-offset:3px}
+@media(max-width:1000px){.pkr-landing-v2 .pkr-l2-hero-inner{grid-template-columns:1fr;max-width:840px;padding-top:52px}.pkr-landing-v2 .pkr-hero-real{justify-self:center}}
+@media(prefers-reduced-motion:reduce){.pkr-landing-v2 .pkr-l2-btn,.pkr-landing-v2 .pkr-tour-tab{transition:none}}
+
+
+/* Fullscreen game: neutral hardware and coral actions, retain beloved felt. */
+#gameScreen.pkr-casino-live-table {
+ --gold:#ad82ff;--gold2:#d2bcff;--gold-dim:#b65d4e;
+ --cream:#f8f5f0;--cream2:#d9d2cb;--green:#6bcfa7;
+ --rail:#272527;--rail2:#4b4243;--border:#f0e9dd29;--border2:#e991806b;
+ --muted:#c2bcb5;--bg:#0d0f1d;--bg2:#1e1d1f;--bg3:#292729;
+ --display:var(--font-landing-display),system-ui,sans-serif;
+ --body:var(--font-landing-body),system-ui,sans-serif;
+ background:radial-gradient(ellipse at 50% 44%,#23302a,#161719 66%,#101012);
+ color:#f8f5f0;
+}
+#gameScreen.pkr-casino-live-table .topbar {
+ background:linear-gradient(180deg,#292729,#1a191b)!important;border-bottom-color:#4e4444
+}
+#gameScreen.pkr-casino-live-table .tb-back {color:#f2af9f;border-right-color:#5c4744}
+#gameScreen.pkr-casino-live-table .tb-title,#gameScreen.pkr-casino-live-table .panel-title {font-family:var(--font-landing-display),sans-serif;color:#faf5ef}
+#gameScreen.pkr-casino-live-table .topbar button:not(.tb-back):not(.share-btn) {
+ background:#343033!important;border-color:#605354!important;color:#f6e9e2!important
+}
+#gameScreen.pkr-casino-live-table .share-btn {
+ background:#ad82ff;color:#261512;border:1px solid #ffc0b0
+}
+#gameScreen.pkr-casino-live-table .bank-bar {background:#292729;border-bottom-color:#564849}
+#gameScreen.pkr-casino-live-table .bank-icon {background:#f09b88;color:#2b1815}
+#gameScreen.pkr-casino-live-table .bank-label {color:#fcf4ed}
+#gameScreen.pkr-casino-live-table .bank-pill {color:#d6c9c2}
+#gameScreen.pkr-casino-live-table .bank-panel {background:#201f21}
+#gameScreen.pkr-casino-live-table .bank-grid {background:#2a282a;border-color:#594d4d}
+#gameScreen.pkr-casino-live-table .bank-cell {background:#25283e}
+#gameScreen.pkr-casino-live-table .table-area {
+ background:radial-gradient(ellipse at 50% 45%,#232923,#151618 72%,#101012)
+}
+#gameScreen.pkr-casino-live-table #tableOuter {
+ background:linear-gradient(160deg,#655c5b 0%,#2b292c 35%,#3b3537 73%,#19191b 100%);
+ border-color:#746968;
+ box-shadow:inset 0 0 0 3px #1d1c1e,inset 0 0 0 7px #a99b8b33,
+            inset 0 7px 14px #fff4e10a,0 6px 0 #0009,0 18px 34px #000c
+}
+#gameScreen.pkr-casino-live-table #tableFelt {
+ border-color:#8b837d;
+ box-shadow:inset 0 0 0 5px #0c1f177b,inset 0 0 32px #0009,0 0 0 4px #100f10ab
+}
+#gameScreen.pkr-casino-live-table #tableCenter::before {color:#f1e8dc78}
+#gameScreen.pkr-casino-live-table #tableName {color:#f8f3ebad;font-family:var(--font-landing-display),sans-serif}
+#gameScreen.pkr-casino-live-table #tableStats {color:#e7dfd5a8}
+#gameScreen.pkr-casino-live-table .seat-chip {border-color:#a19990;background:radial-gradient(circle at 35% 20%,#3b4541,#1a2721)}
+#gameScreen.pkr-casino-live-table .seat-chip.seated {border-color:#d9b2a4;box-shadow:0 2px 0 #373132,0 8px 13px #0008}
+#gameScreen.pkr-casino-live-table .seat-chip.empty .seat-inner {color:#d4c0b7}
+#gameScreen.pkr-casino-live-table .seat-label {background:#19191b;border-color:#68605e;color:#faf4ee}
+#gameScreen.pkr-casino-live-table .side-panel {background:#222124;border-left-color:#544b49}
+#gameScreen.pkr-casino-live-table .panel-hdr {background:#2b292b;border-bottom-color:#574c49}
+#gameScreen.pkr-casino-live-table .p-av {background:linear-gradient(145deg,#734f4d,#2a2a2e)}
+#gameScreen.pkr-casino-live-table .add-btn,#gameScreen.pkr-casino-live-table .btn-primary {
+ background:#ad82ff;border:1px solid #ffb19f;color:#281713
+}
+#gameScreen.pkr-casino-live-table .add-inp {background:#2b292c;border-color:#665654}
+#gameScreen.pkr-casino-live-table .game-tabs {background:#201f22;border-top-color:#564948}
+#gameScreen.pkr-casino-live-table .game-tab {color:#d9c9c0}
+#gameScreen.pkr-casino-live-table .game-tab:active {background:#e9897526;color:#ffa491}
+#gameScreen.pkr-casino-live-table :is(.topbar button,.game-tab,.bank-bar,.seat):focus-visible {outline:3px solid #ffa491}
+#gameScreen.pkr-casino-live-table .pkr-tools-toggle {
+ background:#302c2e;border-color:#74605e;color:#f6ded5
+}
+#gameScreen.pkr-casino-live-table .pkr-bank-current b {color:#f3b49f}
+
+
+/* Complete the system on standalone Insights, guest and mobile routes. */
+:root {
+ --pkr-ink:#0d0f1d;--pkr-panel:#242225;--pkr-panel-raise:#2e2b2f;
+ --pkr-gold:#ed9582;--pkr-gold-light:#ffbeaf;--pkr-emerald:#67cfa3;
+ --pkr-border:rgba(236,227,218,.16)
+}
+body:has(.pkr-persistent-nav) {background:#0d0f1d}
+:is(.pkr-app.pkr-casino,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext,.pkr-guest) {
+ background-color:#0d0f1d;color:#f8f4ef;font-family:var(--font-landing-body),sans-serif
+}
+.pkr-persistent-nav {
+ background:linear-gradient(170deg,#222023,#101221 75%)!important;
+ border-right:1px solid #473e3d!important
+}
+.pkr-persistent-room {background:#2b292b!important;border-color:#65514f!important}
+.pkr-persistent-nav button.active,.pkr-universal-bottom-nav button.active {color:#ffb09f!important}
+.pkr-universal-bottom-nav {
+ background:#1d1b1e!important;border-top:1px solid #514746!important
+}
+.pkr-dashboard .pkr-pro-search {background:#25283e!important;border-color:#5b5150!important}
+.pkr-dashboard .pkr-pro-title h1 {font-family:var(--font-landing-display),sans-serif!important;color:#fcf7f1!important}
+.pkr-dashboard .pkr-pro-shortcuts button {background:#25283e!important;border-color:#534a4a!important}
+.pkr-dashboard .pkr-pro-wide-button {background:#302a2d!important;border-color:#81635d!important;color:#f6ddd5!important}
+.pkr-mobile-featured button:first-child {background:#ad82ff!important;color:#261511!important}
+.pkr-schedule-hero {
+ background-image:linear-gradient(110deg,#25283c 5%,#373033 50%,#1d2136 100%)!important;
+ border-color:#655452!important;
+}
+.pkr-install-card {background:#25283e!important;border-color:#554b49!important}
+.pkr-insights-refresh .pkr-insights-kpis>.pkr-insights-kpi {
+ background:#25283e!important;border-color:#574e4e!important
+}
+.pkr-insights-kpi-icon {background:#513838!important;color:#ffb29c!important}
+.pkr-insights-refresh :is(.pkr-insights-balance-summary,.pkr-insights-trend,.pkr-insights-settlement,.pkr-insights-recent,.pkr-insights-players,.pkr-insights-results) {
+ background:#25283e!important;border-color:#534a49!important
+}
+.pkr-insights-balance-tiles>div {background:#332d30!important;border-color:#5d5151!important}
+.pkr-insights-refresh .pkr-insights-trend .pkr-vnext-bar-column i {
+ background:linear-gradient(#ffbaa5,#d56d5d)!important;border-color:#f59b85!important
+}
+.pkr-insights-settle-tabs {background:#211f22!important;border-color:#5b4e4e!important}
+.pkr-insights-refresh .pkr-vnext-data-table th {background:#332b2d!important;color:#f0dad2!important}
+.pkr-insights-rank {background:#e8917e!important;color:#261511!important}
+.pkr-standings-summary>div,.pkr-standings-podium-card {
+ background:#25283e;border-color:#554847
+}
+.pkr-standings-podium-1 {
+ background:radial-gradient(ellipse at 50% -8%,#eb977e29,transparent 70%),#332b2c;
+ border-color:#ad786c
+}
+.pkr-standings-toolbar :is(input[type=search],select) {
+ background:#25283e;border-color:#605451;color:#fbf6ef
+}
+.pkr-standings-row {background:#25283e;border-color:#5a4c4b}
+.pkr-player-history-dialog {background:#242225;border-color:#94665e;color:#f9f3ed}
+.pkr-host-push-overview {background:#2d292b;border-color:#65514c}
+.pkr-guest .pkr-guest-top {background:#201e21!important;border-bottom-color:#655450!important}
+.pkr-guest .pkr-guest-input {background:#2b292c!important;border-color:#675b59!important;color:#fff6ee!important}
+.pkr-guest .pkr-guest-choice {background:#2b292c!important;border-color:#665755!important;color:#f9e9e2!important}
+.pkr-guest .pkr-guest-button {background:#ee8976!important;color:#241411!important}
+.pkr-guest .pkr-guest-seat-map .pkr-guest-felt {border-color:#333033;outline-color:#92837b}
+.pkr-casino .pkr-casino-art-table {
+ border-color:#363034;box-shadow:inset 0 0 0 4px #9b8a84,inset 0 0 0 7px #1d1b1d,0 0 0 3px #645d5d,0 20px 26px #0009
+}
+.pkr-casino .pkr-casino-art-table > span {color:#f5d7c448}
+.pkr-casino .pkr-art-chips-green {--chip:#5c4d4a;--chip-hi:#f2b3a1}
+.pkr-casino .pkr-art-chips-black {--chip:#27252b;--chip-hi:#ebe5df}
+.pkr-casino .pkr-art-chips-red {--chip:#ae514a;--chip-hi:#ffb8a2}
+@media(max-width:700px){
+ .pkr-landing-v2 .pkr-l2-hero h1 {font-size:clamp(42px,10vw,65px)}
+ .pkr-landing-v2 .pkr-l2-hero-inner {padding-top:35px;padding-bottom:70px}
+ .pkr-landing-v2 .pkr-l2-hero-copy>p {font-size:16px}
+}
+
+
+/* Final legacy override pass based on captured desktop and mobile app screens.
+   The source has !important green backgrounds and gold highlights; these must win. */
+.pkr-dashboard .pkr-pro-hero,
+.pkr-dashboard .pkr-hero {
+ background:radial-gradient(ellipse at 86% 18%,#543b3940,transparent 55%),linear-gradient(115deg,#302941 0%,#1a191b 64%,#242024 100%)!important;
+ border:1px solid #645251!important;
+ background-image:radial-gradient(ellipse at 86% 18%,#543b3940,transparent 55%),linear-gradient(115deg,#302941,#1a191b 64%,#242024)!important;
+}
+.pkr-dashboard .pkr-pro-hero-content>.pkr-eyebrow {color:#faa995!important}
+.pkr-dashboard .pkr-pro-title h1 {font-family:var(--font-landing-display),system-ui,sans-serif!important;color:#fff9f5!important;font-weight:780!important}
+.pkr-dashboard .pkr-pro-stats>div {background:#292528de!important;border-color:#685552!important;backdrop-filter:blur(5px)}
+.pkr-dashboard .pkr-pro-stats>div>span {color:#c8b3ff!important}
+.pkr-dashboard .pkr-pro-stats>div small {color:#d8c8c1!important}
+.pkr-dashboard .pkr-pro-panel {background:#1b1f34!important;border:1px solid #4e4545!important;color:#f9f3ee;box-shadow:0 9px 24px #0002}
+.pkr-dashboard .pkr-pro-shortcuts button {background:#343034!important;border-color:#655252!important}
+.pkr-dashboard .pkr-pro-shortcuts button>span {color:#c8b3ff!important}
+.pkr-dashboard .pkr-pro-date {background:#453033!important;color:#ffbaa8!important}
+.pkr-dashboard .pkr-pro-wide-button,
+.pkr-dashboard .pkr-pro-panel-ctas button {background:#343034!important;border:1px solid #625452!important;color:#f5e7de!important}
+.pkr-dashboard .pkr-pro-wide-button:first-child {background:#ad82ff!important;border:1px solid #ffc1b2!important;color:#291512!important;box-shadow:0 5px 16px #ef89762a!important}
+.pkr-dashboard .pkr-pro-hero .btn-primary,
+.pkr-dashboard .pkr-pro-actions .btn-primary {background:#ad82ff!important;border-color:#d9c6ff!important;color:#2b1512!important;box-shadow:0 6px 19px #e5836d27}
+.pkr-dashboard .pkr-pro-actions .btn-ghost {background:#353032!important;border-color:#756361!important;color:#f7ede7!important}
+.pkr-dashboard .pkr-topbar {background:#1b1d2e!important;border-bottom:1px solid #40393a!important}
+.pkr-dashboard .pkr-topbar .pkr-brand {font-family:var(--font-landing-display),system-ui,sans-serif!important;color:#f9f4ee!important}
+.pkr-dashboard .pkr-topbar .pkr-brand-mark {background:none!important;color:#f09d89!important}
+.pkr-dashboard .pkr-topbar .pkr-brand-sub {color:#c3b7b0!important}
+.pkr-persistent-nav :is(h1,.pkr-persistent-logo,.pkr-persistent-brand) {font-family:var(--font-landing-display),sans-serif!important;color:#fff4eb!important}
+.pkr-persistent-nav :is(.pkr-persistent-logo-mark,.pkr-persistent-mark) {color:#c3acff!important}
+.pkr-persistent-nav :is(button.active,button[aria-current="page"]) {
+ background:#493033!important;color:#ffd8c8!important;border-color:#b8786b!important
+}
+.pkr-dashboard .pkr-pro-search:focus-within {border-color:#eb9784!important}
+/* Room, standings and member management */
+.pkr-event .pkr-event-overview {
+ background:radial-gradient(circle at 82% 12%,#64403942,transparent 54%),linear-gradient(115deg,#31282b,#19191b 68%,#272123)!important;
+ background-image:radial-gradient(circle at 82% 12%,#64403942,transparent 54%),linear-gradient(115deg,#31282b,#19191b 68%,#272123)!important;
+ border-color:#79615d!important
+}
+.pkr-event .pkr-event-overview-inner {background:transparent!important}
+.pkr-event .pkr-event-overview-inner h1 {color:#fbfaff!important;font-family:var(--font-landing-display),sans-serif!important}
+.pkr-event .pkr-event-overview-inner>.pkr-eyebrow {color:#f5aa99!important}
+.pkr-vnext-insights,.pkr-schedule-page {background:#101221!important;color:#f9f4ee}
+.pkr-vnext-insights-hero {
+ background:radial-gradient(ellipse at 96% 12%,#60413a52,transparent 60%),linear-gradient(112deg,#302941,#1d1b1e)!important;
+ background-image:radial-gradient(ellipse at 96% 12%,#60413a52,transparent 60%),linear-gradient(112deg,#302941,#1d1b1e)!important;
+ border-color:#6b5551!important
+}
+.pkr-vnext-insights-art {background:none!important;opacity:0!important;pointer-events:none!important}
+.pkr-vnext-insights-top {border-color:#705550!important;background:#25283e!important}
+.pkr-vnext-insights-top h1 {font-family:var(--font-landing-display),sans-serif!important;color:#fff8f3!important;font-weight:760!important}
+.pkr-vnext-insights-top .pkr-insights-selector label {color:#f4aa98!important}
+.pkr-vnext-insights-top .pkr-insights-selector select {background:#373033!important;border:1px solid #8a6a63!important;color:#f8f1eb!important}
+.pkr-vnext-insights-stats {background:#211f21!important;border-color:#705550!important}
+.pkr-vnext-insights-stats>div {background:#302943!important;border:1px solid #5b5050!important}
+.pkr-vnext-insights-stats span {color:#f3b1a0!important}
+.pkr-vnext-insights-stats small {color:#c8b9b1!important}
+.pkr-insights-kpi-icon.gold {background:#453036!important;color:#ffb1a0!important}
+.pkr-insights-refresh .pkr-vnext-card-heading button,
+.pkr-vnext-card-heading button {color:#eeaa99!important}
+.pkr-insights-refresh .pkr-insights-settle-tabs button[aria-selected="true"] {
+ background:#ad82ff!important;border:1px solid #ffa794!important;color:#271411!important
+}
+.pkr-insights-refresh .pkr-vnext-data-table td:last-child button {color:#d0bcff!important}
+.pkr-insights-refresh .pkr-payment-status-select {background:#372c2e;color:#f2d7ce;border-color:#967067}
+.pkr-insights-refresh .pkr-vnext-data-table tr:hover td {background:#53403e40}
+.pkr-insights-avatar {background:#433033;border-color:#9b7770;color:#ffcab8}
+.pkr-insights-payment-summary>div {background:#302943;border-color:#665350}
+.pkr-insights-refresh .pkr-vnext-performance-row>div {background:#373538}
+/* RSVP and guest onboarding */
+.pkr-guest {background:#131627!important;color:#f9f4ef}
+.pkr-guest .pkr-guest-top {background:#211f22!important;border-bottom-color:#5f504c!important}
+.pkr-guest .pkr-guest-hero {
+ background:radial-gradient(circle at 82% 20%,#5b3f3b37,transparent 54%),#25283c!important;
+ border-color:#66504d!important
+}
+.pkr-guest .pkr-guest-hero h1 {color:#fbfaff!important;font-family:var(--font-landing-display),sans-serif!important}
+.pkr-guest .pkr-guest-choice.selected {background:#503638!important;border-color:#ee947f!important;color:#fff2e9!important;box-shadow:none}
+.pkr-guest .pkr-guest-seat-map .pkr-guest-seat.selected {background:#ad82ff!important;color:#2c1714!important;border-color:#ffb8a8!important;box-shadow:0 0 0 3px #ef89764d}
+.pkr-guest .pkr-guest-seat-map .pkr-guest-seat:not(.selected) {background:#1b1f34!important;border-color:#827875!important}
+.pkr-guest .pkr-guest-button {background:#ad82ff!important;border:1px solid #f8b29f!important;color:#2b1512!important}
+.pkr-mobile-featured button:first-child {background:#f19582!important;color:#2b1512!important}
+.pkr-pro-home .pkr-pro-art {display:none!important}
+.pkr-landing-v2 .pkr-hero-real-label {font-size:9px}
+
+
+/* The previous banner photograph contained brass chips and green UI; retire
+   it from the marketing preview AND from new management screens.
+   The real playable table remains visible in the product tour. */
+.pkr-schedule-hero,
+.pkr-vnext-insights-top,
+.pkr-guest-hero,
+.pkr-install-vnext .pkr-install-hero,
+.pkr-game-detail .pkr-casino-game-summary {
+ background-image:radial-gradient(circle at 90% 10%,#64433d57,transparent 57%),linear-gradient(117deg,#32282b,#1b1d2e 70%,#30282b)!important;
+ background-color:#242123!important;background-position:center!important;
+ background-size:cover!important;border-color:#775b56!important
+}
+.pkr-mobile-featured {
+ background-image:radial-gradient(ellipse at 80% 15%,#754a4154,transparent 61%),linear-gradient(120deg,#3e2c30,#242123)!important;
+ background-color:#2b2528!important;border-color:#755a57!important
+}
+.pkr-game-detail .pkr-casino-game-summary::after {color:#ffc5b31e!important}
+.pkr-install-vnext .pkr-install-hero h1,
+.pkr-schedule-hero h1 {font-family:var(--font-landing-display),sans-serif!important;color:#fbfaff!important}
+.pkr-l2-last-call,.pkr-landing-v2 .pkr-l2-last-call {background-image:none!important}
+/* The glass computer panel is a product window rather than a gold casino frame. */
+.pkr-landing-v2 .pkr-tour-visual,
+.pkr-landing-v2 .pkr-proof-card-image {border-color:#675753;background:#232225}
+.pkr-landing-v2 .pkr-feature-photo-real {border-color:#6b5855}
+.pkr-landing-v2 .pkr-feature-photo-real::after {background:linear-gradient(0deg,#1a1718c9,transparent)}
+.pkr-landing-v2 .pkr-feature-photo-real span {color:#fbfaff}
+.pkr-landing-v2 .pkr-mobile-device figcaption span {color:#675f5b}
+.pkr-landing-v2 .pkr-mobile-device-shell {box-shadow:0 22px 48px #0004}
+@media(max-width:700px) {
+ .pkr-schedule-hero,.pkr-vnext-insights-top,.pkr-guest-hero,
+ .pkr-install-vnext .pkr-install-hero,.pkr-game-detail .pkr-casino-game-summary,
+ .pkr-event .pkr-event-overview,.pkr-dashboard .pkr-pro-hero {
+ background-image:radial-gradient(ellipse at 90% 0%,#74504a4b,transparent 64%),linear-gradient(145deg,#302941,#1e1c1f)!important
+ }
+}
+
+
+/* Screenshot QA follow-up: remove remaining gold navigation and green info tiles. */
+.pkr-persistent-brand span {color:#c5adff!important}
+.pkr-persistent-nav nav button.active,
+.pkr-persistent-nav nav button[aria-current="page"] {
+ background:#483136!important;border-color:#bd7c6f!important;color:#ffe3d7!important;
+ box-shadow:inset 3px 0 0 #f09d8a,0 6px 22px #0002!important
+}
+.pkr-persistent-nav nav button.active svg {color:#c5adff!important}
+.pkr-persistent-nav nav button:hover {color:#fff7f0!important;background:#3b3032!important}
+.pkr-persistent-nav nav button svg {color:#d3c3bc!important}
+.pkr-persistent-room {background:#302b2e!important;border-color:#665353!important}
+.pkr-persistent-nav nav button {color:#d6d0ca!important}
+.pkr-dashboard .pkr-pro-feature-game,
+.pkr-dashboard .pkr-pro-member-stats>div {
+ background:#322b2f!important;border:1px solid #584748!important
+}
+.pkr-dashboard .pkr-pro-feature-game strong,
+.pkr-dashboard .pkr-pro-member-stats strong {color:#fff8f3!important}
+.pkr-dashboard .pkr-pro-panel-head button {color:#f5a18e!important}
+.pkr-dashboard .pkr-pro-member>span:not(.pkr-pro-member-avatar) {background:#4b3437!important;color:#ffd7ca!important;border-color:#8c6059!important}
+.pkr-dashboard .pkr-pro-member>span:first-child:not(:has(img)) {background:#453135!important;border-color:#8f6059!important;color:#ffc5b5!important}
+.pkr-dashboard .pkr-pro-topbar :is(.pkr-pro-upgrade,.pkr-pro-plan-badge) {background:#3c2c2f!important;color:#ffad9b!important}
+.pkr-dashboard .pkr-pro-hero p,.pkr-dashboard .pkr-pro-panel p {color:#d9cbc5}
+.pkr-vnext-insights .pkr-vnext-card {background:#1b1f34!important;border-color:#4e4242!important}
+.pkr-vnext-insights .pkr-vnext-card-heading button {color:#f3a28f!important}
+#gameScreen.pkr-casino-live-table .topbar button.share-btn,
+#gameScreen.pkr-casino-live-table .share-btn {
+ background:#ad82ff!important;background-color:#ad82ff!important;background-image:none!important;
+ color:#2b1512!important;border-color:#ffb6a6!important;
+ box-shadow:0 4px 12px #0004!important
+}
+#gameScreen.pkr-casino-live-table .bank-icon {background:#f19e8e!important;color:#2c1714!important}
+#gameScreen.pkr-casino-live-table .game-tabs .game-tab {color:#e8d9d1!important}
+#gameScreen.pkr-casino-live-table .game-tabs .game-tab[aria-selected="true"] {color:#ffa28f!important}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PKR Nightshift — one visual language for every user journey.
+   Sora / Plus Jakarta Sans · midnight ink / ultraviolet / frost.
+   Existing layout mechanics and the approved GREEN poker felt stay intact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --pkr-theme-id:nightshift-2026;
+  --font-landing-display:var(--font-display);
+  --font-landing-body:var(--font-body);
+  --bg:#0d0f1d; --bg2:#161a2d; --bg3:#22263c; --bg4:#2e3350;
+  --gold:#ad82ff; --gold2:#cfb7ff; --gold-dim:#8d68dc;
+  --gold-pale:#eae0ff; --gold-glow:rgba(173,130,255,.13);
+  --white:#faf9ff; --ivory:#e3e4f3; --muted:#b7bad1; --faint:#80869c;
+  --border:rgba(193,183,250,.18); --border-hi:rgba(173,130,255,.53);
+  --border-sub:rgba(214,210,245,.11);
+  --pkr-ink:#0d0f1d; --pkr-panel:#1b2035; --pkr-panel-raise:#292d46;
+  --pkr-gold:#ad82ff; --pkr-gold-light:#d7c3ff;
+  --pkr-accent:#ad82ff; --pkr-accent-strong:#8c5dff;
+  --pkr-positive:#4cdeb0; --pkr-negative:#ff789b;
+}
+html { color-scheme:dark; }
+body {color:#faf9ff; background:#0d0f1d;font-family:var(--font-body),system-ui,sans-serif;}
+body,button,input,select,textarea {font-family:var(--font-body),system-ui,sans-serif;}
+h1,h2,h3,h4,.display,.serif {font-family:var(--font-display),system-ui,sans-serif;font-style:normal;letter-spacing:-.035em;}
+:is(.pkr-app,.pkr-casino,.pkr-vnext-insights,.pkr-schedule-page,.pkr-onboarding,.pkr-guest,.pkr-landing-v2,.pkr-marketing-editorial,.pkr-install-vnext){
+  --gold:#ad82ff;--gold-dim:#8666d2;--gold-pale:#eae0ff;
+  --gold-glow:rgba(173,130,255,.12);
+  --bg:#0d0f1d;--bg2:#171a2d;--bg3:#24283f;--bg4:#303550;
+  --ivory:#e7e5f6;--white:#faf9ff;--muted:#bfc1d5;
+  --border:rgba(198,185,249,.18);--border-hi:#a387f6;--border-sub:rgba(213,207,247,.12);
+  color:#faf9ff; font-family:var(--font-body),system-ui,sans-serif;
+}
+.pkr-app.pkr-casino,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext,.pkr-guest{
+  background:radial-gradient(ellipse 75% 44% at 100% -16%,rgba(136,93,247,.11),transparent 78%),#0d0f1d!important;
+}
+:is(.pkr-app,.pkr-vnext-insights,.pkr-schedule-page,.pkr-onboarding,.pkr-guest) :is(h1,h2,h3),
+.pkr-landing-v2 :is(h1,h2,h3),.pkr-marketing-editorial :is(h1,h2,h3),
+#gameScreen :is(.tb-title,.panel-title,.sheet-hdr h2){
+ font-family:var(--font-display),system-ui,sans-serif!important;
+ font-style:normal!important;letter-spacing:-.035em;
+}
+:where(.pkr-app,.pkr-casino,.pkr-guest,.pkr-schedule-page,.pkr-vnext-insights,.pkr-install-vnext,.pkr-landing-v2,.pkr-marketing-editorial) :is(button,input,select,textarea) {
+ font-family:var(--font-body),system-ui,sans-serif;
+}
+:is(.pkr-app,.pkr-casino,.pkr-guest,.pkr-schedule-page,.pkr-vnext-insights,.pkr-install-vnext,.pkr-landing-v2,.pkr-marketing-editorial) :is(button,a,input,select,summary):focus-visible {
+ outline:3px solid #d1bbff!important;outline-offset:3px;
+}
+/* Fluid card rhythm, never plastic casino borders. */
+.pkr-app :is(.card,.card-gold,.pkr-pro-panel,.pkr-room-card,.pkr-member-summary,.pkr-game-card),
+.pkr-vnext-insights .pkr-vnext-card,
+.pkr-schedule-page .pkr-schedule-game,
+.pkr-install-vnext .pkr-install-card,
+.pkr-guest :is(.pkr-guest-card,.pkr-guest-hero){
+ background:#1a1e32!important;
+ border:1px solid #343754!important;
+ box-shadow:0 14px 44px rgba(0,0,0,.18)!important;
+ border-radius:19px!important;
+}
+.pkr-app :is(.btn-primary,.pkr-hero-action,.pkr-pro-actions .btn-primary),
+.pkr-schedule-page .btn-primary,.pkr-install-vnext .pkr-install-primary,
+.pkr-guest .pkr-guest-button,
+.pkr-marketing-editorial .pkr-marketing-button.primary {
+ background:#ad82ff!important;background-image:none!important;color:#171125!important;
+ border:1px solid #d1bcff!important;font-weight:800!important;
+ box-shadow:0 10px 30px rgba(153,112,255,.20)!important;
+}
+.pkr-app :is(.btn-primary,.pkr-hero-action):hover,
+.pkr-schedule-page .btn-primary:hover,.pkr-guest .pkr-guest-button:hover,
+.pkr-install-vnext .pkr-install-primary:hover{
+ background:#c9b1ff!important;transform:translateY(-1px);
+}
+:is(.pkr-app,.pkr-casino) :is(.btn-ghost,.btn-outline),
+.pkr-marketing-editorial .pkr-marketing-button:not(.primary) {
+ background:#262a42!important;border:1px solid #51516e!important;color:#f6f3ff!important;
+}
+:is(.pkr-app,.pkr-casino,.pkr-guest,.pkr-vnext-insights,.pkr-schedule-page) :is(select,input,textarea){
+ accent-color:#ad82ff;
+}
+.pkr-app :is(.inp,select,textarea),
+.pkr-insights-refresh :is(select,.pkr-payment-status-select),
+.pkr-schedule-page :is(select,input),
+.pkr-guest .pkr-guest-input{
+ background:#24283e!important;border:1px solid #515574!important;color:#faf9ff!important;
+ border-radius:10px;
+}
+.pkr-app :is(.inp,select,textarea):focus,
+.pkr-insights-refresh :is(select,.pkr-payment-status-select):focus,
+.pkr-guest .pkr-guest-input:focus{border-color:#b398ff!important;box-shadow:0 0 0 3px rgba(173,130,255,.14)!important;}
+/* Shared, visible navigation: sidebar and mobile tab bar. */
+.pkr-persistent-nav{
+ background:linear-gradient(180deg,#15172a,#0b0d19 90%)!important;
+ border-right:1px solid #353854!important;
+ box-shadow:14px 0 38px #00000016;
+}
+.pkr-persistent-room{background:#22263d!important;border-color:#444460!important;}
+.pkr-persistent-nav nav button{color:#bfc3df!important;border-radius:12px;}
+.pkr-persistent-nav nav button svg{color:#999fbe!important;}
+.pkr-persistent-nav nav button.active,
+.pkr-persistent-nav nav button[aria-current="page"]{
+ background:linear-gradient(95deg,rgba(150,111,250,.22),rgba(150,111,250,.065))!important;
+ color:#f4ebff!important;border:1px solid #8065ca!important;
+ box-shadow:inset 3px 0 #b594ff,0 10px 20px #0002!important;
+}
+.pkr-persistent-nav nav button.active svg{color:#c8b0ff!important;}
+.pkr-universal-bottom-nav,.pkr-casino .pkr-mobile-nav{
+ background:#141728!important;border-top:1px solid #4b4568!important;
+ box-shadow:0 -8px 30px #0005;
+}
+.pkr-universal-bottom-nav button.active,.pkr-casino .pkr-mobile-nav button[aria-current="page"]{color:#c1a6ff!important;}
+.pkr-dashboard .pkr-topbar,.pkr-app .pkr-topbar{background:#121524!important;border-bottom:1px solid #333950!important;}
+.pkr-dashboard .pkr-pro-title h1,.pkr-event h1,.pkr-vnext-insights-top h1 {
+ font-family:var(--font-display),system-ui,sans-serif!important;
+ letter-spacing:-.045em!important;font-weight:750!important;
+}
+.pkr-dashboard .pkr-pro-hero,
+.pkr-dashboard .pkr-mobile-featured,
+.pkr-event .pkr-event-overview,
+.pkr-game-detail .pkr-casino-game-summary,
+.pkr-schedule-hero,
+.pkr-vnext-insights-top,
+.pkr-guest .pkr-guest-hero,
+.pkr-install-vnext .pkr-install-hero{
+ background:radial-gradient(ellipse 38% 95% at 93% 20%,rgba(143,98,255,.24),transparent 95%),linear-gradient(112deg,#252341,#121727 76%,#20253e)!important;
+ border:1px solid #595079!important;
+ background-image:radial-gradient(ellipse 38% 95% at 93% 20%,rgba(143,98,255,.24),transparent 95%),linear-gradient(112deg,#252341,#121727 76%,#20253e)!important;
+}
+.pkr-event .pkr-event-overview-inner,.pkr-vnext-insights-top .pkr-insights-intro{background:transparent!important;}
+.pkr-dashboard .pkr-pro-stats>div,.pkr-vnext-insights-stats>div,
+.pkr-dashboard .pkr-pro-member-stats>div,.pkr-insights-balance-tiles>div,
+.pkr-event .pkr-event-metric{
+ background:rgba(37,39,69,.80)!important;
+ border:1px solid #4a496f!important;
+ color:#faf9ff!important;
+}
+.pkr-dashboard .pkr-pro-shortcuts button,
+.pkr-dashboard .pkr-pro-panel-ctas button,
+.pkr-dashboard .pkr-pro-wide-button {
+ background:#282b44!important;color:#f3f0ff!important;border:1px solid #575278!important;
+}
+.pkr-dashboard .pkr-pro-wide-button:first-child,
+.pkr-dashboard .pkr-pro-actions .btn-primary {
+ background:#ad82ff!important;color:#171125!important;border-color:#d1bcff!important;
+}
+.pkr-dashboard .pkr-pro-date,.pkr-insights-rank,
+.pkr-dashboard .pkr-pro-member>span:not(.pkr-pro-member-avatar) {
+ background:#3e335e!important;color:#d9c7ff!important;border-color:#745fac!important;
+}
+.pkr-dashboard .pkr-pro-panel-head button,.pkr-vnext-card-heading button{color:#c9b0ff!important;}
+.pkr-insights-kpi-icon,.pkr-insights-kpi-icon.gold,
+.pkr-vnext-insights-stats .pkr-insights-kpi-icon {
+ background:#3c315e!important;color:#d2beff!important;
+}
+.pkr-insights-refresh .pkr-vnext-card,
+.pkr-insights-refresh :is(.pkr-insights-results,.pkr-insights-settlement,.pkr-insights-players),
+.pkr-vnext-insights .pkr-vnext-card{
+ background:#1a1e32!important;border-color:#343954!important;
+}
+.pkr-insights-settle-tabs{background:#121627!important;border-color:#494866!important;}
+.pkr-insights-refresh .pkr-insights-settle-tabs button[aria-selected="true"]{
+ background:#ad82ff!important;color:#171125!important;border-color:#d1bcff!important;
+}
+.pkr-insights-refresh .pkr-vnext-data-table th{
+ background:#242842!important;color:#d8c8ff!important;
+}
+.pkr-insights-refresh .pkr-vnext-bar-column i,
+.pkr-insights-refresh .pkr-insights-trend .pkr-vnext-bar-column i{
+ background:linear-gradient(180deg,#d5bbff,#8054d9)!important;border-color:#b899ff!important;
+}
+.pkr-insights-refresh .pkr-vnext-performance-row>div{background:#30344f!important;}
+.pkr-insights-refresh .pkr-vnext-performance-row .gain{
+ background:linear-gradient(90deg,#7155ca,#b696ff)!important;
+}
+.pkr-insights-refresh .pkr-vnext-performance-row .loss{
+ background:linear-gradient(90deg,#7c466a,#e778a3)!important;
+}
+.pkr-insights-refresh .pkr-insights-balance-tiles strong,
+.pkr-insights-refresh .pkr-vnext-card-heading h2 {color:#f8f6ff!important;}
+.pkr-standings-podium-card,.pkr-standings-row,.pkr-standings-summary>div{
+ background:#22253b!important;border-color:#474667!important;
+}
+.pkr-standings-podium-1{background:radial-gradient(ellipse at 52% -8%,rgba(157,112,255,.30),transparent 75%),#252341!important;border-color:#8f76d8!important;}
+.pkr-guest .pkr-guest-choice.selected,
+.pkr-guest .pkr-guest-seat-map .pkr-guest-seat.selected{
+ background:#493773!important;border-color:#bb9cff!important;color:#fbf8ff!important;
+}
+.pkr-guest .pkr-guest-seat-map .pkr-guest-felt{border-color:#514a7d!important;}
+/* Actual game table chrome. Keep #tableFelt background and geometry unchanged. */
+#gameScreen.pkr-casino-live-table{
+ --gold:#ad82ff!important;--gold2:#d4bfff!important;--gold-dim:#8768d1!important;
+ --cream:#f8f7ff;--cream2:#d5d7ec;--border:#c7baf52a;--border2:#b598ff6d;
+ --muted:#babdd3;--bg:#0d0f1d;--bg2:#1b1e33;--bg3:#282b43;
+ --rail:#29283d;--rail2:#4c4563;
+ background:radial-gradient(ellipse at 50% 45%,#25243e,#0c0d19 75%)!important;
+}
+#gameScreen.pkr-casino-live-table .topbar,
+#gameScreen.pkr-casino-live-table .bank-bar,
+#gameScreen.pkr-casino-live-table .game-tabs{
+ background:#171a2c!important;border-color:#47415d!important;
+}
+#gameScreen.pkr-casino-live-table .tb-title,#gameScreen.pkr-casino-live-table .panel-title{color:#faf8ff!important;}
+#gameScreen.pkr-casino-live-table .tb-back{color:#cfb9ff!important;}
+#gameScreen.pkr-casino-live-table .share-btn,
+#gameScreen.pkr-casino-live-table .add-btn:not(.g),
+#gameScreen.pkr-casino-live-table .btn-primary {
+ background:#ad82ff!important;background-image:none!important;color:#191326!important;border-color:#d2bfff!important;
+}
+#gameScreen.pkr-casino-live-table #tableOuter{
+ background:linear-gradient(130deg,#605a72,#29283d 38%,#464157 75%,#1d1d2c)!important;
+ border-color:#817497!important;
+ box-shadow:inset 0 0 0 3px #171827,inset 0 0 0 7px #c2b9db30,0 15px 40px #000c!important;
+}
+#gameScreen.pkr-casino-live-table .side-panel,
+#gameScreen.pkr-casino-live-table .panel-hdr,
+#gameScreen.pkr-casino-live-table .bank-panel {
+ background:#1b1e31!important;border-color:#504b6a!important;
+}
+#gameScreen.pkr-casino-live-table .seat-label{
+ background:#151726e8!important;border-color:#514c72!important;color:#fff!important;
+}
+#gameScreen.pkr-casino-live-table .game-tab:focus-visible {outline:3px solid #c9b4ff;}
+/* Marketing: expressive product-led, real screenshots, not fabricated imagery. */
+.pkr-landing-v2{background:#0d0f1d!important;color:#faf9ff!important;}
+.pkr-landing-v2 .pkr-l2-topbar{background:rgba(13,15,29,.94)!important;backdrop-filter:blur(20px);border-color:#292c42!important;}
+.pkr-landing-v2 .pkr-l2-hero{
+ background:radial-gradient(ellipse 45% 76% at 87% 31%,#6244a54a,transparent 79%),#0d0f1d!important;
+}
+.pkr-landing-v2 .pkr-l2-hero-vignette{background:linear-gradient(90deg,#0d0f1d 3%,#0d0f1d7a 55%,transparent)!important;}
+.pkr-landing-v2 .pkr-l2-hero h1{
+ font-family:var(--font-display),sans-serif!important;
+ font-weight:800!important;letter-spacing:-.067em!important;
+ font-size:clamp(50px,6.3vw,102px)!important;
+ line-height:1.02!important;
+}
+.pkr-landing-v2 em{color:#cbb4ff!important;font-style:normal!important;}
+.pkr-landing-v2 .pkr-l2-eyebrow,.pkr-landing-v2 .pkr-l2-section-kicker,
+.pkr-landing-v2 .pkr-tour-overline{color:#c7afff!important;letter-spacing:.13em!important;}
+.pkr-landing-v2 .pkr-l2-btn-gold,.pkr-landing-v2 .pkr-tour-cta,.pkr-landing-v2 .pkr-landing-primary{
+ background:#ad82ff!important;color:#171125!important;border:1px solid #d2bcff!important;
+ box-shadow:0 9px 30px #8e5efb3d!important;
+}
+.pkr-landing-v2 .pkr-l2-btn-gold:hover,.pkr-landing-v2 .pkr-tour-cta:hover{background:#cbb3ff!important;transform:translateY(-2px);}
+.pkr-landing-v2 .pkr-l2-btn-outline,.pkr-landing-v2 .pkr-l2-btn-glass{
+ background:#22263b!important;border:1px solid #555276!important;color:#f7f5ff!important;
+}
+.pkr-landing-v2 .pkr-l2-brand-emblem,.pkr-landing-v2 .pkr-landing-dialog-logo{
+ background:#ad82ff!important;color:#161222!important;
+}
+.pkr-landing-v2 .pkr-hero-desktop{
+ background:#181b2e!important;border:1px solid #7770a1!important;
+ box-shadow:0 32px 90px rgba(0,0,0,.54),0 0 60px rgba(163,117,255,.11)!important;
+}
+.pkr-landing-v2 .pkr-hero-mobile{border-color:#8880ae!important;}
+.pkr-landing-v2 .pkr-hero-real-label{background:#241f37!important;color:#efebff!important;border:1px solid #63578b!important;}
+.pkr-landing-v2 .pkr-l2-ribbon{background:#edf0fc!important;}
+.pkr-landing-v2 .pkr-product-tour,.pkr-landing-v2 .pkr-l2-features,
+.pkr-landing-v2 .pkr-mobile-product-showcase,.pkr-landing-v2 .pkr-l2-faq{
+ background:#f6f6fd!important;color:#1b1a30!important;
+}
+.pkr-landing-v2 .pkr-product-tour-header h2,.pkr-landing-v2 .pkr-l2-features h2,
+.pkr-landing-v2 .pkr-mobile-product-intro h2,.pkr-landing-v2 .pkr-l2-faq h2{
+ color:#171727!important;
+}
+.pkr-landing-v2 :is(.pkr-product-tour-header h2 em,.pkr-l2-features h2 em,.pkr-mobile-product-intro h2 em,.pkr-l2-faq h2 em){color:#7651c6!important;}
+.pkr-landing-v2 .pkr-tour-tab{background:#e9e8f7!important;color:#29283f!important;border-color:#cfc9eb!important;}
+.pkr-landing-v2 .pkr-tour-tab.selected{background:#2b2448!important;color:#fff!important;border-color:#4c3b83!important;}
+.pkr-landing-v2 .pkr-tour-panel{background:#1b1b2d!important;border-color:#524b7d!important;box-shadow:0 24px 72px #26213c33!important;}
+.pkr-landing-v2 .pkr-tour-screen-top{background:#232237!important;}
+.pkr-landing-v2 .pkr-proof-card,.pkr-landing-v2 .pkr-l2-feature-card,.pkr-landing-v2 .pkr-l2-faq-item{
+ background:#fff!important;border:1px solid #e0dcf4!important;color:#171727!important;
+ box-shadow:0 12px 35px rgba(33,20,65,.07)!important;
+}
+.pkr-landing-v2 .pkr-proof-card-copy{background:#faf9ff!important;color:#171727!important;}
+.pkr-landing-v2 .pkr-l2-how{background:#151728!important;}
+.pkr-landing-v2 .pkr-l2-step{background:#22253b!important;border-color:#484267!important;}
+.pkr-landing-v2 .pkr-l2-pricing{background:#0f1121!important;}
+.pkr-landing-v2 .pkr-l2-plan{background:#1c1e33!important;border:1px solid #4d446c!important;}
+.pkr-landing-v2 .pkr-l2-plan-featured{
+ background:radial-gradient(ellipse at 100% 0%,#6e4ea94a,transparent 70%),#211d39!important;
+ border-color:#ad82ff!important;box-shadow:0 0 0 1px #ad82ff35,0 24px 60px #0003!important;
+}
+.pkr-landing-v2 .pkr-l2-plan-badge{background:#4e357b!important;color:#e5d7ff!important;}
+.pkr-landing-v2 .pkr-l2-join-section{background:#eceefa!important;color:#1d1b31!important;}
+.pkr-landing-v2 .pkr-l2-join-section :is(h2,p,label){color:#2d2945!important;}
+.pkr-landing-v2 .pkr-l2-join-form input{background:#fff!important;color:#141625!important;border:1px solid #c5c3df!important;}
+.pkr-landing-v2 .pkr-l2-join-form button{background:#251b42!important;color:#faf9ff!important;}
+.pkr-landing-v2 .pkr-l2-faq-item summary{color:#1b1a2d!important;}
+.pkr-landing-v2 .pkr-l2-faq-item p{color:#5d5b75!important;}
+.pkr-landing-v2 .pkr-l2-last-call{background:#24203c!important;}
+.pkr-marketing-editorial{background:#111426!important;color:#faf9ff!important;--mk-gold:#ad82ff!important;--mk-ink:#faf9ff!important;--mk-muted:#bec1d7!important;}
+.pkr-marketing-editorial em,.pkr-marketing-editorial .pkr-marketing-price{color:#c5a9ff!important;}
+.pkr-marketing-editorial .pkr-marketing-button.primary{background:#ad82ff!important;color:#191326!important;}
+.pkr-marketing-editorial .pkr-marketing-plan{background:#1b1e32!important;border-color:#444364!important;}
+.pkr-marketing-editorial .pkr-marketing-plan.featured{background:#292141!important;border-color:#a585fa!important;}
+/* Invite and unauthenticated routes cannot fall back to legacy green layouts. */
+.pkr-onboarding,.pkr-install-vnext{background:#0d0f1d!important;color:#faf9ff!important;}
+.pkr-onboard-pending,.pkr-install-vnext .pkr-install-card{background:#1b1e32!important;border-color:#49466a!important;}
+.pkr-onboarding .pkr-onboard-steps .complete{color:#c2a6ff!important;}
+.pkr-onboarding .pkr-pending-actions .btn-primary{background:#ad82ff!important;color:#171125!important;}
+.pkr-guest .pkr-guest-top{background:#13162a!important;border-color:#4b476f!important;}
+.pkr-guest :is(.pkr-guest-choice,.pkr-guest-seat-map button){background:#262940!important;border-color:#514e6b!important;color:#f6f3ff!important;}
+.pkr-install-vnext .pkr-install-secondary{background:#292b45!important;border:1px solid #585377!important;color:#f7f4ff!important;}
+.pkr-insights-legacy-actions{
+ display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+ padding:17px 20px;margin:14px 0;
+ background:linear-gradient(100deg,#282442,#1c2236);border:1px solid #6b5c9b;border-radius:16px;
+}
+.pkr-insights-legacy-actions strong{color:#fbfaff;display:block;font-size:15px;}
+.pkr-insights-legacy-actions p{margin:4px 0 0;font-size:13px;color:#c8c7df;line-height:1.55;}
+.pkr-insights-legacy-actions button{
+ padding:11px 16px;border-radius:10px;background:#ad82ff;color:#171125;font-weight:800;
+ border:1px solid #d1baff;cursor:pointer;
+}
+.pkr-insights-legacy-actions button:disabled{opacity:.4;cursor:not-allowed;}
+.pkr-insights-legacy-review{
+ border:1px solid #615588;border-radius:16px;background:#1b1d34;
+ padding:18px 20px;margin:14px 0;
+}
+.pkr-insights-legacy-review :is(h3,strong){color:#f9f8ff;}
+.pkr-insights-legacy-review p{color:#c6c5da;font-size:13px;line-height:1.5;}
+.pkr-insights-legacy-review label{display:grid;gap:6px;font-weight:700;font-size:13px;color:#eee8ff;}
+.pkr-insights-legacy-review input{
+ padding:12px 14px;max-width:280px;background:#292d47;border:1px solid #7771ab;
+ border-radius:10px;color:#fff;
+}
+.pkr-insights-legacy-review button{background:#ad82ff;color:#171125;border:1px solid #d1bcff;border-radius:10px;padding:12px 18px;font-weight:800;}
+.pkr-insights-legacy-review button:disabled{opacity:.45;cursor:not-allowed;}
+/* Common microinteractions are restrained and respect reduced-motion. */
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+ .pkr-landing-v2 :is(.pkr-l2-feature-card,.pkr-proof-card,.pkr-l2-plan),
+ .pkr-app :is(.pkr-room-card,.pkr-pro-panel,.pkr-game-card){transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;}
+ .pkr-landing-v2 :is(.pkr-l2-feature-card,.pkr-proof-card):hover,
+ .pkr-app :is(.pkr-room-card,.pkr-game-card):hover{transform:translateY(-3px);border-color:#8870dd!important;box-shadow:0 18px 50px #0003!important;}
+}
+@media(max-width:700px){
+ .pkr-landing-v2 .pkr-l2-hero h1{font-size:clamp(43px,10vw,66px)!important;}
+ .pkr-landing-v2 .pkr-l2-hero-inner{padding-top:35px;padding-bottom:65px;}
+ .pkr-insights-legacy-actions{padding:15px;}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;}
+ .pkr-landing-v2 .pkr-l2-btn{transition:none!important;}
+}
+
+
+/* Finishing rules: fixed legacy component styles cannot change fonts or the
+   small-screen reconciler layout back to an unrelated theme. */
+html:has(#gameScreen),body:has(#gameScreen),
+body:has(.pkr-vnext-insights),body:has(.pkr-guest),
+body:has(.pkr-landing-v2),body:has(.pkr-marketing-editorial){
+ font-family:var(--font-body),system-ui,sans-serif!important;
+}
+.pkr-insights-legacy-fields{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;
+ padding:12px 0;
+}
+.pkr-insights-legacy-review .pkr-insights-legacy-confirm{
+ display:flex;align-items:flex-start;gap:10px;
+ font-weight:500;font-size:13px;line-height:1.55;margin:10px 0 17px;
+ color:#ebe5ff;
+}
+.pkr-insights-legacy-review .pkr-insights-legacy-confirm input{
+ appearance:auto;width:20px;height:20px;min-width:20px;
+ padding:0;border:0;margin-top:1px;accent-color:#ad82ff;
+}
+.pkr-insights-legacy-review .pkr-insights-legacy-fields input{max-width:none;width:100%;}
+.pkr-insights-period-label{display:grid;gap:6px;color:#e9e1ff;font-size:12px;font-weight:700;}
+.pkr-insights-period-select{background:#292c48;color:#f8f6ff;border:1px solid #69658c;border-radius:10px;padding:10px 12px;}
+@media(max-width:700px){
+ .pkr-insights-legacy-fields{grid-template-columns:1fr;}
+ .pkr-insights-legacy-actions>button{width:100%;}
+}

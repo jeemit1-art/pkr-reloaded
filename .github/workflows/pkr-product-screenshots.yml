@@ -3,7 +3,7 @@ name: Refresh PKR public screenshots from redesigned app
 on:
   push:
     branches:
-      - design/charcoal-blue-refresh-20261027
+      - design/pkr-ultraviolet-unified-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
 
@@ -28,15 +28,15 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm latest PKR graphite design
+      - name: Confirm PKR Nightshift design across screens
         run: |
-          grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
+          grep -Fq "import './pkr-nightshift.css';" frontend/src/app/layout.tsx
           ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
-          test -f frontend/src/app/pkr-2026-graphite.css
-          grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
-          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
+          test -f frontend/src/app/pkr-nightshift.css
+          grep -Fq 'dashboard primary control is not ultraviolet' frontend/tests/viewport-smoke.cjs
+          grep -Fq 'live game Share control is not ultraviolet' frontend/tests/viewport-smoke.cjs
+          grep -Fq 'nightshift-2026' frontend/src/app/pkr-nightshift.css
+          grep -Fq 'Sora, Plus_Jakarta_Sans' frontend/src/app/layout.tsx
       - name: Install pinned frontend dependencies
         working-directory: frontend
         run: npm ci --no-audit --no-fund
@@ -49,12 +49,12 @@ jobs:
       - name: Start staging-only PKR application
         working-directory: frontend
         run: |
-          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
+          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-nightshift-next.log 2>&1 &
           for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
             sleep 2
           done
-          cat /tmp/pkr-graphite-next.log
+          cat /tmp/pkr-nightshift-next.log
           exit 1
       - name: Capture and test genuine PKR interface with fictional data
         working-directory: frontend
@@ -65,15 +65,15 @@ jobs:
       - name: Update only demonstration screenshots in design branch
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
+          test "$GITHUB_REF" = "refs/heads/design/pkr-ultraviolet-unified-20261027"
           git config user.name "PKR Screenshot Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/demo/
           if git diff --cached --quiet; then
             echo "No screenshot changes"
           else
-            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
-            git fetch origin design/charcoal-blue-refresh-20261027
-            git rebase origin/design/charcoal-blue-refresh-20261027
-            git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
+            git commit -m "assets: genuine Nightshift PKR UI screenshots with fictional player data"
+            git fetch origin design/pkr-ultraviolet-unified-20261027
+            git rebase origin/design/pkr-ultraviolet-unified-20261027
+            git push origin HEAD:refs/heads/design/pkr-ultraviolet-unified-20261027
           fi
