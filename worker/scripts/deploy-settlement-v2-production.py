@@ -28,11 +28,38 @@ class Stop(RuntimeError):
     pass
 
 
+def safe_export_error_class(output):
+    """Map provider output to a fixed, nonsensitive diagnostic.
+
+    Never return raw stderr: it may contain signed URLs, SQL or account data.
+    """
+    message = (output or "").lower()
+    if "virtual table" in message or "fts5" in message:
+        return "D1 virtual tables are unsupported by full export"
+    if any(x in message for x in ("unauthorized", "forbidden", "insufficient permissions",
+                                  "permission denied", "authentication failed")):
+        return "Cloudflare D1 export authorisation/permission failure"
+    if any(x in message for x in ("rate limit", "too many requests")):
+        return "Cloudflare API rate limit"
+    if any(x in message for x in ("time out", "timeout", "timed out")):
+        return "Cloudflare export timeout"
+    if any(x in message for x in ("database is locked", "database busy")):
+        return "Cloudflare database busy"
+    codes = re.findall(r"(?:error|code)\\s*[:=]?\\s*([0-9]{4,6})\\b", message)
+    if codes:
+        return "Cloudflare API code " + codes[0]
+    return "unknown provider error (no private data logged)"
+
+
 def command(*args, stdin=None):
     proc = subprocess.run(args, input=stdin, text=True, cwd=ROOT,
                           capture_output=True, timeout=300)
     if proc.returncode:
         # Never echo Wrangler output, auth headers or SQL/customer records.
+        if "export" in args and "d1" in args:
+            reason = safe_export_error_class(proc.stderr + "\n" + proc.stdout)
+            raise Stop("Full D1 export failed: " + reason +
+                       ". Migration and payment updates were not started.")
         raise Stop("Command failed (" + str(proc.returncode) + "): " +
                    " ".join(args[:5]))
     return proc.stdout
@@ -129,6 +156,16 @@ def preflight_secrets():
 def preflight_backup():
     before = {table: aggregate(table) for table in
               ("settlement_transfers", "game_players")}
+    # Cloudflare documents that exporting a database with ANY SQLite virtual
+    # table is unsupported. Detect this read-only, never drop a live FTS table.
+    virtual = remote_query(
+        "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' "
+        "AND UPPER(sql) LIKE 'CREATE VIRTUAL TABLE%'")
+    if len(virtual) != 1:
+        raise Stop("Cannot verify remote virtual-table inventory; no export attempted.")
+    if int(virtual[0]["n"] or 0) > 0:
+        raise Stop("Full D1 export is unsupported because the production "
+                   "database contains virtual tables. No schema was altered.")
     # Time Travel is a separate on-Cloudflare restore point (7-30 day window).
     # Never execute a destructive restore in this workflow.
     time_travel = wrangler("d1", "time-travel", "info", DB,
