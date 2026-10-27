@@ -2850,7 +2850,7 @@ function getApprovedTableChromeCSS():string {
   flex:0 0 auto;display:flex;gap:7px;align-items:center;
 }
 #gameScreen.pkr-casino-live-table .topbar button.share-btn,
-#gameScreen.pkr-casino-live-table .topbar button.pkr-tools-toggle{
+#gameScreen.pkr-casino-live-table .topbar.pkr-approved-topbar button.pkr-tools-toggle{
   display:flex;align-items:center;justify-content:center;
   height:44px!important;width:44px!important;min-width:44px!important;
   padding:0!important;margin:0!important;border:1px solid #365963!important;
@@ -2859,9 +2859,9 @@ function getApprovedTableChromeCSS():string {
   font:700 25px/1 var(--font-body),Inter,sans-serif!important;
   box-shadow:none!important;letter-spacing:0!important;
 }
-#gameScreen.pkr-casino-live-table .topbar button.pkr-tools-toggle span{transform:translateY(-3px);font-size:22px}
+#gameScreen.pkr-casino-live-table .topbar.pkr-approved-topbar button.pkr-tools-toggle span{transform:translateY(-3px);font-size:22px}
 #gameScreen.pkr-casino-live-table .topbar button.share-btn:hover,
-#gameScreen.pkr-casino-live-table .topbar button.pkr-tools-toggle:hover{
+#gameScreen.pkr-casino-live-table .topbar.pkr-approved-topbar button.pkr-tools-toggle:hover{
   background:#183F35!important;border-color:#3DDC97!important;
 }
 #gameScreen.pkr-casino-live-table #pkr-table-tools.pkr-approved-tools{
@@ -3031,7 +3031,7 @@ function getApprovedTableChromeCSS():string {
   #gameScreen.pkr-casino-live-table .pkr-table-meta{font-size:10px}
   #gameScreen.pkr-casino-live-table .pkr-table-head-actions{gap:4px}
   #gameScreen.pkr-casino-live-table .topbar button.share-btn,
-  #gameScreen.pkr-casino-live-table .topbar button.pkr-tools-toggle{
+  #gameScreen.pkr-casino-live-table .topbar.pkr-approved-topbar button.pkr-tools-toggle{
     height:40px!important;width:40px!important;min-width:40px!important;
     border-radius:12px!important;
   }
