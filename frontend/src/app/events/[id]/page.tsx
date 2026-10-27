@@ -936,7 +936,7 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
-                    <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
+                    <button type="button" key={n} aria-pressed={form.seats===n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
                         border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
@@ -946,7 +946,7 @@ export default function EventPage() {
               <details className="pkr-create-game-details">
                 <summary>
                   <strong>Arrival time options</strong>
-                  <span>${arrivalTimes.length} time choices · tap to customise</span>
+                  <span>{arrivalTimes.length} time choices · tap to customise</span>
                 </summary>
                 <div className="pkr-create-game-details-body">
               <div>
