@@ -1,0 +1,270 @@
+/* PKR Classic Poker · Genuine casino photography
+   All files local, optimised WebP and attributed in /public/images/casino/README.md.
+   This final presentation layer deliberately avoids #gameScreen and its table.
+   Photos depict physical chips/cards/dice, never the PKR product interface. */
+
+/* --- Home page: real casino atmosphere, actual app stays hero focus --- */
+.pkr-landing-v2 .pkr-l2-hero {isolation:isolate}
+.pkr-landing-v2 .pkr-l2-hero-casino-backdrop{
+ position:absolute;z-index:0;pointer-events:none;
+ inset:0 -3% 0 auto;width:65%;height:100%;
+ overflow:hidden;opacity:.32;
+ -webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.78) 34%,black);
+ mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.78) 34%,black);
+}
+.pkr-landing-v2 .pkr-l2-hero-casino-backdrop img{
+ display:block;width:100%;height:100%;object-fit:cover;object-position:center;
+ filter:brightness(.72) saturate(.88);
+}
+.pkr-landing-v2 .pkr-l2-hero-vignette{pointer-events:none}
+.pkr-landing-v2 .pkr-l2-hero-inner{position:relative;z-index:2}
+.pkr-landing-v2 .pkr-casino-atmosphere{
+ box-sizing:border-box;
+ max-width:1440px;
+ margin:0 auto;
+ padding:clamp(54px,7vw,102px) clamp(18px,4vw,56px);
+ display:grid;grid-template-columns:minmax(260px,.72fr) minmax(0,1.6fr);
+ gap:clamp(25px,5vw,85px);
+ align-items:center;
+ color:#f7f4f1;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-head{
+ max-width:390px;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-head h2{
+ font:800 clamp(32px,3.8vw,58px)/1.1 var(--font-landing-display),system-ui,sans-serif;
+ letter-spacing:-.048em;color:#fff7f1;margin:19px 0;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-head h2 em{
+ color:#f05669!important;font-style:normal;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-head p{
+ font-size:15px;line-height:1.76;max-width:365px;color:#cfc6ca;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photos{
+ min-width:0;
+ display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+ grid-template-rows:clamp(185px,17vw,265px) clamp(185px,17vw,265px);
+ gap:14px;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo{
+ min-width:0;min-height:0;position:relative;isolation:isolate;
+ overflow:hidden;margin:0;background:#222027;
+ border:1px solid rgba(242,220,213,.22);
+ border-radius:17px;
+ box-shadow:0 15px 38px rgba(0,0,0,.26);
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo-featured{grid-row:1/span 2}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo img{
+ display:block;width:100%;height:100%;object-fit:cover;
+ transition:transform .42s ease;
+ filter:contrast(1.04) saturate(.98);
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo-featured img{object-position:38% 50%}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo-cards img{object-position:50% 44%}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo-detail img{object-position:48% 50%}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo::after{
+ content:"";position:absolute;inset:32% 0 0;
+ background:linear-gradient(0deg,rgba(8,8,12,.96),rgba(8,8,12,.3) 51%,transparent);
+ pointer-events:none;
+}
+@media(hover:hover){
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo:hover img{transform:scale(1.04)}
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption{
+ position:absolute;z-index:2;bottom:16px;left:17px;right:12px;
+ display:grid;grid-template-columns:34px minmax(0,1fr);
+ gap:2px 10px;align-items:center;
+ color:#fff8f5;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption>span{
+ grid-row:span 2;display:grid;place-items:center;width:34px;height:34px;
+ border:1px solid #d87c8a;border-radius:50%;
+ color:#f79eab;background:#582b38;font:800 11px var(--font-landing-body),system-ui,sans-serif;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption strong{
+ font:800 13px var(--font-landing-body),system-ui,sans-serif;
+ letter-spacing:.11em;
+}
+.pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption small{
+ color:#d5c5ca;font-size:11px;
+}
+
+/* --- Authenticated dashboard & room: photographic chips, cards, dealer button --- */
+.pkr-app.pkr-casino .pkr-casino-art.pkr-casino-photo-scene{
+ background:#141318!important;overflow:hidden!important;
+ isolation:isolate;
+}
+.pkr-app.pkr-casino .pkr-casino-photo-scene .pkr-photo-scene-main{
+ position:absolute;inset:0;
+ display:block;width:100%;height:100%;object-fit:cover;
+ object-position:32% 50%;filter:saturate(.9) contrast(1.05);
+ z-index:0;opacity:1;
+}
+.pkr-app.pkr-casino .pkr-casino-photo-scene .pkr-photo-scene-inset{
+ position:absolute;z-index:2;
+ width:30%;height:53%;right:5%;bottom:7%;
+ overflow:hidden;border-radius:12px;
+ transform:rotate(7deg);
+ border:3px solid rgba(231,185,182,.74);
+ background:#151117;
+ box-shadow:0 12px 32px rgba(0,0,0,.67);
+}
+.pkr-app.pkr-casino .pkr-casino-photo-scene .pkr-photo-scene-inset img{
+ display:block;width:100%;height:100%;object-fit:cover;
+ object-position:50% 43%;
+}
+.pkr-app.pkr-casino .pkr-casino-photo-scene .pkr-photo-scene-dealer{
+ position:absolute;z-index:3;right:29%;bottom:13%;
+ width:60px;height:60px;
+ border:6px solid #e9e2d7;border-radius:50%;
+ display:grid;place-items:center;
+ background:radial-gradient(circle at 32% 25%,#fffcf5,#d6cab7 73%,#aa9b82);
+ color:#35242a;text-shadow:0 1px #fff8;
+ font:900 10px/1 var(--font-landing-body),system-ui,sans-serif;
+ letter-spacing:.055em;
+ box-shadow:0 5px 17px rgba(0,0,0,.65),inset 0 0 0 2px rgba(83,51,60,.25);
+ transform:rotate(-10deg);
+}
+.pkr-app.pkr-casino .pkr-casino-photo-scene .pkr-photo-scene-suit{
+ position:absolute;z-index:3;right:17%;top:0;
+ font:100px/1 Georgia,serif;color:rgba(255,240,231,.14);
+ text-shadow:0 6px 18px rgba(0,0,0,.5);
+}
+.pkr-app.pkr-casino .pkr-casino-art.pkr-casino-photo-scene::after{
+ z-index:4;
+ background:linear-gradient(90deg,rgba(12,11,15,.48),transparent 48%),
+   linear-gradient(0deg,rgba(13,12,15,.77),transparent 51%)!important;
+}
+.pkr-app.pkr-casino.pkr-dashboard .pkr-pro-home .pkr-pro-art{
+ display:block!important;
+ position:absolute!important;inset:0 0 0 44%!important;
+ opacity:1!important;z-index:0!important;
+ pointer-events:none;overflow:hidden;
+ -webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.96) 35%,black 75%);
+ mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.96) 35%,black 75%);
+}
+.pkr-app.pkr-casino.pkr-dashboard .pkr-pro-hero-content{
+ position:relative;z-index:2!important;
+}
+.pkr-app.pkr-casino.pkr-dashboard .pkr-pro-art .pkr-casino-photo-scene{
+ position:absolute!important;inset:0!important;
+ height:100%!important;width:100%!important;
+}
+.pkr-app.pkr-casino.pkr-dashboard .pkr-pro-art .pkr-photo-scene-main{
+ object-position:22% 50%;
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-casino-photo-scene{
+ position:absolute!important;top:0!important;left:0!important;right:0!important;
+ width:100%!important;height:242px!important;
+ z-index:0!important;border:0!important;
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-main{
+ object-position:center 52%;
+ filter:contrast(1.15) brightness(.81);
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-inset{
+ width:19%;height:61%;right:6%;bottom:9%;transform:rotate(8deg);
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-dealer{
+ right:27%;bottom:12%;transform:scale(.84) rotate(-10deg);
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-casino-photo-scene::after{
+ background:linear-gradient(180deg,rgba(14,12,17,.09),rgba(18,14,20,.34) 60%,#19191e)!important;
+}
+.pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner{
+ background:#19191e!important;
+}
+
+/* --- Other management pages: photo in header, never inside live game controls --- */
+.pkr-app.pkr-casino.pkr-game-detail .pkr-casino-game-summary{
+ background-image:
+  linear-gradient(90deg,rgba(20,16,21,.98) 0%,rgba(22,16,23,.92) 43%,rgba(15,14,19,.42) 100%),
+  url('/images/casino/real-chip-closeup.webp')!important;
+ background-color:#211c22!important;
+ background-repeat:no-repeat!important;
+ background-size:cover!important;
+ background-position:center,center 50%!important;
+}
+.pkr-schedule-page .pkr-schedule-hero{
+ background-image:
+  linear-gradient(90deg,rgba(22,16,23,.98),rgba(22,16,23,.92) 48%,rgba(22,16,23,.43)),
+  url('/images/casino/real-casino-props.webp')!important;
+ background-color:#19171b!important;background-position:center!important;
+ background-size:cover!important;
+}
+.pkr-vnext-insights .pkr-vnext-insights-top{
+ background-image:
+  linear-gradient(90deg,rgba(27,19,26,.97),rgba(27,19,26,.91) 52%,rgba(27,19,26,.46)),
+  url('/images/casino/real-poker-chips.webp')!important;
+ background-color:#211c22!important;background-position:center,60% center!important;
+ background-size:cover!important;
+}
+.pkr-guest .pkr-guest-hero{
+ background-image:
+  linear-gradient(90deg,rgba(26,19,25,.96),rgba(26,19,25,.88) 66%,rgba(26,19,25,.66)),
+  url('/images/casino/real-casino-props.webp')!important;
+ background-size:cover!important;background-position:center!important;
+}
+.pkr-casino-photo-scene,.pkr-l2-hero-casino-backdrop,
+.pkr-casino-atmosphere-photo img{pointer-events:none}
+
+/* --- Responsive, lightweight & readable --- */
+@media(max-width:1080px){
+ .pkr-landing-v2 .pkr-casino-atmosphere{
+  grid-template-columns:minmax(0,1fr);gap:28px;
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere-head{max-width:720px}
+ .pkr-landing-v2 .pkr-casino-atmosphere-photos{
+  grid-template-rows:235px 235px;
+ }
+}
+@media(max-width:700px){
+ .pkr-landing-v2 .pkr-l2-hero-casino-backdrop{
+  width:100%;inset:0;opacity:.14;
+  -webkit-mask-image:linear-gradient(0deg,rgba(0,0,0,.8),transparent 86%);
+  mask-image:linear-gradient(0deg,rgba(0,0,0,.8),transparent 86%);
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere{
+  padding:58px 16px 66px;gap:26px;
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere-photos{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:290px 180px;gap:9px;
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo-featured{grid-column:span 2;grid-row:auto}
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption{
+  left:10px;right:7px;bottom:10px;gap:2px 6px;grid-template-columns:25px 1fr;
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption>span{
+  width:25px;height:25px;font-size:9px;
+ }
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption strong{font-size:10px}
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption small{font-size:9px;line-height:1.3}
+ .pkr-app.pkr-casino.pkr-dashboard .pkr-pro-home .pkr-pro-art{
+  inset:0 0 22% 29%!important;opacity:.27!important;
+ }
+ .pkr-app.pkr-casino.pkr-dashboard .pkr-pro-art .pkr-photo-scene-dealer{
+  display:none;
+ }
+ .pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-casino-photo-scene{
+  height:192px!important;
+ }
+ .pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-inset{
+  width:28%;height:57%;right:7%;
+ }
+ .pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-dealer{display:none}
+ .pkr-app.pkr-casino.pkr-game-detail .pkr-casino-game-summary{
+  background-image:
+   linear-gradient(180deg,rgba(18,15,19,.7),rgba(18,15,19,.92) 52%,rgba(18,15,19,.98)),
+   url('/images/casino/real-chip-closeup.webp')!important;
+ }
+}
+@media(max-width:360px){
+ .pkr-landing-v2 .pkr-casino-atmosphere-photos{grid-template-rows:240px 156px}
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo figcaption small{display:none}
+ .pkr-app.pkr-casino.pkr-event .pkr-event-overview-inner .pkr-photo-scene-inset{width:32%}
+}
+@media(prefers-reduced-motion:reduce){
+ .pkr-landing-v2 .pkr-casino-atmosphere-photo img{transition:none!important}
+}
