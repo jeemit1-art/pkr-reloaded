@@ -161,3 +161,88 @@
 .pkr-classic-create-game-dialog>.pkr-unfinished-note+div{position:sticky;bottom:-1px;background:var(--pkr-a-surface);padding:12px 0 0;z-index:2}
 @media(max-width:700px){.pkr-mobile-more-panel{bottom:calc(66px + env(safe-area-inset-bottom))}.pkr-classic-create-game-dialog{width:min(96vw,600px)!important;max-height:92dvh!important;padding:18px!important}.pkr-create-game-details summary span{width:100%}}
 @media(max-width:390px){.pkr-mobile-more-grid{grid-template-columns:1fr}}
+
+
+/* ==========================================================================
+   IPHONE / ALL AUTHENTICATED MODALS — 28 OCT 2026
+   The fixed mobile nav previously covered End Event / Delete Game buttons:
+   the modal lived in .pkr-content (z=1), while nav lived at z=180.
+   Make the content stacking context and its actual modal layer win, center
+   short dialogs, and allow tall sheets to scroll inside the visible viewport.
+   Preserve the surrounding Midnight Felt styling and all action callbacks.
+   ========================================================================== */
+body:has(.pkr-app .modal-overlay) .pkr-app .pkr-content:has(.modal-overlay) {
+  position:relative!important;
+  z-index:10040!important;
+}
+body:has(.pkr-app .modal-overlay) .pkr-app.pkr-event,
+body:has(.pkr-app .modal-overlay) .pkr-app.pkr-dashboard,
+body:has(.pkr-app .modal-overlay) .pkr-app.pkr-game-detail {
+  overflow:visible!important;
+}
+/* The navigation is not actionable while a blocking dialog is open.
+   Hide it rather than leave it as an overlay on top of modal controls. */
+body:has(.pkr-app .modal-overlay) :is(.pkr-universal-bottom-nav,.pkr-mobile-nav,.bottom-tab-bar) {
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+.pkr-app .modal-overlay,
+.pkr-guest .modal-overlay {
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  z-index:11000!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  opacity:1!important;
+  pointer-events:auto!important;
+  padding:calc(12px + env(safe-area-inset-top))
+          max(12px,env(safe-area-inset-right))
+          calc(12px + env(safe-area-inset-bottom))
+          max(12px,env(safe-area-inset-left))!important;
+}
+.pkr-app .modal-overlay > :is(.modal,.modal-sheet,.pkr-player-history-dialog),
+.pkr-guest .modal-overlay > :is(.modal,.modal-sheet) {
+  box-sizing:border-box!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  width:100%!important;
+  max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px)!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  margin:auto!important;
+  transform:none!important;
+}
+.pkr-app .modal-overlay :is(.modal,.modal-sheet) button {
+  min-height:44px;
+}
+@media(max-width:700px) {
+  .pkr-app.pkr-event .modal-overlay,
+  .pkr-app.pkr-dashboard .modal-overlay,
+  .pkr-app.pkr-game-detail .modal-overlay {
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  .pkr-app .modal-overlay > .modal {
+    padding:0!important;
+    border-radius:16px!important;
+  }
+  .pkr-app .modal-overlay > .modal-sheet {
+    border-radius:16px!important;
+    padding:18px!important;
+  }
+  .pkr-app .modal-overlay > .pkr-classic-create-game-dialog {
+    padding:18px!important;
+  }
+  .pkr-app .modal-overlay .pkr-player-history-dialog {
+    max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px)!important;
+  }
+}

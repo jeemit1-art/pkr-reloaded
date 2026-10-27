@@ -225,6 +225,38 @@ async function test(){
      await page.waitForTimeout(350);
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
+
+     if(item.id==='dashboard' && size.width<=700){
+      // On iPhones, the fixed nav must never cover a confirmation dialog.
+      const open=page.getByRole('button',{name:'End poker room Friday Night Poker'});
+      if(await open.count()){
+       await open.click();
+       const modal=page.locator('.pkr-app .modal-overlay').filter({hasText:'End Event?'});
+       await modal.waitFor({state:'visible',timeout:6000});
+       const geo=await modal.evaluate(root=>{
+        const buttons=[...root.querySelectorAll('button')];
+        const action=buttons.find(b=>b.textContent?.trim()==='End Event');
+        const cancel=buttons.find(b=>b.textContent?.trim()==='Cancel');
+        const r=action?.getBoundingClientRect(),c=cancel?.getBoundingClientRect();
+        const hit=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null;
+        const nav=document.querySelector('.pkr-universal-bottom-nav');
+        return {
+         bottom:r?.bottom,top:r?.top,cancelBottom:c?.bottom,viewport:innerHeight,
+         actionTopmost:!!action&&!!hit&&(action===hit||action.contains(hit)),
+         navVisibility:nav?getComputedStyle(nav).visibility:'none'
+        };
+       });
+       if(!geo.actionTopmost||!Number.isFinite(geo.bottom)||geo.bottom>geo.viewport-5
+          ||!Number.isFinite(geo.cancelBottom)||geo.cancelBottom>geo.viewport-5)
+        errors.push(size.name+' End Event dialog buttons obstructed: '+JSON.stringify(geo));
+       if(geo.navVisibility!=='hidden')
+        errors.push(size.name+' mobile bottom nav not inert behind dialog: '+JSON.stringify(geo));
+       await page.screenshot({path:path.join(output,size.name+'-end-event-dialog.png'),fullPage:false});
+       await modal.getByRole('button',{name:'Cancel'}).click();
+       await modal.waitFor({state:'hidden',timeout:5000});
+      }
+     }
+
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
 
@@ -309,6 +341,19 @@ async function test(){
          await openScheduler.click();
          const scheduler=page.getByRole('dialog',{name:'Schedule a game'});
          await scheduler.waitFor({state:'visible',timeout:5000});
+
+          if(size.width<=700){
+           const geo=await scheduler.evaluate(dialog=>{
+            const r=dialog.getBoundingClientRect(),nav=document.querySelector('.pkr-universal-bottom-nav');
+            return {top:r.top,bottom:r.bottom,viewport:innerHeight,
+             navVisibility:nav?getComputedStyle(nav).visibility:'none',
+             dialogOverflow:getComputedStyle(dialog).overflowY};
+           });
+           if(geo.top < -1 || geo.bottom>geo.viewport+1 || geo.navVisibility!=='hidden'
+              ||geo.dialogOverflow!=='auto')
+             errors.push(size.name+' scheduler obstructed on phone: '+JSON.stringify(geo));
+          }
+
          const arrivalDetails=scheduler.locator('.pkr-create-game-details').first();
          if(await arrivalDetails.evaluate(node=>node.hasAttribute('open')))
            errors.push(size.name+' optional arrivals expanded before user request');
@@ -409,6 +454,14 @@ async function test(){
        if(await feature.count() && !(await feature.isVisible()))errors.push(size.name+' mobile next-game feature hidden');
      }
      if(item.id==='insights'){
+
+       if(size.width<=700){
+        const top=await page.locator('.pkr-vnext-insights-top').evaluate(el=>({
+         top:el.getBoundingClientRect().top,padding:getComputedStyle(document.querySelector('.pkr-insights-refresh')).paddingTop
+        }));
+        if(top.top>75) errors.push(size.name+' unexpected empty gap before Insights heading: '+JSON.stringify(top));
+       }
+
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});
        await page.locator('.pkr-insights-settle-tabs').waitFor({state:'visible'});
        if(await page.locator('.pkr-insights-kpis .pkr-insights-kpi').count()!==5)errors.push(size.name+' insights KPI count mismatch');
