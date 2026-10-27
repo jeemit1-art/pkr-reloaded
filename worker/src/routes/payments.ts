@@ -22,9 +22,18 @@ payments.put('/games/:id/transfers/:tid/status', authMiddleware, async (c) => {
   }
   const now = Math.floor(Date.now() / 1000);
   const result = await c.env.DB.prepare(
-    'UPDATE settlement_transfers SET status=?, paid_at=?, last_reminded_at=NULL WHERE id=? AND game_id=?'
+    // Legacy migration status means unknown payment history. Refuse to overwrite
+    // it via routine payment controls; an audited reconciliation is separate.
+    "UPDATE settlement_transfers SET status=?, paid_at=?, last_reminded_at=NULL WHERE id=? AND game_id=? AND status!='legacy'"
   ).bind(status, status === 'paid' ? now : null, tid, gameId).run();
   if (result.meta.changes === 0) {
+    const existing = await c.env.DB.prepare(
+      'SELECT status FROM settlement_transfers WHERE id=? AND game_id=?'
+    ).bind(tid,gameId).first<{status:string}>();
+    if(existing?.status==='legacy') return c.json({
+      error:'Historical transfer is unverified and cannot be marked paid by routine payment controls. Review original records first.',
+      code:'HISTORICAL_PAYMENT_REVIEW_REQUIRED',
+    },409);
     return c.json({ error: 'Settlement transfer not found in this game' }, 404);
   }
   return c.json({ ok: true, status });
