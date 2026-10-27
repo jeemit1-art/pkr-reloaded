@@ -9,6 +9,7 @@ on:
       - 'frontend/src/app/pkr-nightshift.css'
       - 'frontend/src/app/layout.tsx'
       - 'frontend/src/app/games/[id]/play/page.tsx'
+      - 'frontend/tests/viewport-smoke.cjs'
 
 permissions:
   contents: write

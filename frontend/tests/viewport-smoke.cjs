@@ -427,6 +427,7 @@ async function test(){
        if(liveCount&&!liveCount.includes('0 live now'))
          errors.push(size.name+' historical unfinished game counted as live');
        await page.getByLabel('Filter by game status').selectOption('unfinished');
+       await page.getByText('Unfinished',{exact:true}).first().waitFor({state:'visible',timeout:6000}).catch(()=>{});
        if(!await page.getByText('Unfinished',{exact:true}).count())
          errors.push(size.name+' unfinished game not discoverable via Schedule');
        await page.getByLabel('Filter by game status').selectOption('all');
