@@ -91,3 +91,12 @@ body:has(#gameScreen):has(.sheet.open,.sheet.show,.overlay.open,.overlay.show) .
 .pkr-insights-player-mobile-row>.pkr-metric-trigger{flex-direction:row;align-items:center;gap:10px}
 .pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-player-mobile-info{flex:1;min-width:0}
 .pkr-insights-players td>.pkr-metric-trigger{min-height:36px;justify-content:center;align-items:flex-start}
+/* The small-screen layout hides the desktop hero; retain its useful record cards. */
+@media(max-width:700px){
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero:has(.pkr-metric-trigger){display:block!important;min-height:0!important;padding:0!important;background:transparent!important;border:0!important;overflow:visible!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero-content{display:block!important;padding:0!important;width:100%!important;max-width:none!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero-content>:not(.pkr-pro-stats),.pkr-dashboard .pkr-pro-home .pkr-pro-hero:has(.pkr-metric-trigger)>.pkr-pro-art{display:none!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0!important;padding:0!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats>div{display:block!important;min-width:0;padding:13px!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats .pkr-metric-trigger{display:flex!important;min-height:78px;align-items:flex-start}
+}

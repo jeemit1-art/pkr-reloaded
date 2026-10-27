@@ -26,7 +26,7 @@ export function RecordProvider({children}:{children:ReactNode}){
   const current=requests[requests.length-1];
   return <RecordContext.Provider value={open}>
     {children}
-    {current&&<RecordSheet request={current} canGoBack={requests.length>1} onClose={close}
+    {current&&<RecordSheet key={JSON.stringify(current)} request={current} canGoBack={requests.length>1} onClose={close}
       onBack={()=>setRequests(old=>old.slice(0,-1))} onNext={request=>setRequests(old=>[...old,request])}/>}
   </RecordContext.Provider>;
 }
