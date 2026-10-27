@@ -125,6 +125,45 @@ def main():
           numeric(item,"latest_created_count"),"/",numeric(item,"latest_created_cents"))
     print("This summary never supplies a game ID, selects players, or approves payment changes.")
 
+    recent=release.remote_query("""
+      WITH newest AS (
+       SELECT id,amount,game_id,created_at
+       FROM settlement_transfers WHERE status='legacy'
+       ORDER BY created_at DESC,id DESC LIMIT 8
+      )
+      SELECT COUNT(*) AS n,COALESCE(SUM(amount),0) AS cents,
+             COUNT(DISTINCT game_id) AS games,
+             MIN(created_at) AS boundary,
+             (SELECT COUNT(*) FROM settlement_transfers
+              WHERE status='legacy'
+              AND created_at=(SELECT MIN(created_at) FROM newest)) AS boundary_ties,
+             (SELECT COUNT(*) FROM newest
+              WHERE created_at=(SELECT MIN(created_at) FROM newest)) AS eight_at_boundary
+      FROM newest
+    """)
+    if len(recent)!=1:
+        raise RuntimeError("Could not obtain read-only eight-row timing summary.")
+    latest=recent[0]
+    print("Eight latest-created legacy transfers: count=",numeric(latest,"n"),
+          "aggregate cents=",numeric(latest,"cents"),
+          "across games=",numeric(latest,"games"))
+    print("Eight latest-created sum matches the observed 82,400-cent excess:",
+          numeric(latest,"cents")==82400)
+    print("Created-at boundary is unambiguous:",
+          numeric(latest,"boundary_ties")==numeric(latest,"eight_at_boundary"))
+    by_day=release.remote_query("""
+      SELECT CAST(created_at/86400 AS INTEGER) AS day_bucket,
+             COUNT(*) AS n,COALESCE(SUM(amount),0) AS cents
+      FROM settlement_transfers WHERE status='legacy'
+      GROUP BY CAST(created_at/86400 AS INTEGER)
+      ORDER BY day_bucket DESC LIMIT 8
+    """)
+    # Bucket dates are operational creation dates, not player identities.
+    # The grouped totals help distinguish older imported records from late edits.
+    print("Most recent legacy insertion-day buckets (epoch day/count/aggregate cents):")
+    for rec in by_day:
+        print("  ",numeric(rec,"day_bucket"),numeric(rec,"n"),numeric(rec,"cents"))
+
 
 if __name__=="__main__":
     try:
