@@ -1,21 +1,24 @@
-name: Generate public demo screenshots from synthetic PKR tests
+name: Refresh PKR public screenshots from redesigned app
 
 on:
   push:
     branches:
-      - codex/pkr-actual-product-home-20261027
+      - design/charcoal-blue-refresh-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
-      - 'frontend/scripts/publish-demo-shots.cjs'
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
-  product-demo-screenshots:
+  capture-real-pkr-ui:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 30
+    env:
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_PKR_ENV: staging
+      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,33 +28,52 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Install pinned Next.js dependencies (sharp included)
-        working-directory: frontend
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Retrieve synthetic test screenshot artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Confirm latest PKR graphite design
         run: |
-          mkdir -p "$RUNNER_TEMP/pkr-synthetic-capture"
-          gh run download 40403274702 \
-            --repo jeemit1-art/pkr-reloaded \
-            --name pkr-viewport-smoke \
-            --dir "$RUNNER_TEMP/pkr-synthetic-capture"
-          test -f "$RUNNER_TEMP/pkr-synthetic-capture/desktop-live-table.png"
-          test -f "$RUNNER_TEMP/pkr-synthetic-capture/phone-insights.png"
-      - name: Generate compressed app product screenshots
+          grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
+          ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
+          test -f frontend/src/app/pkr-2026-graphite.css
+          grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
+          grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
+          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
+          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
+      - name: Install pinned frontend dependencies
         working-directory: frontend
-        run: node scripts/publish-demo-shots.cjs "$RUNNER_TEMP/pkr-synthetic-capture"
-      - name: Commit only safe demo screenshots to this release branch
+        run: npm ci --no-audit --no-fund
+      - name: Install visual browser test runner
+        working-directory: frontend
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - name: Install isolated Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Start staging-only PKR application
+        working-directory: frontend
+        run: |
+          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/pkr-graphite-next.log
+          exit 1
+      - name: Capture and test genuine PKR interface with fictional data
+        working-directory: frontend
+        run: node tests/viewport-smoke.cjs
+      - name: Optimise real app screenshots
+        working-directory: frontend
+        run: node scripts/publish-demo-shots.cjs ../artifacts/viewport-smoke
+      - name: Update only demonstration screenshots in design branch
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/codex/pkr-actual-product-home-20261027"
+          test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
           git config user.name "PKR Screenshot Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/demo/
           if git diff --cached --quiet; then
-            echo "Product screenshot assets already up to date"
+            echo "No screenshot changes"
           else
-            git commit -m "assets: publish synthetic-only real PKR app screenshots"
-            git push origin HEAD:refs/heads/codex/pkr-actual-product-home-20261027
+            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
+            git fetch origin design/charcoal-blue-refresh-20261027
+            git rebase origin/design/charcoal-blue-refresh-20261027
+            git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
           fi

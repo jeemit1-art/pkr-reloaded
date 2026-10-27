@@ -9,16 +9,16 @@ const output = path.resolve(__dirname, '../../artifacts/viewport-smoke');
 fs.mkdirSync(output,{recursive:true});
 const future=Math.floor(Date.now()/1000)+86400;
 const past=Math.floor(Date.now()/1000)-86400;
-const room={id:'test-room',name:'Friday Night Test',description:'Private game room',status:'active',role:'host',host_id:'test-user',member_count:4,game_count:2,buy_in:5000,created_at:past};
-const archivedRoom={id:'synthetic-ended-room',name:'Synthetic Closed Room',description:'Archived test room',status:'ended',role:'host',host_id:'test-user',member_count:1,game_count:1,buy_in:2500,created_at:past-9000};
-const upcoming={id:'test-game',event_id:room.id,scheduled_at:future,status:'scheduled',location:'Test room',notes:'',seats:8,created_at:past,player_count:2,results_token:null,live_token:null};
+const room={id:'test-room',name:'Friday Night Poker',description:'Private game room',status:'active',role:'host',host_id:'test-user',member_count:4,game_count:2,buy_in:5000,created_at:past};
+const archivedRoom={id:'synthetic-ended-room',name:'Sunday Social Room',description:'Archived test room',status:'ended',role:'host',host_id:'test-user',member_count:1,game_count:1,buy_in:2500,created_at:past-9000};
+const upcoming={id:'test-game',event_id:room.id,scheduled_at:future,status:'scheduled',location:'Private home game',notes:'',seats:8,created_at:past,player_count:2,results_token:null,live_token:null};
 const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:past,player_count:4,results_token:'synthetic-results'};
 const oldUnfinished={...upcoming,id:'test-old-unfinished',status:'active',scheduled_at:past-90*86400,created_at:past-90*86400,player_count:0};
-const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#214b37"/><circle cx="32" cy="25" r="13" fill="#e9c783"/><path d="M10 64c0-30 44-30 44 0" fill="#e9c783"/></svg>');
-const members=[{id:'test-user',name:'Test Host',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Demo Player',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
-const leaders=[{user_id:'test-user',display_name:'Test Host',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Demo Player',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:'Guest '+String(i+3).padStart(2,'0'),games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
-const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Demo Player',to:'test-user',to_name:'Test Host',amount:7500,status:'owed'}]};
-const user={id:'test-user',name:'Test Host',email:'test@invalid.example',avatar_url:null,plan:'pro',trial_active:false,trial_days_left:0};
+const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2d292b"/><circle cx="32" cy="25" r="13" fill="#f0a18c"/><path d="M10 64c0-30 44-30 44 0" fill="#f0a18c"/></svg>');
+const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Jordan Lee',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
+const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
+const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'}]};
+const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
 const fixture=(pathname,method)=>{
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
@@ -29,8 +29,8 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [{
     ...finished,top_players:[
-      {display_name:'Test Host',net:7500},
-      {display_name:'Demo Player',net:-7500},
+      {display_name:'Alex Morgan',net:7500},
+      {display_name:'Jordan Lee',net:-7500},
     ],
   }];
   if(pathname==='/events/'+room.id+'/join-requests')return {requests:[]};
@@ -85,6 +85,9 @@ async function test(){
       if(landing.scrollWidth>landing.viewportWidth+5)
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
       if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
+      const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+      if(landingCTAColour!=='rgb(239, 137, 118)')
+        errors.push(size.name+' landing CTA reverted to rejected brand colour: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
@@ -127,7 +130,7 @@ async function test(){
       await guestPage.keyboard.press('Escape');
       if(await guestPage.getByRole('dialog',{name:'Host sign in'}).count())
         errors.push(size.name+' landing host sign-in dialog did not close');
-      await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:false});
+      await guestPage.screenshot({path:path.join(output,size.name+'-landing-v2.png'),fullPage:(size.name==='desktop'||size.name==='phone')});
       if(size.name==='phone'||size.name==='desktop'){
         for(const route of ['/pricing','/home-poker-game-tracker','/poker-tournament-manager','/home-poker-settlement']){
           await guestPage.goto(BASE+route,{waitUntil:'domcontentloaded',timeout:40000});
@@ -173,6 +176,8 @@ async function test(){
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
+     // Publish dashboard before mutation tests (which reopen an archived room).
+     if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
      // The old synthetic test missed a real regression: Insights/Schedule rendered
@@ -204,9 +209,8 @@ async function test(){
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
          return {height:r.height,image:s.backgroundImage};
        });
-       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
-       if(summary.height<245||!summary.image.includes(imageName))
-         errors.push(size.name+' game detail hero not matching approved banner: '+JSON.stringify(summary));
+       if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
+         errors.push(size.name+' game detail hero does not use the redesigned no-gold header: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -221,23 +225,25 @@ async function test(){
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
-       const imageName='pkr-approved-hero-'+(size.width<=700?'mobile':'desktop')+'.webp';
-       if(!visual.background.includes(imageName))errors.push(size.name+' '+item.id+' approved photographic banner not applied: '+JSON.stringify(visual));
-       const imageResponse=await page.request.get('http://127.0.0.1:3000/images/'+imageName);
-       if(!imageResponse.ok())errors.push(size.name+' '+item.id+' banner image returned '+imageResponse.status());
-       else if((await imageResponse.body()).length<25000)errors.push(size.name+' '+item.id+' photographic banner appears over-compressed');
+       if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
+         errors.push(size.name+' '+item.id+' stale casino photo remains instead of graphite header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'){
-       const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Test Host'}).locator('.pkr-pro-member-avatar img');
-       const fallback=page.locator('.pkr-pro-member').filter({hasText:'Demo Player'}).locator('.pkr-pro-member-avatar');
+       const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+       if(primary!=='rgb(239, 137, 118)')
+         errors.push(size.name+' dashboard primary control is not coral: '+primary);
+     }
+     if(item.id==='dashboard'){
+       const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
+       const fallback=page.locator('.pkr-pro-member').filter({hasText:'Jordan Lee'}).locator('.pkr-pro-member-avatar');
        if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard not displaying member avatar_url');
        else {
          const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit,position:getComputedStyle(img).position}));
          if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover'||details.position!=='absolute')
            errors.push(size.name+' dashboard member portrait is not properly displayed: '+JSON.stringify(details));
        }
-       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='D'||await fallback.locator('img').count())
+       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='J'||await fallback.locator('img').count())
          errors.push(size.name+' dashboard member without a photo did not retain initials');
      }
      if(item.id==='dashboard'){
@@ -251,11 +257,11 @@ async function test(){
          errors.push(size.name+' archived rooms toggle missing');
        else{
          await archivedToggle.click();
-         if(await archivedCard.count()!==1 || !(await archivedCard.textContent())?.includes('Synthetic Closed Room'))
+         if(await archivedCard.count()!==1 || !(await archivedCard.textContent())?.includes('Sunday Social Room'))
            errors.push(size.name+' archived room not available after expanding');
          if(size.width>=1100){
            // Reopening uses a mocked, host-authorised Worker route; no real D1 updates.
-           await page.getByRole('button',{name:'Reopen poker room Synthetic Closed Room'}).click();
+           await page.getByRole('button',{name:'Reopen poker room Sunday Social Room'}).click();
            await page.waitForTimeout(180);
            if(await page.locator('#pkr-active-rooms .pkr-room-card').count()!==2 ||
               await page.locator('#pkr-archived-rooms').count()!==0)
@@ -338,6 +344,12 @@ async function test(){
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
        if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
+       const share=page.locator('#gameScreen .share-btn');
+       if(await share.count()){
+         const shareColour=await share.first().evaluate(el=>getComputedStyle(el).backgroundColor);
+         if(shareColour!=='rgb(239, 137, 118)')
+           errors.push(size.name+' live game Share control retains gold: '+shareColour);
+       }
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
@@ -410,10 +422,10 @@ async function test(){
        await registration.getByText('1 of 2 members have a registered notification device').waitFor({state:'visible',timeout:5000});
        const search=page.locator('#pkr-member-search');
        if(await search.count()){
-         await search.fill('Demo');
+         await search.fill('Jordan');
          const roster=page.locator('.pkr-member-roster');
-         if(!await roster.getByText('Demo Player').isVisible())errors.push(size.name+' filtered member missing');
-         if(await roster.getByText('Test Host').count())errors.push(size.name+' member search did not filter');
+         if(!await roster.getByText('Jordan Lee').isVisible())errors.push(size.name+' filtered member missing');
+         if(await roster.getByText('Alex Morgan').count())errors.push(size.name+' member search did not filter');
          await search.fill('');
        }
       }
@@ -422,7 +434,7 @@ async function test(){
       if(await page.locator('.pkr-standings-row').count()!==leaders.length)
         errors.push(size.name+' Standings did not show every synthetic player');
       const playerSearch=page.getByLabel('Search standings by player name');
-      await playerSearch.fill('Demo');
+      await playerSearch.fill('Jordan');
       if(await page.locator('.pkr-standings-row').count()!==1)
         errors.push(size.name+' Standings search did not filter players');
       await playerSearch.fill('');
@@ -431,7 +443,7 @@ async function test(){
       await page.locator('.pkr-standings-row').first().click();
       const profile=page.getByRole('dialog',{name:/Player history for/});
       await profile.waitFor({state:'visible',timeout:5000});
-      if(!await profile.getByText('Test Host',{exact:true}).count())
+      if(!await profile.getByText('Alex Morgan',{exact:true}).count())
         errors.push(size.name+' Standings player profile shows the wrong player');
       if(!await profile.getByText('Settled games',{exact:true}).count())
         errors.push(size.name+' Standings player profile missing settled-game statistics');
@@ -450,7 +462,7 @@ async function test(){
        const number=await page.locator('.pkr-persistent-nav button.active').count();
        if(number!==1)errors.push(size.name+' '+item.id+' has '+number+' selected sidebar items');
      }
-     await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
+     if(item.id!=='dashboard') await page.screenshot({path:path.join(output,size.name+'-'+item.id+'.png'),fullPage:false});
     }catch(e){errors.push(size.name+' '+item.id+': '+(e?.message||e));}
    }
    await context.close();
