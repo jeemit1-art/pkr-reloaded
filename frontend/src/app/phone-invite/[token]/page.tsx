@@ -33,7 +33,7 @@ export default function PhoneInvite(){
      const result=await api.phoneInvites.requestApproval(token,name);
      try{localStorage.setItem('pkr:join-claim:'+token,result.claim);}catch{}
      setClaim(result.claim);
-     setStatus('Request sent. Your host can approve it from Members in PKR. This page checks automatically while it stays open.');
+     setStatus('Request sent. When the host approves, this page can automatically finish joining your room. Keep this page open, or return on the same device and browser.');
    }catch(e:any){setError(e.message||'Unable to request group access.');}
    finally{setBusy(false);}
  }
@@ -54,7 +54,11 @@ export default function PhoneInvite(){
      }else if(!silent){
        setStatus('Still waiting for your host. PKR will check again automatically.');
      }
-   }catch(e:any){if(!silent)setError(e.message||'Could not check approval. Try again.');}
+   }catch(e:any){
+     // Silent polling previously hid approval/registration errors indefinitely.
+     // Keep a visible, actionable message without leaking the private claim.
+     setError(e.message||'Could not complete joining. Retry Check approval now, or contact the host.');
+   }
    finally{checkingRef.current=false;if(!silent)setChecking(false);}
  }
  useEffect(()=>{
@@ -109,12 +113,14 @@ export default function PhoneInvite(){
        </form>:
        <div className="pkr-pending-actions">
          <div style={{borderRadius:10,padding:13,background:'rgba(201,168,76,.09)',border:'1px solid rgba(201,168,76,.25)'}}>
-           <strong style={{color:'var(--gold)',fontSize:14}}>◷ Waiting for host approval</strong>
-           <p style={{marginBottom:0}}>Your host will see a request in <strong>PKR → Members → Approvals</strong>.
-             If they enabled push alerts, they'll also get a notification on their device.</p>
+           <strong style={{color:'var(--gold)',fontSize:14}}>◷ Join request submitted</strong>
+           <p style={{marginBottom:0}}>Once the host approves your request, this same page finishes your secure membership.
+             Host approval alone does not add you to the room. Keep this page open, or return through the original
+             invite on the same phone and browser.</p>
          </div>
-         <p>PKR checks approval automatically about every 11 seconds while this page is open.
-            You can also check manually below. You will be taken to phone setup when approved.</p>
+         <p>PKR checks about every 11 seconds while this page is open. You can also check manually.
+            If you opened the link on another phone, browser or installed app, your private request may not carry over.
+            Return to the original browser to finish, or ask your host for a fresh invitation.</p>
          <button type="button" className="btn btn-primary" disabled={checking}
            onClick={()=>void check(false)}>
            {checking?'Checking approval…':'Check approval now'}
