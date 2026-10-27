@@ -325,6 +325,26 @@ async function test(){
        await page.getByRole('tab',{name:'Player Balances'}).click();
        if(!await page.getByRole('tab',{name:'Player Balances'}).getAttribute('aria-selected').then(v=>v==='true'))errors.push(size.name+' settlement balances tab did not activate');
        await page.getByRole('tab',{name:'Who Pays Who'}).click();
+       // Host-only history cleanup must NEVER run automatically. Confirm that
+       // unmatched totals are blocked and an exact user-confirmed amount is required.
+       const historyReview=page.getByRole('button',{name:'Review historical payments'});
+       await historyReview.waitFor({state:'visible',timeout:5000});
+       await historyReview.click();
+       const historyDate=page.getByLabel('Last historical game date');
+       await historyDate.fill(new Date().toISOString().slice(0,10));
+       const exactAmount=page.getByLabel('Independently verified total (AUD)');
+       const markHistory=page.getByRole('button',{name:'Mark verified historical payments as paid'});
+       if(!await markHistory.isDisabled())
+         errors.push(size.name+' historical transfers can be marked paid without an amount and acknowledgement');
+       await exactAmount.fill('75.01');
+       await page.getByLabel(/I confirm these selected historical payments were already settled/).check();
+       if(!await markHistory.isDisabled())
+         errors.push(size.name+' historical transfers can be marked paid with an incorrect total');
+       await exactAmount.fill('75.00');
+       await page.getByLabel(/I confirm these selected historical payments were already settled/).check();
+       if(await markHistory.isDisabled())
+         errors.push(size.name+' correct historical sum and confirmation did not enable host-only reconciliation');
+       await page.getByRole('button',{name:'Close review'}).click();
        const settlement=page.locator('#pkr-settlement');
        if(!await settlement.isVisible())errors.push(size.name+' settlement centre disappeared');
        const paymentSelect=page.locator('.pkr-payment-status-select').first();
