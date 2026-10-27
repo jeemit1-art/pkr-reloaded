@@ -11,8 +11,24 @@ export default function ResultsPage() {
   const [copied, setCopied]   = useState<number|null>(null);
   const [busy, setBusy]       = useState<string|null>(null);
   const [isBanker,setIsBanker]=useState(false);
+  const [myUserId,setMyUserId]=useState<string|null>(null);
+  const [settlementNotice,setSettlementNotice]=useState('');
+  const [collectionStarted,setCollectionStarted]=useState(false);
 
   useEffect(()=>{ api.games.results(token as string).then(setData).catch(()=>setError('Results not found')); },[token]);
+  useEffect(()=>{
+    if(!data?.game?.id||!getToken()){setCollectionStarted(false);return}
+    let active=true;
+    api.games.settlementControl(data.game.id).then(info=>{
+      if(active)setCollectionStarted(!!info.enabled);
+    }).catch(()=>{if(active)setCollectionStarted(false)});
+    return()=>{active=false};
+  },[data?.game?.id]);
+  useEffect(()=>{
+    if(!getToken()){setMyUserId(null);return}
+    api.auth.me().then(u=>setMyUserId(u?.id||null)).catch(()=>setMyUserId(null));
+  },[token]);
+
   useEffect(()=>{
     if(!data?.game?.event_id||!getToken()){setIsBanker(false);return;}
     let active=true;
@@ -55,8 +71,27 @@ export default function ResultsPage() {
     setData(d => d ? {...d, transfers:d.transfers.map(x => x.id===id ? {...x,...p} : x)} : d);
   }
 
+  async function respond(t:Transfer,action:'sent'|'received'|'not_received'){
+    if(!t.id||busy)return;
+    const confirmation=action==='sent'?'Confirm you have sent '+fmt(t.amount)+' to '+t.to_name+'?'
+      :action==='received'?'Confirm you have received '+fmt(t.amount)+' from '+t.from_name+'?'
+      :'Confirm that '+fmt(t.amount)+' has not been received?';
+    if(!window.confirm(confirmation))return;
+    setBusy(t.id);setSettlementNotice('');
+    try{
+      const updated=await api.games.respondToTransfer(data!.game.id,t.id,action);
+      patchTransfer(t.id,{status:updated.status as Transfer['status'],
+        paid_at:updated.status==='paid'?Math.floor(Date.now()/1000):null});
+      setSettlementNotice(action==='sent'
+        ?'Marked as sent. The recipient must confirm receipt before the balance is treated as paid.'
+        :action==='received'?'Receipt confirmed. This payment is now settled.'
+        :'Not received recorded; the payer can review and send again.');
+    }catch(e:any){setSettlementNotice(e?.message||'Could not update your transfer')}
+    finally{setBusy(null)}
+  }
+
   async function bankerSet(t: Transfer, status:'owed'|'paid'|'not_received') {
-    if (!t.id) return;
+    if (!t.id || t.status === 'legacy') return;
     setBusy(t.id);
     try { await api.games.setTransferStatus(data!.game.id, t.id, status); patchTransfer(t.id, {status}); }
     catch(e:any) { alert(e.message || 'Could not update'); }
@@ -76,7 +111,7 @@ export default function ResultsPage() {
     }
     const ok=await subscribePush(data!.game.event_id,user.id,user.name);
     alert(ok
-      ?'PKR room notifications enabled. Personal payment reminders depend on the player name matching your account.'
+      ?'PKR room notifications enabled. Personal payment reminders require your game seat to be linked to this verified PKR account.'
       :'Could not enable notifications. Check room membership and browser settings.');
   }
 
@@ -121,6 +156,10 @@ export default function ResultsPage() {
             WhatsApp
           </a>
         </div>
+
+        {settlementNotice&&<div className="card" role="status" style={{padding:'12px 14px',fontSize:12,lineHeight:1.5,marginBottom:12}}>
+          {settlementNotice}
+        </div>}
 
         {(game.variance||0)!==0 && (
           <div className="card" style={{marginBottom:14,padding:'12px 16px',fontSize:12,color:'var(--amber)'}}>
@@ -173,11 +212,35 @@ export default function ResultsPage() {
                       {fmt(t.amount)}
                     </span>
                   </div>
+                  {t.status==='legacy' && (
+                    <p role="note" style={{fontSize:12,lineHeight:1.55,color:'var(--ivory)',marginBottom:9}}>
+                      Historical settlement — payment status unverified. Excluded from current amounts owing. Not marked paid.
+                    </p>
+                  )}
+                  {/* Only the verified logged-in payer or recipient can
+                      confirm the transfer. A name or public results link alone
+                      never grants financial write permissions. */}
+                  {collectionStarted&&t.id&&t.status!=='legacy'&&myUserId===t.from&&
+                    ['owed','not_received'].includes(t.status||'owed')&&(
+                    <button type="button" className="btn btn-primary" disabled={!!busy}
+                      style={{fontSize:12,padding:'9px 12px',marginBottom:9,width:'100%'}}
+                      onClick={()=>void respond(t,'sent')}>I have paid {fmt(t.amount)} · Mark sent</button>
+                  )}
+                  {collectionStarted&&t.id&&t.status==='payer_claimed'&&myUserId===t.to&&(
+                    <div style={{display:'flex',gap:8,marginBottom:9}}>
+                      <button type="button" className="btn btn-primary" disabled={!!busy}
+                        style={{fontSize:12,padding:'9px 10px',flex:1}}
+                        onClick={()=>void respond(t,'received')}>Confirm received</button>
+                      <button type="button" className="btn btn-outline" disabled={!!busy}
+                        style={{fontSize:12,padding:'9px 10px',flex:1}}
+                        onClick={()=>void respond(t,'not_received')}>Not received</button>
+                    </div>
+                  )}
                   {t.status && t.status!=='legacy' && (
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
                         color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
-                        {t.status==='paid'?'✓ Paid':t.status==='not_received'?'⚠ Not received':'Owed'}
+                        {t.status==='paid'?'✓ Receipt confirmed':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
                       </span>
                       {!isBanker && t.status!=='paid' && (
                         <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
@@ -199,8 +262,8 @@ export default function ResultsPage() {
                       )}
                     </div>
                   )}
-                  {/* Actions row — always copy, WA only if number known */}
-                  <div style={{display:'flex',gap:6}}>
+                  {/* Historic unverified transfers must never trigger payment reminders. */}
+                  {t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
                     <button
                       onClick={()=>copyTransferMsg(t,i)}
                       className="btn btn-ghost"
@@ -225,7 +288,7 @@ export default function ResultsPage() {
                         📱 WhatsApp
                       </a>
                     )}
-                  </div>
+                  </div>}
                 </div>
               );
             })}

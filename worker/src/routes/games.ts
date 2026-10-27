@@ -994,7 +994,10 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
   ));
 
   const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
-  c.executionCtx.waitUntil((async () => {
+  // Settlement V2 deliberately waits for the host to dispatch individual
+  // payment requests from the game summary after saving and ending the game.
+  // Keep the legacy results announcement unchanged when V2 is disabled.
+  if(c.env.PKR_SETTLEMENT_V2!=='1') c.executionCtx.waitUntil((async () => {
     for (const p of positions) {
       const netCents = p.net || 0;
       const netStr = netCents > 0 ? `+$${(netCents/100).toFixed(0)}` : netCents < 0 ? `-$${(Math.abs(netCents)/100).toFixed(0)}` : '$0';

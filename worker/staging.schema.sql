@@ -270,3 +270,28 @@ CREATE TABLE tournament_eliminations (
   eliminated_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE(game_id,player_name)
 );
+
+-- Settlement V2 isolated staging fixture. Existing settlement data remains untouched.
+CREATE TABLE settlement_notification_settings (
+  game_id TEXT PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
+  enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+  reminders_enabled INTEGER NOT NULL DEFAULT 0 CHECK(reminders_enabled IN (0,1)),
+  last_broadcast_at INTEGER,
+  started_at INTEGER,
+  updated_by TEXT,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE TABLE settlement_confirmation_events (
+  id TEXT PRIMARY KEY,
+  game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  transfer_id TEXT REFERENCES settlement_transfers(id) ON DELETE SET NULL,
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  previous_status TEXT,
+  new_status TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX idx_settlement_confirmation_events_game
+  ON settlement_confirmation_events(game_id,created_at DESC);
+CREATE INDEX idx_settlement_confirmation_events_transfer
+  ON settlement_confirmation_events(transfer_id,created_at DESC);

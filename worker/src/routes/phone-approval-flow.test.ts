@@ -23,6 +23,14 @@ function makeFixture(){
    if(sql.includes('SELECT display_name,phone_cipher FROM group_phone_contacts'))return {display_name:'Expected Player',phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678')};
    return null;
   },
+  async all(){
+   if(sql.includes('SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts')){
+    return {results:[{id:'contact-1',event_id:'room-1',display_name:'Expected Player',
+      phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678'),
+      user_id:dbState.userId,created_at:1}]};
+   }
+   return {results:[]};
+  },
   async run(){
    if(sql.includes('INSERT INTO users')){dbState.users++;return {meta:{changes:1}};}
    if(sql.includes('UPDATE group_phone_invites SET consumed_at')){if(dbState.consumed)return {meta:{changes:0}};dbState.consumed=true;return {meta:{changes:1}};}
@@ -60,7 +68,11 @@ describe('free private WhatsApp membership host approval contract',()=>{
   expect(notApproved.status).toBe(202);
   expect(dbState.users).toBe(0);
   const hostToken=await signJWT({sub:'host-1',email:'host@invalid.test',name:'Host'},jwtSecret);
-  const inbox=await router.request(base+'/events/room-1/join-requests',{headers:{Authorization:'Bearer '+hostToken}},env);
+  const hostHeaders={headers:{Authorization:'Bearer '+hostToken}};
+  const pendingContactResponse=await router.request(base+'/events/room-1/phone-contacts',hostHeaders,env);
+  expect(pendingContactResponse.status).toBe(200);
+  expect((await pendingContactResponse.json() as any).contacts[0].status).toBe('awaiting_host_approval');
+  const inbox=await router.request(base+'/events/room-1/join-requests',hostHeaders,env);
   expect(inbox.status).toBe(200);
   const inboxData=await inbox.json() as any;
   expect(inboxData.requests).toHaveLength(1);
@@ -71,6 +83,10 @@ describe('free private WhatsApp membership host approval contract',()=>{
   expect(blocked.status).toBe(403);
   const approved=await router.request(base+'/events/room-1/join-requests/'+inboxData.requests[0].id+'/decision',jsonPost({approve:true},hostToken),env);
   expect(approved.status).toBe(200);
+  const approvedContactResponse=await router.request(base+'/events/room-1/phone-contacts',hostHeaders,env);
+  expect(approvedContactResponse.status).toBe(200);
+  expect((await approvedContactResponse.json() as any).contacts[0].status).toBe('approved_awaiting_member');
+  expect(dbState.members).toHaveLength(0); // approving alone must not create membership
   const joined=await router.request(base+'/phone-invites/complete-approval',jsonPost({claim:pending.claim}),env);
   expect(joined.status).toBe(200);
   const joinedData=await joined.json() as any;
@@ -79,6 +95,9 @@ describe('free private WhatsApp membership host approval contract',()=>{
   expect(dbState.users).toBe(1);
   expect(dbState.members).toEqual([{eventId:'room-1',userId:dbState.userId,role:'member'}]);
   expect(dbState.consumed).toBe(true);
+  const joinedContactResponse=await router.request(base+'/events/room-1/phone-contacts',hostHeaders,env);
+  expect((await joinedContactResponse.json() as any).contacts[0].status).toBe('joined');
+  expect([...kvMap.keys()].some(k=>k.startsWith('approved-contact:'))).toBe(false);
   expect([...kvMap.keys()].some(k=>k.startsWith('approved-join:'))).toBe(false);
   const second=await router.request(base+'/phone-invites/complete-approval',jsonPost({claim:pending.claim}),env);
   expect(second.status).toBe(202);

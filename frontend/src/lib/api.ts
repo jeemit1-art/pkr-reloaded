@@ -74,7 +74,7 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
 
 export const api = {
   phoneInvites: {
@@ -98,7 +98,7 @@ export const api = {
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
     recoverContact:(id:string,contactId:string)=>req<{ok:boolean;url:string;whatsapp_url:string}>(`/events/${id}/phone-contacts/${contactId}/recovery`,{method:'POST'}),
     joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>}>(`/events/${id}/join-requests`),
-    decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
+    decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean;contact_id?:string}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
     phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
     inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>
       req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),
@@ -150,6 +150,19 @@ export const api = {
         method:'PUT',body:JSON.stringify({cashout,expected_cashout:expectedCashout})}),
     markPaid: (token:string,tid:string) => pub<{ok:boolean}>(`/games/results/${token}/transfers/${tid}/paid`,{method:'POST'}),
     setTransferStatus: (gameId:string,tid:string,status:'owed'|'paid'|'not_received') => req<{ok:boolean}>(`/games/${gameId}/transfers/${tid}/status`,{method:'PUT',body:JSON.stringify({status})}),
+    settlementControl: (id:string) => req<{game_id:string;enabled:boolean;reminders_enabled:boolean;last_broadcast_at:number|null;outstanding_count:number;can_manage:boolean}>(`/games/${id}/settlement-control`),
+    broadcastSettlement: (id:string,reminders_enabled:boolean) => req<{ok:boolean;transfers:number;push_accepted:number;recipients_without_accepted_push:number}>(`/games/${id}/settlement-control/broadcast`,{
+      method:'POST',body:JSON.stringify({reminders_enabled}),
+    }),
+    settlementReminders: (id:string,enabled:boolean) => req<{ok:boolean;reminders_enabled:boolean}>(`/games/${id}/settlement-control/reminders`,{
+      method:'PUT',body:JSON.stringify({enabled}),
+    }),
+    respondToTransfer: (id:string,tid:string,action:'sent'|'received'|'not_received') => req<{ok:boolean;status:string}>(`/games/${id}/transfers/${tid}/respond`,{
+      method:'POST',body:JSON.stringify({action}),
+    }),
+    bulkTransferStatus: (id:string,ids:string[],status:'owed'|'paid') => req<{ok:boolean;updated:number;status:string}>(`/games/${id}/transfers/bulk-status`,{
+      method:'POST',body:JSON.stringify({ids,status}),
+    }),
     unsettle: (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/unsettle`,{method:'POST'}),
     cancel:   (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/cancel`,{method:'POST'}),
     delete:   (id:string) => req<{ok:boolean}>(`/games/${id}`,{method:'DELETE'}),
@@ -212,7 +225,7 @@ export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
 export interface LeaderboardEntry { user_id:string; display_name:string; games_played:number; games_won:number; total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null; }
 export interface Transfer { from:string; from_name:string; to:string; to_name:string; amount:number;
-  id?:string; status?:'owed'|'paid'|'not_received'|'legacy'; paid_at?:number|null; last_reminded_at?:number|null; reminder_count?:number; }
+  id?:string; status?:'owed'|'paid'|'not_received'|'payer_claimed'|'legacy'; paid_at?:number|null; last_reminded_at?:number|null; reminder_count?:number; }
 export interface SettlementResult { settlement_id:string; game_id:string; results:any[]; transfers:Transfer[]; settled_at:number; results_token:string; cached?:boolean; }
 
 export function fmt(cents:number):string {

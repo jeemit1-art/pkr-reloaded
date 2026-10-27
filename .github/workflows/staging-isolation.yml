@@ -28,7 +28,11 @@ jobs:
           node --check worker/scripts/check-staging-config.mjs
           node worker/scripts/check-staging-config.mjs
       - name: Check test-only staging schema (in-memory)
-        run: python3 worker/scripts/check-staging-schema.py
+        run: |
+          python3 worker/scripts/check-staging-schema.py
+          python3 worker/scripts/test-settlement-v2-migration.py
+          python3 worker/scripts/test-owner-legacy-reconciliation.py
+          python3 -m py_compile worker/scripts/owner-reconcile-legacy-paid.py
       - name: Test optional integrity upgrade in disposable SQLite
         run: python3 worker/scripts/check-staging-integrity-migration.py
       - name: Test RSVP board migration in disposable SQLite

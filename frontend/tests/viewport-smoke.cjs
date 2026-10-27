@@ -17,7 +17,7 @@ const oldUnfinished={...upcoming,id:'test-old-unfinished',status:'active',schedu
 const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2d292b"/><circle cx="32" cy="25" r="13" fill="#f0a18c"/><path d="M10 64c0-30 44-30 44 0" fill="#f0a18c"/></svg>');
 const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Jordan Lee',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
 const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
-const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'}]};
+const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'synthetic-historical-legacy',from:'historical-payer',from_name:'Historical Player A',to:'historical-recipient',to_name:'Historical Player B',amount:7523500,status:'legacy'}]};
 const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
 const fixture=(pathname,method)=>{
   if(method==='OPTIONS')return {};
@@ -251,6 +251,28 @@ async function test(){
        if(!rect)errors.push(size.name+' room missing hero/tabs geometry');
        else if(Math.abs(rect.heroLeft-rect.tabsLeft)>18||Math.abs(rect.heroRight-rect.tabsRight)>18) errors.push(size.name+' room banner and tabs misaligned: '+JSON.stringify(rect));
      }
+     if(item.id==='room'){
+       // The redesigned game scheduler must expose the essentials immediately,
+       // keep optional controls accessible, and never create a game just by opening.
+       const openScheduler=page.getByRole('button',{name:'+ Game',exact:true});
+       if(!await openScheduler.isVisible())errors.push(size.name+' room create-game action unavailable');
+       else{
+         await openScheduler.click();
+         const scheduler=page.getByRole('dialog',{name:'Schedule a game'});
+         await scheduler.waitFor({state:'visible',timeout:5000});
+         const arrivalDetails=scheduler.locator('.pkr-create-game-details').first();
+         if(await arrivalDetails.evaluate(node=>node.hasAttribute('open')))
+           errors.push(size.name+' optional arrivals expanded before user request');
+         await arrivalDetails.locator('summary').click();
+         if(await scheduler.getByLabel('RSVP arrival time 1').count()!==1)
+           errors.push(size.name+' editable RSVP arrival times missing');
+         await scheduler.getByRole('button',{name:'Tournament',exact:true}).click();
+         if(await scheduler.getByRole('button',{name:'Tournament',exact:true}).getAttribute('aria-pressed')!=='true')
+           errors.push(size.name+' tournament format was not selected');
+         await scheduler.getByRole('button',{name:'Close game scheduler'}).click();
+         await scheduler.waitFor({state:'hidden',timeout:5000});
+       }
+     }
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
@@ -341,6 +363,17 @@ async function test(){
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});
        await page.locator('.pkr-insights-settle-tabs').waitFor({state:'visible'});
        if(await page.locator('.pkr-insights-kpis .pkr-insights-kpi').count()!==5)errors.push(size.name+' insights KPI count mismatch');
+       // $75,235 of migrated legacy transfers must NOT inflate the real
+       // current outstanding balance, and must NEVER be marked paid by UI.
+       const current=await page.getByTestId('current-outstanding').textContent();
+       if(current?.trim()!=='$75')
+        errors.push(size.name+' historical $75,235 incorrectly included in outstanding: '+current);
+       const legacyNotice=await page.getByTestId('legacy-settlement-notice').textContent();
+       if(!legacyNotice?.includes('75,235')||!legacyNotice?.includes('not been marked paid'))
+        errors.push(size.name+' legacy settlement is not segregated as unverified history');
+       if(await page.locator('.pkr-payment-status-select').count()!==1)
+        errors.push(size.name+' legacy payment status must be read-only');
+
         // Regression: both sections must show ALL 14 synthetic players, not the first 8/10.
         await page.locator('.pkr-vnext-performance-row').first().waitFor({state:'visible',timeout:10000});
         if(await page.locator('.pkr-vnext-performance-row').count()!==leaders.length)
@@ -454,6 +487,19 @@ async function test(){
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
      }
+     if(item.id==='room'&&size.width<1100){
+      const moreButton=page.locator('.pkr-universal-bottom-nav button').filter({hasText:'More'}).first();
+      if(!await moreButton.isVisible())errors.push(size.name+' mobile More navigation missing');
+      else{
+       await moreButton.click();
+       const moreDialog=page.getByRole('dialog',{name:'More PKR navigation'});
+       await moreDialog.waitFor({state:'visible',timeout:5000});
+       if(await moreDialog.getByRole('button',{name:'Settlements'}).count()!==1)
+        errors.push(size.name+' mobile More menu missing settlements shortcut');
+       await page.keyboard.press('Escape');
+       if(await moreDialog.isVisible())errors.push(size.name+' mobile More menu did not close with Escape');
+      }
+     }
      if(item.id==='room'){
       const selector=size.width>=1100?'.pkr-persistent-nav button':'.pkr-universal-bottom-nav button';
       const memberNav=page.locator(selector).filter({hasText:'Members'}).first();
@@ -470,16 +516,16 @@ async function test(){
          const active=page.locator('.pkr-persistent-nav button.active');
          if(await active.count()!==1||!(await active.first().textContent())?.includes('Members'))
            errors.push(size.name+' Games and Members highlighted at once');
-         await nav.filter({hasText:'Players'}).first().click();
+         await nav.filter({hasText:'Standings'}).first().click();
          await page.waitForTimeout(130);
          const playersActive=page.locator('.pkr-persistent-nav button.active');
-         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Players'))
-           errors.push(size.name+' Games and Players highlighted at once');
-         await nav.filter({hasText:'Games'}).first().click();
+         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Standings'))
+           errors.push(size.name+' Rooms and Standings highlighted at once');
+         await nav.filter({hasText:'Rooms & games'}).first().click();
          await page.waitForTimeout(130);
          const gamesActive=page.locator('.pkr-persistent-nav button.active');
-         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Games'))
-           errors.push(size.name+' Games is not the sole active menu after return');
+         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Rooms & games'))
+           errors.push(size.name+' Rooms & games is not the sole active menu after return');
          await nav.filter({hasText:'Members'}).first().click();
          await page.waitForTimeout(130);
        }

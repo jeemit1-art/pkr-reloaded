@@ -47,6 +47,8 @@ function fixture(status: string = 'active', cached?: { game_id: string; payload_
               if (sql.includes('FROM games WHERE id=?') || sql.includes('FROM games g WHERE g.id=?')) return game;
               if (sql.includes('FROM events WHERE id=?')) return event;
               if (sql.includes('FROM events e WHERE e.id=?')) return event;
+              if (sql.includes('SELECT status FROM settlement_transfers') && _params[0] === 'historical')
+                return {status:'legacy'};
               return null;
             },
             async all(): Promise<any> {
@@ -59,7 +61,7 @@ function fixture(status: string = 'active', cached?: { game_id: string; payload_
             },
             async run(): Promise<any> {
               writes.push(sql);
-              if (sql.startsWith('UPDATE settlement_transfers') && _params[2] === 'missing') {
+              if (sql.startsWith('UPDATE settlement_transfers') && ['missing','historical'].includes(String(_params[2]))) {
                 return {meta:{changes:0}};
               }
               if (sql.includes("SET status='cancelled'")) game.status = 'cancelled';
@@ -191,6 +193,16 @@ describe('payment acknowledgement integrity', () => {
       json('PUT',{status:'paid'}), f.env);
     expect(response.status).toBe(200);
     expect(f.writes).toHaveLength(1);
+  });
+
+  it('refuses to mark migration-era unverified transfers paid', async () => {
+    const f=fixture('settled');
+    const response=await payments.request('https://test.invalid/games/game/transfers/historical/status',
+      json('PUT',{status:'paid'}), f.env);
+    expect(response.status).toBe(409);
+    const payload=await response.json() as {code:string};
+    expect(payload.code).toBe('HISTORICAL_PAYMENT_REVIEW_REQUIRED');
+    expect(f.writes[0]).toContain("status!='legacy'");
   });
 
   it('returns not found rather than false success for a nonexistent transfer', async () => {

@@ -54,6 +54,7 @@ export default function EventPage() {
   const [isGroupOwner,setIsGroupOwner]=useState(false);
   const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>);
   const previousRequestCount=useRef<number|null>(null);
+  const [joinDecisionNotice,setJoinDecisionNotice]=useState('');
   const memberDeepLinkScroll=useRef(false);
   const [memberSection,setMemberSection]=useState<'invite'|'requests'|'roster'|'notifications'>('invite');
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
@@ -157,13 +158,38 @@ export default function EventPage() {
     }
   },[tab,event]);
   async function decideJoin(requestId:string,approve:boolean){
-    try{await api.events.decideJoin(id,requestId,approve);setJoinRequests(v=>v.filter(r=>r.id!==requestId));}
-    catch(e:any){alert(e.message||'Unable to review request');}
+    setJoinDecisionNotice('');
+    const name=joinRequests.find(r=>r.id===requestId)?.name||'Player';
+    try{
+      const result=await api.events.decideJoin(id,requestId,approve);
+      setJoinRequests(v=>v.filter(r=>r.id!==requestId));
+      if(approve&&result.contact_id){
+        setPhoneContacts(v=>v.map(contact=>contact.id===result.contact_id
+          ?{...contact,status:'approved_awaiting_member'}:contact));
+      }
+      setJoinDecisionNotice(approve
+        ?name+' approved. They must return to their original PKR invitation on the same device, then tap “Check approval now” to finish joining. The member list will update after that.'
+        :name+' request rejected.');
+      // Cloudflare KV may be eventually consistent across regions. Keep the
+      // confirmed host-side state visible until the normal refresh completes.
+      window.setTimeout(()=>api.events.phoneContacts(id)
+        .then(r=>setPhoneContacts(r.contacts)).catch(()=>{}),2000);
+    }catch(e:any){setJoinDecisionNotice(e.message||'Unable to review request');}
   }
   useEffect(()=>{
     if(tab!=='members'||!isGroupOwner)return;
-    api.events.phoneContacts(id).then(r=>{setPhoneContacts(r.contacts);setPhoneError('');})
-      .catch(e=>setPhoneError(e.message||'The private contact list is unavailable.'));
+    let active=true;
+    const refresh=()=>{
+      api.events.phoneContacts(id).then(r=>{
+        if(active){setPhoneContacts(r.contacts);setPhoneError('');}
+      }).catch(e=>{if(active)setPhoneError(e.message||'The private contact list is unavailable.');});
+      // Host room members are a separate resource from private invite contacts.
+      api.events.get(id).then(e=>{if(active)setEvent(e as any)}).catch(()=>{});
+    };
+    refresh();
+    const interval=window.setInterval(refresh,15000);
+    window.addEventListener('focus',refresh);
+    return()=>{active=false;window.clearInterval(interval);window.removeEventListener('focus',refresh)};
   },[tab,id,isGroupOwner]);
 
   useEffect(()=>{
@@ -541,6 +567,10 @@ export default function EventPage() {
              <p>When a player scans their private invitation, their request will appear here.
                If host push alerts are enabled, you will also receive a notification.</p>
            </section>}
+           {isGroupOwner&&joinDecisionNotice&&
+            <div role="status" style={{padding:'13px 15px',marginBottom:15,border:'1px solid var(--border-hi)',borderRadius:10,background:'var(--bg2)',fontSize:13,lineHeight:1.55}}>
+              {joinDecisionNotice}
+            </div>}
            {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
             <div id="pkr-members-invite" className="pkr-members-anchor" />
             {isGroupOwner&&<section className="pkr-member-invite" style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
@@ -585,8 +615,17 @@ export default function EventPage() {
                   display:'flex',alignItems:'center',flexWrap:'wrap',gap:8}}>
                   <div style={{flex:1,minWidth:140}}>
                     <div style={{fontSize:14}}>{contact.display_name}</div>
-                    <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Joined':'Invitation pending'}</div>
+                    <div style={{fontSize:11,color:'var(--muted)'}}>{contact.phone} · {contact.status==='joined'?'Joined'
+                      :contact.status==='approved_awaiting_member'?'Approved — waiting for player to finish joining'
+                      :contact.status==='awaiting_host_approval'?'Waiting for host approval'
+                      :'Invitation sent — not yet joined'}</div>
                   </div>
+                  {contact.status==='approved_awaiting_member'&&
+                    <a className="btn btn-outline" target="_blank" rel="noopener noreferrer"
+                      style={{fontSize:10,padding:'7px 9px',textDecoration:'none'}}
+                      href={'https://wa.me/'+contact.phone.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(
+                        'Your PKR join request for '+event.name+' is approved. Please reopen the original invitation in the same browser and tap Check approval now to finish joining. If you no longer have the link, let me know.'
+                      )}>Remind to complete</a>}
                   {contact.status==='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy} onClick={async()=>{try{const result=await api.events.recoverContact(id,contact.id);setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.url,name:contact.display_name});}catch(e:any){alert(e.message);}}}>Recover access</button>}
                   {contact.status==='joined'&&selectedGameId&&
                     <a href={gameWhatsAppLink(contact.phone,selectedGameId)} target="_blank" rel="noreferrer"
@@ -891,9 +930,16 @@ export default function EventPage() {
       {/* Create game modal */}
       {showCreate && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}}>
-          <div className="modal-sheet">
-            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:20,fontWeight:500}}>Schedule Game</div>
-            <div style={{display:'grid',gap:14}}>
+          <div className="modal-sheet pkr-classic-create-game-dialog" role="dialog" aria-modal="true" aria-labelledby="pkr-create-game-title">
+            <div className="pkr-create-game-heading">
+              <span className="pkr-create-game-kicker">YOUR NEXT POKER NIGHT</span>
+              <div className="pkr-create-game-title-row">
+                <h2 id="pkr-create-game-title">Schedule a game</h2>
+                <button type="button" className="pkr-create-game-close" aria-label="Close game scheduler" onClick={()=>setShowCreate(false)}>×</button>
+              </div>
+              <p>Set the game format, date and table size. Fine-tune the optional details whenever you need them.</p>
+            </div>
+            <div className="pkr-create-game-form" style={{display:'grid',gap:14}}>
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Date & Time *</div>
                 <input className="inp" type="datetime-local" value={form.scheduled_at} onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}/>
@@ -901,34 +947,6 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Location</div>
                 <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
-              </div>
-              <div>
-                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
-                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
-                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
-                </p>
-                <div style={{display:'grid',gap:8}}>
-                  {arrivalTimes.map((time,index)=>(
-                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
-                        value={time} style={{minWidth:0,flex:1}}
-                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
-                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
-                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
-                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
-                    </div>
-                  ))}
-                </div>
-                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
-                  disabled={arrivalTimes.length>=8} onClick={()=>{
-                    const used=new Set(arrivalTimes);
-                    for(let hour=17;hour<24;hour++){
-                      for(const minute of ['00','30']){
-                        const next=String(hour).padStart(2,'0')+':'+minute;
-                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
-                      }
-                    }
-                  }}>+ Add arrival time</button>
               </div>
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Game format *</div>
@@ -957,13 +975,52 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
-                    <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
+                    <button type="button" key={n} aria-pressed={form.seats===n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
                         border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
                   ))}
                 </div>
               </div>
+              <details className="pkr-create-game-details">
+                <summary>
+                  <strong>Arrival time options</strong>
+                  <span>{arrivalTimes.length} time choices · tap to customise</span>
+                </summary>
+                <div className="pkr-create-game-details-body">
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
+                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
+                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
+                </p>
+                <div style={{display:'grid',gap:8}}>
+                  {arrivalTimes.map((time,index)=>(
+                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
+                        value={time} style={{minWidth:0,flex:1}}
+                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
+                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
+                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
+                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
+                  disabled={arrivalTimes.length>=8} onClick={()=>{
+                    const used=new Set(arrivalTimes);
+                    for(let hour=17;hour<24;hour++){
+                      for(const minute of ['00','30']){
+                        const next=String(hour).padStart(2,'0')+':'+minute;
+                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
+                      }
+                    }
+                  }}>+ Add arrival time</button>
+              </div>
+                </div>
+              </details>
+              <details className="pkr-create-game-details">
+                <summary><strong>More game settings</strong><span>Password, notes and repeating games</span></summary>
+                <div className="pkr-create-game-details-body">
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Game Password</div>
                 <input className="inp" placeholder="Optional" value={form.game_password} onChange={e=>setForm(f=>({...f,game_password:e.target.value}))}/>
@@ -976,7 +1033,7 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:8}}>Repeat</div>
                 <div style={{display:'flex',gap:6}}>
                   {(['none','weekly','fortnightly']).map(r=>(
-                    <button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))}
+                    <button type="button" key={r} aria-pressed={form.repeat===r} onClick={()=>setForm(f=>({...f,repeat:r}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
                         background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
                         border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
@@ -985,6 +1042,8 @@ export default function EventPage() {
                   ))}
                 </div>
               </div>
+                </div>
+              </details>
             </div>
             <p className="pkr-unfinished-note" style={{marginTop:12}}>
               Repeating schedules create four weekly or fortnightly games. Tournament formats include editable blinds and chip stacks;
