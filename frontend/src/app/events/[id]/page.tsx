@@ -161,12 +161,19 @@ export default function EventPage() {
     setJoinDecisionNotice('');
     const name=joinRequests.find(r=>r.id===requestId)?.name||'Player';
     try{
-      await api.events.decideJoin(id,requestId,approve);
+      const result=await api.events.decideJoin(id,requestId,approve);
       setJoinRequests(v=>v.filter(r=>r.id!==requestId));
+      if(approve&&result.contact_id){
+        setPhoneContacts(v=>v.map(contact=>contact.id===result.contact_id
+          ?{...contact,status:'approved_awaiting_member'}:contact));
+      }
       setJoinDecisionNotice(approve
         ?name+' approved. They must return to their original PKR invitation on the same device, then tap “Check approval now” to finish joining. The member list will update after that.'
         :name+' request rejected.');
-      api.events.phoneContacts(id).then(r=>setPhoneContacts(r.contacts)).catch(()=>{});
+      // Cloudflare KV may be eventually consistent across regions. Keep the
+      // confirmed host-side state visible until the normal refresh completes.
+      window.setTimeout(()=>api.events.phoneContacts(id)
+        .then(r=>setPhoneContacts(r.contacts)).catch(()=>{}),2000);
     }catch(e:any){setJoinDecisionNotice(e.message||'Unable to review request');}
   }
   useEffect(()=>{
