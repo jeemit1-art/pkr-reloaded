@@ -1,4 +1,4 @@
-// worker/src/index.ts — FULL REPLACEMENT
+// worker/src/index.ts
 import { Hono } from 'hono';
 import { Env } from './types';
 import { corsHeaders } from './middleware';
@@ -49,7 +49,19 @@ app.route('/',        games);
 app.route('/',        tournament);
 app.route('/',        analysis);
 
-app.get('/health',          (c) => c.json({ ok:true, service:'pkr-reloaded-worker', environment:c.env.PKR_ENV === 'staging' ? 'staging' : 'production', ts:Date.now() }));
+// Only public capability booleans: never credentials or player information.
+// These report configuration, not proof of end-to-end device delivery.
+app.get('/health', (c) => c.json({
+  ok:true, service:'pkr-reloaded-worker',
+  environment:c.env.PKR_ENV === 'staging' ? 'staging' : 'production',
+  release:'settlement-v2-github-20261028',
+  features:{
+    settlement_v2:c.env.PKR_SETTLEMENT_V2==='1',
+    push_rooms_v2:c.env.PKR_PUSH_ROOMS_V2==='1',
+    phone_members_v1:c.env.PKR_PHONE_MEMBERS_V1==='1',
+  },
+  ts:Date.now(),
+}));
 app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
 app.notFound(               (c) => c.json({ error:'Not found' }, 404));
 
