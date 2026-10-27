@@ -20,6 +20,7 @@ export default function InsightsPage(){
  const [transfersPartial,setTransfersPartial]=useState(false);
  const [settlementView,setSettlementView]=useState<SettlementView>('transfers');
  const [paymentBusy,setPaymentBusy]=useState<string|null>(null);
+ const [selectedTransfers,setSelectedTransfers]=useState<string[]>([]);
  const [paymentNotice,setPaymentNotice]=useState('');
  const [transferPage,setTransferPage]=useState(0);
  const [period,setPeriod]=useState<'all'|'90d'>('all');
@@ -38,7 +39,7 @@ export default function InsightsPage(){
  useEffect(()=>{
   if(!selected)return;
   let live=true;
-  setPaymentNotice('');setPaymentBusy(null);setTransferPage(0);setPeriod('all');
+  setPaymentNotice('');setPaymentBusy(null);setTransferPage(0);setPeriod('all');setSelectedTransfers([]);
   setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setTransfersPartial(false);setSettlementView('transfers');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
@@ -93,6 +94,41 @@ export default function InsightsPage(){
  const totalPending=outstanding.reduce((sum,row)=>sum+row.transfer.amount,0);
  const peopleOwing=new Set(outstanding.map(t=>t.transfer.from)).size;
  const peopleReceiving=new Set(outstanding.map(t=>t.transfer.to)).size;
+ const selectionKey=(row:SettlementRow)=>row.game.id+':'+row.transfer.id;
+ const selectable=pageTransfers.filter(row=>row.transfer.id&&row.transfer.status!=='legacy');
+ const selectedHere=selectable.filter(row=>selectedTransfers.includes(selectionKey(row)));
+ async function bulkPaymentStatus(status:'paid'|'owed'){
+   if(!canManagePayments||paymentBusy||!selectedTransfers.length)return;
+   const selected=transfers.filter(row=>row.transfer.id&&selectedTransfers.includes(selectionKey(row))
+     &&row.transfer.status!=='legacy');
+   if(selected.length!==selectedTransfers.length){
+     setPaymentNotice('Selection changed. Refresh the settlement list and try again.');return;
+   }
+   const label=status==='paid'?'paid':'unpaid';
+   if(!window.confirm('Mark '+selected.length+' selected transfers '+label+
+     '? This updates the PKR payment record only. Verify actual receipts first.'))return;
+   const groups=new Map<string,string[]>();
+   for(const row of selected){
+     const ids=groups.get(row.game.id)||[];
+     ids.push(row.transfer.id!);groups.set(row.game.id,ids);
+   }
+   setPaymentBusy('bulk');setPaymentNotice('');
+   let count=0;
+   try{
+     for(const [gameId,ids] of groups){
+       const updated=await api.games.bulkTransferStatus(gameId,ids,status);
+       count+=updated.updated;
+       setTransfers(previous=>previous.map(item=>
+         item.game.id===gameId&&item.transfer.id&&ids.includes(item.transfer.id)
+           ?{...item,transfer:{...item.transfer,status,paid_at:status==='paid'?Math.floor(Date.now()/1000):null}}:item));
+     }
+     setPaymentNotice(count+' transfer(s) marked '+label+'.');
+     setSelectedTransfers([]);
+   }catch(e:any){
+     setPaymentNotice(count+' updated before an error: '+(e?.message||'Please refresh and review.'));
+   }finally{setPaymentBusy(null)}
+ }
+
  const balances=useMemo(()=>{
   const map=new Map<string,{name:string;net:number}>();
   for(const {transfer} of filteredTransfers){
