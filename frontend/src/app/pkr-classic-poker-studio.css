@@ -639,3 +639,46 @@
   background:#29252d!important;border:1px solid #604550!important;color:#f9edf1!important;
 }
 .pkr-classic-mobile-login :is(a,button):focus-visible{outline:3px solid #ff7f8c!important;outline-offset:3px}
+
+
+/* 09 · Screenshot-review fixes: finish legacy islands on the room hub.
+   These controls navigate only; they do not manipulate the live poker table. */
+.pkr-app.pkr-event .pkr-event-hero-actions button:first-child{
+  background:#df2e47!important;background-image:none!important;
+  border:1px solid #fb6276!important;color:#fff6f5!important;
+  border-radius:10px!important;box-shadow:0 9px 22px #ba14342c!important;
+}
+.pkr-app.pkr-event .pkr-event-hero-actions button:last-child{
+  background:#28232a!important;background-image:none!important;
+  border:1px solid #89616c!important;color:#faf0ed!important;border-radius:10px!important;
+}
+.pkr-app.pkr-event .pkr-event-tabs{
+  background:rgba(17,16,21,.97)!important;
+  border-bottom:1px solid #58404b!important;
+  backdrop-filter:blur(14px);
+}
+.pkr-app.pkr-event .pkr-event-tabs-inner{
+  background:#242127!important;border:1px solid #4f414a!important;border-radius:11px!important;
+}
+.pkr-app.pkr-event .pkr-event-tabs .tab{color:#ded2d7!important}
+.pkr-app.pkr-event .pkr-event-tabs .tab.active{
+  background:#df2e47!important;border-color:#f15b71!important;color:#fff!important;
+}
+.pkr-schedule-page .pkr-schedule-calendar{
+  background:#452431!important;border:1px solid #9a4a60!important;color:#fff1ee!important;
+}
+.pkr-schedule-page .pkr-schedule-actions button:first-child{
+  background:#df2e47!important;border-color:#f27083!important;color:#fff!important;
+}
+.pkr-app.pkr-dashboard .pkr-unfinished-note{
+  background:#201b1b!important;border:1px solid #785b37!important;
+  color:#eee0ce!important;border-radius:12px!important;
+  line-height:1.6!important;padding:15px 17px!important;
+}
+.pkr-app.pkr-dashboard .pkr-unfinished-note button{
+  min-height:43px!important;border-radius:9px!important;
+}
+@media(max-width:700px){
+ .pkr-app.pkr-event .pkr-event-tabs{top:58px!important}
+ .pkr-app.pkr-event .pkr-event-hero-actions button{min-height:46px!important}
+}
