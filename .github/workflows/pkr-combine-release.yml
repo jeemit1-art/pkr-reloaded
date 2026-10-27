@@ -19,21 +19,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run reviewed pinned assembly with staged-file removal correction
+      - name: Run reviewed assembly with explicit Theme A conflict resolutions
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import re, subprocess
           from pathlib import Path
-          # Reuse the exact reviewed assembly code committed immediately before
-          # this repair. Only the three obsolete files newly staged by the merge
-          # need git rm -f; no user files or uncommitted work are removed.
           source=subprocess.check_output(['git','show','8a1eeea3d40b08beaa1b63487a47b569102ebb10:.github/workflows/pkr-combine-release.yml'],text=True)
-          old="['git','rm','--ignore-unmatch','--',*obsolete]"
-          new="['git','rm','-f','--ignore-unmatch','--',*obsolete]"
-          assert source.count(old)==1
-          source=source.replace(old,new)
+          replacements={
+            "['git','rm','--ignore-unmatch','--',*obsolete]":"['git','rm','-f','--ignore-unmatch','--',*obsolete]",
+            "'server-authorised',":"",
+            "len(selected)==6":"len(selected)==5"
+          }
+          # main already has a newer, robust async payment wait. Keep it rather
+          # than applying the conflicting older replacement from PR 15.
+          for old,new in replacements.items():
+              assert source.count(old)==1, old
+              source=source.replace(old,new)
           scripts=re.findall(r'(?ms)^        run: \|\n(.*?)(?=^      - |\Z)',source)
           assert len(scripts)==3, len(scripts)
           for number,block in enumerate(scripts,1):
