@@ -45,7 +45,7 @@ def safe_export_error_class(output):
         return "Cloudflare export timeout"
     if any(x in message for x in ("database is locked", "database busy")):
         return "Cloudflare database busy"
-    codes = re.findall(r"(?:error|code)\\s*[:=]?\\s*([0-9]{4,6})\\b", message)
+    codes = re.findall(r"(?:error|code)\s*[:=]?\s*([0-9]{4,6})\b", message)
     if codes:
         return "Cloudflare API code " + codes[0]
     return "unknown provider error (no private data logged)"
