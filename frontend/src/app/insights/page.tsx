@@ -83,6 +83,7 @@ export default function InsightsPage(){
  // Keep the original records visible for review and never mutate them here.
  const historical=filteredTransfers.filter(t=>t.transfer.status==='legacy');
  const historicalTotal=historical.reduce((sum,row)=>sum+row.transfer.amount,0);
+ const historicalDisplay=new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',minimumFractionDigits:0,maximumFractionDigits:2}).format(historicalTotal/100);
  const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid'&&t.transfer.status!=='legacy');
  const paid=filteredTransfers.filter(t=>t.transfer.status==='paid');
  const perPage=20;
@@ -204,7 +205,7 @@ export default function InsightsPage(){
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
      {historical.length>0&&<p className="pkr-vnext-warning pkr-insights-legacy-notice" role="status" data-testid="legacy-settlement-notice">
-      <strong>Historical settlement records:</strong> {historical.length} transfer{historical.length===1?'':'s'} totalling {fmt(historicalTotal)} were migrated with unknown payment status. They are excluded from current amounts outstanding and player balances, but remain available below for review. <strong>These records have not been marked paid.</strong>
+      <strong>Historical settlement records:</strong> {historical.length} transfer{historical.length===1?'':'s'} totalling {historicalDisplay} were migrated with unknown payment status. They are excluded from current amounts outstanding and player balances, but remain available below for review. <strong>These records have not been marked paid.</strong>
      </p>}
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
@@ -244,7 +245,7 @@ export default function InsightsPage(){
       <div><strong>{paid.length}</strong><span>Recorded as paid</span></div>
       <div><strong>{outstanding.length}</strong><span>Still outstanding</span></div>
       <div><strong>{fmt(totalPending)}</strong><span>Current outstanding (excluding legacy)</span></div>
-      <div><strong>{historical.length}</strong><span>Historical transfers · {fmt(historicalTotal)} unverified</span></div>
+      <div><strong>{historical.length}</strong><span>Historical transfers · {historicalDisplay} unverified</span></div>
       <p>Pending and paid figures reflect explicitly recorded payment statuses. Legacy records are excluded, not considered paid, and must be reconciled against external evidence before changing any status. PKR does not transfer money.</p>
      </div>}
     </section>
