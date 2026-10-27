@@ -8,14 +8,17 @@ on:
     paths:
       - 'worker/src/**'
       - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/scripts/settlement-push-dependencies-ci.py'
       - 'worker/scripts/reconcile-authorised-legacy-ci.py'
       - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
+      - 'worker/migrations/20261026_push_rooms.sql'
       - 'worker/migrations/20261027_settlement_v2.sql'
       - 'worker/wrangler.toml'
       - '.github/workflows/deploy-cloudflare-production.yml'
   pull_request:
     paths:
       - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/scripts/settlement-push-dependencies-ci.py'
       - 'worker/scripts/reconcile-authorised-legacy-ci.py'
       - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
       - '.github/workflows/deploy-cloudflare-production.yml'
@@ -47,6 +50,7 @@ jobs:
           python3 worker/scripts/test-reconcile-authorised-legacy-ci.py
           python3 -m py_compile worker/scripts/reconcile-authorised-legacy-ci.py
           python3 -m py_compile worker/scripts/deploy-settlement-v2-production.py
+          python3 -m py_compile worker/scripts/settlement-push-dependencies-ci.py
 
   deploy-settlement-v2:
     needs: release-safety
@@ -86,11 +90,21 @@ jobs:
           python3 scripts/test-settlement-v2-migration.py
           python3 scripts/test-owner-legacy-reconciliation.py
           python3 scripts/test-reconcile-authorised-legacy-ci.py
+      - name: Verify membership dependencies and prepare additive authenticated push schema
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/settlement-push-dependencies-ci.py --prepare
       - name: Back up, verify, migrate, deploy and smoke-test Settlement V2
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python3 scripts/deploy-settlement-v2-production.py
+      - name: Activate and verify all live settlement push feature gates
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/settlement-push-dependencies-ci.py --activate
       - name: Back up again and reconcile only the owner-authorised historical batch
         if: github.event_name == 'push' || inputs.reconcile_authorised_legacy
         working-directory: worker
