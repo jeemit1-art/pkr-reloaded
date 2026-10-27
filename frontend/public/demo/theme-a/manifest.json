@@ -1,6 +1,6 @@
 {
   "theme": "Theme A - Midnight Felt",
-  "cssSha256": "f0fc0bafb1107ad704018e3ba6738c1a5ce4e36a8f12a2bd01a49e43d4ab2981",
+  "cssSha256": "732ca64eb4ed59f12a6b425e765fb9bf1fe2ad0756053d7f8f191fca5f2ff380",
   "colours": {
     "background": "#0B0F12",
     "surface": "#131A1F",
@@ -18,7 +18,7 @@
     "Inter",
     "JetBrains Mono"
   ],
-  "sourceCommit": "374fe183ab07c1a0a593a61bde853748ee508492",
+  "sourceCommit": "6b66669f7cb6ae96c2e59ab39ee3978c3f352c7b",
   "sampleData": true,
   "images": [
     "live-table.webp",

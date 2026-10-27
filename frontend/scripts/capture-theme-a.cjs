@@ -85,6 +85,20 @@ async function run(){
      if(stale.length)errors.push('Old screenshot references: '+stale.join(','));
      const broken=await page.locator('img[src^="/demo/theme-a/"]').evaluateAll(images=>images.filter(img=>!img.complete||img.naturalWidth<100).map(img=>img.getAttribute('src')));
      if(broken.length)errors.push('Fresh screenshots unavailable: '+broken.join(','));
+     if(id==='home'){
+      const tour=page.locator('#pkr-tour-panel picture img');
+      await tour.scrollIntoViewIfNeeded();await settle(page);
+      const imageState=await tour.evaluate(img=>{
+       const css=getComputedStyle(img),rect=img.getBoundingClientRect();
+       return {ready:img.complete&&img.naturalWidth>100,width:rect.width,height:rect.height,opacity:css.opacity,visibility:css.visibility,display:css.display,src:img.currentSrc};
+      });
+      checks.push({page:'visible-product-tour',viewport:size.name,...imageState});
+      if(!imageState.ready||imageState.width<100||imageState.height<100||Number(imageState.opacity)<.9||imageState.visibility!=='visible'||imageState.display==='none')errors.push('Product tour screenshot not visibly rendered: '+JSON.stringify(imageState));
+      await page.locator('#pkr-tour-panel').screenshot({path:path.join(output,size.name+'-product-tour.png')});
+      await page.locator('.pkr-l2-last-call').scrollIntoViewIfNeeded();await settle(page);
+      await page.locator('.pkr-l2-last-call').screenshot({path:path.join(output,size.name+'-closing.png')});
+      await page.evaluate(()=>scrollTo(0,0));await page.waitForTimeout(200);
+     }
      await page.screenshot({path:path.join(output,size.name+'-'+id+'.png'),fullPage:id==='home'});
     }
    }

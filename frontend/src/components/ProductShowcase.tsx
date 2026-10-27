@@ -126,7 +126,7 @@ export function ProductTour(){
     <div className="pkr-tour-screen-top"><div className="pkr-tour-browser-dots" aria-hidden="true"><i/><i/><i/></div><span>mypkr.app · PKR APP</span><span>● DEMO</span></div>
     <picture>
      {selected.mobile&&<source media="(max-width: 620px)" srcSet={selected.mobile}/>}
-     <img src={selected.desktop} alt={selected.alt} width={selected.id==='table'?1440:1225} height={selected.id==='table'?900:845} loading="lazy" decoding="async"/>
+     <img src={selected.desktop} alt={selected.alt} width={selected.id==='table'?1440:1225} height={selected.id==='table'?900:845} loading="eager" decoding="sync"/>
     </picture>
     <div className="pkr-tour-sample-note"><span aria-hidden="true">◉</span> PKR APP SCREEN <span aria-hidden="true">·</span> SAMPLE DATA</div>
    </div>
