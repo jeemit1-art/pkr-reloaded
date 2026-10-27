@@ -12,7 +12,7 @@ jobs:
   capture-real-pkr-ui:
     if: github.ref == 'refs/heads/design/theme-a-midnight-felt-20261027'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 20
     env:
       VERCEL_ENV: preview
       NEXT_PUBLIC_PKR_ENV: staging
@@ -36,13 +36,20 @@ jobs:
           grep -Fq "import './pkr-theme-a.css';" frontend/src/app/layout.tsx
           grep -Fq '#3DDC97' frontend/src/app/pkr-theme-a-tokens.css
           node --check frontend/tests/viewport-smoke.cjs
-      - name: Install locked dependencies and pinned browser
+      - name: Install locked frontend dependencies
+        timeout-minutes: 3
         working-directory: frontend
-        run: |
-          npm ci --no-audit --no-fund
-          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-          npx playwright install --with-deps chromium
+        run: npm ci --no-audit --no-fund --fetch-retries=1 --fetch-timeout=60000
+      - name: Install pinned browser runner
+        timeout-minutes: 3
+        working-directory: frontend
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund --fetch-retries=1 --fetch-timeout=60000 playwright@1.56.1
+      - name: Install isolated Chromium without unrelated OS upgrades
+        timeout-minutes: 3
+        working-directory: frontend
+        run: npx --no-install playwright install chromium
       - name: Build exact application, including the consolidated Theme A cascade
+        timeout-minutes: 4
         working-directory: frontend
         run: npm run build
       - name: Start isolated optimised app
@@ -57,6 +64,7 @@ jobs:
           cat /tmp/pkr-theme-a-next.log
           exit 1
       - name: Capture actual app screens with seven fictional players
+        timeout-minutes: 3
         working-directory: frontend
         run: node scripts/capture-theme-a.cjs app
       - name: Generate fresh product images and source manifest
@@ -73,9 +81,11 @@ jobs:
           done
           exit 1
       - name: Verify public pages show this build, not old screenshots
+        timeout-minutes: 3
         working-directory: frontend
         run: node scripts/capture-theme-a.cjs marketing
       - name: Test full app at six screen sizes
+        timeout-minutes: 6
         working-directory: frontend
         run: node tests/viewport-smoke.cjs
       - name: Package reviewed source only, with no credentials or environment files
