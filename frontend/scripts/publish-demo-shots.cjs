@@ -5,7 +5,7 @@ const path = require('node:path');
 const sharp = require('sharp');
 
 const source = process.argv[2];
-const output = path.resolve(__dirname,'../public/demo');
+const output = path.resolve(__dirname,'../public/demo/theme-a');
 if (!source || !fs.existsSync(source)) throw Error('Expected synthetic browser screenshots directory');
 fs.mkdirSync(output,{recursive:true});
 
@@ -42,6 +42,11 @@ async function run(){
   if(stat.size<10000 || stat.size>1200000)throw Error('Unexpected image size '+name+': '+stat.size);
   console.log(name+': '+(stat.size/1024).toFixed(0)+'KB');
  }
+ const manifest=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../public/design-version.json'),'utf8'));
+ manifest.sourceCommit=process.env.GITHUB_SHA||'local';
+ manifest.sampleData=true;
+ manifest.images=entries.map(([,name])=>name);
+ fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
  fs.writeFileSync(path.join(output,'README.md'), [
   '# PKR product screenshots',
   '',

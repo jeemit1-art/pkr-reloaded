@@ -14,14 +14,7 @@ export default function PlayPage() {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Inject fonts
-    if (!document.getElementById('pkr-fonts')) {
-      const link = document.createElement('link');
-      link.id = 'pkr-fonts';
-      link.rel = 'stylesheet';
-      link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap';
-      document.head.appendChild(link);
-    }
+    // Approved Theme A fonts are bundled once by RootLayout.
 
     // Get auth token
     const token = typeof window !== 'undefined'

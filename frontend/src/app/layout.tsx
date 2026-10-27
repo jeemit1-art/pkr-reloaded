@@ -1,24 +1,6 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
-import './globals.css';
-import './pkr-app.css';
-import './pkr-casino.css';
-import './pre-game.css';
-import './pkr-reference-polish.css';
-import './pkr-approved-banner.css';
-import './pkr-secondary-ui.css';
-import './pkr-interaction-refresh.css';
-import './pkr-standings.css';
-import './pkr-landing-premium.css';
-import './pkr-marketing-pages.css';
-import './pkr-product-gallery.css';
-import './pkr-2026-graphite.css';
-// Design-only, final cascade layer: Midnight Felt across all public and app pages.
-import './pkr-theme-a-tokens.css';
-import './pkr-theme-a-public.css';
-import './pkr-theme-a-app.css';
-import './pkr-theme-a-table.css';
-import './pkr-theme-a-polish.css';
+import './pkr-theme-a.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

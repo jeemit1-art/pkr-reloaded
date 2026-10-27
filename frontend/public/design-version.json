@@ -1,0 +1,21 @@
+{
+  "theme": "Theme A - Midnight Felt",
+  "cssSha256": "f0fc0bafb1107ad704018e3ba6738c1a5ce4e36a8f12a2bd01a49e43d4ab2981",
+  "colours": {
+    "background": "#0B0F12",
+    "surface": "#131A1F",
+    "raised": "#1B242B",
+    "line": "#26323A",
+    "text": "#EAF0F2",
+    "muted": "#8A99A3",
+    "primary": "#3DDC97",
+    "money": "#F2B84B",
+    "danger": "#FF5A5F",
+    "felt": "#0F5C4A"
+  },
+  "fonts": [
+    "Bricolage Grotesque",
+    "Inter",
+    "JetBrains Mono"
+  ]
+}

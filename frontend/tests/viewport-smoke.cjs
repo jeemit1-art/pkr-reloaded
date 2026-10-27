@@ -68,7 +68,7 @@ async function test(){
       await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
       // Theme A shows genuine PKR screens, never the old painted hero backdrop.
       await guestPage.locator('.pkr-hero-desktop img').evaluate(async image=>{
-        if(image instanceof HTMLImageElement)await image.decode().catch(()=>{});
+        if(image instanceof HTMLImageElement){image.loading='eager';await image.decode().catch(()=>{});}
       });
       const landing=await guestPage.evaluate(()=>{
         const hero=document.querySelector('.pkr-hero-desktop img');
@@ -85,11 +85,11 @@ async function test(){
         errors.push(size.name+' redundant legacy illustrated hero still rendered');
       const closer=await guestPage.locator('.pkr-l2-closing-art').evaluate(async image=>{
         if(!(image instanceof HTMLImageElement))return {ok:false};
-        await image.decode().catch(()=>{});
+        image.loading='eager';await image.decode().catch(()=>{});
         return {ok:image.complete&&image.naturalWidth>500&&getComputedStyle(image).display!=='none',
                 src:image.getAttribute('src')};
       });
-      if(!closer.ok||closer.src!=='/brand/pkr-midnight-closing.svg')
+      if(!closer.ok||closer.src!=='/images/pkr-approved-hero-desktop.webp')
         errors.push(size.name+' Theme A closing lacks visible poker-chip artwork');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
       if(landingCTAColour!=='rgb(61, 220, 151)')
@@ -147,10 +147,10 @@ async function test(){
       const insightsImage=guestPage.locator('#pkr-tour-panel picture img');
       await insightsImage.waitFor({state:'visible',timeout:10000});
       const selectedImage=await insightsImage.getAttribute('src');
-      if(selectedImage!=='/demo/insights.webp')
+      if(selectedImage!=='/demo/theme-a/insights.webp')
         errors.push(size.name+' interactive product tour did not switch to Insights screenshot');
       await tabs.getByRole('tab',{name:/Live poker table/i}).click();
-      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/live-table.webp')
+      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/theme-a/live-table.webp')
         errors.push(size.name+' interactive product tour did not switch back to live table');
       const productWidth=await guestPage.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
       if(productWidth.scroll>productWidth.viewport+5)
@@ -165,7 +165,7 @@ async function test(){
         const social=await guestPage.locator('meta[property="og:image"]').getAttribute('content');
         if(!social?.includes('/opengraph-image'))
           errors.push('Theme A social share metadata still points to legacy gold image');
-        for(const asset of ['/demo/live-table.webp','/demo/host-dashboard.webp','/demo/rsvp-board.webp','/demo/insights.webp','/demo/mobile-live-table.webp']){
+        for(const asset of ['/demo/theme-a/live-table.webp','/demo/theme-a/host-dashboard.webp','/demo/theme-a/rsvp-board.webp','/demo/theme-a/insights.webp','/demo/theme-a/mobile-live-table.webp']){
           const response=await guestPage.request.get(BASE+asset);
           if(!response.ok()||(await response.body()).length<10000)
             errors.push('Real product screenshot not available: '+asset);
@@ -281,9 +281,9 @@ async function test(){
        if(await prop.count()){
          const valid=await prop.evaluate(async image=>{
            if(!(image instanceof HTMLImageElement))return false;
-           await image.decode().catch(()=>{});
+           image.loading='eager';await image.decode().catch(()=>{});
            return image.complete&&image.naturalWidth>500&&
-             image.getAttribute('src')==='/brand/pkr-midnight-closing.svg';
+             image.getAttribute('src')==='/images/pkr-approved-hero-desktop.webp';
          });
          if(!valid)errors.push(size.name+' '+item.id+' missing recognisable poker chips/cards image');
        }
