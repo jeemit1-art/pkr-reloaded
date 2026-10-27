@@ -1,0 +1,60 @@
+name: PKR production settlements (read-only inventory)
+
+on:
+  pull_request:
+    paths:
+      - 'worker/scripts/read-only-production-settlement-audit.py'
+      - 'worker/scripts/test-read-only-production-settlement-audit.py'
+      - '.github/workflows/pkr-production-audit-readonly.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'worker/scripts/read-only-production-settlement-audit.py'
+      - 'worker/scripts/test-read-only-production-settlement-audit.py'
+      - '.github/workflows/pkr-production-audit-readonly.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkr-readonly-inventory-production
+  cancel-in-progress: false
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test aggregate-only inventory (synthetic records)
+        run: |
+          python3 -m py_compile worker/scripts/read-only-production-settlement-audit.py
+          python3 worker/scripts/test-read-only-production-settlement-audit.py
+
+  live-readonly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: offline-safety
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install reviewed Worker D1 tooling without credentials
+        working-directory: worker
+        run: npm ci --no-audit --no-fund
+      - name: Only query grouped production settlement counts (no write operations)
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/read-only-production-settlement-audit.py
