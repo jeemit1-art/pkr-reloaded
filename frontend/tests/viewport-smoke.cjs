@@ -17,7 +17,7 @@ const oldUnfinished={...upcoming,id:'test-old-unfinished',status:'active',schedu
 const syntheticMemberAvatar='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2d292b"/><circle cx="32" cy="25" r="13" fill="#f0a18c"/><path d="M10 64c0-30 44-30 44 0" fill="#f0a18c"/></svg>');
 const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invalid.example',avatar_url:syntheticMemberAvatar,joined_at:past},{id:'member-2',name:'Jordan Lee',role:'member',email:'demo@invalid.example',avatar_url:null,joined_at:past}];
 const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
-const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'}]};
+const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'synthetic-historical-legacy',from:'historical-payer',from_name:'Historical Player A',to:'historical-recipient',to_name:'Historical Player B',amount:7523500,status:'legacy'}]};
 const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
 const fixture=(pathname,method)=>{
   if(method==='OPTIONS')return {};
@@ -339,6 +339,17 @@ async function test(){
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});
        await page.locator('.pkr-insights-settle-tabs').waitFor({state:'visible'});
        if(await page.locator('.pkr-insights-kpis .pkr-insights-kpi').count()!==5)errors.push(size.name+' insights KPI count mismatch');
+       // $75,235 of migrated legacy transfers must NOT inflate the real
+       // current outstanding balance, and must NEVER be marked paid by UI.
+       const current=await page.getByTestId('current-outstanding').textContent();
+       if(!current?.includes('75.00')||current?.includes('75,235'))
+        errors.push(size.name+' historical $75,235 incorrectly included in outstanding: '+current);
+       const legacyNotice=await page.getByTestId('legacy-settlement-notice').textContent();
+       if(!legacyNotice?.includes('75,235')||!legacyNotice?.includes('not been marked paid'))
+        errors.push(size.name+' legacy settlement is not segregated as unverified history');
+       if(await page.locator('.pkr-payment-status-select').count()!==1)
+        errors.push(size.name+' legacy payment status must be read-only');
+
         // Regression: both sections must show ALL 14 synthetic players, not the first 8/10.
         await page.locator('.pkr-vnext-performance-row').first().waitFor({state:'visible',timeout:10000});
         if(await page.locator('.pkr-vnext-performance-row').count()!==leaders.length)
