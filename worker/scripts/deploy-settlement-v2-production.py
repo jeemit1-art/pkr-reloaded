@@ -69,8 +69,9 @@ def aggregate_sql(table):
                 " SUM(CASE WHEN status='legacy' THEN 1 ELSE 0 END) AS legacy "
                 " FROM settlement_transfers")
     if table == "game_players":
-        return ("SELECT COUNT(*) AS n,COALESCE(SUM(buy_in),0) AS cents "
-                "FROM game_players")
+        return ("SELECT COUNT(*) AS n,COALESCE(SUM(buy_in_total),0) AS cents,"
+                " COALESCE(SUM(cashout),0) AS cashouts,"
+                " COALESCE(SUM(net),0) AS net FROM game_players")
     raise Stop("Unexpected financial table.")
 
 
@@ -80,7 +81,7 @@ def aggregate(table):
         raise Stop("Unexpected financial summary shape.")
     return tuple(int(rows[0][key] or 0) for key in
                  (("n", "cents", "legacy") if table == "settlement_transfers"
-                  else ("n", "cents")))
+                  else ("n", "cents", "cashouts", "net")))
 
 
 def verify_target():
@@ -215,9 +216,9 @@ def main():
     # Deploy only after schema check; preserve vars set in Cloudflare dashboard.
     wrangler("deploy", "--config", "wrangler.toml", "--keep-vars")
     print("Production Worker deployed.", flush=True)
-    if "PKR_SETTLEMENT_V2" not in secret_names():
-        wrangler("secret", "put", "PKR_SETTLEMENT_V2",
-                 "--config", "wrangler.toml", stdin="1\n")
+    # A prior disabled flag can exist; explicitly activate the reviewed release.
+    wrangler("secret", "put", "PKR_SETTLEMENT_V2",
+             "--config", "wrangler.toml", stdin="1\n")
     print("Settlement V2 secret configured.", flush=True)
     check_api_route()
     if {t: aggregate(t) for t in before} != before:
