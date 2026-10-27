@@ -55,7 +55,7 @@ const v2=(c:any)=>c.env.PKR_SETTLEMENT_V2==='1';
 async function settledGame(c:any,gameId:string):Promise<PayGame|null>{
   return c.env.DB.prepare(
     'SELECT id,event_id,status,results_token FROM games WHERE id=?'
-  ).bind(gameId).first<PayGame>();
+  ).bind(gameId).first() as Promise<PayGame|null>;
 }
 async function writeAudit(
   c:any,gameId:string,tid:string|null,action:string,
