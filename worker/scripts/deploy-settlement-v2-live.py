@@ -85,6 +85,9 @@ def assert_target() -> None:
     git("fetch", "--no-tags", "origin", "main")
     if git("rev-parse", "HEAD") != git("rev-parse", "origin/main"):
         raise Stop("Local main is not the latest GitHub main; update and retry.")
+    if not (WORKER / "node_modules/wrangler/bin/wrangler.js").exists():
+        print("Installing pinned Worker dependencies before Cloudflare preflight...")
+        run("npm", "ci")
     whoami = run(*WRANGLER, "whoami")
     if EXPECTED_ACCOUNT not in whoami:
         raise Stop("Wrangler is not authenticated to the expected Cloudflare account.")
