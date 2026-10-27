@@ -207,6 +207,28 @@ async function test(){
        if(!rect)errors.push(size.name+' room missing hero/tabs geometry');
        else if(Math.abs(rect.heroLeft-rect.tabsLeft)>18||Math.abs(rect.heroRight-rect.tabsRight)>18) errors.push(size.name+' room banner and tabs misaligned: '+JSON.stringify(rect));
      }
+     if(item.id==='room'){
+       // The redesigned game scheduler must expose the essentials immediately,
+       // keep optional controls accessible, and never create a game just by opening.
+       const openScheduler=page.getByRole('button',{name:'+ Game',exact:true});
+       if(!await openScheduler.isVisible())errors.push(size.name+' room create-game action unavailable');
+       else{
+         await openScheduler.click();
+         const scheduler=page.getByRole('dialog',{name:'Schedule a game'});
+         await scheduler.waitFor({state:'visible',timeout:5000});
+         const arrivalDetails=scheduler.locator('.pkr-create-game-details').first();
+         if(await arrivalDetails.evaluate(node=>node.hasAttribute('open')))
+           errors.push(size.name+' optional arrivals expanded before user request');
+         await arrivalDetails.locator('summary').click();
+         if(await scheduler.getByLabel('RSVP arrival time 1').count()!==1)
+           errors.push(size.name+' editable RSVP arrival times missing');
+         await scheduler.getByRole('button',{name:'Tournament',exact:true}).click();
+         if(await scheduler.getByRole('button',{name:'Tournament',exact:true}).getAttribute('aria-pressed')!=='true')
+           errors.push(size.name+' tournament format was not selected');
+         await scheduler.getByRole('button',{name:'Close game scheduler'}).click();
+         await scheduler.waitFor({state:'hidden',timeout:5000});
+       }
+     }
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
