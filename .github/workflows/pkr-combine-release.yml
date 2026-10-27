@@ -19,131 +19,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Combine pinned functional branches while preserving approved Theme A
+      - name: Run reviewed pinned assembly with staged-file removal correction
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = refs/heads/release/pkr-combined-fixes-20261027
-          git config user.name 'PKR Release Bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git fetch origin main design/pkr-classic-poker-20261027 fix/phone-join-approved-awaiting-completion-20261027 release/pkr-combined-fixes-20261027
-          MAIN=07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d
-          CLASSIC=0122774507102353e77d9880f398f8c6fdc28ef0
-          JOIN=32502a8819e8f716d7d97aad6b2c4d1bc2477b80
-          test "$(git rev-parse origin/main)" = "$MAIN"
-          test "$(git rev-parse origin/design/pkr-classic-poker-20261027)" = "$CLASSIC"
-          test "$(git rev-parse origin/fix/phone-join-approved-awaiting-completion-20261027)" = "$JOIN"
-          test "$(git rev-parse origin/release/pkr-combined-fixes-20261027)" = "$GITHUB_SHA"
-          if ! git merge --no-ff --no-commit "$CLASSIC"; then
-            git diff --name-only --diff-filter=U
-          fi
           python3 - <<'PY'
-          import subprocess, re
+          import re, subprocess
           from pathlib import Path
-          main='07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d'
-          classic='0122774507102353e77d9880f398f8c6fdc28ef0'
-          base='aef5e1de9a01ed50caba989ccb4af5190e5e8333'
-          # These conflicts are presentation-only. Keep the newer approved design,
-          # single compiled cascade and genuine Theme A product screenshots.
-          retained=['.github/workflows/pkr-product-screenshots.yml','frontend/src/app/layout.tsx','frontend/src/app/page.tsx','frontend/src/components/CasinoArtwork.tsx','frontend/tests/viewport-smoke.cjs']
-          conflicts=subprocess.check_output(['git','diff','--name-only','--diff-filter=U'],text=True).splitlines()
-          unknown=set(conflicts)-set(retained)
-          if unknown:
-              subprocess.run(['git','diff','--cc'])
-              raise SystemExit('Unreviewed conflicts: '+repr(sorted(unknown)))
-          subprocess.run(['git','restore','--source='+main,'--staged','--worktree','--',*retained],check=True)
-          # Do not reintroduce obsolete classic colour layers or their writer job.
-          obsolete=['frontend/src/app/pkr-classic-poker-studio.css','frontend/src/app/pkr-casino-photography.css','.github/workflows/pkr-casino-photo-assets.yml']
-          subprocess.run(['git','rm','--ignore-unmatch','--',*obsolete],check=True)
-          # Preserve Theme A visual assertions, adding only the six functional
-          # regression hunks from PR 15 (legacy balances, scheduler and navigation).
-          path='frontend/tests/viewport-smoke.cjs'
-          patch=subprocess.check_output(['git','diff','--no-color','--unified=3',base,classic,'--',path],text=True)
-          blocks=re.split(r'(?m)(?=^@@ )',patch)
-          markers=['synthetic-historical-legacy','Schedule a game','legacy-settlement-notice','server-authorised','More PKR navigation','Rooms & games']
-          selected=[block for block in blocks[1:] if any(marker in block for marker in markers)]
-          assert len(selected)==6, ('Unexpected functional test hunks',len(selected))
-          functional=blocks[0]+''.join(selected)
-          Path('/tmp/pkr-functional-tests.patch').write_text(functional)
-          subprocess.run(['git','apply','--check','/tmp/pkr-functional-tests.patch'],check=True)
-          subprocess.run(['git','apply','/tmp/pkr-functional-tests.patch'],check=True)
+          # Reuse the exact reviewed assembly code committed immediately before
+          # this repair. Only the three obsolete files newly staged by the merge
+          # need git rm -f; no user files or uncommitted work are removed.
+          source=subprocess.check_output(['git','show','8a1eeea3d40b08beaa1b63487a47b569102ebb10:.github/workflows/pkr-combine-release.yml'],text=True)
+          old="['git','rm','--ignore-unmatch','--',*obsolete]"
+          new="['git','rm','-f','--ignore-unmatch','--',*obsolete]"
+          assert source.count(old)==1
+          source=source.replace(old,new)
+          scripts=re.findall(r'(?ms)^        run: \|\n(.*?)(?=^      - |\Z)',source)
+          assert len(scripts)==3, len(scripts)
+          for number,block in enumerate(scripts,1):
+              script='\n'.join(line[10:] if line.startswith('          ') else line for line in block.splitlines())+'\n'
+              path=Path('/tmp/pkr-assembly-'+str(number)+'.sh')
+              path.write_text(script)
+              print('::group::Reviewed assembly phase '+str(number),flush=True)
+              subprocess.run(['bash','--noprofile','--norc','-e','-o','pipefail',str(path)],check=True)
+              print('::endgroup::',flush=True)
           PY
-          test -z "$(git diff --name-only --diff-filter=U)"
-          git add frontend/tests/viewport-smoke.cjs
-          git diff --cached --check
-          git commit -m 'Merge settlement, tournament and navigation fixes while retaining Theme A'
-          if ! git merge --no-ff --no-commit "$JOIN"; then
-            git diff --cc
-            exit 1
-          fi
-          git diff --cached --check
-          git commit -m 'Merge accurate join approval statuses and refreshed member roster'
-      - name: Style added functional controls using Theme A tokens only
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat >> frontend/src/app/pkr-theme-a-polish.css <<'CSS'
-
-          /* Combined functional release: room switcher, More drawer and scheduler.
-             Preserve Midnight Felt; no old classic colour layer or table changes. */
-          .pkr-room-switch-label{display:block;margin:10px 0 5px;color:var(--pkr-a-muted);font-size:11px;font-weight:700;letter-spacing:.06em}
-          .pkr-room-switcher{display:block;width:100%;min-height:38px;margin-top:5px;background:var(--pkr-a-surface);color:var(--pkr-a-text);border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-sm);padding:8px;font-size:12px}
-          .pkr-nav-group-label{color:var(--pkr-a-muted);font-size:10px;font-weight:700;line-height:1.3;letter-spacing:.12em;margin:16px 12px 6px;text-transform:uppercase}
-          .pkr-more-icon{font-size:20px;line-height:1}
-          .pkr-mobile-more-panel{position:fixed;z-index:10020;bottom:calc(70px + env(safe-area-inset-bottom));left:12px;right:12px;max-height:calc(90dvh - 80px);overflow-y:auto;padding:15px;background:var(--pkr-a-surface);color:var(--pkr-a-text);border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-lg);box-shadow:0 24px 70px #000b}
-          .pkr-mobile-more-title{display:flex;justify-content:space-between;align-items:center;gap:16px;font-weight:700;margin-bottom:12px}
-          .pkr-mobile-more-title button{width:44px;height:44px;border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-sm);color:var(--pkr-a-text);background:var(--pkr-a-raised)}
-          .pkr-mobile-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-          .pkr-mobile-more-grid button{display:flex;gap:9px;align-items:center;padding:12px 10px;min-height:48px;color:var(--pkr-a-text);background:var(--pkr-a-raised);border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-md);text-align:left}
-          .pkr-mobile-more-grid svg{width:19px;height:19px;color:var(--pkr-a-primary)}
-          .pkr-mobile-more-grid button[aria-current="page"]{border-color:var(--pkr-a-primary)}
-          .pkr-mobile-more-overlay{position:fixed;z-index:10019;inset:0;background:#0007;border:0}
-          .pkr-classic-create-game-dialog{box-sizing:border-box;width:min(96vw,620px)!important;max-width:620px!important;max-height:min(92dvh,900px)!important;overflow-y:auto!important;overscroll-behavior:contain;padding:clamp(19px,3.5vw,29px)!important;background:var(--pkr-a-surface)!important;color:var(--pkr-a-text)!important;border:var(--pkr-a-border)!important;border-radius:var(--pkr-a-radius-lg)!important}
-          .pkr-create-game-heading{display:grid;gap:8px;margin-bottom:20px}
-          .pkr-create-game-kicker{color:var(--pkr-a-primary);font-size:10px;font-weight:700;letter-spacing:.14em}
-          .pkr-create-game-title-row{display:flex;justify-content:space-between;align-items:center;gap:16px}
-          .pkr-create-game-title-row h2{font-size:clamp(24px,4.2vw,30px)}
-          .pkr-create-game-heading p{color:var(--pkr-a-muted);font-size:13px;line-height:1.55}
-          .pkr-create-game-close{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;background:var(--pkr-a-raised);border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-sm);color:var(--pkr-a-text);font-size:26px;cursor:pointer}
-          .pkr-create-game-form{display:grid;gap:15px!important}
-          .pkr-create-game-form .inp{min-height:45px}
-          .pkr-create-game-form button[aria-pressed]{min-height:44px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer;border:var(--pkr-a-border)!important;background:var(--pkr-a-raised)!important;color:var(--pkr-a-text)!important;border-radius:var(--pkr-a-radius-md)}
-          .pkr-create-game-form button[aria-pressed="true"]{background:var(--pkr-a-primary)!important;color:var(--pkr-a-on-primary)!important;border-color:var(--pkr-a-primary)!important}
-          .pkr-create-game-details{min-width:0;background:var(--pkr-a-raised);border:var(--pkr-a-border);border-radius:var(--pkr-a-radius-md);overflow:hidden}
-          .pkr-create-game-details summary{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:7px 12px;position:relative;cursor:pointer;min-height:58px;padding:13px 40px 13px 15px;list-style:none}
-          .pkr-create-game-details summary::-webkit-details-marker{display:none}
-          .pkr-create-game-details summary::after{content:'+';position:absolute;right:15px;top:calc(50% - 13px);color:var(--pkr-a-primary);font-size:23px}
-          .pkr-create-game-details[open] summary::after{content:'-'}
-          .pkr-create-game-details summary strong{font-size:13px;font-weight:700}
-          .pkr-create-game-details summary span{color:var(--pkr-a-muted);font-size:11px}
-          .pkr-create-game-details-body{display:grid;gap:14px;padding:15px;border-top:var(--pkr-a-border)}
-          .pkr-classic-create-game-dialog>.pkr-unfinished-note+div{position:sticky;bottom:-1px;background:var(--pkr-a-surface);padding:12px 0 0;z-index:2}
-          @media(max-width:700px){.pkr-mobile-more-panel{bottom:calc(66px + env(safe-area-inset-bottom))}.pkr-classic-create-game-dialog{width:min(96vw,600px)!important;max-height:92dvh!important;padding:18px!important}.pkr-create-game-details summary span{width:100%}}
-          @media(max-width:390px){.pkr-mobile-more-grid{grid-template-columns:1fr}}
-          CSS
-          npm ci --prefix frontend --no-audit --no-fund
-          node frontend/scripts/compile-theme-a.cjs
-          node frontend/tests/tournament-structure.cjs
-          node worker/scripts/check-browser-scripts.mjs
-          python3 worker/scripts/test-settlement-v2-migration.py
-          python3 worker/scripts/test-owner-legacy-reconciliation.py
-          # This one-shot assembly workflow must not be shipped to main.
-          git rm .github/workflows/pkr-combine-release.yml
-          git add frontend/src/app/pkr-theme-a-polish.css frontend/src/app/pkr-theme-a.css frontend/public/design-version.json
-          git diff --cached --check
-          git commit -m 'Apply Theme A styling to merged controls and remove one-shot assembler'
-      - name: Publish only the combined release branch for normal PR checks
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main release/pkr-combined-fixes-20261027
-          test "$(git rev-parse origin/main)" = 07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d
-          test "$(git rev-parse origin/release/pkr-combined-fixes-20261027)" = "$GITHUB_SHA"
-          git merge-base --is-ancestor 0122774507102353e77d9880f398f8c6fdc28ef0 HEAD
-          git merge-base --is-ancestor 32502a8819e8f716d7d97aad6b2c4d1bc2477b80 HEAD
-          test -z "$(git diff 07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d -- frontend/src/app/layout.tsx frontend/src/app/page.tsx frontend/src/components/CasinoArtwork.tsx frontend/src/components/ProductShowcase.tsx frontend/public/demo/theme-a worker/wrangler.toml)"
-          git diff --check 07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d HEAD
-          git diff --stat 07c24dc97f614ef0ec9ea43b2cceafc2f4cc8c2d HEAD
-          git push origin HEAD:refs/heads/release/pkr-combined-fixes-20261027
-          echo "Combined release commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
-          echo 'main and production database are unchanged; normal PR checks and reviewed merge follow.' >> "$GITHUB_STEP_SUMMARY"
