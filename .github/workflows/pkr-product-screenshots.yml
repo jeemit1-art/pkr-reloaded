@@ -6,6 +6,9 @@ on:
       - design/pkr-ultraviolet-unified-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
+      - 'frontend/src/app/pkr-nightshift.css'
+      - 'frontend/src/app/layout.tsx'
+      - 'frontend/src/app/games/[id]/play/page.tsx'
 
 permissions:
   contents: write

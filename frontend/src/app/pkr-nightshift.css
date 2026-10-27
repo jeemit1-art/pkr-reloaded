@@ -717,7 +717,10 @@ h1,h2,h3,h4,.display,.serif {font-family:var(--font-display),system-ui,sans-seri
  --rail:#29283d;--rail2:#4c4563;
  background:radial-gradient(ellipse at 50% 45%,#25243e,#0c0d19 75%)!important;
 }
-#gameScreen.pkr-casino-live-table .topbar,
+#gameScreen.pkr-casino-live-table .topbar{
+ background-image:linear-gradient(180deg,#252740,#171a2d)!important;
+ background-color:#171a2c!important;border-color:#47415d!important;
+}
 #gameScreen.pkr-casino-live-table .bank-bar,
 #gameScreen.pkr-casino-live-table .game-tabs{
  background:#171a2c!important;border-color:#47415d!important;
