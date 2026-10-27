@@ -86,8 +86,11 @@ async function test(){
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
       if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(239, 137, 118)')
-        errors.push(size.name+' landing CTA reverted to rejected brand colour: '+landingCTAColour);
+      const landingBackground=await guestPage.locator('.pkr-landing-v2').evaluate(el=>getComputedStyle(el).backgroundColor);
+      if(landingBackground!=='rgb(11, 11, 14)')
+        errors.push(size.name+' classic poker landing background mismatch: '+landingBackground);
+      if(landingCTAColour!=='rgb(223, 46, 71)')
+        errors.push(size.name+' landing CTA is not approved classic poker red: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
@@ -226,13 +229,13 @@ async function test(){
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
        if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
-         errors.push(size.name+' '+item.id+' stale casino photo remains instead of graphite header: '+JSON.stringify(visual));
+         errors.push(size.name+' '+item.id+' stale casino photo remains instead of classic studio header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(primary!=='rgb(239, 137, 118)')
-         errors.push(size.name+' dashboard primary control is not coral: '+primary);
+       if(primary!=='rgb(223, 46, 71)')
+         errors.push(size.name+' dashboard primary control is not classic poker red: '+primary);
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
@@ -381,6 +384,19 @@ async function test(){
      if(item.id==='room'&&size.width<=700){
       if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
      }
+     if(item.id==='room'&&size.width<1100){
+      const moreButton=page.locator('.pkr-universal-bottom-nav button').filter({hasText:'More'}).first();
+      if(!await moreButton.isVisible())errors.push(size.name+' mobile More navigation missing');
+      else{
+       await moreButton.click();
+       const moreDialog=page.getByRole('dialog',{name:'More PKR navigation'});
+       await moreDialog.waitFor({state:'visible',timeout:5000});
+       if(await moreDialog.getByRole('button',{name:'Settlements'}).count()!==1)
+        errors.push(size.name+' mobile More menu missing settlements shortcut');
+       await page.keyboard.press('Escape');
+       if(await moreDialog.isVisible())errors.push(size.name+' mobile More menu did not close with Escape');
+      }
+     }
      if(item.id==='room'){
       const selector=size.width>=1100?'.pkr-persistent-nav button':'.pkr-universal-bottom-nav button';
       const memberNav=page.locator(selector).filter({hasText:'Members'}).first();
@@ -397,16 +413,16 @@ async function test(){
          const active=page.locator('.pkr-persistent-nav button.active');
          if(await active.count()!==1||!(await active.first().textContent())?.includes('Members'))
            errors.push(size.name+' Games and Members highlighted at once');
-         await nav.filter({hasText:'Players'}).first().click();
+         await nav.filter({hasText:'Standings'}).first().click();
          await page.waitForTimeout(130);
          const playersActive=page.locator('.pkr-persistent-nav button.active');
-         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Players'))
-           errors.push(size.name+' Games and Players highlighted at once');
-         await nav.filter({hasText:'Games'}).first().click();
+         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Standings'))
+           errors.push(size.name+' Rooms and Standings highlighted at once');
+         await nav.filter({hasText:'Rooms & games'}).first().click();
          await page.waitForTimeout(130);
          const gamesActive=page.locator('.pkr-persistent-nav button.active');
-         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Games'))
-           errors.push(size.name+' Games is not the sole active menu after return');
+         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Rooms & games'))
+           errors.push(size.name+' Rooms & games is not the sole active menu after return');
          await nav.filter({hasText:'Members'}).first().click();
          await page.waitForTimeout(130);
        }
