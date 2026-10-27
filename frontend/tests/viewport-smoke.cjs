@@ -93,6 +93,13 @@ async function test(){
         errors.push(size.name+' landing CTA is not approved classic poker red: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
+      // Genuine physical chips, cards and dice complement (but do not replace)
+      // the authentic PKR product screenshots.
+      const casinoGallery=guestPage.locator('.pkr-casino-atmosphere-photo img');
+      if(await casinoGallery.count()!==3)
+        errors.push(size.name+' photographic casino props gallery must show three genuine photos');
+      if(await guestPage.locator('.pkr-l2-hero-casino-backdrop img').count()!==1)
+        errors.push(size.name+' photographed casino backdrop missing');
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
       const actualHero=guestPage.locator('.pkr-hero-desktop img');
       await actualHero.waitFor({state:'visible',timeout:10000});
@@ -121,6 +128,11 @@ async function test(){
       if(productWidth.scroll>productWidth.viewport+5)
         errors.push(size.name+' product screenshot gallery introduces horizontal overflow');
       if(size.name==='desktop'){
+        for(const photo of ['/images/casino/real-poker-chips.webp','/images/casino/real-casino-props.webp','/images/casino/real-chip-closeup.webp']){
+          const response=await guestPage.request.get(BASE+photo);
+          if(!response.ok()||!(response.headers()['content-type']||'').includes('image/webp')||(await response.body()).length<25000)
+            errors.push('Locally bundled casino photograph missing or incorrectly served: '+photo);
+        }
         for(const asset of ['/demo/live-table.webp','/demo/host-dashboard.webp','/demo/rsvp-board.webp','/demo/insights.webp','/demo/mobile-live-table.webp']){
           const response=await guestPage.request.get(BASE+asset);
           if(!response.ok()||(await response.body()).length<10000)
@@ -199,6 +211,11 @@ async function test(){
          errors.push(size.name+' '+item.id+' content clipped/overlaps fixed sidebar: '+JSON.stringify(geometry));
      }
      if(item.id==='room'){
+       const props=page.locator('.pkr-event-overview-inner .pkr-casino-photo-scene');
+       if(await props.count()!==1||await props.locator('img').count()!==2)
+        errors.push(size.name+' room header missing photographed chips/cards or dice');
+     }
+     if(item.id==='room'){
        const rect=await page.evaluate(()=>{
         const hero=document.querySelector('.pkr-event-overview');const tabs=document.querySelector('.pkr-event-tabs');
         if(!hero||!tabs)return null;const h=hero.getBoundingClientRect(),t=tabs.getBoundingClientRect();
@@ -253,6 +270,19 @@ async function test(){
        if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
          errors.push(size.name+' '+item.id+' stale casino photo remains instead of classic studio header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+     }
+     if(item.id==='dashboard'){
+       const scenePhoto=page.locator('.pkr-pro-art .pkr-photo-scene-main');
+       if(await scenePhoto.count()!==1)
+        errors.push(size.name+' dashboard casino chip photograph not rendered');
+       else if(size.width>=1100){
+        const visual=await scenePhoto.evaluate(async img=>{
+          if(img instanceof HTMLImageElement)await img.decode().catch(()=>{});
+          return {naturalWidth:img.naturalWidth,visible:getComputedStyle(img.closest('.pkr-pro-art')).display};
+        });
+        if(visual.naturalWidth<700||visual.visible==='none')
+         errors.push(size.name+' dashboard physical poker-chip photo missing or hidden: '+JSON.stringify(visual));
+       }
      }
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
@@ -367,6 +397,8 @@ async function test(){
        // Gameplay uses the entire viewport, without the global desktop sidebar or mobile bottom navigation.
        const navCount=await page.locator('.pkr-persistent-nav, .pkr-universal-bottom-nav').count();
        if(navCount!==0)errors.push(size.name+' live table includes '+navCount+' global navigation elements');
+       if(await page.locator('#gameScreen .pkr-casino-photo-scene').count()!==0)
+         errors.push(size.name+' decorative casino photographs inserted into protected live table');
        const geometry=await page.locator('#gameScreen').evaluate(node=>{
          const r=node.getBoundingClientRect();
          return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight};
