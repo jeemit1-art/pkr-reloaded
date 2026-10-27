@@ -254,7 +254,7 @@
 }
 .pkr-app.pkr-casino :is(.card,.card-gold,.card-inset,.pkr-room-card,.pkr-pro-panel),
 .pkr-vnext-insights .pkr-vnext-card{
-  background:#1a1a20!important;border:1px solid rgba(247,244,239,.13)!important;
+  background-color:#1a1a20!important;border:1px solid rgba(247,244,239,.13)!important;
   border-radius:15px!important;box-shadow:0 9px 30px #0003!important;
 }
 .pkr-app.pkr-casino :is(.btn-primary,.pkr-hero-action,.tab.active),
@@ -681,4 +681,14 @@
 @media(max-width:700px){
  .pkr-app.pkr-event .pkr-event-tabs{top:58px!important}
  .pkr-app.pkr-event .pkr-event-hero-actions button{min-height:46px!important}
+}
+
+
+/* Specificity guard: card styling must never erase game-detail hero imagery.
+   Previous broad .card shorthand set background-image:none despite last theme. */
+.pkr-app.pkr-casino.pkr-game-detail .pkr-casino-game-summary{
+  background-image:
+    radial-gradient(ellipse at 88% 11%,rgba(201,39,67,.28),transparent 60%),
+    linear-gradient(115deg,#311c26,#17181c 65%,#271b25)!important;
+  background-color:#1c1920!important;
 }
