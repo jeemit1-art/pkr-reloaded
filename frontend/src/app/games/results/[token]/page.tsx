@@ -56,7 +56,7 @@ export default function ResultsPage() {
   }
 
   async function bankerSet(t: Transfer, status:'owed'|'paid'|'not_received') {
-    if (!t.id) return;
+    if (!t.id || t.status === 'legacy') return;
     setBusy(t.id);
     try { await api.games.setTransferStatus(data!.game.id, t.id, status); patchTransfer(t.id, {status}); }
     catch(e:any) { alert(e.message || 'Could not update'); }
@@ -173,6 +173,11 @@ export default function ResultsPage() {
                       {fmt(t.amount)}
                     </span>
                   </div>
+                  {t.status==='legacy' && (
+                    <p role="note" style={{fontSize:12,lineHeight:1.55,color:'var(--ivory)',marginBottom:9}}>
+                      Historical settlement — payment status unverified. Excluded from current amounts owing. Not marked paid.
+                    </p>
+                  )}
                   {t.status && t.status!=='legacy' && (
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
@@ -199,8 +204,8 @@ export default function ResultsPage() {
                       )}
                     </div>
                   )}
-                  {/* Actions row — always copy, WA only if number known */}
-                  <div style={{display:'flex',gap:6}}>
+                  {/* Historic unverified transfers must never trigger payment reminders. */}
+                  {t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
                     <button
                       onClick={()=>copyTransferMsg(t,i)}
                       className="btn btn-ghost"
@@ -225,7 +230,7 @@ export default function ResultsPage() {
                         📱 WhatsApp
                       </a>
                     )}
-                  </div>
+                  </div>}
                 </div>
               );
             })}
