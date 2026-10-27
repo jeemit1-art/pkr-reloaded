@@ -7,6 +7,8 @@ const MIN_GAP = 24 * 3600;  // hourly cron must never exceed one reminder per da
 const money = (c: number) => '$' + (c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2));
 
 export async function sendPaymentReminders(env: Env): Promise<void> {
+  // Daily reminders are opt-in and only available after the V2 schema is enabled.
+  if (env.PKR_ENV==='staging'||env.PKR_SETTLEMENT_V2!=='1') return;
   const now = Math.floor(Date.now() / 1000);
   const rows = await env.DB.prepare(`
     SELECT t.id, t.amount, t.from_name, t.to_name, g.id AS game_id, g.event_id, g.results_token, e.name AS event_name
