@@ -227,6 +227,55 @@ async function test(){
      if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      const x=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
      if(x.scroll>x.viewport+5)errors.push(size.name+' '+item.id+' horizontal overflow '+x.scroll+' > '+x.viewport);
+
+     if(item.id==='live-table'){
+       // Approved game chrome: six viewport checks without touching real games.
+       const visual=await page.evaluate(async()=>{
+         const outer=document.querySelector('#gameScreen');
+         const head=document.querySelector('.pkr-approved-topbar');
+         const bank=document.getElementById('bankBar');
+         const dock=document.querySelector('.pkr-approved-game-dock');
+         const table=document.getElementById('tableFelt');
+         const chips=bank?.querySelector('.bank-icon img');
+         if(chips instanceof HTMLImageElement)await chips.decode().catch(()=>{});
+         const bounds=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+         return {
+           viewport:innerWidth,height:innerHeight,
+           root:outer?bounds(outer):null,head:head?bounds(head):null,
+           bank:bank?bounds(bank):null,dock:dock?bounds(dock):null,
+           table:table?bounds(table):null,
+           chipsLoaded:chips instanceof HTMLImageElement&&chips.complete&&chips.naturalWidth>0,
+           theme:getComputedStyle(outer).getPropertyValue('--pkr-chrome-green').trim(),
+           title:document.getElementById('topbarTitle')?.textContent,
+           footerControls:[...document.querySelectorAll('.pkr-approved-game-dock .game-tab')].map(el=>el.id),
+         };
+       });
+       if(!visual.head||!visual.bank||!visual.dock||!visual.table)
+         errors.push(size.name+' missing approved game header/bank/dock/table');
+       else{
+         for(const [name,rect] of [['header',visual.head],['bank',visual.bank],['dock',visual.dock]]){
+           if(rect.left < -1 || rect.right > size.width+1)
+             errors.push(size.name+' gameplay '+name+' clipped: '+JSON.stringify(rect));
+         }
+         if(visual.head.bottom>visual.bank.top+2||visual.bank.bottom>visual.dock.top)
+           errors.push(size.name+' gameplay chrome overlaps: '+JSON.stringify(visual));
+         if(visual.theme!=='#3DDC97')errors.push(size.name+' gameplay chrome Theme A missing');
+         if(!visual.chipsLoaded)errors.push(size.name+' real poker chips asset not loaded in bank summary');
+         if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
+           errors.push(size.name+' gameplay settlement/end-game control missing');
+       }
+       const toolsButton=page.getByRole('button',{name:'Open table tools'});
+       await toolsButton.click();
+       if(!await page.getByRole('button',{name:/Add seat/i}).isVisible())
+         errors.push(size.name+' seat controls inaccessible in gameplay overflow menu');
+       await page.getByRole('button',{name:'Close table tools'}).click();
+       await page.locator('#bankBar').click();
+       if(!await page.locator('#bankPanel').evaluate(el=>el.classList.contains('open')))
+         errors.push(size.name+' bank summary did not expand');
+       await page.locator('#bankBar').click();
+       await page.screenshot({path:path.join(output,size.name+'-approved-live-table.png'),fullPage:false});
+     }
+
      // The old synthetic test missed a real regression: Insights/Schedule rendered
      // underneath the fixed desktop sidebar without causing horizontal overflow.
      if(size.width>=1100 && ['insights','schedule','room','install','game-detail'].includes(item.id)){
