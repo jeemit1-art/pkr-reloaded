@@ -328,15 +328,35 @@ def pre_migration_schema():
     return names == both
 
 
-def check_api_route():
-    status = command("curl", "-sS", "--max-time", "20",
-                     "-o", "/dev/null", "-w", "%{http_code}",
-                     "-H", "Cache-Control: no-cache",
-                     HOST + "/games/production-route-probe/settlement-control").strip()
-    # Authentication must be checked before looking up a non-existent game.
-    if status != "401":
-        raise Stop("Expected Settlement V2 unauthenticated 401, got HTTP " + status)
-    print("Production Settlement V2 authenticated-route gate: PASS", flush=True)
+def check_api_route(*, attempts=24, delay_seconds=5):
+    """Allow new Cloudflare Worker versions to propagate before final sign-off.
+
+    Never treat a 404 as success; a timeout still halts feature activation and
+    historical-payment reconciliation. The route must authenticate before
+    checking that the synthetic game identifier does not exist.
+    """
+    for attempt in range(attempts):
+        status = command("curl", "-sS", "--max-time", "20",
+                         "-o", "/dev/null", "-w", "%{http_code}",
+                         "-H", "Cache-Control: no-cache",
+                         HOST + "/games/production-route-probe/settlement-control").strip()
+        if status == "401":
+            payload = command("curl", "-fsS", "--max-time", "20",
+                              "-H", "Cache-Control: no-cache", HOST + "/health")
+            try:
+                health = json.loads(payload)
+            except ValueError as exc:
+                raise Stop("Production health response invalid; refusing activation.") from exc
+            if (health.get("release") == "settlement-v2-github-20261028"
+                    and health.get("environment") == "production"
+                    and (health.get("features") or {}).get("settlement_v2") is True):
+                print("Production Settlement V2 authenticated route and release: PASS",
+                      flush=True)
+                return
+        if attempt + 1 < attempts:
+            time.sleep(delay_seconds)
+    raise Stop("Production Settlement V2 route/release failed authenticated readiness; "
+               "last route HTTP " + status + ". Later feature and payment steps halted.")
 
 
 def main():
