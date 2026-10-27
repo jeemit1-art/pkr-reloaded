@@ -19,17 +19,23 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
-          import urllib.error
-          import urllib.request
-
+          import subprocess
           url = 'https://pkr-reloaded-worker.jeemit1.workers.dev'
           def request(path):
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(
-                          url+path, headers={'Cache-Control':'no-store'}), timeout=20) as res:
-                      return res.status,res.read(8192)
-              except urllib.error.HTTPError as error:
-                  return error.code,b''
+              # Production release uses curl; Cloudflare can block Python-urllib User-Agent.
+              p=subprocess.run(['curl','--silent','--show-error','--max-time','20',
+                  '--header','Cache-Control: no-store','--output','/dev/null',
+                  '--write-out','%{http_code}',url+path],
+                  capture_output=True,text=True,timeout=25)
+              if p.returncode or len(p.stdout.strip())!=3:
+                  raise SystemExit('Live route request failed without a reliable HTTP status')
+              status=int(p.stdout.strip())
+              if path=='/health' and status==200:
+                  q=subprocess.run(['curl','--silent','--show-error','--fail','--max-time','20',
+                      '--header','Cache-Control: no-store',url+path],
+                      capture_output=True,timeout=25)
+                  return status,q.stdout[:8192] if q.returncode==0 else b''
+              return status,b''
 
           health_status,health_body=request('/health')
           if health_status != 200: raise SystemExit('Health HTTP status: '+str(health_status))
