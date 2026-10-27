@@ -535,8 +535,11 @@ async function test(){
        if(liveCount&&!liveCount.includes('0 live now'))
          errors.push(size.name+' historical unfinished game counted as live');
        await page.getByLabel('Filter by game status').selectOption('unfinished');
-       if(!await page.getByText('Unfinished',{exact:true}).count())
+       try {
+         await page.getByText('Unfinished',{exact:true}).first().waitFor({state:'visible',timeout:5000});
+       } catch {
          errors.push(size.name+' unfinished game not discoverable via Schedule');
+       }
        await page.getByLabel('Filter by game status').selectOption('all');
      }
      if(item.id==='room'&&size.width<=700){
