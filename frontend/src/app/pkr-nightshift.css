@@ -897,3 +897,65 @@ body:has(.pkr-landing-v2),body:has(.pkr-marketing-editorial){
  .pkr-insights-legacy-fields{grid-template-columns:1fr;}
  .pkr-insights-legacy-actions>button{width:100%;}
 }
+
+
+/* Visual screenshot review: remove the last coral/green legacy islands.
+   Exceptions: real poker felt, semantic success/negative statuses, WhatsApp. */
+.pkr-dashboard .pkr-topbar .pkr-brand-mark,
+.pkr-dashboard .pkr-pro-topbar .pkr-brand-mark{
+ color:#bc9bff!important;background:none!important;box-shadow:none!important;
+}
+.pkr-dashboard .pkr-pro-hero .pkr-eyebrow,
+.pkr-dashboard .pkr-mobile-featured .pkr-eyebrow,
+.pkr-dashboard .pkr-pro-hero-content>.pkr-eyebrow{
+ color:#cbb4ff!important;
+}
+.pkr-dashboard .pkr-pro-actions .btn-ghost{
+ background:#282b44!important;color:#f7f5ff!important;border:1px solid #5b5680!important;
+}
+.pkr-dashboard .pkr-pro-feature-game{
+ background:#292943!important;border:1px solid #585274!important;
+}
+.pkr-dashboard .pkr-pro-feature-game .pkr-pro-date{
+ background:#40345f!important;color:#e1d2ff!important;border:1px solid #635b99!important;
+}
+.pkr-dashboard .pkr-mobile-featured-actions button:first-child,
+.pkr-dashboard .pkr-mobile-featured-actions button:not(:last-child){
+ background:#ad82ff!important;color:#171125!important;
+ border:1px solid #d4bfff!important;box-shadow:0 9px 25px #8e5efb29!important;
+}
+.pkr-dashboard .pkr-mobile-featured-actions button:last-child{
+ background:#272b47!important;color:#f7f5ff!important;border:1px solid #595677!important;
+}
+.pkr-dashboard .pkr-mobile-featured-meta>span{
+ background:#2c2b48!important;color:#eceaff!important;
+ border:1px solid #5a547c!important;
+}
+.pkr-dashboard .pkr-pro-date strong,
+.pkr-dashboard .pkr-pro-date small {color:#ded1ff!important;}
+.pkr-vnext-insights .pkr-vnext-insights-top .pkr-eyebrow,
+.pkr-vnext-insights .pkr-vnext-insights-top .pkr-insights-selector label{
+ color:#ccb7ff!important;
+}
+.pkr-vnext-insights .pkr-vnext-insights-top .pkr-insights-selector select,
+.pkr-insights-refresh .pkr-insights-selector select{
+ background:#252941!important;color:#f9f7ff!important;border:1px solid #68638d!important;
+}
+.pkr-insights-refresh .pkr-vnext-card-heading button,
+.pkr-insights-refresh .pkr-vnext-card-heading button:hover{
+ color:#cab1ff!important;
+}
+.pkr-landing-v2 .pkr-l2-ribbon-icon,
+.pkr-landing-v2 .pkr-l2-feature-copy>span{
+ color:#7551c3!important;
+}
+.pkr-landing-v2 .pkr-l2-feature-intro .pkr-l2-intro-highlights b{
+ color:#c4aaff!important;
+}
+#gameScreen.pkr-casino-live-table .table-area{
+ background:radial-gradient(ellipse at 50% 45%,#232639,#0b0e1b 75%)!important;
+}
+#gameScreen.pkr-casino-live-table .bank-bar{
+ background:#171a2c!important;color:#f5f3ff!important;
+}
+#gameScreen.pkr-casino-live-table .bank-pill:not(.g){color:#d7d2f0!important;}
