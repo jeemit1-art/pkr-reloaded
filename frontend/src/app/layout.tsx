@@ -18,6 +18,7 @@ import './pkr-theme-a-tokens.css';
 import './pkr-theme-a-public.css';
 import './pkr-theme-a-app.css';
 import './pkr-theme-a-table.css';
+import './pkr-theme-a-polish.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
