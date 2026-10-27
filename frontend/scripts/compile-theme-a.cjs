@@ -52,5 +52,5 @@ fs.writeFileSync(path.join(app,'pkr-theme-a.css'),css+'\n');
 const manifest={theme:'Theme A - Midnight Felt',cssSha256:crypto.createHash('sha256').update(css).digest('hex'),
  colours:{background:'#0B0F12',surface:'#131A1F',raised:'#1B242B',line:'#26323A',text:'#EAF0F2',muted:'#8A99A3',primary:'#3DDC97',money:'#F2B84B',danger:'#FF5A5F',felt:'#0F5C4A'},
  fonts:['Bricolage Grotesque','Inter','JetBrains Mono']};
-fs.writeFileSync(path.resolve(app,'../../..','public/design-version.json'),JSON.stringify(manifest,null,2)+'\n');
+fs.writeFileSync(path.resolve(__dirname,'../public/design-version.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log('Compiled one Midnight Felt cascade: '+manifest.cssSha256.slice(0,12));
