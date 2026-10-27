@@ -31,6 +31,8 @@ jobs:
         run: |
           python3 worker/scripts/check-staging-schema.py
           python3 worker/scripts/test-settlement-v2-migration.py
+          python3 worker/scripts/test-deploy-settlement-v2.py
+          python3 -m py_compile worker/scripts/deploy-settlement-v2-live.py
           python3 worker/scripts/test-owner-legacy-reconciliation.py
           python3 -m py_compile worker/scripts/owner-reconcile-legacy-paid.py
       - name: Test optional integrity upgrade in disposable SQLite

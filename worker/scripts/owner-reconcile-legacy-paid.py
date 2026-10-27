@@ -135,7 +135,7 @@ def main():
         raise GuardError("Refusing to overwrite an existing production D1 backup.")
     old_umask=os.umask(0o077)
     try:
-        run("export",TARGET,"--config","wrangler.toml","--remote","--output",str(export))
+        run("export",TARGET,"--config","wrangler.toml","--remote","--skip-confirmation","--output",str(export))
     finally:
         os.umask(old_umask)
     if not export.exists():
@@ -146,9 +146,9 @@ def main():
         raise GuardError("Concurrent live settlement changes: aborting.")
     # The added schema migration is non-destructive and must be performed before
     # any historical paid update, so that trigger rows create a durable audit.
-    run("execute",TARGET,"--config","wrangler.toml","--remote","--file",
+    run("execute",TARGET,"--config","wrangler.toml","--remote","--yes","--file",
         "migrations/20261027_settlement_v2.sql")
-    run("execute",TARGET,"--config","wrangler.toml","--remote","--file",
+    run("execute",TARGET,"--config","wrangler.toml","--remote","--yes","--file",
         "migrations/20261027_owner_mark_legacy_paid.sql")
     after=select_aggregate()
     if after!=(0,0):
