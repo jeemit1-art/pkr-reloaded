@@ -57,7 +57,7 @@ export const metadata = {
       'Track buy-ins, cashouts and settlements in real time. Built for home game hosts. Free 5-day trial.',
     url: 'https://mypkr.app',
     siteName: 'PKR',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'PKR home poker tracker and tournament manager' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'PKR home poker tracker and tournament manager' }],
     type: 'website',
     locale: 'en_AU',
   },
@@ -65,7 +65,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'PKR — Home Poker Game Manager',
     description: 'Track buy-ins, cashouts and settlements in real time. Built for home game hosts.',
-    images: ['/og-image.png'],
+    images: ['/opengraph-image'],
   },
 };
 
