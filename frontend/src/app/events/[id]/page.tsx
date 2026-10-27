@@ -1,5 +1,8 @@
 // @refresh
 'use client';
+import RecordMetric from '@/components/RecordMetric';
+import AppDialog from '@/components/AppDialog';
+
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
@@ -397,10 +400,10 @@ export default function EventPage() {
           <h1>{event.name}</h1>
           <p>Manage upcoming games, player standings and results from this room.</p>
           <div className="pkr-event-metrics">
-            <div className="pkr-event-metric"><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></div>
-            <div className="pkr-event-metric"><strong>{event.game_count || 0}</strong><small>Games</small></div>
-            <div className="pkr-event-metric"><strong>{event.member_count || 1}</strong><small>Members</small></div>
-            <div className="pkr-event-metric"><strong>{upcoming[0]?new Date(upcoming[0].scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></div>
+            <div className="pkr-event-metric"><RecordMetric request={{kind:'settings',title:"Default room buy-in",roomId:id}}><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></RecordMetric></div>
+            <div className="pkr-event-metric"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:id}}><strong>{event.game_count || 0}</strong><small>Games</small></RecordMetric></div>
+            <div className="pkr-event-metric"><RecordMetric request={{kind:'members',title:"Room members",roomId:id}}><strong>{event.member_count || 1}</strong><small>Members</small></RecordMetric></div>
+            <div className="pkr-event-metric"><RecordMetric request={upcoming[0]?{kind:'game',title:"Next game",gameId:upcoming[0].id}:{kind:'games',title:"Upcoming games",roomId:id,filter:'upcoming'}}><strong>{upcoming[0]?new Date(upcoming[0].scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
           </div>
           {isGroupOwner && joinRequests.length > 0 && <button type="button"
             onClick={() => selectTab('members')}
@@ -502,7 +505,7 @@ export default function EventPage() {
         )}
 
         {/* All-time player standings — derived from settled game records. */}
-        {tab==='leaderboard'&&<StandingsBoard leaders={leaders} settledGames={settled.length} onSelectPlayer={setSelectedPlayer}/>}
+        {tab==='leaderboard'&&<StandingsBoard leaders={leaders} settledGames={settled.length} onSelectPlayer={setSelectedPlayer} roomId={id}/>}
 
         {/* ── Members tab ── */}
         {tab==='members' && (
@@ -640,7 +643,7 @@ export default function EventPage() {
                 WhatsApp opens on your device; PKR does not automatically send messages to contacts.
               </p>
             </section>}
-            {phoneShare&&<div className="modal-overlay" onClick={e=>{if(e.currentTarget===e.target)setPhoneShare(null);}}>
+            {phoneShare&&<AppDialog className="modal-overlay" onClick={e=>{if(e.currentTarget===e.target)setPhoneShare(null);}}>
               <div className="modal-sheet">
                 <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
                 <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
@@ -665,10 +668,10 @@ export default function EventPage() {
                   onClick={()=>navigator.clipboard.writeText(phoneShare.url)}>Copy personal invitation link</button>
                 <button className="btn btn-ghost" style={{width:'100%',marginTop:9}} onClick={()=>setPhoneShare(null)}>Done</button>
               </div>
-            </div>}
+            </AppDialog>}
             {/* Confirm remove modal */}
             {confirmRemoveMember && (
-              <div className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
+              <AppDialog className="modal-overlay" onClick={()=>setConfirmRemoveMember(null)}>
                 <div className="modal animate-up" onClick={(e)=>e.stopPropagation()} style={{maxWidth:340}}>
                   <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>Remove Member?</div>
                   <div style={{fontSize:13,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>
@@ -682,7 +685,7 @@ export default function EventPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </AppDialog>
             )}
             <div id="pkr-members-roster" className="pkr-members-anchor" />
             <div className="pkr-member-search-tools">
@@ -759,7 +762,7 @@ export default function EventPage() {
 
             {/* Merge Players Modal */}
             {showMerge && (
-              <div className="modal-overlay" onClick={()=>setShowMerge(false)}>
+              <AppDialog className="modal-overlay" onClick={()=>setShowMerge(false)}>
                 <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
                   <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>⟳ Merge Duplicate Players</div>
                   <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
@@ -816,7 +819,7 @@ export default function EventPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </AppDialog>
             )}
           </div>
         )}
@@ -870,7 +873,7 @@ export default function EventPage() {
 
       {/* End event confirm modal */}
       {confirmEndEvent && (
-        <div className="modal-overlay" onClick={()=>setConfirmEndEvent(false)}>
+        <AppDialog className="modal-overlay" onClick={()=>setConfirmEndEvent(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
             <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
               <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
@@ -885,12 +888,12 @@ export default function EventPage() {
               </button>
             </div>
           </div>
-        </div>
+        </AppDialog>
       )}
 
       {/* Fix 6+10: Confirm delete/cancel modal */}
       {confirmDelete && (
-        <div className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
+        <AppDialog className="modal-overlay" onClick={()=>setConfirmDelete(null)}>
           <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
             <div style={{padding:'24px 24px 0'}}>
               <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
@@ -924,13 +927,13 @@ export default function EventPage() {
               </button>
             </div>
           </div>
-        </div>
+        </AppDialog>
       )}
 
       {/* Create game modal */}
       {showCreate && (
-        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}}>
-          <div className="modal-sheet pkr-classic-create-game-dialog" role="dialog" aria-modal="true" aria-labelledby="pkr-create-game-title">
+        <AppDialog className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}} aria-labelledby="pkr-create-game-title">
+          <div className="modal-sheet pkr-classic-create-game-dialog"   >
             <div className="pkr-create-game-heading">
               <span className="pkr-create-game-kicker">YOUR NEXT POKER NIGHT</span>
               <div className="pkr-create-game-title-row">
@@ -1056,12 +1059,12 @@ export default function EventPage() {
               <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
             </div>
           </div>
-        </div>
+        </AppDialog>
       )}
 
       {/* Invite modal */}
       {showInvite && (
-        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
+        <AppDialog className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInvite(false);}}>
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:6,fontWeight:500}}>{inviteRole==='member'?'Member Invite':'Co-host Invite'}</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif'}}>For {inviteEmail} only · single-use · expires in 48 hours. Send through WhatsApp or email; only the invited account can accept.</div>
@@ -1088,12 +1091,12 @@ export default function EventPage() {
             </div>
             <button className="btn btn-ghost" style={{width:'100%',marginTop:8}} onClick={()=>setShowInvite(false)}>Close</button>
           </div>
-        </div>
+        </AppDialog>
       )}
 
       {/* Install / Share modal */}
       {showInstall && (
-        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInstall(false);}}>
+        <AppDialog className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowInstall(false);}}>
           <div className="modal-sheet">
             <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>Share PKR</div>
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>{event.name}</div>
@@ -1146,7 +1149,7 @@ export default function EventPage() {
 
             <button className="btn btn-ghost" style={{width:'100%'}} onClick={()=>setShowInstall(false)}>Close</button>
           </div>
-        </div>
+        </AppDialog>
       )}
 
       <PkrMobileNav items={[
@@ -1199,7 +1202,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   }
 
   return (
-    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <AppDialog className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-sheet">
         <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>⚡ Quick Seat Players</div>
         <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Add players before launching the table</div>
@@ -1235,7 +1238,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
           </button>
         </div>
       </div>
-    </div>
+    </AppDialog>
   );
 }
 
@@ -1381,13 +1384,13 @@ function PlayerHistoryDialog({ player, history, leader, onClose }: {
     };
   },[]);
   return (
-    <div className="modal-overlay pkr-player-history-overlay"
-      onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <AppDialog className="modal-overlay pkr-player-history-overlay"
+      onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}} aria-label={'Player history for '+player}>
       <section ref={dialogRef} className="pkr-player-history-dialog"
-        role="dialog" aria-modal="true" aria-label={'Player history for '+player}>
+          >
         <PlayerHistoryCard player={player} history={history} leader={leader} onClose={onClose}/>
       </section>
-    </div>
+    </AppDialog>
   );
 }
 

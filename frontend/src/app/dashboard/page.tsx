@@ -1,4 +1,7 @@
 'use client';
+import RecordMetric from '@/components/RecordMetric';
+import AppDialog from '@/components/AppDialog';
+
 // frontend/src/app/dashboard/page.tsx — FULL REPLACEMENT
 // Changes vs original:
 //  - Imports UpgradeModal
@@ -548,10 +551,10 @@ function DashboardInner() {
               <div className="pkr-pro-title"><h1>{featuredRoom?.name||'Your poker club'}</h1><span className="pkr-pro-live">● {featuredRoom?'Active':'Get started'}</span></div>
               <p>Your group, upcoming games and results — all in one place.</p>
               <div className="pkr-pro-stats">
-                <div><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games played</small></div>
-                <div><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></div>
-                <div><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></div>
-                <div><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></div>
+                <div><RecordMetric request={{kind:'games',title:"Games recorded",roomId:featuredRoom?.id}}><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games recorded</small></RecordMetric></div>
+                <div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></RecordMetric></div>
+                <div><RecordMetric request={{kind:'games',title:"Games across rooms"}}><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></RecordMetric></div>
+                <div><RecordMetric request={nextGame?{kind:'game',title:"Next game",gameId:nextGame.id}:{kind:'games',title:"Upcoming games",roomId:featuredRoom?.id,filter:'upcoming'}}><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
               </div>
               <div className="pkr-pro-actions"><button className="btn btn-primary" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>▶ {featuredRoom?'Open Room':'Create Room'} →</button><button className="btn btn-ghost" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ Invite Players</button></div>
             </div>
@@ -563,7 +566,7 @@ function DashboardInner() {
               <div className="pkr-pro-panel-ctas"><button className="pkr-pro-wide-button" onClick={()=>nextGame?router.push('/games/'+nextGame.id):featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{nextGame?'View Game →':'Open Room →'}</button>{nextGame&&<button className="pkr-pro-wide-button" onClick={()=>router.push('/games/'+nextGame.id+'/rsvp')}>Manage RSVP</button>}</div>
             </section>
             <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♟ Members</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>View all →</button></div>
-              <div className="pkr-pro-member-stats"><div><strong>{featuredRoom?.member_count||0}</strong><small>Total members</small></div><div><strong>{activeRooms.length}</strong><small>Active rooms</small></div></div>
+              <div className="pkr-pro-member-stats"><div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><strong>{featuredRoom?.member_count||0}</strong><small>Total members</small></RecordMetric></div><div><RecordMetric request={{kind:'rooms',title:"Active rooms"}}><strong>{activeRooms.length}</strong><small>Active rooms</small></RecordMetric></div></div>
               <div className="pkr-pro-member-list">{featuredMembers.slice(0,4).map(m=><div key={m.id} className="pkr-pro-member"><span className="pkr-pro-member-avatar" aria-hidden="true">{m.name?.trim().charAt(0)?.toUpperCase()||'♠'}{m.avatar_url&&<img key={m.avatar_url} src={m.avatar_url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e=>{e.currentTarget.style.display='none';}}/>}</span><strong>{m.name}</strong><small>{m.role}</small></div>)}{!featuredMembers.length&&<p className="pkr-pro-empty">Members appear after joining a room.</p>}</div>
               <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>Manage Members →</button>
             </section>
@@ -609,7 +612,7 @@ function DashboardInner() {
 
         {/* QR Scanner Modal */}
         {showScanner && (
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+          <AppDialog style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}} aria-label="Scan invite" onDismiss={()=>{setShowScanner(false);setScanning(false);}}>
             <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
                 <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
@@ -629,7 +632,7 @@ function DashboardInner() {
                 )}
               </div>
             </div>
-          </div>
+          </AppDialog>
         )}
 
         {/* Create form */}
@@ -705,7 +708,7 @@ function DashboardInner() {
 
         {/* End event confirm modal */}
         {confirmEndEventId && (
-          <div className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
+          <AppDialog className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
             <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
               <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
                 <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
@@ -721,7 +724,7 @@ function DashboardInner() {
                 </button>
               </div>
             </div>
-          </div>
+          </AppDialog>
         )}
       </div>
 

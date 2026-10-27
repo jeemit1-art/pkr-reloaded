@@ -1,4 +1,6 @@
 'use client';
+import RecordMetric from '@/components/RecordMetric';
+
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, LiveData, fmt, fmtDate } from '@/lib/api';
@@ -167,12 +169,12 @@ export default function LivePage() {
           {l:'Cashouts',v:fmt(totalOut)},
           {l:'In Bank', v:fmt(bank), gold:bank>0},
         ].map(s=>(
-          <div key={s.l} style={{padding:'10px 0',textAlign:'center',borderRight:'1px solid rgba(201,168,76,0.08)'}}>
+          <div key={s.l} style={{padding:'10px 0',textAlign:'center',borderRight:'1px solid rgba(201,168,76,0.08)'}}><RecordMetric request={{kind:'live-money',title:s.l,publicToken:String(token),measure:s.l==='Buy-ins'?'buyins':s.l==='Cashouts'?'cashouts':'bank'}}>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',
               color:(s as any).gold?'#c9a84c':'#f0e6c8',fontWeight:500}}>{s.v}</div>
             <div style={{fontSize:'0.6rem',letterSpacing:'0.16em',textTransform:'uppercase',
               color:'#6b8c6e',marginTop:2}}>{s.l}</div>
-          </div>
+          </RecordMetric></div>
         ))}
       </div>
 

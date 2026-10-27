@@ -1,10 +1,13 @@
 'use client';
+import RecordMetric from '@/components/RecordMetric';
+
 
 import {useMemo,useState} from 'react';
 import {fmtSign,type LeaderboardEntry} from '@/lib/api';
 
 type SortKey='net'|'average'|'profitable'|'games';
 type BoardProps={
+  roomId?:string;
   leaders:LeaderboardEntry[];
   settledGames:number;
   onSelectPlayer:(name:string)=>void;
@@ -17,7 +20,7 @@ const sortLabels:Record<SortKey,string>={
   games:'Games played',
 };
 
-export default function StandingsBoard({leaders,settledGames,onSelectPlayer}:BoardProps){
+export default function StandingsBoard({leaders,settledGames,onSelectPlayer,roomId}:BoardProps){
   const [sort,setSort]=useState<SortKey>('net');
   const [query,setQuery]=useState('');
   const [minGames,setMinGames]=useState(false);
@@ -43,9 +46,9 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer}:Boa
       <span className="pkr-standings-updated">All-time records</span>
     </header>
     <div className="pkr-standings-summary">
-      <div><span>Ranked players</span><strong>{leaders.length}</strong></div>
-      <div><span>Settled games</span><strong>{settledGames}</strong></div>
-      <div><span>Player sessions</span><strong>{playerSessions}</strong></div>
+      <div><RecordMetric request={{kind:'leaders',title:"Ranked players",roomId}}><span>Ranked players</span><strong>{leaders.length}</strong></RecordMetric></div>
+      <div><RecordMetric request={{kind:'games',title:"Settled games",roomId,filter:'settled'}}><span>Settled games</span><strong>{settledGames}</strong></RecordMetric></div>
+      <div><RecordMetric request={{kind:'sessions',title:"Player sessions",roomId}}><span>Player sessions</span><strong>{playerSessions}</strong></RecordMetric></div>
     </div>
     {!leaders.length
       ? <div className="pkr-standings-empty"><span aria-hidden="true">🏆</span><h3>The table is waiting</h3>

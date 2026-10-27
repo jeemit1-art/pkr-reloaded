@@ -1,4 +1,6 @@
 'use client';
+import RecordMetric from '@/components/RecordMetric';
+
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
@@ -196,11 +198,11 @@ export default function InsightsPage(){
    <section className="pkr-vnext-card"><h2>No poker rooms yet</h2><p>Create a room to start recording games and results.</p><button onClick={()=>router.push('/dashboard')}>Go to dashboard →</button></section>:
   <>
    <section className="pkr-vnext-insights-stats pkr-insights-kpis" aria-label="Recorded poker room statistics">
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">♧</span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Confirmed outstanding</small><strong data-testid="current-outstanding">{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'}</em></span></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:selected}}><span className="pkr-insights-kpi-icon">♧</span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'members',title:"Room members",roomId:selected}}><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={best?{kind:'player',title:best.display_name+' - game results',roomId:selected,playerId:best.user_id,playerName:best.display_name}:{kind:'leaders',title:"Player results",roomId:selected}}><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'transfers',title:"Outstanding payments",roomId:selected,filter:'outstanding',period}}><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Confirmed outstanding</small><strong data-testid="current-outstanding">{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'}</em></span></RecordMetric></div>
    </section>
    {loadingDetails&&<p className="pkr-insights-loader" role="status">Updating the recorded results and settlement information…</p>}
    <div className="pkr-insights-overview-grid">
@@ -209,16 +211,16 @@ export default function InsightsPage(){
       <button type="button" onClick={()=>document.getElementById('pkr-settlement')?.scrollIntoView({behavior:'smooth'})}>View details →</button>
      </div>
      <div className="pkr-insights-balance-tiles">
-      <div><strong>{peopleOwing}</strong><span>Players owe</span><small>{fmt(totalPending)} outstanding</small></div>
-      <div><strong>{peopleReceiving}</strong><span>To receive</span><small>{fmt(totalPending)} due</small></div>
-      <div><strong>{paid.length}</strong><span>Transfers paid</span><small>Recorded as paid</small></div>
-      <div><strong>{outstanding.length}</strong><span>Transfers pending</span><small>{outstanding.length?'To be followed up':'No pending transfers'}</small></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Players who owe",roomId:selected,filter:'owing',period}}><strong>{peopleOwing}</strong><span>Players owe</span><small>{fmt(totalPending)} outstanding</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Players to receive",roomId:selected,filter:'receiving',period}}><strong>{peopleReceiving}</strong><span>To receive</span><small>{fmt(totalPending)} due</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Paid transfers",roomId:selected,filter:'paid',period}}><strong>{paid.length}</strong><span>Transfers paid</span><small>Recorded as paid</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Outstanding transfers",roomId:selected,filter:'outstanding',period}}><strong>{outstanding.length}</strong><span>Transfers pending</span><small>{outstanding.length?'To be followed up':'No pending transfers'}</small></RecordMetric></div>
      </div>
     </section>
     <section className="pkr-vnext-card pkr-insights-trend">
      <div className="pkr-vnext-card-heading"><div><h2>▥ Games Trend</h2><p>Settled games in the last six calendar months.</p></div><span>Last 6 months</span></div>
-     <div className="pkr-vnext-bar-chart" role="img" aria-label="Settled games by month for the last six months">
-      {months.map(month=><div key={month.key} className="pkr-vnext-bar-column"><strong>{month.count}</strong><div><i style={{height:(month.count/maxMonth*100)+'%'}}/></div><span>{month.label}</span></div>)}
+     <div className="pkr-vnext-bar-chart" role="group" aria-label="Settled games by month for the last six months">
+      {months.map(month=><RecordMetric key={month.key} className="pkr-vnext-bar-column" bare request={{kind:'games',title:'Settled games - '+month.label,roomId:selected,filter:'settled',month:month.key}}><strong>{month.count}</strong><div><i style={{height:(month.count/maxMonth*100)+'%'}}/></div><span>{month.label}</span></RecordMetric>)}
      </div>
     </section>
    </div>
@@ -291,14 +293,14 @@ export default function InsightsPage(){
        </div>}
        </div>:<p className="pkr-vnext-empty">No transfers recorded for this period.</p>)}
      {settlementView==='balances'&&
-      (balances.length?<div className="pkr-insights-balance-list">{balances.map(p=><div className="pkr-insights-balance-row" key={p.id}>
+      (balances.length?<div className="pkr-insights-balance-list">{balances.map(p=><RecordMetric className="pkr-insights-balance-row" key={p.id} bare request={{kind:'transfers',title:p.name+' - outstanding transfers',roomId:selected,filter:'outstanding',playerId:p.id,period}}>
        <span className="pkr-insights-avatar">{p.name.slice(0,1).toUpperCase()}</span><strong>{p.name}</strong><small>{p.net<0?'To pay':'To receive'}</small>
        <b className={p.net<0?'pkr-vnext-negative':'pkr-vnext-positive'}>{fmt(Math.abs(p.net))}</b>
-      </div>)}</div>:<p className="pkr-vnext-empty">No outstanding player balances in the recorded transfers.</p>)}
+      </RecordMetric>)}</div>:<p className="pkr-vnext-empty">No outstanding player balances in the recorded transfers.</p>)}
      {settlementView==='status'&&<div className="pkr-insights-payment-summary">
-      <div><strong>{paid.length}</strong><span>Recorded as paid</span></div>
-      <div><strong>{outstanding.length}</strong><span>Still outstanding</span></div>
-      <div><strong>{fmt(totalPending)}</strong><span>Current outstanding</span></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Paid transfers",roomId:selected,filter:'paid',period}}><strong>{paid.length}</strong><span>Recorded as paid</span></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Outstanding transfers",roomId:selected,filter:'outstanding',period}}><strong>{outstanding.length}</strong><span>Still outstanding</span></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Outstanding amount",roomId:selected,filter:'outstanding',period}}><strong>{fmt(totalPending)}</strong><span>Current outstanding</span></RecordMetric></div>
       
       <p>Payment statuses reflect the room's records. PKR does not send or receive money.</p>
      </div>}
@@ -315,24 +317,24 @@ export default function InsightsPage(){
     <section className="pkr-vnext-card pkr-insights-players">
      <div className="pkr-vnext-card-heading"><div><h2>▥ Player Performance</h2><p>All {leaders.length} players with settled results in this room. Members without a settled game are not ranked.</p></div><button type="button" onClick={()=>router.push(roomUrl('leaderboard'))}>All players →</button></div>
      {leaders.length?<><div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>Player</th><th>Games</th><th>Profitable</th><th>Profitable %</th><th>Net result</th></tr></thead>
-      <tbody>{leadersByNet.map((p,i)=><tr key={p.user_id}><td><span className="pkr-insights-player-name"><span className="pkr-insights-rank">{i+1}</span>{p.display_name}</span></td>
-       <td>{p.games_played}</td><td>{p.games_won}</td><td>{p.games_played?Math.round(p.games_won/p.games_played*100)+'%':'—'}</td>
-       <td className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</td></tr>)}</tbody>
+      <tbody>{leadersByNet.map((p,i)=><tr key={p.user_id}><td><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}><span className="pkr-insights-player-name"><span className="pkr-insights-rank">{i+1}</span>{p.display_name}</span></RecordMetric></td>
+       <td><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>{p.games_played}</RecordMetric></td><td><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name,filter:'profitable'}}>{p.games_won}</RecordMetric></td><td><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>{p.games_played?Math.round(p.games_won/p.games_played*100)+'%':'—'}</RecordMetric></td>
+       <td className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>{fmtSign(p.total_net)}</RecordMetric></td></tr>)}</tbody>
      </table></div>
        <div className="pkr-insights-player-mobile-list" role="list" aria-label="All recorded player performance">
-        {leadersByNet.map((p,i)=><div role="listitem" className="pkr-insights-player-mobile-row" key={p.user_id||p.display_name}>
+        {leadersByNet.map((p,i)=><div role="listitem" className="pkr-insights-player-mobile-row" key={p.user_id||p.display_name}><RecordMetric request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
          <span className="pkr-insights-rank" aria-label={'Rank '+(i+1)}>{i+1}</span>
          <span className="pkr-insights-player-mobile-info"><strong>{p.display_name}</strong><small>{p.games_played} games · {p.games_won} profitable · {p.games_played?Math.round(p.games_won/p.games_played*100):0}%</small></span>
          <strong className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</strong>
-        </div>)}
+        </RecordMetric></div>)}
        </div></>:<p className="pkr-vnext-empty">Player results appear after a game is settled.</p>}
     </section>
     <section className="pkr-vnext-card pkr-insights-results">
      <div className="pkr-vnext-card-heading"><h2>♛ Player Net Results</h2><span>All {leaders.length} recorded players · lifetime in this room</span></div>
-     {leaders.length?<div className="pkr-vnext-performance">{leadersByNet.map(p=><div className="pkr-vnext-performance-row" key={p.user_id}>
+     {leaders.length?<div className="pkr-vnext-performance">{leadersByNet.map(p=><RecordMetric className="pkr-vnext-performance-row" key={p.user_id} bare request={{kind:'player',title:p.display_name+' - game results',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
       <span>{p.display_name}</span><div><i className={p.total_net<0?'loss':'gain'} style={{width:(Math.max(3,Math.abs(p.total_net)/maxNet*100))+'%'}}/></div>
       <strong className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</strong>
-     </div>)}</div>:<p className="pkr-vnext-empty">No settled player results recorded yet.</p>}
+     </RecordMetric>)}</div>:<p className="pkr-vnext-empty">No settled player results recorded yet.</p>}
     </section>
    </div>
    {(upcoming.length>0||unfinished.length>0)&&<p className="pkr-insights-upcoming-note">

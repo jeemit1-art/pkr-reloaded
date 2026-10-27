@@ -1,0 +1,102 @@
+/* App experience: part of the compiled Midnight Felt cascade, not a competing theme. */
+html{--pkr-navigation-height:0px;--pkr-visible-top:0px;--pkr-visible-height:100dvh}
+/* Landing-page nav defaults must never position an app navigation bar at the top. */
+.pkr-universal-bottom-nav{top:auto!important;height:auto!important;min-height:0!important;max-height:none!important;border-bottom:0!important;box-sizing:border-box!important}
+.pkr-persistent-nav>nav{position:static!important;inset:auto!important;height:auto!important;max-height:none!important;padding:0!important;display:block!important}
+.pkr-event .pkr-event-tabs{height:auto!important;min-height:0!important}
+.pkr-keyboard-open .pkr-universal-bottom-nav{visibility:hidden!important;pointer-events:none!important}
+html.pkr-installed,html.pkr-installed body{overscroll-behavior-y:none;background:var(--pkr-a-bg)}
+.pkr-installed .pkr-topbar{padding-top:env(safe-area-inset-top)}
+.pkr-insights-refresh{padding-top:calc(12px + env(safe-area-inset-top))!important}
+.pkr-insights-refresh>.pkr-vnext-insights-top{min-height:0!important;height:auto!important;gap:14px!important;padding:clamp(17px,2.8vw,26px)!important;margin-bottom:15px!important}
+.pkr-insights-refresh .pkr-insights-intro h1{margin:7px 0!important}
+.pkr-insights-refresh .pkr-insights-intro p{margin:0!important}
+
+/* Preserve the existing statistic card layout; the entire value opens its records. */
+.pkr-metric-trigger{appearance:none!important;border:0!important;background:transparent!important;color:inherit!important;font:inherit!important;letter-spacing:inherit;text-align:inherit;display:flex;flex-direction:column;align-items:inherit;justify-content:inherit;gap:5px;padding:0!important;margin:0;width:100%;min-width:0;min-height:44px;cursor:pointer;touch-action:manipulation}
+.pkr-insights-kpi>.pkr-metric-trigger{flex-direction:row;align-items:center;gap:12px;text-align:left}
+.pkr-insights-kpi>.pkr-metric-trigger>.pkr-insights-kpi-copy{flex:1;min-width:0}
+.pkr-metric-trigger:focus-visible{outline:2px solid var(--pkr-a-primary)!important;outline-offset:5px;border-radius:5px}
+.pkr-metric-trigger:active{opacity:.8}
+:is(.pkr-insights-kpi,.pkr-pro-stats>div,.pkr-event-metric,.pkr-insights-balance-tiles>div,.pkr-insights-payment-summary>div,.pkr-standings-summary>div):has(>.pkr-metric-trigger):hover{border-color:var(--pkr-a-primary)!important}
+.pkr-insights-balance-row>.pkr-metric-trigger{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.pkr-record-dialog{position:fixed;inset:auto!important;top:calc(var(--pkr-visible-top) + var(--pkr-visible-height)/2)!important;left:50%!important;transform:translate(-50%,-50%)!important;width:min(650px,calc(100vw - 24px));max-width:none;margin:0!important;padding:0!important;max-height:calc(var(--pkr-visible-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)!important;overflow:hidden;border:1px solid var(--pkr-a-line)!important;border-radius:18px;background:var(--pkr-a-surface)!important;color:var(--pkr-a-text)!important;box-shadow:0 24px 80px #000a;box-sizing:border-box}
+.pkr-record-dialog[open]{display:flex;flex-direction:column}
+.pkr-record-dialog::backdrop,.pkr-native-dialog::backdrop{background:rgba(2,8,11,.78);backdrop-filter:blur(6px)}
+.pkr-record-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:21px 21px 16px;border-bottom:1px solid var(--pkr-a-line);flex:none}
+.pkr-record-heading>div{min-width:0}
+.pkr-record-heading span{font-size:10px;letter-spacing:.13em;font-weight:750;color:var(--pkr-a-primary)}
+.pkr-record-heading h2{font-family:var(--font-head),Inter,sans-serif;font-size:clamp(21px,5vw,28px);line-height:1.2;margin:7px 0;overflow-wrap:anywhere}
+.pkr-record-heading p{color:var(--pkr-a-muted);font-size:12px;line-height:1.5;margin:0}
+.pkr-record-dialog button{min-height:44px;cursor:pointer;font:inherit;touch-action:manipulation}
+.pkr-record-heading>button,.pkr-record-pagination button,.pkr-record-error button{flex:none;padding:9px 12px;border:1px solid var(--pkr-a-line);border-radius:9px;background:var(--pkr-a-raised);color:var(--pkr-a-text);font-size:12px}
+.pkr-record-body{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0;padding:8px 13px}
+.pkr-record-search{display:grid;gap:5px;color:var(--pkr-a-muted);font-size:11px;padding:7px 10px}
+.pkr-record-search input{width:100%;min-height:44px;padding:9px 11px;background:var(--pkr-a-raised);border:1px solid var(--pkr-a-line);border-radius:9px;color:var(--pkr-a-text);font-size:16px}
+.pkr-record-row{display:flex;width:100%;min-height:63px;align-items:center;gap:12px;padding:12px 9px;text-align:left;background:transparent;color:var(--pkr-a-text);border:0;border-bottom:1px solid var(--pkr-a-line);font:inherit}
+.pkr-record-row>span:first-child{min-width:0;flex:1;display:grid;gap:4px}
+.pkr-record-row strong{font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.pkr-record-row small{font-size:11px;line-height:1.4;color:var(--pkr-a-muted);overflow-wrap:anywhere}
+.pkr-record-row b{font:700 13px/1.3 var(--font-num),monospace;color:var(--pkr-a-money);white-space:nowrap}
+button.pkr-record-row:hover{background:var(--pkr-a-raised)}
+.pkr-record-dialog :is(button,input):focus-visible{outline:2px solid var(--pkr-a-primary);outline-offset:2px}
+.pkr-record-empty{padding:25px 12px;color:var(--pkr-a-muted);font-size:13px;line-height:1.6}
+.pkr-record-error{padding:13px;margin:8px 0;border:1px solid #665326;border-radius:10px;background:#2c261b;color:#f4d795;font-size:12px;line-height:1.5}
+.pkr-record-pagination{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 3px;font-size:11px;color:var(--pkr-a-muted)}
+.pkr-record-dialog button:disabled{opacity:.4;cursor:not-allowed}
+.pkr-record-footer{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--pkr-a-line);font-size:11px;color:var(--pkr-a-muted)}
+.pkr-record-footer button{padding:9px 17px;border:0;border-radius:9px;background:var(--pkr-a-primary);color:var(--pkr-a-on-primary);font-weight:700;font-size:12px;flex:none}
+
+/* Native top-layer portals also cover scanner, upgrade, create and confirmation dialogs. */
+.pkr-app.pkr-dialog-root{display:contents!important;margin:0!important;padding:0!important;min-height:0!important}
+.pkr-dialog-root .pkr-native-dialog.modal-overlay{position:fixed!important;top:var(--pkr-visible-top)!important;left:0!important;right:0!important;bottom:auto!important;margin:0!important;max-width:none!important;width:100vw!important;height:var(--pkr-visible-height)!important;max-height:var(--pkr-visible-height)!important;border:0!important;border-radius:0!important;background:transparent!important;backdrop-filter:none!important;overflow-y:auto!important;overscroll-behavior:contain;box-sizing:border-box!important;padding:calc(12px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important;align-items:center!important;justify-content:center!important}
+.pkr-dialog-root .pkr-native-dialog[open]{display:flex!important}
+.pkr-dialog-root .pkr-native-dialog:not([open]){display:none!important}
+.pkr-dialog-root .pkr-native-dialog>div{box-sizing:border-box;max-height:calc(var(--pkr-visible-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 26px)!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0;flex-shrink:1}
+.pkr-native-dialog button{min-height:44px}
+.pkr-mobile-more-panel{max-height:calc(var(--pkr-visible-height) - var(--pkr-navigation-height) - 30px)!important;bottom:calc(var(--pkr-navigation-height) + 8px)!important;overscroll-behavior:contain}
+.pkr-financial-notice,.pkr-update-notice,.pkr-connection-notice{position:fixed!important;bottom:calc(max(var(--pkr-navigation-height),env(safe-area-inset-bottom)) + 12px)!important;left:max(12px,env(safe-area-inset-left))!important;right:max(12px,env(safe-area-inset-right))!important;max-width:450px;margin:0 auto;max-height:calc(var(--pkr-visible-height) - var(--pkr-navigation-height) - 32px);overflow-y:auto;z-index:19000;background:var(--pkr-a-raised)!important;color:var(--pkr-a-text)!important;border:1px solid var(--pkr-a-line)!important;border-radius:13px;padding:14px;box-shadow:0 15px 45px #0008;box-sizing:border-box}
+.pkr-financial-notice :is(a,button){min-height:44px;display:inline-flex;align-items:center;color:var(--pkr-a-primary)!important;border-color:var(--pkr-a-line)!important}
+.pkr-update-notice{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.pkr-update-notice button{min-height:44px;background:transparent;border:0;color:var(--pkr-a-primary);font-weight:650;cursor:pointer}
+.pkr-connection-notice{font-size:12px;border-color:#665326!important;bottom:auto!important;top:calc(var(--pkr-visible-top) + env(safe-area-inset-top) + 10px)}
+body:has(.pkr-financial-notice) .pkr-update-notice{display:none}
+body:has(dialog[open]) :is(.pkr-financial-notice,.pkr-update-notice){visibility:hidden}
+/* Gameplay uses its own tab bar and imperative sheets. Keep those actions above it too. */
+body:has(#gameScreen) :is(.sheet,.overlay){z-index:22000!important;top:var(--pkr-visible-top)!important;bottom:auto!important;height:var(--pkr-visible-height)!important;max-height:var(--pkr-visible-height)!important;box-sizing:border-box!important;padding-top:env(safe-area-inset-top)!important}
+body:has(#gameScreen) :is(.sheet-box,.overlay>.modal){max-height:calc(var(--pkr-visible-height) - env(safe-area-inset-top) - 20px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+body:has(#gameScreen) .sheet-body{padding-bottom:calc(20px + env(safe-area-inset-bottom))!important;min-height:0}
+body:has(#gameScreen) .game-tabs{padding-bottom:env(safe-area-inset-bottom)}
+body:has(#gameScreen) :is(#toast,#waToast,#notifBanner){bottom:calc(max(var(--pkr-navigation-height),90px) + env(safe-area-inset-bottom) + 12px)!important;max-height:calc(var(--pkr-visible-height) - 130px - env(safe-area-inset-bottom));overflow-y:auto;z-index:23000!important}
+body:has(#gameScreen) #toast{white-space:normal!important;max-width:calc(100vw - 24px);text-align:center}
+body:has(#gameScreen):has(.sheet.open,.sheet.show,.overlay.open,.overlay.show) .pkr-financial-notice{visibility:hidden}
+@media(max-width:700px){
+ .pkr-insights-refresh>.pkr-vnext-insights-top{padding:17px!important;gap:10px!important}
+ .pkr-insights-refresh .pkr-insights-intro h1{font-size:clamp(26px,7.5vw,34px)!important}
+ .pkr-insights-refresh .pkr-insights-intro p{font-size:12px!important}
+ .pkr-insights-refresh .pkr-insights-selector{min-width:0!important;width:100%!important;max-width:none!important;flex-basis:auto!important}
+ .pkr-installed .pkr-event .pkr-event-tabs{top:calc(60px + env(safe-area-inset-top))!important}
+ .pkr-record-dialog{top:calc(var(--pkr-visible-top) + var(--pkr-visible-height))!important;transform:translate(-50%,-100%)!important;width:100%;border-radius:20px 20px 0 0;border-bottom:0!important;max-height:calc(var(--pkr-visible-height) - env(safe-area-inset-top) - 10px)!important}
+ .pkr-record-heading{padding:18px 17px 13px}
+ .pkr-record-body{padding:6px 9px}
+ .pkr-record-footer{padding-left:16px;padding-right:16px}
+ .pkr-app :is(input,select,textarea),.pkr-native-dialog :is(input,select,textarea){font-size:16px!important}
+}
+@media(prefers-reduced-motion:reduce){.pkr-metric-trigger,.pkr-record-dialog,.pkr-native-dialog{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.pkr-record-action{font:inherit!important;background:transparent!important;color:inherit!important;cursor:pointer!important;touch-action:manipulation;border:1px solid transparent;text-align:left}
+.pkr-record-action:focus-visible{outline:2px solid var(--pkr-a-primary)!important;outline-offset:3px}
+.pkr-insights-refresh .pkr-vnext-card button.pkr-record-action{font:inherit!important;color:inherit!important}
+.pkr-vnext-bar-column.pkr-record-action{padding:0 2px!important;border-radius:8px}
+.pkr-vnext-performance-row.pkr-record-action{width:100%;text-align:left}
+.pkr-insights-player-mobile-row>.pkr-metric-trigger{flex-direction:row;align-items:center;gap:10px}
+.pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-player-mobile-info{flex:1;min-width:0}
+.pkr-insights-players td>.pkr-metric-trigger{min-height:36px;justify-content:center;align-items:flex-start}
+/* The small-screen layout hides the desktop hero; retain its useful record cards. */
+@media(max-width:700px){
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero:has(.pkr-metric-trigger){display:block!important;min-height:0!important;padding:0!important;background:transparent!important;border:0!important;overflow:visible!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero-content{display:block!important;padding:0!important;width:100%!important;max-width:none!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-hero-content>:not(.pkr-pro-stats),.pkr-dashboard .pkr-pro-home .pkr-pro-hero:has(.pkr-metric-trigger)>.pkr-pro-art{display:none!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0!important;padding:0!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats>div{display:block!important;min-width:0;padding:13px!important}
+ .pkr-dashboard .pkr-pro-home .pkr-pro-stats .pkr-metric-trigger{display:flex!important;min-height:78px;align-items:flex-start}
+}

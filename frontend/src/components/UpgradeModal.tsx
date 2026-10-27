@@ -1,4 +1,6 @@
 'use client';
+import AppDialog from '@/components/AppDialog';
+
 // frontend/src/components/UpgradeModal.tsx
 // Drop this component into any page that uses gated actions.
 // It listens for the global 'pkr:upgrade_required' event fired by api.ts on 402.
@@ -120,7 +122,7 @@ export default function UpgradeModal() {
   };
 
   return (
-    <div style={s.overlay} onClick={() => setOpen(false)}>
+    <AppDialog style={s.overlay} onClick={() => setOpen(false)} aria-label="Choose a PKR plan">
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         <button style={s.closeBtn} onClick={() => setOpen(false)}>✕</button>
 
@@ -215,6 +217,6 @@ export default function UpgradeModal() {
           </button>
         </div>
       </div>
-    </div>
+    </AppDialog>
   );
 }
