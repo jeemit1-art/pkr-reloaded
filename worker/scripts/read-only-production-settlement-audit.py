@@ -97,7 +97,33 @@ def main():
     )
     if len(extras)!=1:
         raise RuntimeError("Unexpected grouped D1 count.")
-    show_summary(groups,audits,extras)
+    summary=show_summary(groups,audits,extras)
+    # A unique 8-record / 82,400-cent game would explain the discrepancy,
+    # but does NOT authorise changing it. Check aggregate timing only.
+    cohort=release.remote_query("""
+      WITH per_game AS (
+       SELECT t.game_id,COUNT(*) AS n,COALESCE(SUM(t.amount),0) AS cents,
+              MAX(g.scheduled_at) AS scheduled,MAX(t.created_at) AS created
+       FROM settlement_transfers t JOIN games g ON g.id=t.game_id
+       WHERE t.status='legacy' GROUP BY t.game_id
+      )
+      SELECT
+       (SELECT COUNT(*) FROM per_game WHERE n=8 AND cents=82400) AS candidate_games,
+       (SELECT n FROM per_game ORDER BY scheduled DESC,game_id DESC LIMIT 1) AS latest_scheduled_count,
+       (SELECT cents FROM per_game ORDER BY scheduled DESC,game_id DESC LIMIT 1) AS latest_scheduled_cents,
+       (SELECT n FROM per_game ORDER BY created DESC,game_id DESC LIMIT 1) AS latest_created_count,
+       (SELECT cents FROM per_game ORDER BY created DESC,game_id DESC LIMIT 1) AS latest_created_cents
+    """)
+    if len(cohort)!=1:
+        raise RuntimeError("Cannot evaluate grouped excess cohort.")
+    item=cohort[0]
+    print("Extra-cohort diagnostic (READ ONLY): 8 transfers / 82,400 cents is the observed excess.")
+    print("Games containing exactly this excess:",numeric(item,"candidate_games"))
+    print("Most recently scheduled legacy game's count/cents:",
+          numeric(item,"latest_scheduled_count"),"/",numeric(item,"latest_scheduled_cents"))
+    print("Most recently inserted legacy game's count/cents:",
+          numeric(item,"latest_created_count"),"/",numeric(item,"latest_created_cents"))
+    print("This summary never supplies a game ID, selects players, or approves payment changes.")
 
 
 if __name__=="__main__":
