@@ -6,6 +6,15 @@ on:
       - design/pkr-classic-poker-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
+      - 'frontend/src/app/pkr-classic-poker-studio.css'
+      - 'frontend/src/app/layout.tsx'
+      - 'frontend/src/app/page.tsx'
+      - 'frontend/src/app/dashboard/**'
+      - 'frontend/src/app/insights/**'
+      - 'frontend/src/app/events/**'
+      - 'frontend/src/app/games/**'
+      - 'frontend/src/components/PersistentNavigation.tsx'
+      - 'frontend/tests/viewport-smoke.cjs'
 
 permissions:
   contents: write
