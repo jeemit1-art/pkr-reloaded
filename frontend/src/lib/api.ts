@@ -74,7 +74,7 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
 
 export const api = {
   phoneInvites: {
@@ -98,7 +98,7 @@ export const api = {
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
     recoverContact:(id:string,contactId:string)=>req<{ok:boolean;url:string;whatsapp_url:string}>(`/events/${id}/phone-contacts/${contactId}/recovery`,{method:'POST'}),
     joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>}>(`/events/${id}/join-requests`),
-    decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
+    decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean;contact_id?:string}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
     phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
     inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>
       req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),

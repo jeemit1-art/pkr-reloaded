@@ -38,10 +38,48 @@ router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
     const result=await c.env.DB.prepare(
       'SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts WHERE event_id=? ORDER BY display_name'
     ).bind(eventId).all<Contact & {created_at:number}>();
-    const contacts=await Promise.all(result.results.map(async row=>({
-      id:row.id,display_name:row.display_name,phone:await decryptPhone(c.env,row.phone_cipher),
-      status:row.user_id?'joined':'invited',created_at:row.created_at
-    })));
+    // Host approval is a separate state from actual room membership. A player
+    // must still redeem their own private claim before event_members is created.
+    // Always show this distinction instead of calling approved joins "pending".
+    const pendingKeys=await c.env.KV.list({prefix:'join-request:'+eventId+':'});
+    const pendingContactIds=new Set<string>();
+    await Promise.all(pendingKeys.keys.map(async k=>{
+      const raw=await c.env.KV.get(k.name);
+      if(!raw)return;
+      try{
+        const state=JSON.parse(raw);
+        if(state.event_id===eventId&&typeof state.contact_id==='string')
+          pendingContactIds.add(state.contact_id);
+      }catch{}
+    }));
+    // Existing approvals (created before the contact-index improvement) only
+    // have approved-join:<claim-hash>. Include them so a recent real approval
+    // displays correctly after this hotfix, without modifying membership.
+    const legacyApprovedContactIds=new Set<string>();
+    let approvedCursor:string|undefined;
+    for(let page=0;page<5;page++){
+      const listed=await c.env.KV.list({prefix:'approved-join:',...(approvedCursor?{cursor:approvedCursor}:{})});
+      await Promise.all(listed.keys.map(async k=>{
+        const raw=await c.env.KV.get(k.name);
+        if(!raw)return;
+        try{
+          const state=JSON.parse(raw);
+          if(state.event_id===eventId&&typeof state.contact_id==='string')
+            legacyApprovedContactIds.add(state.contact_id);
+        }catch{}
+      }));
+      if(listed.list_complete||!listed.cursor)break;
+      approvedCursor=listed.cursor;
+    }
+    const contacts=await Promise.all(result.results.map(async row=>{
+      const approved=await c.env.KV.get('approved-contact:'+eventId+':'+row.id);
+      const status=row.user_id?'joined'
+        :approved||legacyApprovedContactIds.has(row.id)?'approved_awaiting_member'
+        :pendingContactIds.has(row.id)?'awaiting_host_approval':'invited';
+      return {id:row.id,display_name:row.display_name,
+        phone:await decryptPhone(c.env,row.phone_cipher),
+        status,created_at:row.created_at};
+    }));
     privateHeaders(c);
     return c.json({contacts});
   }catch{return failed(c);}
@@ -215,9 +253,11 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
     ).bind(state.invite_id,id).first();
     if(!invite)return c.json({error:'Original invitation expired; resend it'},409);
     await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify({...state,approved_at:Date.now()}),{expirationTtl:3600});
+    // Read-only visibility for the room host; this is not membership.
+    await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:3600});
   }
   await c.env.KV.delete(key);
-  return c.json({ok:true,approved:body?.approve===true});
+  return c.json({ok:true,approved:body?.approve===true,contact_id:state.contact_id});
 });
 router.post('/phone-invites/complete-approval',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
@@ -255,6 +295,7 @@ router.post('/phone-invites/complete-approval',async c=>{
   const results=await c.env.DB.batch(writes);
   if(!results[contact.user_id?0:1]?.meta.changes)return c.json({error:'Invitation already redeemed'},409);
   await c.env.KV.delete('approved-join:'+hash);
+  await c.env.KV.delete('approved-contact:'+state.event_id+':'+state.contact_id);
   // Successful registration is useful for the host to know; never include
   // a phone number in a lock-screen notification.
   try {
