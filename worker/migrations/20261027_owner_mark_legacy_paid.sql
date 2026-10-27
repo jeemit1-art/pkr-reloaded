@@ -29,6 +29,10 @@ SET status='paid', paid_at=COALESCE(paid_at,unixepoch()),
     last_reminded_at=NULL
 WHERE status='legacy';
 
+-- Remove this one-time audit trigger so it cannot misattribute later
+-- independent status changes to the 27 October owner instruction.
+DROP TRIGGER IF EXISTS trg_owner_legacy_paid_20261027_audit;
+
 -- Read-only post-verification. Inspect result and archive privately.
 SELECT COUNT(*) AS legacy_remaining,
        COALESCE(SUM(amount),0) AS legacy_remaining_cents
