@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './pkr-theme-a.css';
+import './pkr-dialog-safety.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -63,7 +64,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           if('serviceWorker' in navigator)
             window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));
         `}}/>
-
       </body>
     </html>
   );
