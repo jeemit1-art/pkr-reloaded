@@ -150,6 +150,15 @@ async function test(){
       if(productWidth.scroll>productWidth.viewport+5)
         errors.push(size.name+' product screenshot gallery introduces horizontal overflow');
       if(size.name==='desktop'){
+        // Production social artwork is generated as a branded PNG — old gold
+        // share imagery must not be advertised in OpenGraph metadata.
+        const share=await guestPage.request.get(BASE+'/opengraph-image');
+        if(!share.ok()||!(share.headers()['content-type']||'').includes('image/png')||
+           (await share.body()).length<5000)
+          errors.push('Theme A 1200×630 share artwork unavailable as PNG');
+        const social=await guestPage.locator('meta[property="og:image"]').getAttribute('content');
+        if(!social?.includes('/opengraph-image'))
+          errors.push('Theme A social share metadata still points to legacy gold image');
         for(const asset of ['/demo/live-table.webp','/demo/host-dashboard.webp','/demo/rsvp-board.webp','/demo/insights.webp','/demo/mobile-live-table.webp']){
           const response=await guestPage.request.get(BASE+asset);
           if(!response.ok()||(await response.body()).length<10000)
