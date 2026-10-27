@@ -103,7 +103,8 @@ export default function PersistentNavigation(){
  },[pathname,hasSession]);
  if(!allowed||!hasSession)return null;
 
- const preferredRoom=rooms.find(r=>r.id===preferredRoomId);
+ // Archived rooms remain accessible from history, but never become the default.
+ const preferredRoom=rooms.find(r=>r.id===preferredRoomId&&r.status!=='ended');
  const eventId=pathname.match(/^\/events\/([^/]+)/)?.[1]
   ||gameEventId||preferredRoom?.id||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
@@ -116,10 +117,10 @@ export default function PersistentNavigation(){
   switch(name){
    case 'Home':return pathname==='/dashboard';
    case 'Games':case 'Rooms':case 'Rooms & games':
-    return inGame||(inRoom&&(mobile?roomTab!=='members':roomTab==='games'||roomTab==='history'));
+    return inGame||(inRoom&&(roomTab==='games'||roomTab==='history'));
    case 'Standings':case 'Players':return inRoom&&roomTab==='leaderboard';
    case 'Members':return inRoom&&roomTab==='members';
-   case 'Insights':return pathname==='/insights'&&(mobile||!isSettlement);
+   case 'Insights':return pathname==='/insights'&&!isSettlement;
    case 'Settlements':case 'Settle':return isSettlement;
    case 'Schedule':return pathname==='/schedule';
    case 'Install':case 'Install PKR':return pathname==='/install';
