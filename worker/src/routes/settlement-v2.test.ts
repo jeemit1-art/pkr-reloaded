@@ -45,9 +45,9 @@ function fixture(){
         async run(){
           if(sql.startsWith('UPDATE settlement_transfers SET status=')){
             let item:Item|undefined;
-            if(sql.includes('status=?')&&args.length===6)
-              item=rows.find(x=>x.id===args[4]&&x.game_id===args[3]&&x.status===args[5]);
-            else if(args.length===6)
+            if(sql.includes('WHERE game_id=? AND id=?')&&args.length===5)
+              item=rows.find(x=>x.id===args[3]&&x.game_id===args[2]&&x.status===args[4]);
+            else if(sql.includes('WHERE id=? AND game_id=?')&&args.length===6)
               item=rows.find(x=>x.id===args[3]&&x.game_id===args[4]&&x.status===args[5]);
             if(!item)return{meta:{changes:0}};
             item.status=args[0];item.paid_at=args[1];item.last_reminded_at=args[2];
