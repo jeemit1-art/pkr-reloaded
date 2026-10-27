@@ -35,7 +35,7 @@ const photos=[
   source:'https://unsplash.com/photos/closeup-photography-of-poker-chip-set-MJX7-BAdkt0',
   description:'Close-up photograph of a real set of poker chips, cropped to omit playing-card branding',
   width:1350,
-  cropLeft:0.28
+  cropLeft:0.40
  }
 ];
 
