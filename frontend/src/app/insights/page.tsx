@@ -246,21 +246,46 @@ export default function InsightsPage(){
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
+     {settlementView==='transfers'&&canManagePayments&&filteredTransfers.length>0&&
+       <div className="pkr-insights-bulk-actions" style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',margin:'12px 0'}}>
+         <span style={{fontSize:12}}>{selectedTransfers.length} selected</span>
+         <button type="button" className="btn btn-primary" disabled={paymentBusy!==null||!selectedTransfers.length}
+           onClick={()=>void bulkPaymentStatus('paid')}>Mark selected paid</button>
+         <button type="button" className="btn btn-outline" disabled={paymentBusy!==null||!selectedTransfers.length}
+           onClick={()=>void bulkPaymentStatus('owed')}>Mark selected unpaid</button>
+         <button type="button" disabled={paymentBusy!==null||!selectedTransfers.length}
+           onClick={()=>setSelectedTransfers([])}>Clear selection</button>
+       </div>}
      {settlementView==='transfers'&&
-      (filteredTransfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      (filteredTransfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr>
+       {canManagePayments&&<th><input type="checkbox" aria-label="Select all visible settlement transfers"
+          disabled={paymentBusy!==null||!selectable.length} checked={!!selectable.length&&selectedHere.length===selectable.length}
+          onChange={e=>{
+            const keys=selectable.map(selectionKey);
+            setSelectedTransfers(prev=>e.target.checked?[...new Set([...prev,...keys])]:prev.filter(k=>!keys.includes(k)));
+          }}/></th>}
+       <th>From</th><th>To</th><th>Amount</th><th>Status</th><th>Action</th>
+      </tr></thead><tbody>
        {pageTransfers.map((item,i)=><tr key={item.game.id+':'+(item.transfer.id||i)}>
+        {canManagePayments&&<td>{item.transfer.id&&item.transfer.status!=='legacy'&&
+          <input type="checkbox" aria-label={'Select settlement '+item.transfer.from_name+' to '+item.transfer.to_name}
+            disabled={paymentBusy!==null}
+            checked={selectedTransfers.includes(selectionKey(item))}
+            onChange={e=>setSelectedTransfers(prev=>e.target.checked
+              ?[...new Set([...prev,selectionKey(item)])]:prev.filter(k=>k!==selectionKey(item)))}/>}</td>}
         <td>{item.transfer.from_name}</td><td>{item.transfer.to_name}</td><td>{fmt(item.transfer.amount)}</td>
         <td>
           {canManagePayments&&item.transfer.id&&item.transfer.status!=='legacy'?
            <select className={'pkr-payment-status-select '+(item.transfer.status==='paid'?'paid':item.transfer.status==='not_received'?'not-received':'pending')}
              aria-label={'Payment status for '+item.transfer.from_name+' to '+item.transfer.to_name}
-             value={item.transfer.status==='paid'?'paid':item.transfer.status==='not_received'?'not_received':'owed'}
+             value={item.transfer.status==='paid'?'paid':item.transfer.status==='not_received'?'not_received':item.transfer.status==='payer_claimed'?'payer_claimed':'owed'}
              disabled={paymentBusy!==null||loadingDetails}
              onChange={e=>void setPaymentStatus(item,e.target.value as 'owed'|'paid'|'not_received')}>
              <option value="owed">Pending</option><option value="paid">Paid</option><option value="not_received">Not received</option>
+             <option value="payer_claimed" disabled>Sent · awaiting receipt</option>
            </select>
            :<span className={'pkr-vnext-status '+(item.transfer.status==='paid'?'paid':'pending')}>
-             {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='legacy'?'Historical · unverified':'Pending'}
+             {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='payer_claimed'?'Sent · awaiting receipt':item.transfer.status==='legacy'?'Historical · unverified':'Pending'}
            </span>}
          </td>
         <td><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button></td>
