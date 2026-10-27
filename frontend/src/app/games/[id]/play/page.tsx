@@ -180,53 +180,57 @@ export default function PlayPage() {
 
       {/* ── GAME SCREEN ── */}
       <div id="gameScreen" className="screen pkr-casino-live-table">
-        <div className="topbar">
-          <button className="tb-back" id="backBtn" onClick={() => {
+        <div className="topbar pkr-approved-topbar">
+          <button className="tb-back" id="backBtn" aria-label="Back to room" onClick={() => {
             try {
               const c = JSON.parse(localStorage.getItem('pkrCtx') || 'null');
               if (c?.eventId) { window.location.href = '/events/' + c.eventId; return; }
             } catch(e) {}
             window.location.href = '/dashboard';
-          }}>‹ PKR</button>
-          <div style={{display:'flex',flexDirection:'column',flex:1}}>
-            <div className="tb-title" id="topbarTitle">The Table</div>
-            <div id="gameCodeBadge" style={{display:'none',fontSize:'0.88rem',color:'var(--gold)',letterSpacing:'2.5px',fontWeight:700,lineHeight:1,paddingLeft:'12px'}}></div>
+          }}><span aria-hidden="true">‹</span> <span className="pkr-brand-name">PKR</span></button>
+          <div className="pkr-table-identity">
+            <span className="pkr-table-identity-icon" aria-hidden="true">🃏</span>
+            <span className="pkr-table-identity-copy">
+              <span className="tb-title" id="topbarTitle">The Table</span>
+              <span className="pkr-table-meta" id="topbarGameMeta" aria-live="off">Poker night</span>
+              <span id="gameCodeBadge" style={{display:'none'}}></span>
+            </span>
           </div>
-          <button id="trackHandsBtn" onClick={() => (window as any).toggleHandTracking?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Toggle hand tracking">🃏</button>
-          <button className="pkr-toolbar-secondary" onClick={() => (window as any).removeSeat?.()}
-            style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 9px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}}
-            title="Remove last empty seat" aria-label="Remove last empty seat">−🪑</button>
-          <button className="pkr-toolbar-secondary" onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
-          <button className="pkr-toolbar-secondary" onClick={openTournamentReliably} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
-          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
-          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
-          <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
-          <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
-            aria-controls="pkr-table-tools" aria-label={toolsOpen?'Close table tools':'Open table tools'}
-            onClick={() => setToolsOpen(v=>!v)}>☰ <span>Tools</span></button>
+          <div className="pkr-table-head-actions">
+            <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}
+              aria-label="Share live poker table" title="Share live table"><span aria-hidden="true">⇧</span></button>
+            <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
+              aria-controls="pkr-table-tools" aria-label={toolsOpen?'Close table tools':'Open table tools'}
+              onClick={() => setToolsOpen(v=>!v)} title="Table tools">
+              <span aria-hidden="true">•••</span>
+            </button>
+          </div>
         </div>
 
-        <div id="pkr-table-tools" className={'pkr-mobile-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
+        <div id="pkr-table-tools" className={'pkr-mobile-tools pkr-approved-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
+          <span className="pkr-tools-caption">Table tools</span>
+          <button id="trackHandsBtn" type="button" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>🃏 Hand tracking</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>🏆 Tournament</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>🏆 Tournament controls</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
         </div>
 
         {/* Bank Bar */}
         <div className="bank-bar" id="bankBar" role="button" tabIndex={0}
-          aria-label="Toggle bank summary" onClick={() => (window as any).toggleBank?.()}
+          aria-label="Toggle bank summary details" aria-expanded={false}
+          onClick={() => (window as any).toggleBank?.()}
           onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="bank-left">
-            <div className="bank-icon">💳</div>
-            <span className="bank-label">Bank Summary</span>
+            <div className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></div>
+            <span className="bank-label">Bank <span className="pkr-bank-label-extra">Summary</span></span>
           </div>
           <div className="bank-right">
-            <span className="bank-pill g"><small>IN</small><b id="bbIn">$0</b></span>
-            <span className="bank-pill pkr-bank-out"><small>OUT</small><b id="bbOut">$0</b></span>
-            <span className="bank-pill pkr-bank-current"><small>BANK</small><b id="bbBank">$0</b></span>
-            <span className="bank-caret">▼</span>
+            <span className="bank-pill g"><span className="pkr-bank-visual pkr-bank-in" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>IN</small><b id="bbIn">$0</b></span></span>
+            <span className="bank-pill pkr-bank-out"><span className="pkr-bank-visual pkr-bank-out-icon" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>OUT</small><b id="bbOut">$0</b></span></span>
+            <span className="bank-pill pkr-bank-current"><span className="pkr-bank-visual pkr-bank-balance" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>BANK</small><b id="bbBank">$0</b></span></span>
+            <span className="bank-caret" aria-hidden="true">⌄</span>
           </div>
         </div>
         <div className="bank-panel" id="bankPanel">
@@ -257,14 +261,13 @@ export default function PlayPage() {
         </div>
 
         {/* Bottom Tab Bar */}
-        <div className="game-tabs">
-          <button className="game-tab" id="publishBtn" onClick={() => (window as any).openPublish?.()}><span className="game-tab-icon">📤</span>Share</button>
-          <button className="game-tab" id="lbInGameBtn" onClick={() => (window as any).openLeaderboard?.()}><span className="game-tab-icon">🏆</span>Leaderboard</button>
-          <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon">💸</span>Settle Up</button>
-          <button className="game-tab" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon">✅</span>Save Results</button>
-          <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon">🃏</span>Hands</button>
-
-          <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon">🏁</span>End Game</button>
+        <div className="game-tabs pkr-approved-game-dock" aria-label="Game actions">
+          <button className="game-tab" id="publishBtn" onClick={() => (window as any).openPublish?.()}><span className="game-tab-icon" aria-hidden="true">⇧</span><span>Share</span></button>
+          <button className="game-tab" id="lbInGameBtn" onClick={() => (window as any).openLeaderboard?.()}><span className="game-tab-icon" aria-hidden="true">🏆</span><span>Leaderboard</span></button>
+          <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon" aria-hidden="true">💵</span><span>Settle Up</span></button>
+          <button className="game-tab pkr-save-results-action" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true">✅</span> Save Results</button>
+          <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true">🃏</span><span>Hands</span></button>
+          <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon" aria-hidden="true">⚑</span><span>End Game</span></button>
         </div>
       </div>
 
@@ -1657,7 +1660,7 @@ window.toggleBank = function() {
   var panel = document.getElementById('bankPanel');
   var bar = document.getElementById('bankBar');
   if (panel) panel.classList.toggle('open');
-  if (bar) bar.classList.toggle('open');
+  if (bar) { var expanded = bar.classList.toggle('open'); bar.setAttribute('aria-expanded', expanded ? 'true' : 'false'); }
 };
 
 function updateBank() {
@@ -1706,6 +1709,8 @@ function renderTable() {
   var players = Object.values(state.players).filter(function(p){ return p && p.name; });
   var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
+  var headerMeta = document.getElementById('topbarGameMeta');
+  if (headerMeta) headerMeta.textContent = active + ' active · ' + players.length + ' seated';
   buildSeats(state.game.seats, tW, tH, cx, cy, wideTable);
   updateBank();
   updateSaveResultsBtn();
