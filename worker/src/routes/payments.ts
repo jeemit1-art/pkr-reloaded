@@ -49,8 +49,7 @@ interface PayTransfer {
   to_name:string;amount:number;status:string;paid_at:number|null;
   last_reminded_at:number|null;
 }
-const safeMoney=(cents:number)=>'
-+(cents/100).toFixed(2);
+const safeMoney=(cents:number)=>String.fromCharCode(36)+(cents/100).toFixed(2);
 const v2=(c:any)=>c.env.PKR_SETTLEMENT_V2==='1';
 async function settledGame(c:any,gameId:string):Promise<PayGame|null>{
   return c.env.DB.prepare(
