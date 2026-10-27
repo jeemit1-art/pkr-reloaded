@@ -1,4 +1,7 @@
 "use client";
+import RecordMetric from '@/components/RecordMetric';
+import AppDialog from '@/components/AppDialog';
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, fmtDate, fmt, fmtSign } from "@/lib/api";
@@ -195,11 +198,11 @@ export default function GamePage() {
               {label:'RSVPs',  value:yesRsvps.length,                          color:'var(--green)'},
               {label:'Seated', value:(game.players||[]).length,                color:'var(--ivory)'},
             ].map(s=>(
-              <div key={s.label}>
+              <div key={s.label}><RecordMetric request={{kind:s.label==='Seats'?'seats':s.label==='Buy-in'?'game':s.label==='RSVPs'?'rsvps':'players',title:s.label,gameId:id,filter:s.label==='RSVPs'?'yes':'all'}}>
                 <div className="display" style={{fontSize:20,color:s.color,fontWeight:500,lineHeight:1}}>{s.value}</div>
                 <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',
                   color:'var(--muted)',marginTop:3,fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>{s.label}</div>
-              </div>
+              </RecordMetric></div>
             ))}
           </div>
         </div>
@@ -208,9 +211,9 @@ export default function GamePage() {
             Here we show confirmed activity counts, not inferred money balances. */}
         {(game.players||[]).length>0 && (
           <div className="pkr-player-activity" aria-label="Player activity">
-            <div><strong>{seated.length}</strong><span>Players bought in</span></div>
-            <div><strong>{cashedOut.length}</strong><span>Players cashed out</span></div>
-            <div><strong>{(game.players||[]).length}</strong><span>Total players</span></div>
+            <div><RecordMetric request={{kind:'players',title:"Players bought in",gameId:id,filter:'bought-in'}}><strong>{seated.length}</strong><span>Players bought in</span></RecordMetric></div>
+            <div><RecordMetric request={{kind:'players',title:"Players cashed out",gameId:id,filter:'cashed-out'}}><strong>{cashedOut.length}</strong><span>Players cashed out</span></RecordMetric></div>
+            <div><RecordMetric request={{kind:'players',title:"All game players",gameId:id,filter:'all'}}><strong>{(game.players||[]).length}</strong><span>Total players</span></RecordMetric></div>
           </div>
         )}
 
@@ -448,7 +451,7 @@ export default function GamePage() {
 
       {/* Confirm modal */}
       {confirm && (
-        <div className="modal-overlay" onClick={()=>!acting&&setConfirm(null)}>
+        <AppDialog className="modal-overlay" onClick={()=>!acting&&setConfirm(null)}>
           <div className="modal animate-up" onClick={(e:any)=>e.stopPropagation()} style={{maxWidth:360}}>
             <div style={{padding:'24px 24px 0'}}>
               <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:8}}>
@@ -469,7 +472,7 @@ export default function GamePage() {
               </button>
             </div>
           </div>
-        </div>
+        </AppDialog>
       )}
     </div>
   );

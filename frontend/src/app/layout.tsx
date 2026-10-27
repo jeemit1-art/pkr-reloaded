@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import AppExperience from '@/components/AppExperience';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './pkr-theme-a.css';
 import FinancialNotice from '@/components/FinancialNotice';
@@ -25,7 +26,13 @@ const numberFont = JetBrains_Mono({
   display: 'swap',
 });
 
-export const metadata = {
+export const viewport: Viewport = {
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#0B0F12', colorScheme:'dark',
+};
+export const metadata: Metadata = {
+  applicationName:'PKR', manifest:'/manifest.json',
+  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black-translucent'},
+  icons:{icon:'/icon-192.png',apple:'/icon-192.png'},
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
   description:
     'PKR helps you manage private home poker games: track buy-ins and cash-outs, organize players, run tournament blinds, review leaderboards and see who owes whom. From AUD $9.99/month for hosts.',
@@ -54,16 +61,15 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${bodyFont.variable} ${numberFont.variable}`}>
+    <html lang="en-AU" className={`${display.variable} ${bodyFont.variable} ${numberFont.variable}`}>
       <body>
+        <AppExperience>
         <PersistentNavigation/>
         {children}
         <FinancialNotice/>
-        <script dangerouslySetInnerHTML={{__html:`
-          if('serviceWorker' in navigator)
-            window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));
-        `}}/>
 
+
+      </AppExperience>
       </body>
     </html>
   );

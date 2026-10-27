@@ -1,4 +1,6 @@
 'use client';
+import AppDialog from '@/components/AppDialog';
+
 import {Fragment,useEffect,useState} from 'react';
 import {usePathname,useRouter} from 'next/navigation';
 import {api,Event,getToken} from '@/lib/api';
@@ -190,14 +192,14 @@ export default function PersistentNavigation(){
    </button>)}
   </nav>
   {moreOpen&&<>
-   <button type="button" aria-label="Close additional navigation" className="pkr-mobile-more-overlay" onClick={()=>setMoreOpen(false)}/>
-   <div className="pkr-mobile-more-panel" role="dialog" aria-modal="true" aria-label="More PKR navigation">
+
+   <AppDialog aria-label="More PKR navigation" onDismiss={()=>setMoreOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setMoreOpen(false);}}><div className="pkr-mobile-more-panel"   >
     <div className="pkr-mobile-more-title"><strong>More from PKR</strong><button type="button" aria-label="Close menu" onClick={()=>setMoreOpen(false)}>×</button></div>
     <div className="pkr-mobile-more-grid">
      {moreNavigation.map(item=><button key={item.name} type="button" aria-current={selected(item.name)?'page':undefined}
       onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/>{item.name}</button>)}
     </div>
-   </div>
+   </div></AppDialog>
   </>}
  </>;
 }

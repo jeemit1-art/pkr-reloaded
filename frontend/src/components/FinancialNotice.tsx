@@ -41,7 +41,7 @@ export default function FinancialNotice(){
   position:'fixed',bottom:80,left:16,right:16,maxWidth:450,margin:'0 auto',zIndex:10000,
   background:'#19241f',color:'#fff',border:'2px solid #d4ad55',borderRadius:14,
   padding:18,boxShadow:'0 15px 45px #0009'
- }}>
+ }} className="pkr-financial-notice">
   <strong style={{fontSize:20,display:'block'}}>{label.heading}</strong>
   <p style={{fontSize:14,margin:'8px 0 14px'}}>{label.body}</p>
   <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
