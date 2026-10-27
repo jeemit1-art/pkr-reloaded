@@ -1,0 +1,61 @@
+name: Deploy Cloudflare production - PKR Settlement V2
+
+# Runs when reviewed Worker changes reach main, or manually after a token is added.
+# This deploys the existing Worker and an additive D1 schema, never a full database import.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/src/**'
+      - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/migrations/20261027_settlement_v2.sql'
+      - 'worker/wrangler.toml'
+      - '.github/workflows/deploy-cloudflare-production.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkr-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-settlement-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CI: 'true'
+    steps:
+      - name: Checkout reviewed code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install locked Worker dependencies
+        working-directory: worker
+        run: npm ci --no-audit --no-fund
+      - name: Check TypeScript, Worker unit tests and offline migration
+        working-directory: worker
+        run: |
+          npm run typecheck
+          npm test
+          python3 scripts/test-settlement-v2-migration.py
+          python3 scripts/test-owner-legacy-reconciliation.py
+          python3 -m py_compile scripts/deploy-settlement-v2-production.py
+      - name: Require Cloudflare Actions token
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN in GitHub Settings > Secrets and variables > Actions. No production changes made."
+            exit 1
+          fi
+      - name: Back up, verify, migrate, deploy and smoke-test Settlement V2
+        working-directory: worker
+        run: python3 scripts/deploy-settlement-v2-production.py
