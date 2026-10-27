@@ -62,7 +62,7 @@ function fixture(){
           }
           return{meta:{changes:1}};
         },
-      }}},
+      }}}},
       async batch(statements:any[]){const r=[];for(const st of statements)r.push(await st.run());return r},
     }};
   const call=(path:string,user:string,body?:any,method='POST')=>{
