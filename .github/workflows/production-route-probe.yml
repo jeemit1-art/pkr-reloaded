@@ -1,0 +1,52 @@
+name: PKR read-only live Worker route probe
+on:
+  pull_request:
+    paths:
+      - 'worker/**'
+      - '.github/workflows/production-route-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check only public health metadata and unauthenticated route status
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          url = 'https://pkr-reloaded-worker.jeemit1.workers.dev'
+          def request(path):
+              # Production release uses curl; Cloudflare can block Python-urllib User-Agent.
+              p=subprocess.run(['curl','--silent','--show-error','--max-time','20',
+                  '--header','Cache-Control: no-store','--output','/dev/null',
+                  '--write-out','%{http_code}',url+path],
+                  capture_output=True,text=True,timeout=25)
+              if p.returncode or len(p.stdout.strip())!=3:
+                  raise SystemExit('Live route request failed without a reliable HTTP status')
+              status=int(p.stdout.strip())
+              if path=='/health' and status==200:
+                  q=subprocess.run(['curl','--silent','--show-error','--fail','--max-time','20',
+                      '--header','Cache-Control: no-store',url+path],
+                      capture_output=True,timeout=25)
+                  return status,q.stdout[:8192] if q.returncode==0 else b''
+              return status,b''
+
+          health_status,health_body=request('/health')
+          if health_status != 200: raise SystemExit('Health HTTP status: '+str(health_status))
+          data=json.loads(health_body)
+          print('Worker environment:',str(data.get('environment'))[:30])
+          print('Worker release:',str(data.get('release'))[:80])
+          print('Feature gates:',{k:bool(v) for k,v in (data.get('features') or {}).items()
+                                  if k in ('settlement_v2','push_rooms_v2','phone_members_v1')})
+          status,_=request('/games/pkr-route-probe-only/settlement-control')
+          print('Unauthenticated Settlement V2 route status:',status,'(401 expected)')
+          if data.get('environment')!='production':raise SystemExit('Wrong Worker environment')
+          # Read-only diagnostic: prints actual status, does not mutate or change CI
+          # release decisions. The guarded production workflow enforces 401.
+          PY
