@@ -692,3 +692,106 @@
     linear-gradient(115deg,#311c26,#17181c 65%,#271b25)!important;
   background-color:#1c1920!important;
 }
+
+
+/* 10 · Create-game usability: essentials first; optional controls unfold on demand.
+   Existing createGame(), API, seat limits and tournament logic are untouched. */
+.pkr-classic-create-game-dialog{
+  box-sizing:border-box;
+  width:min(96vw,620px)!important;max-width:620px!important;
+  max-height:min(92dvh,900px)!important;
+  overflow-y:auto!important;overscroll-behavior:contain;
+  padding:clamp(19px,3.5vw,29px)!important;
+  background:#1b1b21!important;color:#f7f4f0!important;
+  border:1px solid #63434e!important;border-radius:18px!important;
+  box-shadow:0 30px 80px #000c!important;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-heading{
+  display:grid;gap:8px;margin-bottom:20px;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-kicker{
+  color:#f78a99;font-size:10px;font-weight:800;letter-spacing:.16em;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-title-row{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-title-row h2{
+  color:#fff6f3;font-family:var(--font-landing-display),system-ui,sans-serif;
+  font-size:clamp(24px,4.2vw,30px);font-weight:800;letter-spacing:-.045em;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-heading p{
+  color:#cfbec5;font-size:13px;line-height:1.55;max-width:500px;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-close{
+  display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;
+  background:#2d252d;border:1px solid #674653;border-radius:9px;
+  color:#f4d7dc;font-size:26px;cursor:pointer;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form{
+  display:grid;gap:15px!important;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form .lbl{
+  color:#e5d8dc!important;font-size:12px!important;letter-spacing:.015em;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form .inp{
+  min-height:45px;background:#28252d!important;
+  color:#fff!important;border:1px solid #70606b!important;border-radius:10px!important;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form .inp:focus-visible{
+  outline:3px solid #ff8696!important;outline-offset:1px!important;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form button[aria-pressed]{
+  border:1px solid #5c4953!important;
+  background:#28252b!important;color:#ece2e3!important;
+  border-radius:10px!important;min-height:44px!important;
+  padding:9px 13px!important;font-size:12px!important;
+  font-weight:750!important;cursor:pointer;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-form button[aria-pressed="true"]{
+  background:#df2e47!important;color:#fff8f8!important;
+  border:1px solid #fa6678!important;box-shadow:0 5px 13px #b80d3022;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details{
+  min-width:0;background:#222027;border:1px solid #5a4550;
+  border-radius:12px;overflow:hidden;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details summary{
+  display:flex;flex-wrap:wrap;justify-content:space-between;
+  align-items:center;gap:7px 12px;position:relative;cursor:pointer;
+  min-height:58px;padding:13px 40px 13px 15px;list-style:none;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details summary::-webkit-details-marker{display:none}
+.pkr-classic-create-game-dialog .pkr-create-game-details summary::after{
+  content:"⌄";position:absolute;right:15px;top:calc(50% - 13px);
+  color:#f98797;font-size:23px;transition:transform .18s;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details[open] summary::after{transform:rotate(180deg)}
+.pkr-classic-create-game-dialog .pkr-create-game-details summary strong{
+  color:#fff5f2;font-size:13px;font-weight:800;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details summary span{
+  color:#d0c0c7;font-size:11px;
+}
+.pkr-classic-create-game-dialog .pkr-create-game-details-body{
+  display:grid;gap:14px;padding:15px;border-top:1px solid #4b3d46;
+}
+.pkr-classic-create-game-dialog .pkr-unfinished-note{
+  margin-top:17px!important;background:#241e22!important;
+  border:1px solid #674b46!important;border-radius:10px!important;
+  color:#d5bec1!important;padding:12px!important;font-size:12px;
+  line-height:1.6;
+}
+.pkr-classic-create-game-dialog>.pkr-unfinished-note+div{
+  position:sticky;bottom:-1px;
+  background:linear-gradient(180deg,rgba(27,27,33,.84),#1b1b21 30%);
+  padding:12px 0 0;z-index:2;
+}
+.pkr-classic-create-game-dialog>.pkr-unfinished-note+div .btn-primary{
+  background:#df2e47!important;color:#fff!important;border-color:#fb6d80!important;min-height:48px;
+}
+@media(max-width:700px){
+  .pkr-classic-create-game-dialog{
+    width:min(96vw,600px)!important;max-height:92dvh!important;padding:18px!important;
+  }
+  .pkr-classic-create-game-dialog .pkr-create-game-details summary span{width:100%}
+}
