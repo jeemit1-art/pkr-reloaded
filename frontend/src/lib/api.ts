@@ -74,7 +74,7 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited';created_at?:number}
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
 
 export const api = {
   phoneInvites: {
