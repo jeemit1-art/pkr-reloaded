@@ -555,3 +555,61 @@
   .pkr-mobile-more-grid{grid-template-columns:1fr}
   .pkr-landing-v2 .pkr-l2-hero h1{font-size:42px!important}
 }
+
+
+/* 07 · Cash-game lobby: a room-first view that scales beyond phone width.
+   Internal RSVP, live links and data remain exactly as they were. */
+.pkr-classic-lobby{
+  --bg:#0b0b0e;
+  --bg2:#19191f;
+  --bg3:#25232a;
+  --bg4:#312831;
+  --white:#faf6f2;
+  --ivory:#e3d8d9;
+  --muted:#c5b8bf;
+  --faint:#999098;
+  --gold:#e0465b;
+  --gold-pale:#f9b7c1;
+  --gold-dim:#9e2a41;
+  --green:#58c48d;
+  --red:#ff6577;
+  --border:rgba(248,237,241,.18);
+  --border-sub:rgba(248,237,241,.1);
+  --border-hi:rgba(237,85,111,.55);
+  min-height:100vh!important;background:#0b0b0e!important;color:#f7f4ef;
+  font-family:var(--font-landing-body),system-ui,sans-serif;
+}
+.pkr-classic-lobby-top{max-width:680px!important}
+.pkr-classic-lobby-main{max-width:680px!important}
+.pkr-classic-lobby :is(.card,.card-gold){
+  background:#1b1a20!important;border:1px solid #55434e!important;border-radius:13px!important;
+}
+.pkr-classic-lobby .btn-primary{
+  background:#df2e47!important;border:1px solid #f76b80!important;color:#fff!important;
+  border-radius:10px!important;font-weight:800!important;
+}
+.pkr-classic-lobby .btn-ghost,
+.pkr-classic-lobby .btn-outline{
+  background:#29262d!important;border:1px solid #67515f!important;color:#f8eeee!important;
+  border-radius:10px!important;
+}
+.pkr-classic-lobby :is(input,select,textarea){
+  background:#25232a!important;border-color:#685760!important;color:#fff!important;
+  border-radius:9px!important;
+}
+.pkr-classic-lobby :is(h1,h2,.display){
+  font-family:var(--font-landing-display),system-ui,sans-serif!important;
+  color:#f9f4f2!important;letter-spacing:-.025em;
+}
+.pkr-classic-lobby :is(button,a,input,select):focus-visible{
+  outline:3px solid #ff7488!important;outline-offset:3px!important;
+}
+@media(max-width:700px){
+  .pkr-classic-lobby-main,.pkr-classic-lobby-top{padding-left:16px!important;padding-right:16px!important}
+  .pkr-classic-lobby-main .card{max-width:100%}
+}
+
+/* No surprises: these are intentionally NOT styled by the Classic layer.
+   - Live poker table and seats: #gameScreen, #tableOuter, #tableFelt
+   - Live-player action buttons, blind timers, server state and finances
+   - Synthetic demo images remain labelled until they can be recaptured. */
