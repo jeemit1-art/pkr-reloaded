@@ -109,6 +109,21 @@ describe('opt-in settlement V2 identity and money protection',()=>{
     expect(good.status).toBe(200);expect(f.rows[0].status).toBe('paid');
     expect(f.rows[1].status).toBe('legacy');
   });
+
+  it('sends per-person settlement requests only after host broadcast, with opt-in reminders',async()=>{
+    const f=fixture();
+    const res=await f.call('/games/g1/settlement-control/broadcast','host',{reminders_enabled:true});
+    expect(res.status).toBe(200);
+    const payload=await res.json() as {transfers:number;push_accepted:number;reminders_enabled:boolean};
+    expect(payload.transfers).toBe(1); // the unverified historical transfer is excluded
+    expect(payload.push_accepted).toBe(2); // one notification each to payer and recipient
+    expect(payload.reminders_enabled).toBe(true);
+    expect(f.settings.enabled).toBe(1);
+    const duplicate=await f.call('/games/g1/settlement-control/broadcast','host',{reminders_enabled:true});
+    expect(duplicate.status).toBe(429);
+    const pause=await f.call('/games/g1/settlement-control/reminders','host',{enabled:false},'PUT');
+    expect(pause.status).toBe(200);expect(f.settings.reminders_enabled).toBe(0);
+  });
   it('does not allow a non-manager to initiate settlement notifications',async()=>{
     const f=fixture();
     const denied=await f.call('/games/g1/settlement-control/broadcast','payer',{reminders_enabled:true});
