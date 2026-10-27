@@ -77,7 +77,13 @@ export default function InsightsPage(){
  const best=leadersByNet.find(p=>p.total_net>0);
  const maxNet=Math.max(1,...leaders.map(p=>Math.abs(p.total_net)));
  const filteredTransfers=period==='all'?transfers:transfers.filter(x=>x.game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400);
- const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid');
+ // Historical migration deliberately tagged old transfer statuses as 'legacy'.
+ // Those entries have *unknown* payment status. They are neither proven paid nor
+ // actionable debts; including them creates a false total outstanding balance.
+ // Keep the original records visible for review and never mutate them here.
+ const historical=filteredTransfers.filter(t=>t.transfer.status==='legacy');
+ const historicalTotal=historical.reduce((sum,row)=>sum+row.transfer.amount,0);
+ const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid'&&t.transfer.status!=='legacy');
  const paid=filteredTransfers.filter(t=>t.transfer.status==='paid');
  const perPage=20;
  const pageCount=Math.max(1,Math.ceil(filteredTransfers.length/perPage));
@@ -89,7 +95,7 @@ export default function InsightsPage(){
  const balances=useMemo(()=>{
   const map=new Map<string,{name:string;net:number}>();
   for(const {transfer} of filteredTransfers){
-   if(transfer.status==='paid')continue;
+   if(transfer.status==='paid'||transfer.status==='legacy')continue;
    const from=map.get(transfer.from)||{name:transfer.from_name,net:0};
    from.net-=transfer.amount;map.set(transfer.from,from);
    const to=map.get(transfer.to)||{name:transfer.to_name,net:0};
@@ -119,7 +125,7 @@ export default function InsightsPage(){
    }
  },[loadingRooms,rooms.length]);
  async function setPaymentStatus(row:SettlementRow,status:'owed'|'paid'|'not_received'){
-   if(!canManagePayments||!row.transfer.id||row.game.status!=='settled')return;
+   if(!canManagePayments||!row.transfer.id||row.game.status!=='settled'||row.transfer.status==='legacy')return;
    const current=row.transfer.status==='paid'?'paid':row.transfer.status==='not_received'?'not_received':'owed';
    if(status===current)return;
    const verb=status==='paid'?'Paid':status==='not_received'?'Not received':'Pending';
@@ -162,7 +168,7 @@ export default function InsightsPage(){
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></div>
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></div>
     <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></div>
-    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Outstanding</small><strong>{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'}</em></span></div>
+    <div className="pkr-insights-kpi"><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Confirmed outstanding</small><strong data-testid="current-outstanding">{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'} · excludes legacy</em></span></div>
    </section>
    {loadingDetails&&<p className="pkr-insights-loader" role="status">Updating the recorded results and settlement information…</p>}
    <div className="pkr-insights-overview-grid">
@@ -197,6 +203,9 @@ export default function InsightsPage(){
       {([['transfers','Who Pays Who'],['balances','Player Balances'],['status','Payment Status']] as const).map(([key,label])=>
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
+     {historical.length>0&&<p className="pkr-vnext-warning pkr-insights-legacy-notice" role="status" data-testid="legacy-settlement-notice">
+      <strong>Historical settlement records:</strong> {historical.length} transfer{historical.length===1?'':'s'} totalling {fmt(historicalTotal)} were migrated with unknown payment status. They are excluded from current amounts outstanding and player balances, but remain available below for review. <strong>These records have not been marked paid.</strong>
+     </p>}
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
@@ -214,7 +223,7 @@ export default function InsightsPage(){
              <option value="owed">Pending</option><option value="paid">Paid</option><option value="not_received">Not received</option>
            </select>
            :<span className={'pkr-vnext-status '+(item.transfer.status==='paid'?'paid':'pending')}>
-             {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='legacy'?'Legacy record':'Pending'}
+             {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='legacy'?'Historical · unverified':'Pending'}
            </span>}
          </td>
         <td><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button></td>
@@ -234,8 +243,9 @@ export default function InsightsPage(){
      {settlementView==='status'&&<div className="pkr-insights-payment-summary">
       <div><strong>{paid.length}</strong><span>Recorded as paid</span></div>
       <div><strong>{outstanding.length}</strong><span>Still outstanding</span></div>
-      <div><strong>{fmt(totalPending)}</strong><span>Total unpaid amount</span></div>
-      <p>These figures reflect recorded payment statuses only; no money is transferred by PKR. Use Who Pays Who to update statuses if you are the host or co-host.</p>
+      <div><strong>{fmt(totalPending)}</strong><span>Current outstanding (excluding legacy)</span></div>
+      <div><strong>{historical.length}</strong><span>Historical transfers · {fmt(historicalTotal)} unverified</span></div>
+      <p>Pending and paid figures reflect explicitly recorded payment statuses. Legacy records are excluded, not considered paid, and must be reconciled against external evidence before changing any status. PKR does not transfer money.</p>
      </div>}
     </section>
     <section className="pkr-vnext-card pkr-insights-recent">
