@@ -240,9 +240,13 @@ export default function InsightsPage(){
       {([['transfers','Who Pays Who'],['balances','Player Balances'],['status','Payment Status']] as const).map(([key,label])=>
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
-     {historical.length>0&&<p className="pkr-vnext-warning pkr-insights-legacy-notice" role="status" data-testid="legacy-settlement-notice">
-      <strong>Historical settlement records:</strong> {historical.length} transfer{historical.length===1?'':'s'} totalling {historicalDisplay} were migrated with unknown payment status. They are excluded from current amounts outstanding and player balances, but remain available below for review. <strong>These records have not been marked paid.</strong>
-     </p>}
+     {historical.length>0&&<details className="pkr-vnext-warning pkr-insights-legacy-notice" data-testid="legacy-settlement-notice" style={{padding:'10px 12px',margin:'10px 0',fontSize:12,lineHeight:1.45}}>
+      <summary style={{cursor:'pointer',fontWeight:650}}>
+       Historical payments: {historical.length} transfers · {historicalDisplay} — not marked paid
+       <span style={{fontWeight:400,marginLeft:6}}> · Details</span>
+      </summary>
+      <p style={{margin:'9px 0 0'}}>Payment status was unknown when these records were migrated. They are excluded from the current outstanding balance and player balances, but are still available below for review. <strong>These records have not been marked paid.</strong> An owner-authorised, audited reconciliation is prepared and must be applied to the correct Cloudflare database after a verified backup.</p>
+     </details>}
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
