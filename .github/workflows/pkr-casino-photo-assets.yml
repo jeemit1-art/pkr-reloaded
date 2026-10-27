@@ -1,0 +1,57 @@
+name: Prepare genuine casino photograph assets for PKR Classic
+
+on:
+  push:
+    branches:
+      - design/pkr-classic-poker-20261027
+    paths:
+      - '.github/workflows/pkr-casino-photo-assets.yml'
+      - 'frontend/scripts/download-casino-photo-assets.cjs'
+
+permissions:
+  contents: write
+
+jobs:
+  photograph-assets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout approved development branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Enforce development-only target
+        run: |
+          test "$GITHUB_REF" = "refs/heads/design/pkr-classic-poker-20261027"
+          test -f frontend/scripts/download-casino-photo-assets.cjs
+
+      - name: Set up pinned frontend dependency tree
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Download verified free-use photographs and optimise as WebP
+        run: node frontend/scripts/download-casino-photo-assets.cjs
+
+      - name: Commit only photographs and their source attribution
+        run: |
+          set -euo pipefail
+          git config user.name "PKR Asset Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/images/casino/
+          if git diff --cached --quiet; then
+            echo "Casino asset files are current"
+          else
+            git commit -m "assets: licensed real chips, poker cards and dice photographs"
+            git fetch origin design/pkr-classic-poker-20261027
+            git rebase origin/design/pkr-classic-poker-20261027
+            git push origin HEAD:refs/heads/design/pkr-classic-poker-20261027
+          fi
