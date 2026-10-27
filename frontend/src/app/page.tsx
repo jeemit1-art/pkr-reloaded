@@ -118,7 +118,6 @@ export default function HomePage() {
 
       <main>
         <section className="pkr-l2-hero" aria-labelledby="pkr-l2-main-heading">
-          <img className="pkr-l2-hero-art" src="/images/pkr-hero-premium.svg" alt="" aria-hidden="true" width="1600" height="640" fetchPriority="high"/>
           <div className="pkr-l2-hero-vignette" aria-hidden="true"/>
           <div className="pkr-l2-hero-inner">
             <div className="pkr-l2-hero-copy">
@@ -135,10 +134,10 @@ export default function HomePage() {
             <div className="pkr-hero-real" aria-label="Real PKR desktop poker table and mobile Insights screens, with demo data">
               <div className="pkr-hero-desktop">
                 <div className="pkr-hero-desktop-header"><span>PKR · THE LIVE TABLE</span><span>PKR APP INTERFACE</span></div>
-                <img src="/demo/live-table.webp" alt="Actual PKR green felt oval poker table with host controls and eight player seats, sample data" width="1440" height="900" fetchPriority="high"/>
+                <img src="/demo/theme-a/live-table.webp" alt="Actual PKR green felt oval poker table with host controls and eight player seats, sample data" width="1440" height="900" fetchPriority="high"/>
               </div>
               <div className="pkr-hero-mobile" aria-hidden="true">
-                <img src="/demo/mobile-insights.webp" alt="" width="390" height="844" loading="eager"/>
+                <img src="/demo/theme-a/mobile-insights.webp" alt="" width="390" height="844" loading="eager"/>
               </div>
               <div className="pkr-hero-real-label"><i aria-hidden="true"/> PKR · REAL APP PREVIEW</div>
             </div>
@@ -162,7 +161,7 @@ export default function HomePage() {
             <div className="pkr-l2-intro-highlights"><span><b>✓</b> Private room management</span><span><b>✓</b> Cash games and tournaments</span><span><b>✓</b> Full player history</span></div>
           </div>
           <div className="pkr-feature-photo-real">
-            <img src="/demo/host-dashboard.webp" alt="Actual PKR host dashboard showing a private poker room, upcoming games, members and results using sample data" width="1225" height="845" loading="lazy" decoding="async"/>
+            <img src="/demo/theme-a/host-dashboard.webp" alt="Actual PKR host dashboard showing a private poker room, upcoming games, members and results using sample data" width="1225" height="845" loading="lazy" decoding="async"/>
             <span>THE PKR HOST DASHBOARD</span>
           </div>
         </section>
@@ -176,21 +175,21 @@ export default function HomePage() {
           <div className="pkr-l2-feature-grid">
             <article className="pkr-l2-feature-card">
               <div className="pkr-real-feature-image">
-                <img src="/demo/rsvp-board.webp" alt="Real PKR RSVP screen with private room invitations and response choices" width="1225" height="845" loading="lazy" decoding="async"/>
+                <img src="/demo/theme-a/rsvp-board.webp" alt="Real PKR RSVP screen with private room invitations and response choices" width="1225" height="845" loading="lazy" decoding="async"/>
                 <span>PKR · RSVPS</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>01 / BEFORE</span><h3>Know who&apos;s coming.</h3><p>Collect RSVPs and arrival times, offer available seats and stop chasing the group chat.</p></div>
             </article>
             <article className="pkr-l2-feature-card">
               <div className="pkr-real-feature-image">
-                <img src="/demo/game-detail.webp" alt="Real PKR game details screen showing a scheduled game and Start Game controls" width="1225" height="845" loading="lazy" decoding="async"/>
+                <img src="/demo/theme-a/game-detail.webp" alt="Real PKR game details screen showing a scheduled game and Start Game controls" width="1225" height="845" loading="lazy" decoding="async"/>
                 <span>PKR · GAME SETUP</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>02 / DURING</span><h3>Run a better game.</h3><p>Keep buy-ins, player seating, blind levels and tournament progress together.</p></div>
             </article>
             <article className="pkr-l2-feature-card">
               <div className="pkr-real-feature-image">
-                <img src="/demo/insights.webp" alt="Real PKR Insights screen showing demo game totals, player balances and settlement records" width="1225" height="845" loading="lazy" decoding="async"/>
+                <img src="/demo/theme-a/insights.webp" alt="Real PKR Insights screen showing demo game totals, player balances and settlement records" width="1225" height="845" loading="lazy" decoding="async"/>
                 <span>PKR · INSIGHTS</span>
               </div>
               <div className="pkr-l2-feature-copy"><span>03 / AFTER</span><h3>Finish with clarity.</h3><p>Record cash-outs, review settlements and see every recorded player&apos;s results.</p></div>
@@ -232,7 +231,7 @@ export default function HomePage() {
         </section>
 
         <section className="pkr-l2-last-call">
-          <img src="/images/pkr-hero-premium.svg" alt="" aria-hidden="true" loading="lazy" width="1600" height="640"/>
+          <img className="pkr-l2-closing-art" src="/images/pkr-approved-hero-desktop.webp" alt="" aria-hidden="true" loading="eager" decoding="async" width="1600" height="500"/>
           <div><span className="pkr-l2-section-kicker">MADE FOR REGULAR GAME NIGHTS</span><h2>Deal everyone in.</h2><p>Build your private poker room and make the next game night one to remember.</p><button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start hosting <span aria-hidden="true">↗</span></button></div>
         </section>
         <section id="faq" className="pkr-l2-section pkr-l2-faq" aria-labelledby="pkr-faq-title">

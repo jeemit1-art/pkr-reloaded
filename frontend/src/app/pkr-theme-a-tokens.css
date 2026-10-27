@@ -1,0 +1,186 @@
+/* ==========================================================================
+   PKR THEME A / MIDNIGHT FELT — GLOBAL DESIGN TOKENS
+   Source: PKR_Design_Upgrade_Guide.pdf, pp. 5, 8, 11–17 (27 October 2026).
+   DESIGN ONLY: no routes, controls, user flows, backend, monetary logic,
+   subscriptions, seat positioning, or gameplay behaviour modified.
+   Loaded AFTER older PKR presentation layers to resolve colour conflicts.
+   ========================================================================== */
+:root {
+  /* Source-of-truth Theme A values (never override with older coral/gold). */
+  --pkr-a-bg:#0B0F12;
+  --pkr-a-surface:#131A1F;
+  --pkr-a-raised:#1B242B;
+  --pkr-a-line:#26323A;
+  --pkr-a-text:#EAF0F2;
+  --pkr-a-muted:#8A99A3;
+  --pkr-a-primary:#3DDC97;
+  --pkr-a-on-primary:#06251A;
+  --pkr-a-money:#F2B84B;
+  --pkr-a-danger:#FF5A5F;
+  --pkr-a-felt:#0F5C4A;
+  --pkr-a-radius-sm:6px;
+  --pkr-a-radius-md:10px;
+  --pkr-a-radius-lg:16px;
+  --pkr-a-border:1px solid var(--pkr-a-line);
+  --pkr-a-space:4px;
+  --font-head:var(--font-display);
+  --font-landing-display:var(--font-display);
+  --font-landing-body:var(--font-body);
+  /* Old components share the same global names. Keep every usage working. */
+  --bg:var(--pkr-a-bg);--bg2:var(--pkr-a-surface);
+  --bg3:var(--pkr-a-raised);--bg4:#202D35;
+  --white:var(--pkr-a-text);--ivory:#DCE7E8;
+  --muted:var(--pkr-a-muted);--faint:#657783;
+  --green:var(--pkr-a-primary);--green-dim:#167B5D;
+  --red:var(--pkr-a-danger);--red-dim:#A33742;
+  --amber:var(--pkr-a-money);
+  /* Legacy --gold generally means "primary", not a currency amount.
+     Money headlines deliberately use --pkr-a-money instead. */
+  --gold:var(--pkr-a-primary);--gold2:#6BE9B3;
+  --gold-dim:#278D70;--gold-pale:#BDFFE0;
+  --gold-glow:rgba(61,220,151,.09);
+  --border:rgba(121,156,172,.2);
+  --border-hi:rgba(61,220,151,.42);
+  --border-sub:rgba(121,156,172,.15);
+  --pkr-ink:var(--pkr-a-bg);
+  --pkr-panel:var(--pkr-a-surface);
+  --pkr-panel-raise:var(--pkr-a-raised);
+  --pkr-gold:var(--pkr-a-primary);
+  --pkr-gold-light:#B3FFDC;
+  --pkr-emerald:var(--pkr-a-primary);
+  --pkr-border:rgba(121,156,172,.2);
+  --pkr-copy:var(--pkr-a-text);
+  --pkr-dim:var(--pkr-a-muted);
+}
+html{color-scheme:dark;scrollbar-color:#3B4D59 var(--pkr-a-bg)}
+body{
+  background:var(--pkr-a-bg)!important;
+  color:var(--pkr-a-text);
+  font-family:var(--font-body),Inter,system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+  font-weight:400;
+  letter-spacing:0;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{opacity:0!important} /* No artificial grain/stock texture. */
+::selection{color:var(--pkr-a-on-primary);background:var(--pkr-a-primary)}
+:where(h1,h2,h3,h4,.display,.serif){
+  font-family:var(--font-head),Inter,system-ui,sans-serif;
+  letter-spacing:-.025em;
+  font-style:normal;
+}
+.display,.serif{font-family:var(--font-head),Inter,system-ui,sans-serif!important;letter-spacing:-.028em}
+.money,.money-value,.stat-value,.pkr-amount,.pkr-num{
+  font-family:var(--font-num),ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums;
+}
+:where(input,button,select,textarea,a){-webkit-tap-highlight-color:transparent}
+:where(input,button,select,textarea){font-family:var(--font-body),Inter,system-ui,sans-serif}
+:where(input,button,select,textarea,summary,a,[role="button"]):focus-visible{
+  outline:2px solid var(--pkr-a-primary)!important;
+  outline-offset:3px!important;
+}
+:where(input,textarea,select):focus{
+  caret-color:var(--pkr-a-primary);
+}
+:where(input[type="checkbox"],input[type="radio"]){accent-color:var(--pkr-a-primary)}
+:where(button,[role="button"]):disabled{cursor:not-allowed;filter:saturate(.7)}
+:where(.pos,.positive,.gain,.money-positive){color:var(--pkr-a-primary)!important}
+:where(.neg,.negative,.loss,.money-negative){color:var(--pkr-a-danger)!important}
+:where(.money,.money-value,.pkr-money,.pkr-amount){font-variant-numeric:tabular-nums}
+:where(.btn,.pkr-guest-button,.pkr-install-primary,.pkr-marketing-button){
+  border-radius:var(--pkr-a-radius-md);
+  transition:background-color .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease;
+}
+:where(.btn-primary,.pkr-primary-action){
+  background:var(--pkr-a-primary);
+  color:var(--pkr-a-on-primary);
+  border:1px solid var(--pkr-a-primary);
+}
+:where(.card,.card-gold,.card-inset,.modal,.modal-sheet){
+  border:var(--pkr-a-border);
+  border-radius:var(--pkr-a-radius-lg);
+  background:var(--pkr-a-surface);
+  box-shadow:none;
+}
+:where(.card,.card-gold)::after{display:none}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext,
+       .pkr-guest,.pkr-onboarding,.pkr-landing-v2,.pkr-marketing-editorial){
+  color:var(--pkr-a-text);
+  background-color:var(--pkr-a-bg);
+  font-family:var(--font-body),Inter,system-ui,sans-serif;
+}
+:where(.pkr-app,.pkr-app.pkr-casino,.pkr-vnext-insights,.pkr-schedule-page,
+       .pkr-install-vnext,.pkr-guest,.pkr-onboarding){
+  --bg:var(--pkr-a-bg);--bg2:var(--pkr-a-surface);--bg3:var(--pkr-a-raised);--bg4:#202D35;
+  --white:var(--pkr-a-text);--ivory:#DCE7E8;--muted:var(--pkr-a-muted);--faint:#657783;
+  --green:var(--pkr-a-primary);--green-dim:#167B5D;
+  --gold:var(--pkr-a-primary);--gold-dim:#278D70;--gold-pale:#BDFFE0;
+  --red:var(--pkr-a-danger);--amber:var(--pkr-a-money);
+  --border:rgba(121,156,172,.2);--border-hi:rgba(61,220,151,.42);
+  --border-sub:rgba(121,156,172,.15);
+  --pkr-ink:var(--pkr-a-bg);--pkr-gold:var(--pkr-a-primary);
+  --pkr-emerald:var(--pkr-a-primary);--pkr-dim:var(--pkr-a-muted);
+}
+:where(.pkr-app,.pkr-guest,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext)
+  :is(h1,h2,h3,h4,.display,.serif,.stat-value){
+  font-family:var(--font-head),Inter,system-ui,sans-serif!important;
+  font-style:normal!important;
+  letter-spacing:-.025em;
+}
+:where(.pkr-app,.pkr-guest,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext)
+  :is(button,input,select,textarea){
+  font-family:var(--font-body),Inter,system-ui,sans-serif;
+}
+:where(.pkr-app,.pkr-guest,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext)
+  :is(.btn,.pkr-guest-button,.pkr-install-primary){
+  font-weight:700;
+  border-radius:var(--pkr-a-radius-md);
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext,.pkr-guest)
+  :is(.inp,input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  background-color:var(--pkr-a-raised);
+  border-color:var(--pkr-a-line);
+  color:var(--pkr-a-text);
+  border-radius:var(--pkr-a-radius-md);
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest,.pkr-install-vnext)
+  :is(input,textarea)::placeholder{color:#8A99A3;opacity:1}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.badge,.pkr-eyebrow,[class*="kicker"]){letter-spacing:.09em}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.card,.card-gold,.card-inset,.modal,.modal-sheet){
+  background:var(--pkr-a-surface);
+  border:var(--pkr-a-border);
+  border-radius:var(--pkr-a-radius-lg);
+  box-shadow:none;
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.btn-primary,.pkr-guest-button){
+  background:var(--pkr-a-primary);
+  color:var(--pkr-a-on-primary);
+  border:1px solid var(--pkr-a-primary);
+  box-shadow:none;
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.btn-primary,.pkr-guest-button):hover{
+  background:#68E8B0;
+  color:var(--pkr-a-on-primary);
+  border-color:#68E8B0;
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.btn-ghost,.btn-outline){
+  background:var(--pkr-a-raised);
+  color:var(--pkr-a-text);
+  border:var(--pkr-a-border);
+}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.btn-ghost,.btn-outline):hover{background:#26333D;border-color:#4E695D}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.btn-danger,[class*="danger"]){color:var(--pkr-a-danger)}
+:where(.pkr-app,.pkr-vnext-insights,.pkr-guest)
+  :is(.card,.card-gold,.card-inset):hover{border-color:#375249}
+@media (prefers-reduced-motion:reduce){
+ :where(*, *::before,*::after){scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+}

@@ -1,0 +1,90 @@
+/* Final rendered-screen corrections. The live game adds unlayered legacy CSS;
+   its dialogs are siblings of gameScreen, so they need the same design tokens. */
+:root {
+  --display:var(--font-display),Inter,sans-serif!important;
+  --body:var(--font-body),Inter,sans-serif!important;
+  --cream:var(--pkr-a-text)!important;
+  --cream2:var(--pkr-a-muted)!important;
+}
+html,body {font-family:var(--font-body),Inter,sans-serif!important;}
+:where(.modal,.sheet-box) {
+  background:var(--pkr-a-surface)!important;
+  color:var(--pkr-a-text)!important;
+  border-color:var(--pkr-a-line)!important;
+  font-family:var(--font-body),Inter,sans-serif!important;
+}
+:where(.modal,.sheet-box) :is(h1,h2,h3,.sheet-title) {
+  font-family:var(--font-display),Inter,sans-serif!important;
+  color:var(--pkr-a-text)!important;
+  text-shadow:none!important;
+}
+:where(.modal,.sheet-box) :is(button,input,select,textarea) {
+  font-family:var(--font-body),Inter,sans-serif!important;
+}
+:where(.modal,.sheet-box) :is(input,select,textarea) {
+  background:var(--pkr-a-raised)!important;
+  color:var(--pkr-a-text)!important;
+  border-color:var(--pkr-a-line)!important;
+}
+:where(.modal,.sheet-box) .btn-primary,
+#tournamentBody>button {
+  background:var(--pkr-a-primary)!important;
+  color:var(--pkr-a-on-primary)!important;
+  border-color:var(--pkr-a-primary)!important;
+}
+#tTimerDisplay {font-family:var(--font-num),monospace!important;}
+.pkr-app.pkr-event .pkr-event-tabs-inner button.tab.active {
+  color:var(--pkr-a-on-primary)!important;
+  -webkit-text-fill-color:var(--pkr-a-on-primary)!important;
+  background:var(--pkr-a-primary)!important;
+  text-shadow:none!important;
+}
+.pkr-app.pkr-dashboard .pkr-pro-stats>div>strong {
+  color:var(--pkr-a-text)!important;
+}
+.pkr-app.pkr-event .pkr-event-metric:first-child strong {
+  color:var(--pkr-a-money)!important;
+}
+.pkr-app :is(h1,h2,h3,strong,button),
+#gameScreen :is(.tb-title,.seat-label,#tableName),
+.pkr-persistent-nav *,.pkr-universal-bottom-nav * {
+  text-shadow:none!important;
+}
+.pkr-app::before,.pkr-app::after,
+.pkr-universal-bottom-nav::before,
+.pkr-universal-bottom-nav button::before {display:none!important;}
+
+/* The selected product screenshot is real UI, not a decorative layer. */
+.pkr-landing-v2 .pkr-tour-visual picture {
+ display:block!important;position:relative!important;z-index:1;
+ visibility:visible!important;opacity:1!important;content-visibility:visible!important;
+}
+.pkr-landing-v2 .pkr-tour-visual picture img {
+ display:block!important;visibility:visible!important;opacity:1!important;
+ width:100%;height:auto;position:relative!important;z-index:1;
+ content-visibility:visible!important;filter:none!important;transform:none!important;
+}
+.pkr-landing-v2 .pkr-tour-overline>span {color:var(--pkr-a-primary)!important;}
+/* Full photographic backdrop with a text-safe left area, not a small image
+   accidentally anchored to the old inset:0 underneath centred copy. */
+.pkr-landing-v2 .pkr-l2-last-call {
+ display:block!important;text-align:left!important;min-height:365px;
+ padding:64px max(24px,calc((100vw - 1300px)/2))!important;
+}
+.pkr-landing-v2 .pkr-l2-last-call>img.pkr-l2-closing-art {
+ inset:0!important;right:0!important;left:0!important;
+ width:100%!important;height:100%!important;
+ object-fit:cover!important;object-position:right center!important;
+ opacity:.8!important;z-index:0!important;
+}
+.pkr-landing-v2 .pkr-l2-last-call::after {
+ content:"";inset:0;position:absolute;z-index:1!important;
+ background:linear-gradient(90deg,#131A1F 0%,rgba(19,26,31,.96) 38%,rgba(19,26,31,.1) 78%)!important;
+}
+.pkr-landing-v2 .pkr-l2-last-call>div {max-width:560px!important;position:relative;z-index:2;}
+@media(max-width:700px) {
+ .pkr-landing-v2 .pkr-l2-last-call {padding:44px 24px!important;}
+ .pkr-landing-v2 .pkr-l2-last-call>img.pkr-l2-closing-art {opacity:.35!important;object-position:75% center!important;}
+ .pkr-landing-v2 .pkr-l2-last-call::after {background:rgba(19,26,31,.68)!important;}
+ .pkr-landing-v2 .pkr-tour-visual picture img {width:auto;max-width:100%;margin-inline:auto;}
+}

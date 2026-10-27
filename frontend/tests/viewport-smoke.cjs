@@ -66,16 +66,12 @@ async function test(){
     try{
       await guestPage.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:40000});
       await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
-      await guestPage.locator('.pkr-l2-hero-art').evaluate(async image=>{
-        if(image instanceof HTMLImageElement && !image.complete){
-          await new Promise(resolve=>{
-            image.addEventListener('load',resolve,{once:true});
-            image.addEventListener('error',resolve,{once:true});
-          });
-        }
+      // Theme A shows genuine PKR screens, never the old painted hero backdrop.
+      await guestPage.locator('.pkr-hero-desktop img').evaluate(async image=>{
+        if(image instanceof HTMLImageElement){image.loading='eager';await image.decode().catch(()=>{});}
       });
       const landing=await guestPage.evaluate(()=>{
-        const hero=document.querySelector('.pkr-l2-hero-art');
+        const hero=document.querySelector('.pkr-hero-desktop img');
         return {
           scrollWidth:document.documentElement.scrollWidth,
           viewportWidth:document.documentElement.clientWidth,
@@ -84,12 +80,54 @@ async function test(){
       });
       if(landing.scrollWidth>landing.viewportWidth+5)
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
-      if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
+      if(!landing.imageReady)errors.push(size.name+' genuine PKR hero screenshot failed to load');
+      if(await guestPage.locator('.pkr-l2-hero-art').count())
+        errors.push(size.name+' redundant legacy illustrated hero still rendered');
+      const closer=await guestPage.locator('.pkr-l2-closing-art').evaluate(async image=>{
+        if(!(image instanceof HTMLImageElement))return {ok:false};
+        image.loading='eager';await image.decode().catch(()=>{});
+        return {ok:image.complete&&image.naturalWidth>500&&getComputedStyle(image).display!=='none',
+                src:image.getAttribute('src')};
+      });
+      if(!closer.ok||closer.src!=='/images/pkr-approved-hero-desktop.webp')
+        errors.push(size.name+' Theme A closing lacks visible poker-chip artwork');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(239, 137, 118)')
-        errors.push(size.name+' landing CTA reverted to rejected brand colour: '+landingCTAColour);
+      if(landingCTAColour!=='rgb(61, 220, 151)')
+        errors.push(size.name+' landing CTA is not Midnight Felt lime: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
         errors.push(size.name+' landing visual feature cards missing');
+      const theme=await guestPage.evaluate(()=>{
+        const root=getComputedStyle(document.documentElement);
+        const price=document.querySelector('.pkr-l2-price');
+        const pro=document.querySelector('.pkr-l2-plan-featured');
+        const brand=document.querySelector('.pkr-l2-brand-emblem');
+        return {
+          background:root.getPropertyValue('--pkr-a-bg').trim(),
+          surface:root.getPropertyValue('--pkr-a-surface').trim(),
+          primary:root.getPropertyValue('--pkr-a-primary').trim(),
+          money:root.getPropertyValue('--pkr-a-money').trim(),
+          priceFont:price?getComputedStyle(price).fontFamily:'',
+          priceColor:price?getComputedStyle(price).color:'',
+          proBorder:pro?getComputedStyle(pro).borderTopColor:'',
+          logoBackground:brand?getComputedStyle(brand).backgroundImage:'',
+          font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
+        };
+      });
+      if(theme.background.toLowerCase()!=='#0b0f12'||theme.surface.toLowerCase()!=='#131a1f'||
+         theme.primary.toLowerCase()!=='#3ddc97'||theme.money.toLowerCase()!=='#f2b84b')
+        errors.push(size.name+' Midnight Felt design tokens mismatch: '+JSON.stringify(theme));
+      if(theme.proBorder!=='rgb(242, 184, 75)')
+        errors.push(size.name+' Pro pricing card lacks gold outline: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(242, 184, 75)'||!theme.priceFont.toLowerCase().includes('jetbrains'))
+        errors.push(size.name+' pricing must use JetBrains Mono gold numbers: '+JSON.stringify(theme));
+      if(!theme.logoBackground.includes('/brand/pkr-midnight-mark.svg'))
+        errors.push(size.name+' brand geometric spade asset not loaded');
+      if(!theme.font.toLowerCase().includes('bricolage'))
+        errors.push(size.name+' landing headings must use Bricolage Grotesque: '+theme.font);
+      const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
+      if(!planText.includes('$9.99')||!planText.includes('$19.99'))
+        errors.push(size.name+' Theme A must preserve Starter and Pro prices');
+
       // Marketing must show AUTHENTIC app screenshots, not an illustrated placeholder.
       const actualHero=guestPage.locator('.pkr-hero-desktop img');
       await actualHero.waitFor({state:'visible',timeout:10000});
@@ -109,16 +147,25 @@ async function test(){
       const insightsImage=guestPage.locator('#pkr-tour-panel picture img');
       await insightsImage.waitFor({state:'visible',timeout:10000});
       const selectedImage=await insightsImage.getAttribute('src');
-      if(selectedImage!=='/demo/insights.webp')
+      if(selectedImage!=='/demo/theme-a/insights.webp')
         errors.push(size.name+' interactive product tour did not switch to Insights screenshot');
       await tabs.getByRole('tab',{name:/Live poker table/i}).click();
-      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/live-table.webp')
+      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/theme-a/live-table.webp')
         errors.push(size.name+' interactive product tour did not switch back to live table');
       const productWidth=await guestPage.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
       if(productWidth.scroll>productWidth.viewport+5)
         errors.push(size.name+' product screenshot gallery introduces horizontal overflow');
       if(size.name==='desktop'){
-        for(const asset of ['/demo/live-table.webp','/demo/host-dashboard.webp','/demo/rsvp-board.webp','/demo/insights.webp','/demo/mobile-live-table.webp']){
+        // Production social artwork is generated as a branded PNG — old gold
+        // share imagery must not be advertised in OpenGraph metadata.
+        const share=await guestPage.request.get(BASE+'/opengraph-image');
+        if(!share.ok()||!(share.headers()['content-type']||'').includes('image/png')||
+           (await share.body()).length<5000)
+          errors.push('Theme A 1200×630 share artwork unavailable as PNG');
+        const social=await guestPage.locator('meta[property="og:image"]').getAttribute('content');
+        if(!social?.includes('/opengraph-image'))
+          errors.push('Theme A social share metadata still points to legacy gold image');
+        for(const asset of ['/demo/theme-a/live-table.webp','/demo/theme-a/host-dashboard.webp','/demo/theme-a/rsvp-board.webp','/demo/theme-a/insights.webp','/demo/theme-a/mobile-live-table.webp']){
           const response=await guestPage.request.get(BASE+asset);
           if(!response.ok()||(await response.body()).length<10000)
             errors.push('Real product screenshot not available: '+asset);
@@ -210,7 +257,7 @@ async function test(){
          return {height:r.height,image:s.backgroundImage};
        });
        if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
-         errors.push(size.name+' game detail hero does not use the redesigned no-gold header: '+JSON.stringify(summary));
+         errors.push(size.name+' game detail hero does not use the Midnight Felt header: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -226,13 +273,25 @@ async function test(){
          return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
        });
        if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
-         errors.push(size.name+' '+item.id+' stale casino photo remains instead of graphite header: '+JSON.stringify(visual));
+         errors.push(size.name+' '+item.id+' stale casino photo remains instead of Midnight Felt header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+     }
+     if(['dashboard','room'].includes(item.id)){
+       const prop=page.locator('.pkr-casino-art-asset .pkr-casino-art-props').first();
+       if(await prop.count()){
+         const valid=await prop.evaluate(async image=>{
+           if(!(image instanceof HTMLImageElement))return false;
+           image.loading='eager';await image.decode().catch(()=>{});
+           return image.complete&&image.naturalWidth>500&&
+             image.getAttribute('src')==='/images/pkr-approved-hero-desktop.webp';
+         });
+         if(!valid)errors.push(size.name+' '+item.id+' missing recognisable poker chips/cards image');
+       }
      }
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(primary!=='rgb(239, 137, 118)')
-         errors.push(size.name+' dashboard primary control is not coral: '+primary);
+       if(primary!=='rgb(61, 220, 151)')
+         errors.push(size.name+' dashboard primary control is not Theme A lime: '+primary);
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
@@ -304,9 +363,11 @@ async function test(){
        if(await paymentSelect.count()){
          page.once('dialog',dialog=>dialog.accept());
          await paymentSelect.selectOption('paid');
-         await page.waitForTimeout(120);
-         if(await paymentSelect.inputValue()!=='paid')errors.push(size.name+' payment status did not update to paid');
-         if(!await settlement.getByText('Payment status updated to Paid.').count())errors.push(size.name+' payment update confirmation missing');
+         const paidNotice=settlement.getByText('Payment status updated to Paid.');
+         await paidNotice.waitFor({state:'visible',timeout:12000}).catch(()=>
+           errors.push(size.name+' payment update confirmation missing'));
+         if(await paymentSelect.inputValue()!=='paid')
+           errors.push(size.name+' payment status did not update to paid');
        }else errors.push(size.name+' host cannot select payment status in Insights');
        if(size.width>=1100){
          const nav=page.locator('.pkr-persistent-nav button');
@@ -342,15 +403,27 @@ async function test(){
          errors.push(size.name+' live table is not full-viewport: '+JSON.stringify(geometry));
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
-       const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundImage);
-       if(!chrome.includes('linear-gradient'))errors.push(size.name+' live table premium header missing');
+       const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
+       if(chrome!=='rgb(19, 26, 31)')errors.push(size.name+' live table header should be Midnight Felt surface: '+chrome);
        const share=page.locator('#gameScreen .share-btn');
        if(await share.count()){
          const shareColour=await share.first().evaluate(el=>getComputedStyle(el).backgroundColor);
-         if(shareColour!=='rgb(239, 137, 118)')
-           errors.push(size.name+' live game Share control retains gold: '+shareColour);
+         if(shareColour!=='rgb(61, 220, 151)')
+           errors.push(size.name+' live game Share control is not lime: '+shareColour);
        }
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
+       const feltTheme=await page.locator('#tableFelt').evaluate(node=>{
+         const s=getComputedStyle(node);
+         const rail=getComputedStyle(document.querySelector('#tableOuter'));
+         return {felt:s.backgroundImage,rail:rail.backgroundImage,
+                 moneyFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
+                 feltWidth:node.getBoundingClientRect().width};
+       });
+       if(!feltTheme.felt.includes('15, 92, 74')||!feltTheme.rail.includes('66, 77, 85'))
+         errors.push(size.name+' felt/rail deviates from Midnight Felt palette: '+JSON.stringify(feltTheme));
+       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains'))
+         errors.push(size.name+' bank amounts do not use JetBrains Mono: '+feltTheme.moneyFont);
+
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
            nodes.filter(node=>{const r=node.getBoundingClientRect();return r.left<-1||r.right>innerWidth+1;}).length

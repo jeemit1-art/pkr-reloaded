@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "predev": "node scripts/compile-theme-a.cjs",
+    "prebuild": "node scripts/compile-theme-a.cjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

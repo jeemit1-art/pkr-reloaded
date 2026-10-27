@@ -1,0 +1,126 @@
+/* Theme A final visual QA refinements.
+   These selectors correct old inline/legacy paint still visible in real browser
+   screenshots. They change no text, click handlers, seat layout, or data. */
+
+/* Mobile dashboard featured game — remove rejected burgundy/coral hero. */
+.pkr-dashboard .pkr-mobile-featured {
+  background:#15251F!important;
+  background-image:linear-gradient(132deg,#193F33 0%,#172A29 38%,#131A1F 100%)!important;
+  border:1px solid #3B6555!important;
+  color:var(--pkr-a-text)!important;
+  box-shadow:none!important;
+  border-radius:16px!important;
+}
+.pkr-dashboard .pkr-mobile-featured h2{color:var(--pkr-a-text)!important}
+.pkr-dashboard .pkr-mobile-featured-meta>span {
+  color:#D4E1E3!important;
+  background:#1B302A!important;
+  border:1px solid #345345!important;
+}
+.pkr-dashboard .pkr-mobile-featured-status{
+  color:var(--pkr-a-primary)!important;
+  border-color:#3D8764!important;
+  background:rgba(61,220,151,.09)!important;
+}
+.pkr-dashboard .pkr-mobile-featured-actions button:first-child{
+  background:var(--pkr-a-primary)!important;
+  color:var(--pkr-a-on-primary)!important;
+  border:1px solid var(--pkr-a-primary)!important;
+  box-shadow:none!important;
+}
+.pkr-dashboard .pkr-mobile-featured-actions button:not(:first-child){
+  background:var(--pkr-a-raised)!important;color:var(--pkr-a-text)!important;
+  border:1px solid #466258!important;
+}
+.pkr-dashboard .pkr-pro-plan-badge,
+.pkr-dashboard .pkr-pro-topbar :is(.pkr-pro-upgrade,.pkr-pro-plan-badge) {
+  background:var(--pkr-a-raised)!important;
+  border:1px solid var(--pkr-a-line)!important;
+  color:#B9CEC3!important;
+}
+/* Main game actions are actions, not currency: always lime rather than gold. */
+.pkr-app.pkr-game-detail .pkr-game-detail-shell button.btn.btn-primary,
+.pkr-game-detail .pkr-content button.btn.btn-primary,
+.pkr-game-detail button.btn.btn-primary {
+  background:var(--pkr-a-primary)!important;
+  background-image:none!important;
+  color:var(--pkr-a-on-primary)!important;
+  border:1px solid var(--pkr-a-primary)!important;
+  box-shadow:none!important;
+}
+.pkr-game-detail :is(.pkr-game-summary,.pkr-casino-game-summary) .pkr-eyebrow,
+.pkr-app.pkr-game-detail .pkr-eyebrow {
+  color:var(--pkr-a-primary)!important;
+}
+.pkr-app.pkr-game-detail .pkr-casino-game-summary .pkr-game-metrics strong {
+  color:var(--pkr-a-text)!important;
+  font-family:var(--font-num),ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums;
+}
+/* Counts and the next-game date are numbers, but not monetary amounts. */
+.pkr-app.pkr-casino .pkr-event-metric strong,
+.pkr-event .pkr-event-metric strong,
+.pkr-dashboard .pkr-pro-stats strong {
+  color:var(--pkr-a-text)!important;
+  font-family:var(--font-num),ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums;
+}
+.pkr-event .pkr-event-hero-actions button:first-child,
+.pkr-event .pkr-event-overview .pkr-event-hero-actions button:first-child {
+  background:var(--pkr-a-primary)!important;
+  color:var(--pkr-a-on-primary)!important;
+  border:1px solid var(--pkr-a-primary)!important;
+  box-shadow:none!important;
+}
+.pkr-event .pkr-event-hero-actions button:not(:first-child) {
+  background:var(--pkr-a-raised)!important;
+  color:var(--pkr-a-text)!important;
+  border:1px solid #49665A!important;
+}
+.pkr-event .pkr-event-hero-actions button:hover {filter:brightness(1.08)}
+/* RSVP header and field labels — no old brass typography or gold form labels. */
+.pkr-guest .pkr-guest-logo {
+  color:var(--pkr-a-text)!important;
+  font:700 23px/1 var(--font-head),Inter,sans-serif!important;
+  letter-spacing:-.025em!important;
+}
+.pkr-guest .pkr-guest-logo::first-letter{color:var(--pkr-a-primary)!important}
+.pkr-guest .pkr-guest-label,
+.pkr-guest :is(label,.pkr-guest-label,.pkr-guest-seat-heading){
+  color:var(--pkr-a-text)!important;
+  letter-spacing:.07em;
+}
+.pkr-guest .pkr-guest-stats strong {
+  color:var(--pkr-a-text)!important;
+  font-family:var(--font-num),ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums;
+}
+.pkr-guest .pkr-guest-stats span {color:var(--pkr-a-muted)!important}
+.pkr-guest .pkr-guest-kicker,
+.pkr-guest .pkr-guest-pulse {color:var(--pkr-a-primary)!important}
+.pkr-guest .pkr-guest-options button[aria-pressed="true"] {
+  background:rgba(61,220,151,.13)!important;
+  color:var(--pkr-a-text)!important;
+  border:1px solid var(--pkr-a-primary)!important;
+}
+.pkr-guest .pkr-guest-button {background:var(--pkr-a-primary)!important}
+/* Member approvals and payout badges share exact same accent system. */
+.pkr-event .pkr-member-request-card .btn-primary,
+.pkr-event .pkr-member-invite .btn-primary {
+  background:var(--pkr-a-primary)!important;
+  border-color:var(--pkr-a-primary)!important;
+  color:var(--pkr-a-on-primary)!important;
+}
+.pkr-vnext-insights :is(.pkr-insights-selector,.pkr-insights-settle-tabs) :is(button.selected,button[aria-selected="true"]){
+  color:var(--pkr-a-on-primary)!important;
+  background:var(--pkr-a-primary)!important;
+  border-color:var(--pkr-a-primary)!important;
+}
+/* Focus, responsive tap sizes and legibility on 360-390px phones. */
+@media(max-width:700px) {
+  .pkr-dashboard .pkr-mobile-featured{border-radius:15px!important}
+  .pkr-guest .pkr-guest-logo{font-size:20px!important}
+  .pkr-guest .pkr-guest-stats strong{font-size:clamp(18px,5vw,25px)!important}
+  .pkr-game-detail .pkr-content button.btn.btn-primary{min-height:44px!important}
+  .pkr-event .pkr-event-hero-actions button{min-height:44px!important}
+}

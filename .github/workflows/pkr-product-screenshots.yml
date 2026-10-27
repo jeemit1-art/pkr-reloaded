@@ -1,79 +1,122 @@
-name: Refresh PKR public screenshots from redesigned app
-
+name: Refresh verified Midnight Felt product screenshots
 on:
   push:
-    branches:
-      - design/charcoal-blue-refresh-20261027
-    paths:
-      - '.github/workflows/pkr-product-screenshots.yml'
-
+    branches: [design/theme-a-midnight-felt-20261027]
+    paths: ['.github/workflows/pkr-product-screenshots.yml', 'frontend/src/**', 'frontend/scripts/**', 'frontend/tests/**', 'frontend/package.json', 'frontend/package-lock.json']
+concurrency:
+  group: theme-a-screenshots
+  cancel-in-progress: true
 permissions:
   contents: write
-
 jobs:
   capture-real-pkr-ui:
+    if: github.ref == 'refs/heads/design/theme-a-midnight-felt-20261027'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       VERCEL_ENV: preview
       NEXT_PUBLIC_PKR_ENV: staging
       NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
-      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          persist-credentials: true
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm latest PKR graphite design
+      - name: Apply reviewed design-only source migration
         run: |
-          grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
-          ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
-          test -f frontend/src/app/pkr-2026-graphite.css
-          grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
-          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
-      - name: Install pinned frontend dependencies
+          if test -f frontend/scripts/repair-theme-a-source.cjs; then
+            node frontend/scripts/repair-theme-a-source.cjs
+            rm frontend/scripts/repair-theme-a-source.cjs
+          fi
+          grep -Fq "import './pkr-theme-a.css';" frontend/src/app/layout.tsx
+          grep -Fq '#3DDC97' frontend/src/app/pkr-theme-a-tokens.css
+          node --check frontend/tests/viewport-smoke.cjs
+      - name: Install locked frontend dependencies
+        timeout-minutes: 3
         working-directory: frontend
-        run: npm ci --no-audit --no-fund
-      - name: Install visual browser test runner
+        run: npm ci --no-audit --no-fund --fetch-retries=1 --fetch-timeout=60000
+      - name: Install pinned browser runner
+        timeout-minutes: 3
         working-directory: frontend
-        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-      - name: Install isolated Chromium
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund --fetch-retries=1 --fetch-timeout=60000 playwright@1.56.1
+      - name: Install isolated Chromium without unrelated OS upgrades
+        timeout-minutes: 3
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Start staging-only PKR application
+        run: npx --no-install playwright install chromium
+      - name: Build exact application, including the consolidated Theme A cascade
+        timeout-minutes: 4
+        working-directory: frontend
+        run: npm run build
+      - name: Start isolated optimised app
         working-directory: frontend
         run: |
-          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
-          for attempt in $(seq 1 90); do
+          npm run start -- --hostname 127.0.0.1 > /tmp/pkr-theme-a-next.log 2>&1 &
+          echo $! > /tmp/pkr-theme-a-next.pid
+          for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
             sleep 2
           done
-          cat /tmp/pkr-graphite-next.log
+          cat /tmp/pkr-theme-a-next.log
           exit 1
-      - name: Capture and test genuine PKR interface with fictional data
+      - name: Capture actual app screens with seven fictional players
+        timeout-minutes: 3
+        working-directory: frontend
+        run: node scripts/capture-theme-a.cjs app
+      - name: Generate fresh product images and source manifest
+        working-directory: frontend
+        run: node scripts/publish-demo-shots.cjs ../artifacts/theme-a-capture
+      - name: Restart preview with fresh public assets
+        working-directory: frontend
+        run: |
+          fuser -k 3000/tcp || true
+          npm run start -- --hostname 127.0.0.1 >> /tmp/pkr-theme-a-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/demo/theme-a/manifest.json >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Verify public pages show this build, not old screenshots
+        timeout-minutes: 3
+        working-directory: frontend
+        run: node scripts/capture-theme-a.cjs marketing
+      - name: Test full app at six screen sizes
+        timeout-minutes: 6
         working-directory: frontend
         run: node tests/viewport-smoke.cjs
-      - name: Optimise real app screenshots
-        working-directory: frontend
-        run: node scripts/publish-demo-shots.cjs ../artifacts/viewport-smoke
-      - name: Update only demonstration screenshots in design branch
+      - name: Package reviewed source only, with no credentials or environment files
+        if: always()
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/theme-a-reviewed-source.tar.gz frontend/src frontend/scripts frontend/tests frontend/public frontend/package.json frontend/package-lock.json frontend/next.config.js frontend/postcss.config.js frontend/tailwind.config.js frontend/tsconfig.json
+      - name: Save screenshot and colour-check evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pkr-theme-a-visual-evidence
+          path: |
+            artifacts/theme-a-capture/
+            artifacts/viewport-smoke/
+            artifacts/theme-a-reviewed-source.tar.gz
+            frontend/public/demo/theme-a/
+            /tmp/pkr-theme-a-next.log
+          if-no-files-found: error
+          retention-days: 2
+      - name: Commit tested source and fresh assets to design branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
-          git config user.name "PKR Screenshot Bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/public/demo/
-          if git diff --cached --quiet; then
-            echo "No screenshot changes"
-          else
-            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
-            git fetch origin design/charcoal-blue-refresh-20261027
-            git rebase origin/design/charcoal-blue-refresh-20261027
-            git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
-          fi
+          test "$GITHUB_REF" = 'refs/heads/design/theme-a-midnight-felt-20261027'
+          test "$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git "$GITHUB_REF" | cut -f1)" = "$GITHUB_SHA" || { echo 'Source changed during capture; refusing stale publication.'; exit 1; }
+          git config user.name 'PKR Screenshot Bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend/src/ frontend/scripts/ frontend/tests/ frontend/public/demo/theme-a/ frontend/public/design-version.json frontend/package.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix: verified Midnight Felt cascade and fresh actual-app screenshots'
+          gh auth setup-git
+          git push origin HEAD:refs/heads/design/theme-a-midnight-felt-20261027
