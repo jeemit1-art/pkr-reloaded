@@ -214,7 +214,7 @@ export default function ResultsPage() {
                   </div>
                   {t.status==='legacy' && (
                     <p role="note" style={{fontSize:12,lineHeight:1.55,color:'var(--ivory)',marginBottom:9}}>
-                      Historical settlement — payment status unverified. Excluded from current amounts owing. Not marked paid.
+                      Payment status requires review. Ask the host before changing this record.
                     </p>
                   )}
                   {/* Only the verified logged-in payer or recipient can
@@ -240,7 +240,7 @@ export default function ResultsPage() {
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
                         color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
-                        {t.status==='paid'?'✓ Receipt confirmed':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
+                        {t.status==='paid'?'✓ Paid · recorded':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
                       </span>
                       {!isBanker && t.status!=='paid' && (
                         <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
@@ -262,8 +262,8 @@ export default function ResultsPage() {
                       )}
                     </div>
                   )}
-                  {/* Historic unverified transfers must never trigger payment reminders. */}
-                  {t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
+                  {/* Recorded-as-paid and unreviewed transfers must not offer payment reminders. */}
+                  {t.status!=='paid'&&t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
                     <button
                       onClick={()=>copyTransferMsg(t,i)}
                       className="btn btn-ghost"
