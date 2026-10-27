@@ -257,7 +257,7 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
     await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:3600});
   }
   await c.env.KV.delete(key);
-  return c.json({ok:true,approved:body?.approve===true});
+  return c.json({ok:true,approved:body?.approve===true,contact_id:state.contact_id});
 });
 router.post('/phone-invites/complete-approval',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
