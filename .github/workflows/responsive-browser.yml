@@ -61,11 +61,16 @@ jobs:
       - name: Test app layouts across 6 viewport sizes with synthetic API data
         working-directory: frontend
         run: node tests/viewport-smoke.cjs
+      - name: Verify paid records, visible payment labels and no duplicate-payment reminders across six sizes
+        working-directory: frontend
+        run: node tests/paid-records-ui.cjs
       - name: Upload synthetic-data screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pkr-viewport-smoke
-          path: artifacts/viewport-smoke/
+          path: |
+            artifacts/viewport-smoke/
+            artifacts/paid-records-ui/
           if-no-files-found: ignore
           retention-days: 5
