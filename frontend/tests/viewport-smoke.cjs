@@ -342,7 +342,7 @@ async function test(){
        // $75,235 of migrated legacy transfers must NOT inflate the real
        // current outstanding balance, and must NEVER be marked paid by UI.
        const current=await page.getByTestId('current-outstanding').textContent();
-       if(!current?.includes('75.00')||current?.includes('75,235'))
+       if(current?.trim()!=='$75')
         errors.push(size.name+' historical $75,235 incorrectly included in outstanding: '+current);
        const legacyNotice=await page.getByTestId('legacy-settlement-notice').textContent();
        if(!legacyNotice?.includes('75,235')||!legacyNotice?.includes('not been marked paid'))
