@@ -227,7 +227,7 @@ payments.post('/games/:id/transfers/bulk-status',authMiddleware,async(c)=>{
     return c.json({error:'Select 1-100 unique transfers and a paid/unpaid status'},400);
   const placeholders=ids.map(()=>'?').join(',');
   const rows=await c.env.DB.prepare(
-    'SELECT id,status,amount FROM settlement_transfers WHERE game_id=? AND id IN ('+placeholders+')'
+    `SELECT id,status,amount FROM settlement_transfers WHERE game_id=? AND id IN (${placeholders})`
   ).bind(game.id,...ids).all<{id:string;status:string;amount:number}>();
   if(rows.results.length!==ids.length||rows.results.some(r=>r.status==='legacy'))
     return c.json({error:'Selection includes an unknown or unverified historical transfer. Nothing changed.'},409);
