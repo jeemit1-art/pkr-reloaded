@@ -15,6 +15,11 @@ export default function GamePage() {
   const [starting, setStarting] = useState(false);
   const [confirm, setConfirm] = useState<'cancel'|'delete'|'unsettle'|null>(null);
   const [acting,  setActing]  = useState(false);
+  const [settlementControl,setSettlementControl]=useState<{enabled:boolean;reminders_enabled:boolean;last_broadcast_at:number|null}|null>(null);
+  const [reminderChoice,setReminderChoice]=useState(false);
+  const [settlementNotice,setSettlementNotice]=useState('');
+  const [sendingSettlement,setSendingSettlement]=useState(false);
+
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(() => {
@@ -29,6 +34,45 @@ export default function GamePage() {
       .catch(() => router.push('/dashboard'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(()=>{
+    if(!isHost||game?.status!=='settled')return;
+    let active=true;
+    api.games.settlementControl(id).then(value=>{
+      if(active){setSettlementControl(value);setReminderChoice(value.reminders_enabled)}
+    }).catch(e=>{
+      if(active)setSettlementNotice(e?.message?.includes('503')
+        ?'Settlement notification upgrades are not activated for this room yet.'
+        :'Payment notification controls are currently unavailable.');
+    });
+    return()=>{active=false};
+  },[isHost,game?.status,id]);
+
+  async function sendSettlementNotifications(){
+    if(sendingSettlement)return;
+    if(!window.confirm('Send individual payment and receipt instructions to verified players who have enabled PKR push notifications?'))return;
+    setSendingSettlement(true);setSettlementNotice('');
+    try{
+      const result=await api.games.broadcastSettlement(id,reminderChoice);
+      setSettlementControl({enabled:true,reminders_enabled:reminderChoice,last_broadcast_at:Math.floor(Date.now()/1000)});
+      setSettlementNotice('Settlement notifications initiated for '+result.transfers+
+        ' transfers. '+result.push_accepted+' device notification(s) accepted; '+
+        result.recipients_without_accepted_push+
+        ' recipient notification(s) had no confirmed push acceptance. Share their private results link directly.');
+    }catch(e:any){setSettlementNotice(e?.message||'Notification request failed')}
+    finally{setSendingSettlement(false)}
+  }
+  async function updateSettlementReminders(enabled:boolean){
+    if(!settlementControl?.enabled){setReminderChoice(enabled);return}
+    setSendingSettlement(true);
+    try{
+      await api.games.settlementReminders(id,enabled);
+      setReminderChoice(enabled);
+      setSettlementControl(x=>x?{...x,reminders_enabled:enabled}:x);
+      setSettlementNotice(enabled?'24-hour reminders enabled for outstanding transfers.':'24-hour reminders paused.');
+    }catch(e:any){setSettlementNotice(e?.message||'Could not change reminders')}
+    finally{setSendingSettlement(false)}
+  }
 
   async function doStartGame() {
     setStarting(true);
@@ -225,6 +269,33 @@ export default function GamePage() {
             onClick={()=>router.push(`/games/results/${game.results_token}`)}>
             ✅ View Results
           </button>
+        )}
+
+        {/* Payment collection is a separate step after final results and end game. */}
+        {isHost&&game.status==='settled'&&(
+          <section className="card" aria-label="Settlement notification centre"
+            style={{padding:'16px',marginBottom:16,border:'1px solid var(--gold-dim)'}}>
+            <h3 style={{fontSize:16,margin:'0 0 8px'}}>Settlement notifications</h3>
+            <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:12}}>
+              Saved results are final. Notify each verified payer and recipient of their respective transfer amounts.
+              PKR does not handle the money. Players who have not enabled notifications must be contacted separately.
+            </p>
+            <label style={{display:'flex',alignItems:'center',gap:9,fontSize:12,marginBottom:12}}>
+              <input type="checkbox" checked={reminderChoice} disabled={sendingSettlement}
+                onChange={e=>void updateSettlementReminders(e.target.checked)}/>
+              Repeat outstanding-payment reminders every 24 hours
+            </label>
+            <button className="btn btn-primary" style={{width:'100%',fontSize:13,padding:12}}
+              type="button" disabled={sendingSettlement||(!settlementControl&&!!settlementNotice)}
+              onClick={()=>void sendSettlementNotifications()}>
+              {sendingSettlement?'Sending…':settlementControl?.enabled?'Send settlement notices again':'Send settlement notifications'}
+            </button>
+            {settlementNotice&&<p role="status" style={{marginTop:10,fontSize:12,lineHeight:1.5,color:'var(--muted)'}}>{settlementNotice}</p>}
+            {settlementControl?.last_broadcast_at&&
+              <p style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
+                Previous notification request: {new Date(settlementControl.last_broadcast_at*1000).toLocaleString('en-AU')}
+              </p>}
+          </section>
         )}
 
         {/* Personal game invitations are addressed from the private room roster. */}

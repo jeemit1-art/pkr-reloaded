@@ -17,6 +17,8 @@ if (process.env.NEXT_PUBLIC_PKR_ENV === 'staging') {
 
 /** @type {import('next').NextConfig} */
 module.exports = {
+  // Exclude the Next.js development badge from real PKR UI preview screenshots.
+  devIndicators: false,
   async headers() {
     const privateRoutes=[
       '/dashboard/:path*','/events/:path*','/games/:path*',

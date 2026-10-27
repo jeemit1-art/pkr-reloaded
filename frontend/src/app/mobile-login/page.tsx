@@ -3,7 +3,7 @@ import {api} from '@/lib/api';
 
 export default function MobileLogin(){
   return (
-    <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24}}>
+    <main className="pkr-classic-mobile-login" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24}}>
       <section style={{width:'100%',maxWidth:440,border:'1px solid var(--border-hi)',
         background:'var(--bg2)',borderRadius:14,padding:'32px 26px'}}>
         <a href="/" style={{color:'var(--gold)',textDecoration:'none',fontWeight:700}}>♠ PKR</a>

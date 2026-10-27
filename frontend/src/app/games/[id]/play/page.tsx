@@ -9,6 +9,41 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  // Tournament controls load separately from the live poker engine.
+  // A toolbar click must not silently fail while the script is loading.
+  function openTournamentReliably(){
+    const sheet=document.getElementById('tournamentSheet');
+    const body=document.getElementById('tournamentBody');
+    if(!sheet||!body)return;
+    const opener=(window as any).openTournament;
+    if(typeof opener==='function'){opener();return;}
+    sheet.classList.add('open');
+    body.textContent='Loading tournament controls…';
+    let script=document.getElementById('pkr-tournament') as HTMLScriptElement|null;
+    if(!script){
+      script=document.createElement('script');
+      script.id='pkr-tournament';script.src='/tournament.js';script.async=true;
+      document.head.appendChild(script);
+    }
+    let complete=false;
+    const done=(ok:boolean)=>{
+      if(complete)return;complete=true;
+      if(ok&&typeof (window as any).openTournament==='function'){
+        (window as any).openTournament();
+      }else{
+        body.replaceChildren();
+        const warning=document.createElement('p');
+        warning.setAttribute('role','alert');
+        warning.textContent='Tournament controls could not load. Check your connection and try again. Your game and player records are unchanged.';
+        body.appendChild(warning);
+        script?.remove();
+      }
+    };
+    script.addEventListener('load',()=>done(true),{once:true});
+    script.addEventListener('error',()=>done(false),{once:true});
+    window.setTimeout(()=>done(typeof (window as any).openTournament==='function'),9000);
+  }
+
 
   useEffect(() => {
     if (initialized.current) return;
@@ -104,6 +139,7 @@ export default function PlayPage() {
         const tScript = document.createElement('script');
         tScript.id  = 'pkr-tournament';
         tScript.src = '/tournament.js';
+        tScript.onerror=()=>{console.warn('Tournament controls unavailable; retry from toolbar');tScript.remove();};
         document.head.appendChild(tScript);
       }
       // Load extras.js (rabbit hunt + seat randomiser)
@@ -161,7 +197,7 @@ export default function PlayPage() {
             style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 9px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}}
             title="Remove last empty seat" aria-label="Remove last empty seat">−🪑</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).addSeat?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:'0.8rem',marginRight:4}} title="Add seat">+🪑</button>
-          <button className="pkr-toolbar-secondary" onClick={() => (window as any).openTournament?.()} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
+          <button className="pkr-toolbar-secondary" onClick={openTournamentReliably} style={{background:'none',border:'1px solid rgba(201,168,76,0.3)',color:'var(--gold)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Tournament Mode">🏆</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).openSeatRandomiser?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Seat Draw">🎲</button>
           <button className="pkr-toolbar-secondary" onClick={() => (window as any).openRabbitHunt?.()} style={{background:'none',border:'1px solid var(--border)',color:'var(--muted)',padding:'4px 8px',borderRadius:4,cursor:'pointer',fontSize:'0.78rem',marginRight:4}} title="Rabbit Hunt">🐰</button>
           <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}>⬡ Share</button>
@@ -173,7 +209,7 @@ export default function PlayPage() {
         <div id="pkr-table-tools" className={'pkr-mobile-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openTournament?.();}}>🏆 Tournament</button>
+          <button type="button" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>🏆 Tournament</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
           <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
         </div>
@@ -2495,7 +2531,7 @@ window.endGame = function() {
   overlay2.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
   var box2 = document.createElement('div');
   box2.style.cssText = 'background:#1a0a0a;border:1px solid rgba(46,204,113,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px';
-  box2.innerHTML = '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">🏁 End Game?</div><div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the game and return to the events page.</div><button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button><button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
+  box2.innerHTML = '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">🏁 End Game?</div><div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the table and open the game summary, where the host can send settlement notifications.</div><button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button><button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
   overlay2.appendChild(box2);
   document.body.appendChild(overlay2);
   document.getElementById('pkrEndNo').addEventListener('click', function(){ overlay2.remove(); });
@@ -2506,7 +2542,11 @@ window.endGame = function() {
     window._pkrResultsSaved = false;
     overlay2.remove();
     var eventId = ctx && ctx.eventId;
-    if (eventId) window.location.href = '/events/' + eventId;
+    // Results already saved and the game is settled. Return to this game's
+    // summary so the host can explicitly dispatch personalised settlement
+    // notifications, without touching the approved green poker table.
+    if (ctx && ctx.gameId) window.location.href = '/games/' + encodeURIComponent(ctx.gameId);
+    else if (eventId) window.location.href = '/events/' + encodeURIComponent(eventId);
     else window.location.href = '/dashboard';
   });
   overlay2.addEventListener('click', function(e){ if (e.target === overlay2) overlay2.remove(); });

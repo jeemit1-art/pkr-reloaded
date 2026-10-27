@@ -891,9 +891,16 @@ export default function EventPage() {
       {/* Create game modal */}
       {showCreate && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowCreate(false);}}>
-          <div className="modal-sheet">
-            <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:20,fontWeight:500}}>Schedule Game</div>
-            <div style={{display:'grid',gap:14}}>
+          <div className="modal-sheet pkr-classic-create-game-dialog" role="dialog" aria-modal="true" aria-labelledby="pkr-create-game-title">
+            <div className="pkr-create-game-heading">
+              <span className="pkr-create-game-kicker">YOUR NEXT POKER NIGHT</span>
+              <div className="pkr-create-game-title-row">
+                <h2 id="pkr-create-game-title">Schedule a game</h2>
+                <button type="button" className="pkr-create-game-close" aria-label="Close game scheduler" onClick={()=>setShowCreate(false)}>×</button>
+              </div>
+              <p>Set the game format, date and table size. Fine-tune the optional details whenever you need them.</p>
+            </div>
+            <div className="pkr-create-game-form" style={{display:'grid',gap:14}}>
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Date & Time *</div>
                 <input className="inp" type="datetime-local" value={form.scheduled_at} onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}/>
@@ -901,34 +908,6 @@ export default function EventPage() {
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Location</div>
                 <input className="inp" placeholder="e.g. Mike's place" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))}/>
-              </div>
-              <div>
-                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
-                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
-                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
-                </p>
-                <div style={{display:'grid',gap:8}}>
-                  {arrivalTimes.map((time,index)=>(
-                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
-                        value={time} style={{minWidth:0,flex:1}}
-                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
-                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
-                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
-                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
-                    </div>
-                  ))}
-                </div>
-                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
-                  disabled={arrivalTimes.length>=8} onClick={()=>{
-                    const used=new Set(arrivalTimes);
-                    for(let hour=17;hour<24;hour++){
-                      for(const minute of ['00','30']){
-                        const next=String(hour).padStart(2,'0')+':'+minute;
-                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
-                      }
-                    }
-                  }}>+ Add arrival time</button>
               </div>
               <div>
                 <div className="lbl" style={{marginBottom:8}}>Game format *</div>
@@ -957,13 +936,52 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:8}}>Seats</div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
-                    <button key={n} onClick={()=>setForm(f=>({...f,seats:n}))}
+                    <button type="button" key={n} aria-pressed={form.seats===n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
                         background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
                         border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
                   ))}
                 </div>
               </div>
+              <details className="pkr-create-game-details">
+                <summary>
+                  <strong>Arrival time options</strong>
+                  <span>{arrivalTimes.length} time choices · tap to customise</span>
+                </summary>
+                <div className="pkr-create-game-details-body">
+              <div>
+                <div className="lbl" style={{marginBottom:8}}>RSVP arrival times *</div>
+                <p style={{color:'var(--muted)',fontSize:12,marginBottom:10,lineHeight:1.5}}>
+                  Players choose one of these arrival times, Running late or Not coming. Their seat reservations appear on the live RSVP board.
+                </p>
+                <div style={{display:'grid',gap:8}}>
+                  {arrivalTimes.map((time,index)=>(
+                    <div key={index} style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                      <input className="inp" type="time" aria-label={'RSVP arrival time '+(index+1)}
+                        value={time} style={{minWidth:0,flex:1}}
+                        onChange={e=>setArrivalTimes(previous=>previous.map((t,i)=>i===index?e.target.value:t))}/>
+                      <button className="btn btn-ghost" type="button" disabled={arrivalTimes.length<=1}
+                        aria-label={'Remove RSVP time '+(index+1)} style={{minWidth:44,minHeight:44}}
+                        onClick={()=>setArrivalTimes(previous=>previous.filter((_,i)=>i!==index))}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-outline" type="button" style={{marginTop:10,minHeight:44}}
+                  disabled={arrivalTimes.length>=8} onClick={()=>{
+                    const used=new Set(arrivalTimes);
+                    for(let hour=17;hour<24;hour++){
+                      for(const minute of ['00','30']){
+                        const next=String(hour).padStart(2,'0')+':'+minute;
+                        if(!used.has(next)){setArrivalTimes(previous=>[...previous,next]);return;}
+                      }
+                    }
+                  }}>+ Add arrival time</button>
+              </div>
+                </div>
+              </details>
+              <details className="pkr-create-game-details">
+                <summary><strong>More game settings</strong><span>Password, notes and repeating games</span></summary>
+                <div className="pkr-create-game-details-body">
               <div>
                 <div className="lbl" style={{marginBottom:6}}>Game Password</div>
                 <input className="inp" placeholder="Optional" value={form.game_password} onChange={e=>setForm(f=>({...f,game_password:e.target.value}))}/>
@@ -976,7 +994,7 @@ export default function EventPage() {
                 <div className="lbl" style={{marginBottom:8}}>Repeat</div>
                 <div style={{display:'flex',gap:6}}>
                   {(['none','weekly','fortnightly']).map(r=>(
-                    <button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))}
+                    <button type="button" key={r} aria-pressed={form.repeat===r} onClick={()=>setForm(f=>({...f,repeat:r}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
                         background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
                         border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
@@ -985,6 +1003,8 @@ export default function EventPage() {
                   ))}
                 </div>
               </div>
+                </div>
+              </details>
             </div>
             <p className="pkr-unfinished-note" style={{marginTop:12}}>
               Repeating schedules create four weekly or fortnightly games. Tournament formats include editable blinds and chip stacks;

@@ -108,14 +108,14 @@ export default function LobbyPage() {
   const safari = isSafari();
 
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
+    <div className="pkr-classic-lobby" style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
       {/* Header */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent)'}}/>
-        <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px'}}>
+        <div className="pkr-classic-lobby-top" style={{maxWidth:480,margin:'0 auto',padding:'16px 20px'}}>
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
             <div>
               <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:6}}>
@@ -147,7 +147,7 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:480,margin:'0 auto',padding:'18px 16px',position:'relative',zIndex:1}}>
+      <div className="pkr-classic-lobby-main" style={{maxWidth:480,margin:'0 auto',padding:'18px 16px',position:'relative',zIndex:1}}>
 
         {/* ── HOST CONTROLS ── */}
         {isHost && game.status === 'scheduled' && (

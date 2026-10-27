@@ -194,6 +194,32 @@ export async function sendPushToEvent(env: Env, eventId: string, payload: PushPa
   return delivered.filter(r=>r.status==='fulfilled'&&r.value===true).length;
 }
 
+/**
+ * Financial notifications must use an authenticated user ID, not matching
+ * player names, phone numbers, or former group subscriptions. If a manually
+ * seated guest is not linked to a verified room member, no private push is sent.
+ * Delivery count means accepted by push service, not read by the recipient.
+ */
+export async function sendPushToAccount(
+  env:Env,eventId:string,userId:string,payload:PushPayload
+):Promise<number>{
+  if(env.PKR_ENV==='staging'||env.PKR_PHONE_MEMBERS_V1!=='1'||
+     env.PKR_PUSH_ROOMS_V2!=='1'||!userId)return 0;
+  const rows=await env.DB.prepare(
+    'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s '+
+    'JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id '+
+    'WHERE s.event_id=? AND s.user_id=?'
+  ).bind(eventId,userId).all<{endpoint:string;p256dh:string;auth_key:string}>();
+  const payloadBody=JSON.stringify({
+    title:payload.title,body:payload.body,icon:'/icon-192.png',
+    badge:'/icon-192.png',data:payload.data||{},
+  });
+  const outcomes=await Promise.allSettled(
+    rows.results.map(sub=>sendToSub(env,sub,payloadBody))
+  );
+  return outcomes.filter(o=>o.status==='fulfilled'&&o.value===true).length;
+}
+
 /** Send push to a specific player by display_name within an event */
 export async function sendPushToPlayer(env: Env, eventId: string, displayName: string, payload: PushPayload): Promise<number> {
   if (env.PKR_ENV === 'staging') return 0;
