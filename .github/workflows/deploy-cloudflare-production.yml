@@ -1,34 +1,70 @@
 name: Deploy Cloudflare production - PKR Settlement V2
 
-# Runs when reviewed Worker changes reach main, or manually after a token is added.
-# This deploys the existing Worker and an additive D1 schema, never a full database import.
+# Owner-authorised release. Never deploy from a PR or from a non-main ref.
+# Historical reconciliation is restricted to the exact 326/$75,235 batch.
 on:
   push:
     branches: [main]
     paths:
       - 'worker/src/**'
       - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/scripts/reconcile-authorised-legacy-ci.py'
+      - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
       - 'worker/migrations/20261027_settlement_v2.sql'
       - 'worker/wrangler.toml'
       - '.github/workflows/deploy-cloudflare-production.yml'
+  pull_request:
+    paths:
+      - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/scripts/reconcile-authorised-legacy-ci.py'
+      - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
+      - '.github/workflows/deploy-cloudflare-production.yml'
   workflow_dispatch:
+    inputs:
+      reconcile_authorised_legacy:
+        description: 'Apply the owner-authorised 326-transfer / $75,235 historical batch after backup checks'
+        type: boolean
+        default: true
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: pkr-cloudflare-production
+  group: pkr-cloudflare-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
   cancel-in-progress: false
 
 jobs:
+  release-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test exact-batch audit and concurrency guards without credentials
+        run: |
+          python3 worker/scripts/test-reconcile-authorised-legacy-ci.py
+          python3 -m py_compile worker/scripts/reconcile-authorised-legacy-ci.py
+          python3 -m py_compile worker/scripts/deploy-settlement-v2-production.py
+
   deploy-settlement-v2:
+    needs: release-safety
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CI: 'true'
     steps:
+      - name: Require Cloudflare Actions token before doing work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN in GitHub Settings > Secrets and variables > Actions. No production changes made."
+            exit 1
+          fi
       - name: Checkout reviewed code
         uses: actions/checkout@v4
         with:
@@ -39,7 +75,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: worker/package-lock.json
-      - name: Install locked Worker dependencies
+      - name: Install locked Worker dependencies without production credentials
         working-directory: worker
         run: npm ci --no-audit --no-fund
       - name: Check TypeScript, Worker unit tests and offline migration
@@ -49,13 +85,15 @@ jobs:
           npm test
           python3 scripts/test-settlement-v2-migration.py
           python3 scripts/test-owner-legacy-reconciliation.py
-          python3 -m py_compile scripts/deploy-settlement-v2-production.py
-      - name: Require Cloudflare Actions token
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::Add CLOUDFLARE_API_TOKEN in GitHub Settings > Secrets and variables > Actions. No production changes made."
-            exit 1
-          fi
+          python3 scripts/test-reconcile-authorised-legacy-ci.py
       - name: Back up, verify, migrate, deploy and smoke-test Settlement V2
         working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python3 scripts/deploy-settlement-v2-production.py
+      - name: Back up again and reconcile only the owner-authorised historical batch
+        if: github.event_name == 'push' || inputs.reconcile_authorised_legacy
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/reconcile-authorised-legacy-ci.py --apply
