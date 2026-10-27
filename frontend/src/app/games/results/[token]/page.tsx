@@ -13,8 +13,17 @@ export default function ResultsPage() {
   const [isBanker,setIsBanker]=useState(false);
   const [myUserId,setMyUserId]=useState<string|null>(null);
   const [settlementNotice,setSettlementNotice]=useState('');
+  const [collectionStarted,setCollectionStarted]=useState(false);
 
   useEffect(()=>{ api.games.results(token as string).then(setData).catch(()=>setError('Results not found')); },[token]);
+  useEffect(()=>{
+    if(!data?.game?.id||!getToken()){setCollectionStarted(false);return}
+    let active=true;
+    api.games.settlementControl(data.game.id).then(info=>{
+      if(active)setCollectionStarted(!!info.enabled);
+    }).catch(()=>{if(active)setCollectionStarted(false)});
+    return()=>{active=false};
+  },[data?.game?.id]);
   useEffect(()=>{
     if(!getToken()){setMyUserId(null);return}
     api.auth.me().then(u=>setMyUserId(u?.id||null)).catch(()=>setMyUserId(null));
@@ -211,13 +220,13 @@ export default function ResultsPage() {
                   {/* Only the verified logged-in payer or recipient can
                       confirm the transfer. A name or public results link alone
                       never grants financial write permissions. */}
-                  {t.id&&t.status!=='legacy'&&myUserId===t.from&&
+                  {collectionStarted&&t.id&&t.status!=='legacy'&&myUserId===t.from&&
                     ['owed','not_received'].includes(t.status||'owed')&&(
                     <button type="button" className="btn btn-primary" disabled={!!busy}
                       style={{fontSize:12,padding:'9px 12px',marginBottom:9,width:'100%'}}
                       onClick={()=>void respond(t,'sent')}>I have paid {fmt(t.amount)} · Mark sent</button>
                   )}
-                  {t.id&&t.status==='payer_claimed'&&myUserId===t.to&&(
+                  {collectionStarted&&t.id&&t.status==='payer_claimed'&&myUserId===t.to&&(
                     <div style={{display:'flex',gap:8,marginBottom:9}}>
                       <button type="button" className="btn btn-primary" disabled={!!busy}
                         style={{fontSize:12,padding:'9px 10px',flex:1}}
