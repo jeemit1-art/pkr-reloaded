@@ -58,13 +58,13 @@ export default function ResultsPage() {
       fmtDate(game.scheduled_at), '',
       ...sorted.map((p,i)=>`${i<3?medals[i]:`${i+1}.`} ${p.display_name}: ${fmtSign(p.net||0)}`),
       transfers.length?'\nTransfers:':null,
-      ...transfers.map(t=>`  ${t.from_name} → ${t.to_name}: ${fmt(t.amount)}`),
+      ...transfers.map(t=>`  ${t.from_name} → ${t.to_name}: ${fmt(t.amount)}${t.status==='paid'?' · Paid':''}`),
     ].filter(Boolean).join('\n');
   }
 
   function buildTransferMsg(t: typeof transfers[0]) {
     const link=typeof window!=='undefined'?window.location.origin+'/games/results/'+encodeURIComponent(token as string):'';
-    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Once paid, please tell the host so they can confirm receipt in PKR. 🃏${link?'\\nReview results: '+link:''}`;
+    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Once paid, please tell the host so they can confirm receipt in PKR. 🃏${link?'\nReview results: '+link:''}`;
   }
 
   function patchTransfer(id:string, p:Partial<Transfer>) {
@@ -103,7 +103,7 @@ export default function ResultsPage() {
       alert('On iPhone: tap Share, then Add to Home Screen. Open PKR from the Home Screen to enable alerts.');
       return;
     }
-    // Viewing a shared results link must not let somebody subscribe as another payer.
+    // A shared results link alone never authorises subscribing as another payer.
     const user=await api.auth.me().catch(()=>null);
     if(!user){
       alert('Sign in to PKR to enable notifications for your account.');
@@ -122,6 +122,7 @@ export default function ResultsPage() {
   }
 
   function copyTransferMsg(t: typeof transfers[0], i: number) {
+    if(t.status==='paid'||t.status==='legacy')return;
     navigator.clipboard.writeText(buildTransferMsg(t)).then(()=>{
       setCopied(i);
       setTimeout(()=>setCopied(null), 2000);
@@ -147,7 +148,6 @@ export default function ResultsPage() {
       </div>
 
       <div style={{maxWidth:480,margin:'0 auto',padding:'20px 16px',position:'relative',zIndex:1}}>
-
         <div style={{display:'flex',gap:8,marginBottom:16}}>
           <button className="btn btn-primary" style={{flex:1,fontSize:12}} onClick={share}>Share Results</button>
           <a href={`https://wa.me/?text=${encodeURIComponent(buildShareText())}`}
@@ -156,17 +156,14 @@ export default function ResultsPage() {
             WhatsApp
           </a>
         </div>
-
         {settlementNotice&&<div className="card" role="status" style={{padding:'12px 14px',fontSize:12,lineHeight:1.5,marginBottom:12}}>
           {settlementNotice}
         </div>}
-
         {(game.variance||0)!==0 && (
           <div className="card" style={{marginBottom:14,padding:'12px 16px',fontSize:12,color:'var(--amber)'}}>
             ⚠ Bank variance of {fmt(Math.abs(game.variance||0))}: chips cashed out did not match chips bought in. Transfers below are scaled pro-rata so they balance.
           </div>
         )}
-        {/* Results */}
         <div className="card" style={{marginBottom:14}}>
           <div className="section-header">Results · {players.length} Players</div>
           {sorted.map((p,i)=>(
@@ -190,8 +187,6 @@ export default function ResultsPage() {
             </div>
           ))}
         </div>
-
-        {/* Transfers — with copy + WA per row */}
         {transfers.length>0 && (
           <div className="card">
             <div className="section-header">Who Pays Who</div>
@@ -201,25 +196,21 @@ export default function ResultsPage() {
               return (
                 <div key={i} style={{padding:'12px 16px',
                   borderBottom:i<transfers.length-1?'1px solid var(--border-sub)':'none'}}>
-                  {/* Transfer row */}
                   <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
                     <div style={{flex:1,fontSize:13}}>
                       <span style={{color:'var(--red)',fontFamily:'var(--font-display),serif'}}>{t.from_name}</span>
                       <span style={{color:'var(--faint)',margin:'0 8px'}}>→</span>
                       <span style={{color:'var(--green)',fontFamily:'var(--font-display),serif'}}>{t.to_name}</span>
                     </div>
-                    <span className="display" style={{fontSize:18,color:'var(--ivory)',fontWeight:500}}>
-                      {fmt(t.amount)}
-                    </span>
+                    <span className="display" style={{fontSize:18,color:'var(--ivory)',fontWeight:500}}>{fmt(t.amount)}</span>
                   </div>
                   {t.status==='legacy' && (
                     <p role="note" style={{fontSize:12,lineHeight:1.55,color:'var(--ivory)',marginBottom:9}}>
-                      Historical settlement — payment status unverified. Excluded from current amounts owing. Not marked paid.
+                      Payment status unavailable. Refresh to retrieve the current payment record.
                     </p>
                   )}
-                  {/* Only the verified logged-in payer or recipient can
-                      confirm the transfer. A name or public results link alone
-                      never grants financial write permissions. */}
+                  {/* Only the verified logged-in payer or recipient can confirm
+                      a transfer. A name or shared link never grants write access. */}
                   {collectionStarted&&t.id&&t.status!=='legacy'&&myUserId===t.from&&
                     ['owed','not_received'].includes(t.status||'owed')&&(
                     <button type="button" className="btn btn-primary" disabled={!!busy}
@@ -240,7 +231,7 @@ export default function ResultsPage() {
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
                         color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
-                        {t.status==='paid'?'✓ Receipt confirmed':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
+                        {t.status==='paid'?'✓ Recorded as paid':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
                       </span>
                       {!isBanker && t.status!=='paid' && (
                         <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
@@ -262,11 +253,9 @@ export default function ResultsPage() {
                       )}
                     </div>
                   )}
-                  {/* Historic unverified transfers must never trigger payment reminders. */}
-                  {t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
-                    <button
-                      onClick={()=>copyTransferMsg(t,i)}
-                      className="btn btn-ghost"
+                  {/* Paid records must never prompt a second payment. */}
+                  {t.status!=='legacy'&&t.status!=='paid'&&<div style={{display:'flex',gap:6}}>
+                    <button onClick={()=>copyTransferMsg(t,i)} className="btn btn-ghost"
                       style={{flex:1,fontSize:11,padding:'5px 10px',
                         color:copied===i?'var(--green)':'var(--muted)',
                         borderColor:copied===i?'rgba(76,175,125,0.4)':'var(--border-sub)'}}>
@@ -281,8 +270,7 @@ export default function ResultsPage() {
                       </a>
                     ) : (
                       <a href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="btn btn-ghost"
+                        target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
                         style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
                           display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>
                         📱 WhatsApp
@@ -294,7 +282,6 @@ export default function ResultsPage() {
             })}
           </div>
         )}
-
         <div style={{textAlign:'center',marginTop:24,fontSize:10,color:'var(--faint)',
           letterSpacing:'0.12em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif'}}>
           PKR Private Poker
