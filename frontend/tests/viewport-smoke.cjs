@@ -277,7 +277,9 @@ async function test(){
         errors.push(size.name+' dashboard casino chip photograph not rendered');
        else if(size.width>=1100){
         const visual=await scenePhoto.evaluate(async img=>{
-          if(img instanceof HTMLImageElement)await img.decode().catch(()=>{});
+          if(img instanceof HTMLImageElement){
+            await Promise.race([img.decode().catch(()=>{}),new Promise(resolve=>setTimeout(resolve,4500))]);
+          }
           return {naturalWidth:img.naturalWidth,visible:getComputedStyle(img.closest('.pkr-pro-art')).display};
         });
         if(visual.naturalWidth<700||visual.visible==='none')
