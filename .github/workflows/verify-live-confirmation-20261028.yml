@@ -34,15 +34,20 @@ jobs:
               const page=await context.newPage();
               try{
                 await page.goto(base+'/?pkr_readonly_confirmation=20261028',{waitUntil:'domcontentloaded',timeout:40000});
+                await page.evaluate(()=>document.fonts.ready);
+                await page.waitForTimeout(750);
                 const open=page.getByRole('button',{name:/Host sign in/i}).first();
                 await open.waitFor({state:'visible',timeout:15000});await open.click();
-                const google=page.getByText('Continue with Google',{exact:true});
+                const dialog=page.getByRole('dialog',{name:'Host sign in'});
+                await dialog.waitFor({state:'visible',timeout:12000});
+                const google=dialog.getByRole('button',{name:/Continue with Google/});
                 await google.waitFor({state:'visible',timeout:12000});
-                add(name+' host sign-in dialog',true,{googleButtonVisible:true});
+                add(name+' host sign-in dialog',true,{googleButtonVisible:true,buttonText:await google.innerText()});
                 await page.screenshot({path:out+'/'+name+'-live-signin.png',fullPage:false});
-                await page.keyboard.press('Escape');await google.waitFor({state:'hidden',timeout:5000});
+                await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden',timeout:5000});
                 add(name+' sign-in closes with Escape',true,{});
                 await page.getByRole('button',{name:/Start your poker club/i}).first().click();
+                await dialog.waitFor({state:'visible',timeout:10000});
                 await google.waitFor({state:'visible',timeout:10000});
                 add(name+' main start button opens sign-in',true,{});
               }catch(e){add(name+' sign-in verification',false,{error:e.message});try{await page.screenshot({path:out+'/'+name+'-signin-failure.png',fullPage:false});fs.writeFileSync(out+'/'+name+'-page-text.txt',await page.locator('body').innerText());}catch{}}
@@ -52,7 +57,7 @@ jobs:
             for(const path of ['/auth/me','/games/pkr-readonly-confirmation-nonexistent/rsvp-board','/games/pkr-readonly-confirmation-nonexistent/settlement-control']){
               try{const r=await fetch(api+path,{redirect:'manual',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(15000)});const j=await r.json().catch(()=>({}));add('Production route '+path,r.status===401,{http:r.status,error:j.error,code:j.code});}catch(e){add('Production route '+path,false,{error:e.message})}
             }
-            const summary={checkedAt:new Date().toISOString(),checks,note:'Explicit waits distinguish a real UI failure from checking React state before render. No sign-in credentials, app records, payments, migrations or deployment settings were changed.'};
+            const summary={checkedAt:new Date().toISOString(),checks,note:'Corrected audit selector: actual button is Continue with Google (host), not the previously tested exact text Continue with Google. This run supersedes the first audit sign-in assertions. No credentials, app records, payments, migrations or production deployment settings were changed.'};
             fs.writeFileSync(out+'/confirmation.json',JSON.stringify(summary,null,2));
             const text=['# PKR live confirmation','',summary.checkedAt,'',...checks.map(c=>'- '+c.status+' '+c.name+' '+JSON.stringify(c.details)),'',summary.note].join('\n');
             fs.writeFileSync(out+'/SUMMARY.md',text);fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
