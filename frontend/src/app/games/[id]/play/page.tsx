@@ -2797,7 +2797,7 @@ function getPremiumTableCSS():string {
  * Theme A Midnight Felt values from the approved guide.
  */
 function getApprovedTableChromeCSS():string {
-  return \`
+  return `
 #gameScreen.pkr-casino-live-table {
   --pkr-chrome-bg:#0B0F12;
   --pkr-chrome-panel:#131A1F;
@@ -3070,5 +3070,5 @@ function getApprovedTableChromeCSS():string {
   #gameScreen.pkr-casino-live-table .pkr-approved-game-dock{min-height:58px}
   #gameScreen.pkr-casino-live-table #pkr-table-tools.pkr-approved-tools{top:52px}
 }
-\`;
+`;
 }
