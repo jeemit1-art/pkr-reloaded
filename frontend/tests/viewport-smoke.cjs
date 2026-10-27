@@ -66,16 +66,12 @@ async function test(){
     try{
       await guestPage.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:40000});
       await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
-      await guestPage.locator('.pkr-l2-hero-art').evaluate(async image=>{
-        if(image instanceof HTMLImageElement && !image.complete){
-          await new Promise(resolve=>{
-            image.addEventListener('load',resolve,{once:true});
-            image.addEventListener('error',resolve,{once:true});
-          });
-        }
+      // Theme A shows genuine PKR screens, never the old painted hero backdrop.
+      await guestPage.locator('.pkr-hero-desktop img').evaluate(async image=>{
+        if(image instanceof HTMLImageElement)await image.decode().catch(()=>{});
       });
       const landing=await guestPage.evaluate(()=>{
-        const hero=document.querySelector('.pkr-l2-hero-art');
+        const hero=document.querySelector('.pkr-hero-desktop img');
         return {
           scrollWidth:document.documentElement.scrollWidth,
           viewportWidth:document.documentElement.clientWidth,
@@ -84,7 +80,17 @@ async function test(){
       });
       if(landing.scrollWidth>landing.viewportWidth+5)
         errors.push(size.name+' landing horizontal overflow '+landing.scrollWidth+' > '+landing.viewportWidth);
-      if(!landing.imageReady)errors.push(size.name+' landing hero illustration failed to load');
+      if(!landing.imageReady)errors.push(size.name+' genuine PKR hero screenshot failed to load');
+      if(await guestPage.locator('.pkr-l2-hero-art').count())
+        errors.push(size.name+' redundant legacy illustrated hero still rendered');
+      const closer=await guestPage.locator('.pkr-l2-closing-art').evaluate(async image=>{
+        if(!(image instanceof HTMLImageElement))return {ok:false};
+        await image.decode().catch(()=>{});
+        return {ok:image.complete&&image.naturalWidth>500&&getComputedStyle(image).display!=='none',
+                src:image.getAttribute('src')};
+      });
+      if(!closer.ok||closer.src!=='/brand/pkr-midnight-closing.svg')
+        errors.push(size.name+' Theme A closing lacks visible poker-chip artwork');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
       if(landingCTAColour!=='rgb(61, 220, 151)')
         errors.push(size.name+' landing CTA is not Midnight Felt lime: '+landingCTAColour);
@@ -269,6 +275,18 @@ async function test(){
        if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
          errors.push(size.name+' '+item.id+' stale casino photo remains instead of Midnight Felt header: '+JSON.stringify(visual));
        if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+     }
+     if(['dashboard','room'].includes(item.id)){
+       const prop=page.locator('.pkr-casino-art-asset .pkr-casino-art-props').first();
+       if(await prop.count()){
+         const valid=await prop.evaluate(async image=>{
+           if(!(image instanceof HTMLImageElement))return false;
+           await image.decode().catch(()=>{});
+           return image.complete&&image.naturalWidth>500&&
+             image.getAttribute('src')==='/brand/pkr-midnight-closing.svg';
+         });
+         if(!valid)errors.push(size.name+' '+item.id+' missing recognisable poker chips/cards image');
+       }
      }
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);

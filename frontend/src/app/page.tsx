@@ -118,7 +118,6 @@ export default function HomePage() {
 
       <main>
         <section className="pkr-l2-hero" aria-labelledby="pkr-l2-main-heading">
-          <img className="pkr-l2-hero-art" src="/images/pkr-hero-premium.svg" alt="" aria-hidden="true" width="1600" height="640" fetchPriority="high"/>
           <div className="pkr-l2-hero-vignette" aria-hidden="true"/>
           <div className="pkr-l2-hero-inner">
             <div className="pkr-l2-hero-copy">
@@ -232,7 +231,7 @@ export default function HomePage() {
         </section>
 
         <section className="pkr-l2-last-call">
-          <img src="/images/pkr-hero-premium.svg" alt="" aria-hidden="true" loading="lazy" width="1600" height="640"/>
+          <img className="pkr-l2-closing-art" src="/brand/pkr-midnight-closing.svg" alt="" aria-hidden="true" loading="lazy" decoding="async" width="950" height="500"/>
           <div><span className="pkr-l2-section-kicker">MADE FOR REGULAR GAME NIGHTS</span><h2>Deal everyone in.</h2><p>Build your private poker room and make the next game night one to remember.</p><button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start hosting <span aria-hidden="true">↗</span></button></div>
         </section>
         <section id="faq" className="pkr-l2-section pkr-l2-faq" aria-labelledby="pkr-faq-title">

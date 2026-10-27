@@ -603,3 +603,28 @@
  .pkr-vnext-insights :is(.pkr-vnext-card,.pkr-insights-kpi){min-width:0}
  .pkr-persistent-brand span{width:26px;height:26px}
 }
+
+/* Replace the former CSS-composed casino scene with recognisable poker
+   equipment imagery from an approved local SVG. No existing controls change. */
+.pkr-casino .pkr-casino-art.pkr-casino-art-asset,
+.pkr-dashboard .pkr-pro-art .pkr-casino-art.pkr-casino-art-asset {
+  background:#14231F!important;
+  background-image:none!important;
+}
+.pkr-casino .pkr-casino-art.pkr-casino-art-asset::after {
+  background:linear-gradient(90deg,rgba(19,31,29,.78),rgba(19,31,29,.13) 83%),
+    linear-gradient(0deg,rgba(11,15,18,.68),transparent 55%)!important;
+}
+.pkr-casino .pkr-casino-art-asset .pkr-casino-art-props {
+  position:absolute;top:-36%;right:-7%;width:min(86%,780px);height:170%;
+  max-width:none;object-fit:contain;object-position:right center;
+  opacity:.72;filter:none;pointer-events:none;
+}
+.pkr-casino .pkr-casino-art-room.pkr-casino-art-asset .pkr-casino-art-props {
+  top:-34%;right:-5%;height:170%;opacity:.68;
+}
+@media (max-width:700px) {
+  .pkr-casino .pkr-casino-art-asset .pkr-casino-art-props {
+    right:-30%;top:-12%;width:112%;height:145%;opacity:.38;
+  }
+}
