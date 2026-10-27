@@ -620,6 +620,12 @@ export default function EventPage() {
                       :contact.status==='awaiting_host_approval'?'Waiting for host approval'
                       :'Invitation sent — not yet joined'}</div>
                   </div>
+                  {contact.status==='approved_awaiting_member'&&
+                    <a className="btn btn-outline" target="_blank" rel="noopener noreferrer"
+                      style={{fontSize:10,padding:'7px 9px',textDecoration:'none'}}
+                      href={'https://wa.me/'+contact.phone.replace(/\\D/g,'')+'?text='+encodeURIComponent(
+                        'Your PKR join request for '+event.name+' is approved. Please reopen the original invitation in the same browser and tap Check approval now to finish joining. If you no longer have the link, let me know.'
+                      )}>Remind to complete</a>}
                   {contact.status==='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy} onClick={async()=>{try{const result=await api.events.recoverContact(id,contact.id);setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.url,name:contact.display_name});}catch(e:any){alert(e.message);}}}>Recover access</button>}
                   {contact.status==='joined'&&selectedGameId&&
                     <a href={gameWhatsAppLink(contact.phone,selectedGameId)} target="_blank" rel="noreferrer"
