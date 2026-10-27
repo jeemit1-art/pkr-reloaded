@@ -76,6 +76,10 @@ jobs:
             echo "No screenshot changes"
           else
             git commit -m "assets: genuine Nightshift PKR UI screenshots with fictional player data"
+            # Next.js can update tracked/generated metadata during screenshot
+            # capture. Stash ONLY uncommitted runner changes after demo images
+            # have been committed, so rebase keeps a clean checkout.
+            git stash push --include-untracked --message "pkr-runner-generated-files" || true
             git fetch origin design/pkr-ultraviolet-unified-20261027
             git rebase origin/design/pkr-ultraviolet-unified-20261027
             git push origin HEAD:refs/heads/design/pkr-ultraviolet-unified-20261027
