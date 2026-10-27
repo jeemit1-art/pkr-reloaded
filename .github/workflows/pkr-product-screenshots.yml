@@ -1,9 +1,9 @@
-name: Refresh PKR public screenshots from redesigned app
+name: Refresh classic PKR product screenshots using synthetic browser data
 
 on:
   push:
     branches:
-      - design/charcoal-blue-refresh-20261027
+      - design/pkr-classic-poker-20261027
     paths:
       - '.github/workflows/pkr-product-screenshots.yml'
 
@@ -28,15 +28,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Confirm latest PKR graphite design
+      - name: Confirm approved PKR Classic Poker design
         run: |
-          grep -Fq "import './pkr-2026-graphite.css';" frontend/src/app/layout.tsx
+          grep -Fq "import './pkr-classic-poker-studio.css';" frontend/src/app/layout.tsx
           ! grep -Fq "import './pkr-2026-blue-theme.css';" frontend/src/app/layout.tsx
-          test -f frontend/src/app/pkr-2026-graphite.css
-          grep -Fq 'dashboard primary control is not coral' frontend/tests/viewport-smoke.cjs
+          test -f frontend/src/app/pkr-classic-poker-studio.css
+          grep -Fq 'dashboard primary control is not classic poker red' frontend/tests/viewport-smoke.cjs
           grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
-          grep -Fq 'background:#ef8976;color:#261512' 'frontend/src/app/games/[id]/play/page.tsx'
-          ! grep -Fq 'background:linear-gradient(135deg,var(--gold),#8a5c20)' 'frontend/src/app/games/[id]/play/page.tsx'
+          # Immutable gameplay: no redesign PR may alter the existing playing surface.
+          git fetch origin main --depth=1
+          ! git diff --name-only origin/main...HEAD | grep -Fq 'frontend/src/app/games/[id]/play/page.tsx'
       - name: Install pinned frontend dependencies
         working-directory: frontend
         run: npm ci --no-audit --no-fund
@@ -49,7 +50,7 @@ jobs:
       - name: Start staging-only PKR application
         working-directory: frontend
         run: |
-          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-graphite-next.log 2>&1 &
+          npm run dev -- --hostname 127.0.0.1 > /tmp/pkr-classic-next.log 2>&1 &
           for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
             sleep 2
@@ -65,15 +66,15 @@ jobs:
       - name: Update only demonstration screenshots in design branch
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/design/charcoal-blue-refresh-20261027"
+          test "$GITHUB_REF" = "refs/heads/design/pkr-classic-poker-20261027"
           git config user.name "PKR Screenshot Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/demo/
           if git diff --cached --quiet; then
             echo "No screenshot changes"
           else
-            git commit -m "assets: genuine graphite PKR UI screenshots with fictional player data"
-            git fetch origin design/charcoal-blue-refresh-20261027
-            git rebase origin/design/charcoal-blue-refresh-20261027
-            git push origin HEAD:refs/heads/design/charcoal-blue-refresh-20261027
+            git commit -m "assets: authentic classic PKR screenshots with synthetic player data"
+            git fetch origin design/pkr-classic-poker-20261027
+            git rebase origin/design/pkr-classic-poker-20261027
+            git push origin HEAD:refs/heads/design/pkr-classic-poker-20261027
           fi
