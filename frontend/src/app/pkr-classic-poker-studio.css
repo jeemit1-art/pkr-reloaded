@@ -613,3 +613,29 @@
    - Live poker table and seats: #gameScreen, #tableOuter, #tableFelt
    - Live-player action buttons, blind timers, server state and finances
    - Synthetic demo images remain labelled until they can be recaptured. */
+
+
+/* 08 · Player account recovery / sign-in: honour existing invite security. */
+.pkr-classic-mobile-login{
+  --bg:#0b0b0e;--bg2:#1b1a20;--bg3:#26232b;
+  --gold:#e0465b;--gold-pale:#f5bbc4;
+  --white:#faf6f1;--ivory:#ddd2d7;--muted:#bbb2b9;
+  --border:rgba(251,241,245,.14);--border-hi:rgba(241,88,112,.48);
+  background:radial-gradient(ellipse at 50% 10%,rgba(159,27,54,.23),transparent 65%),#0b0b0e!important;
+  color:#f8f2f0;font-family:var(--font-landing-body),system-ui,sans-serif;
+}
+.pkr-classic-mobile-login>section{
+  background:#19191e!important;border:1px solid #614854!important;
+  box-shadow:0 25px 60px #0006;border-radius:17px!important;
+}
+.pkr-classic-mobile-login h1{
+  font-family:var(--font-landing-display),system-ui,sans-serif!important;
+  font-weight:760;letter-spacing:-.045em;color:#fff7f3;
+}
+.pkr-classic-mobile-login a.btn-primary{
+  background:#df2e47!important;border:1px solid #f2697b!important;color:#fff!important;
+}
+.pkr-classic-mobile-login a.btn-ghost{
+  background:#29252d!important;border:1px solid #604550!important;color:#f9edf1!important;
+}
+.pkr-classic-mobile-login :is(a,button):focus-visible{outline:3px solid #ff7f8c!important;outline-offset:3px}
