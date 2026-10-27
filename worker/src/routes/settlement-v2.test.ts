@@ -78,8 +78,14 @@ describe('opt-in settlement V2 identity and money protection',()=>{
     const res=await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
     expect(res.status).toBe(503);expect(f.rows[0].status).toBe('owed');
   });
-  it('only the verified payer can mark their own transfer as sent',async()=>{
+  it('requires the host to start collection before any player can acknowledge payment',async()=>{
     const f=fixture();
+    const reply=await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
+    expect(reply.status).toBe(409);
+    expect(f.rows[0].status).toBe('owed');
+  });
+  it('only the verified payer can mark their own transfer as sent',async()=>{
+    const f=fixture();f.settings.enabled=1;
     const nope=await f.call('/games/g1/transfers/t1/respond','receiver',{action:'sent'});
     expect(nope.status).toBe(403);expect(f.rows[0].status).toBe('owed');
     const ok=await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
@@ -88,7 +94,7 @@ describe('opt-in settlement V2 identity and money protection',()=>{
     expect(f.audit.some(a=>a[4]==='sent')).toBe(true);
   });
   it('recipient must confirm receipt, and can dispute a claimed payment',async()=>{
-    const f=fixture();
+    const f=fixture();f.settings.enabled=1;
     await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
     const denied=await f.call('/games/g1/transfers/t1/respond','payer',{action:'received'});
     expect(denied.status).toBe(403);
@@ -97,7 +103,7 @@ describe('opt-in settlement V2 identity and money protection',()=>{
     expect(f.rows[0].paid_at).toBeGreaterThan(0);
   });
   it('allows recipient dispute without incorrectly marking a transfer as paid',async()=>{
-    const f=fixture();await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
+    const f=fixture();f.settings.enabled=1;await f.call('/games/g1/transfers/t1/respond','payer',{action:'sent'});
     const r=await f.call('/games/g1/transfers/t1/respond','receiver',{action:'not_received'});
     expect(r.status).toBe(200);expect(f.rows[0].status).toBe('not_received');expect(f.rows[0].paid_at).toBeNull();
   });
