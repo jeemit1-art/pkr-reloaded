@@ -34,7 +34,7 @@ export async function sendPaymentReminders(env: Env): Promise<void> {
     // Count only push service acceptance, not attempted or failed sends.
     // This does NOT mean the device displayed or the payer read the reminder.
     if(accepted>0){
-      await env.DB.prepare('UPDATE settlement_transfers SET last_reminded_at=?, reminder_count=reminder_count+1 WHERE id=? AND status IN ('owed','not_received')')
+      await env.DB.prepare("UPDATE settlement_transfers SET last_reminded_at=?, reminder_count=reminder_count+1 WHERE id=? AND status IN ('owed','not_received')")
         .bind(now, r.id).run();
     }
   }
