@@ -15,6 +15,8 @@ import './pkr-product-gallery.css';
 import './pkr-2026-graphite.css';
 // Approved Classic Poker Studio layer must be imported after legacy themes.
 import './pkr-classic-poker-studio.css';
+// Locally bundled genuine poker-chip, card and dice photography (not live gameplay).
+import './pkr-casino-photography.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
