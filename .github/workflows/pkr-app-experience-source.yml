@@ -34,6 +34,14 @@ jobs:
         working-directory: frontend
         run: |
           node scripts/apply-app-experience-20261028.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for name in ['src/app/layout.tsx','src/components/PersistentNavigation.tsx']:
+              p=Path(name)
+              p.write_text(re.sub(r'(?m)^[ \t]+$', '', p.read_text()))
+          PY
+          git diff --check
           node tests/record-details.cjs
           node tests/tournament-structure.cjs
       - name: Build and type-check actual application
