@@ -1,0 +1,35 @@
+/* Viewport safety for the camera dialog, which uses inline markup rather
+   than the shared .modal-overlay. No camera, invitation or theme changes. */
+body:has(#scanVideo) .pkr-universal-bottom-nav,
+body:has(.pkr-upgrade-viewport-overlay) .pkr-universal-bottom-nav {
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+.pkr-dashboard .pkr-content:has(#scanVideo) {
+  position:relative!important;
+  z-index:11000!important;
+}
+/* Scanner overlay > frame > video container > unique camera element. */
+.pkr-dashboard .pkr-content div:has(> div > div > video#scanVideo) {
+  position:fixed!important;
+  inset:0!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  box-sizing:border-box!important;
+  z-index:11000!important;
+  overflow-y:auto!important;
+  padding:calc(12px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important;
+}
+.pkr-dashboard .pkr-content div:has(> div > video#scanVideo) {
+  max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px)!important;
+  min-height:0!important;
+  flex:0 1 auto!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+}
+.pkr-dashboard .pkr-content div:has(> div > video#scanVideo) > div:first-child {
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--pkr-a-surface,#131A1F);
+}
