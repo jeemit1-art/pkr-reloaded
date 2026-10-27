@@ -29,6 +29,7 @@ function fixture(p,method){
  if(p==='/games/'+game.id)return game;
  if(p==='/games/'+finished.id)return finished;
  if(p==='/games/results/synthetic-results')return {...data.results,game:finished,players:finished.players};
+ if(p==='/games/'+game.id+'/tournament')return {state:{status:'paused',current_level:1,paused_elapsed:300,starting_chips:10000,buy_in_amount:2500,rebuy_allowed:false,rebuy_levels:4,addon_allowed:false,payout_structure:'[{"position":1,"percent":60},{"position":2,"percent":30},{"position":3,"percent":10}]'},levels:Array.from({length:12},(_,i)=>({level_num:i+1,small_blind:25*(i+1),big_blind:50*(i+1),ante:0,duration_secs:1200,is_break:false})),rebuys:[],eliminations:[],payouts:[],prize_pool_cents:17500};
  if(p==='/games/'+game.id+'/rsvp-board')return {event:room,game,players:[],version:1,options:['19:45','20:00','20:15'],guests:members.map((m,i)=>({id:m.id,display_name:m.name,status:i===6?'maybe':'yes',arrival_option:i%2?'20:00':'19:45',seat_number:i===6?null:i+1,updated_at:room.created_at}))};
  return data.fixture(p,method);
 }
@@ -37,10 +38,7 @@ const rgb={bg:'rgb(11, 15, 18)',surface:'rgb(19, 26, 31)',primary:'rgb(61, 220, 
 async function settle(page){
  await page.evaluate(async()=>{
   await Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,8000))]);
-  await Promise.all([...document.images].map(async img=>{
-   img.loading='eager';
-   await Promise.race([img.decode().catch(()=>{}),new Promise(r=>setTimeout(r,6000))]);
-  }));
+  await Promise.all([...document.images].map(async img=>{img.loading='eager';await Promise.race([img.decode().catch(()=>{}),new Promise(r=>setTimeout(r,6000))]);}));
  });
  await page.waitForTimeout(300);
 }
@@ -62,43 +60,23 @@ async function run(){
    await context.route('**/*',async route=>{
     const url=new URL(route.request().url());
     if(url.origin===BASE)return route.continue();
-    if(url.origin===API){
-     const result=fixture(url.pathname,route.request().method());
-     return route.fulfill({status:result?.error?404:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(result)});
-    }
+    if(url.origin===API){const result=fixture(url.pathname,route.request().method());return route.fulfill({status:result?.error?404:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(result)});}
     if(url.hostname.includes('workers.dev')||url.hostname==='mypkr.app')errors.push('Forbidden live request: '+url.origin);
     return route.abort();
    });
-   const page=await context.newPage();
-   page.setDefaultTimeout(12000);
+   const page=await context.newPage();page.setDefaultTimeout(12000);
    if(mode==='app'){
     const routes=[['dashboard','/dashboard','.pkr-pro-home'],['room','/events/test-room','.pkr-event-tabs'],['insights','/insights','.pkr-insights-settle-tabs'],['schedule','/schedule','.pkr-schedule-page'],['game-detail','/games/test-game','.pkr-game-detail'],['rsvp','/games/test-game/rsvp','.pkr-guest-card'],['live-table','/games/test-game/play','#tableFelt'],['install','/install?group=test-room','.pkr-install-vnext']];
     for(const [id,url,ready] of routes){
-     await page.goto(BASE+url,{waitUntil:'domcontentloaded'});
-     await page.locator(ready).first().waitFor({state:'visible'});
+     await page.goto(BASE+url,{waitUntil:'domcontentloaded'});await page.locator(ready).first().waitFor({state:'visible'});
      if(id==='live-table')await page.waitForFunction(()=>document.querySelectorAll('.seat-chip.seated').length===7);
      await settle(page);await report(page,id,size.name);
-     if(id==='dashboard'){
-      const value=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(value!==rgb.primary)errors.push(size.name+' dashboard action not lime: '+value);
-     }
-     if(id==='live-table'){
-      const value=await page.locator('#gameScreen .topbar').evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(value!==rgb.surface)errors.push(size.name+' table toolbar not Theme A surface: '+value);
-      if(await page.locator('.pkr-persistent-nav,.pkr-universal-bottom-nav').count())errors.push('Navigation intrudes into gameplay');
-     }
+     if(id==='dashboard'){const value=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);if(value!==rgb.primary)errors.push(size.name+' dashboard action not lime: '+value);}
+     if(id==='room'){const contrast=await page.locator('.pkr-event-tabs-inner .tab.active').evaluate(el=>({fg:getComputedStyle(el).color,bg:getComputedStyle(el).backgroundColor}));if(contrast.fg===contrast.bg)errors.push(size.name+' room tab label has no contrast');}
+     if(id==='live-table'){const value=await page.locator('#gameScreen .topbar').evaluate(el=>getComputedStyle(el).backgroundColor);if(value!==rgb.surface)errors.push(size.name+' table toolbar not Theme A surface: '+value);if(await page.locator('.pkr-persistent-nav,.pkr-universal-bottom-nav').count())errors.push('Navigation intrudes into gameplay');}
      await page.screenshot({path:path.join(output,size.name+'-'+id+'.png'),fullPage:false});
-     if(id==='room'){
-      await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();
-      await page.locator('.pkr-standings-board').waitFor({state:'visible'});await settle(page);
-      await page.evaluate(()=>scrollTo(0,0));
-      await page.screenshot({path:path.join(output,size.name+'-standings.png'),fullPage:false});
-     }
-     if(id==='live-table'){
-      await page.waitForFunction(()=>typeof window.openTournament==='function');
-      await page.evaluate(()=>window.openTournament());await page.waitForTimeout(250);
-      await page.screenshot({path:path.join(output,size.name+'-tournament.png'),fullPage:false});
-     }
+     if(id==='room'){await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();await page.locator('.pkr-standings-board').waitFor({state:'visible'});await settle(page);await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(output,size.name+'-standings.png'),fullPage:false});}
+     if(id==='live-table'){await page.waitForFunction(()=>typeof window.openTournament==='function');await page.evaluate(()=>window.openTournament());await page.locator('#tTimerDisplay').waitFor({state:'visible'});await page.screenshot({path:path.join(output,size.name+'-tournament.png'),fullPage:false});}
     }
    }else{
     for(const [id,url] of [['home','/'],['pricing','/pricing'],['game-tracker','/home-poker-game-tracker'],['settlement','/home-poker-settlement'],['tournaments','/poker-tournament-manager'],['player-login','/mobile-login']]){

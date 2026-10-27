@@ -1,0 +1,55 @@
+/* Final rendered-screen corrections. The live game adds unlayered legacy CSS;
+   its dialogs are siblings of gameScreen, so they need the same design tokens. */
+:root {
+  --display:var(--font-display),Inter,sans-serif!important;
+  --body:var(--font-body),Inter,sans-serif!important;
+  --cream:var(--pkr-a-text)!important;
+  --cream2:var(--pkr-a-muted)!important;
+}
+html,body {font-family:var(--font-body),Inter,sans-serif!important;}
+:where(.modal,.sheet-box) {
+  background:var(--pkr-a-surface)!important;
+  color:var(--pkr-a-text)!important;
+  border-color:var(--pkr-a-line)!important;
+  font-family:var(--font-body),Inter,sans-serif!important;
+}
+:where(.modal,.sheet-box) :is(h1,h2,h3,.sheet-title) {
+  font-family:var(--font-display),Inter,sans-serif!important;
+  color:var(--pkr-a-text)!important;
+  text-shadow:none!important;
+}
+:where(.modal,.sheet-box) :is(button,input,select,textarea) {
+  font-family:var(--font-body),Inter,sans-serif!important;
+}
+:where(.modal,.sheet-box) :is(input,select,textarea) {
+  background:var(--pkr-a-raised)!important;
+  color:var(--pkr-a-text)!important;
+  border-color:var(--pkr-a-line)!important;
+}
+:where(.modal,.sheet-box) .btn-primary,
+#tournamentBody>button {
+  background:var(--pkr-a-primary)!important;
+  color:var(--pkr-a-on-primary)!important;
+  border-color:var(--pkr-a-primary)!important;
+}
+#tTimerDisplay {font-family:var(--font-num),monospace!important;}
+.pkr-app.pkr-event .pkr-event-tabs-inner button.tab.active {
+  color:var(--pkr-a-on-primary)!important;
+  -webkit-text-fill-color:var(--pkr-a-on-primary)!important;
+  background:var(--pkr-a-primary)!important;
+  text-shadow:none!important;
+}
+.pkr-app.pkr-dashboard .pkr-pro-stats>div>strong {
+  color:var(--pkr-a-text)!important;
+}
+.pkr-app.pkr-event .pkr-event-metric:first-child strong {
+  color:var(--pkr-a-money)!important;
+}
+.pkr-app :is(h1,h2,h3,strong,button),
+#gameScreen :is(.tb-title,.seat-label,#tableName),
+.pkr-persistent-nav *,.pkr-universal-bottom-nav * {
+  text-shadow:none!important;
+}
+.pkr-app::before,.pkr-app::after,
+.pkr-universal-bottom-nav::before,
+.pkr-universal-bottom-nav button::before {display:none!important;}
