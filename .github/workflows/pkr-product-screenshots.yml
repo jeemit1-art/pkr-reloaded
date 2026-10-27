@@ -37,7 +37,7 @@ jobs:
           grep -Fq 'live game Share control retains gold' frontend/tests/viewport-smoke.cjs
           # Immutable gameplay: no redesign PR may alter the existing playing surface.
           git fetch origin main --depth=1
-          ! git diff --name-only origin/main...HEAD | grep -Fq 'frontend/src/app/games/[id]/play/page.tsx'
+          ! git diff --name-only origin/main HEAD | grep -Fq 'frontend/src/app/games/[id]/play/page.tsx'
       - name: Install pinned frontend dependencies
         working-directory: frontend
         run: npm ci --no-audit --no-fund
