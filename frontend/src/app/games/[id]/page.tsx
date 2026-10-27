@@ -140,7 +140,7 @@ export default function GamePage() {
           {game.format && game.format !== 'cash' && (
             <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
               letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 8px',borderRadius:2,
-              background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.2)'}}>
+              background:'rgba(173,130,255,0.1)',border:'1px solid rgba(173,130,255,0.2)'}}>
               {({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as any)[game.format]||game.format}
             </span>
           )}
@@ -176,7 +176,7 @@ export default function GamePage() {
         {(game.status==='scheduled'||game.status==='lobby') && isHost && (<>
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:8,
-              background:'var(--gold)',color:'#06271d',
+              background:'var(--gold)',color:'#171125',
               opacity:starting?0.7:1}}
             disabled={starting}
             onClick={doStartGame}>
@@ -202,7 +202,7 @@ export default function GamePage() {
         {game.status==='active' && isHost && (
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
-              background:'var(--gold)',color:'#06271d'}}
+              background:'var(--gold)',color:'#171125'}}
             onClick={()=>router.push(`/games/${id}/play`)}>
             🃏 {unfinished?'Resume / Review Table':'Open Table'}
           </button>
@@ -221,7 +221,7 @@ export default function GamePage() {
         {game.status==='settled' && resultsUrl && (
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
-              background:'var(--gold)',color:'#06271d'}}
+              background:'var(--gold)',color:'#171125'}}
             onClick={()=>router.push(`/games/results/${game.results_token}`)}>
             ✅ View Results
           </button>

@@ -154,7 +154,7 @@ export default function InvitePage() {
       <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif',marginBottom:20}}>
         {err || 'This invite link has expired or already been used.'}
       </div>
-      <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.18)',borderRadius:2,padding:'12px 14px',marginBottom:20,textAlign:'left'}}>
+      <div style={{background:'rgba(173,130,255,0.06)',border:'1px solid rgba(173,130,255,0.18)',borderRadius:2,padding:'12px 14px',marginBottom:20,textAlign:'left'}}>
         <div style={{fontSize:11,color:'var(--gold)',fontWeight:600,marginBottom:4,fontFamily:'var(--font-body),sans-serif'}}>What to do</div>
         <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>Ask the host to generate a new invite link — they expire after 48 hours and can only be used once.</div>
       </div>
@@ -216,14 +216,14 @@ export default function InvitePage() {
             {step:'3',text:'Tap "Add" in the top-right corner'},
           ].map(s=>(
             <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:10}}>
-              <div style={{width:20,height:20,borderRadius:'50%',background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
+              <div style={{width:20,height:20,borderRadius:'50%',background:'rgba(173,130,255,0.15)',border:'1px solid rgba(173,130,255,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
               <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
             </div>
           ))}
         </div>
       )}
       {ios && !safari && (
-        <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:3,padding:'12px 14px',marginBottom:16}}>
+        <div style={{background:'rgba(173,130,255,0.06)',border:'1px solid rgba(173,130,255,0.2)',borderRadius:3,padding:'12px 14px',marginBottom:16}}>
           <div style={{fontSize:12,color:'var(--amber)',lineHeight:1.6,fontFamily:'var(--font-body),sans-serif'}}><strong>Open this page in Safari</strong> to install PKR on your home screen. Chrome on iPhone doesn't support PWA install.</div>
         </div>
       )}
@@ -235,7 +235,7 @@ export default function InvitePage() {
             {step:'2',text:'Tap "Add to Home screen" or "Install app"'},
           ].map(s=>(
             <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:10}}>
-              <div style={{width:20,height:20,borderRadius:'50%',background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
+              <div style={{width:20,height:20,borderRadius:'50%',background:'rgba(173,130,255,0.15)',border:'1px solid rgba(173,130,255,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
               <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
             </div>
           ))}

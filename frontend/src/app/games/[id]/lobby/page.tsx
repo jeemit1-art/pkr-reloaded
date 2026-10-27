@@ -114,7 +114,7 @@ export default function LobbyPage() {
 
       {/* Header */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent)'}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(173,130,255,0.4),transparent)'}}/>
         <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px'}}>
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
             <div>
@@ -186,9 +186,9 @@ export default function LobbyPage() {
 
         {/* ── INSTALL + PUSH BANNER ── */}
         {installState === 'not_installed' && (
-          <div style={{background:'var(--bg2)',border:'1px solid rgba(201,168,76,0.3)',borderRadius:3,
+          <div style={{background:'var(--bg2)',border:'1px solid rgba(173,130,255,0.3)',borderRadius:3,
             marginBottom:16,position:'relative',overflow:'hidden'}}>
-            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.5),transparent)'}}/>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(173,130,255,0.5),transparent)'}}/>
             <div style={{padding:'16px 16px 0'}}>
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
                 <div style={{width:36,height:36,borderRadius:8,background:'var(--bg3)',border:'1px solid var(--border)',
@@ -235,8 +235,8 @@ export default function LobbyPage() {
                     {step:'4', text:'Open PKR from your home screen and allow notifications'},
                   ].map(s=>(
                     <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:8}}>
-                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(201,168,76,0.15)',
-                        border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',
+                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(173,130,255,0.15)',
+                        border:'1px solid rgba(173,130,255,0.3)',display:'flex',alignItems:'center',
                         justifyContent:'center',fontSize:9,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
                       <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
                     </div>
@@ -250,8 +250,8 @@ export default function LobbyPage() {
                     {step:'3', text:'Open PKR from your home screen and allow notifications'},
                   ].map(s=>(
                     <div key={s.step} style={{display:'flex',alignItems:'flex-start',gap:8}}>
-                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(201,168,76,0.15)',
-                        border:'1px solid rgba(201,168,76,0.3)',display:'flex',alignItems:'center',
+                      <div style={{width:18,height:18,borderRadius:'50%',background:'rgba(173,130,255,0.15)',
+                        border:'1px solid rgba(173,130,255,0.3)',display:'flex',alignItems:'center',
                         justifyContent:'center',fontSize:9,color:'var(--gold)',fontWeight:600,flexShrink:0,marginTop:1}}>{s.step}</div>
                       <div style={{fontSize:12,color:'var(--ivory)',lineHeight:1.5,fontFamily:'var(--font-body),sans-serif'}}>{s.text}</div>
                     </div>
@@ -272,8 +272,8 @@ export default function LobbyPage() {
                 </button>
               </div>
               {showInstallHelp && (
-                <div style={{marginTop:10,padding:'10px 12px',background:'rgba(201,168,76,0.04)',
-                  border:'1px solid rgba(201,168,76,0.12)',borderRadius:2}}>
+                <div style={{marginTop:10,padding:'10px 12px',background:'rgba(173,130,255,0.04)',
+                  border:'1px solid rgba(173,130,255,0.12)',borderRadius:2}}>
                   <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>
                     PKR is a PWA (Progressive Web App) — it installs like a native app directly from your browser, no App Store needed.
                     Once installed and notifications are allowed, you'll receive alerts on your lock screen whenever there's
@@ -472,7 +472,7 @@ function LiveScoreboard({ gameId, liveToken }: { gameId:string; liveToken?:strin
 
   return (
     <div style={{marginBottom:16}}>
-      <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:3,
+      <div style={{background:'rgba(173,130,255,0.06)',border:'1px solid rgba(173,130,255,0.2)',borderRadius:3,
         padding:'10px 14px',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{width:7,height:7,borderRadius:'50%',background:'var(--green)',display:'inline-block',

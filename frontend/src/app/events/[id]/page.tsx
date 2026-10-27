@@ -378,7 +378,7 @@ export default function EventPage() {
           </div>
           {isGroupOwner && joinRequests.length > 0 && <button type="button"
             onClick={() => selectTab('members')}
-            style={{width:'100%',margin:'10px 0',padding:13,borderRadius:9,background:'rgba(201,168,76,.15)',border:'1px solid var(--gold)',color:'var(--gold)',fontWeight:700,cursor:'pointer'}}>
+            style={{width:'100%',margin:'10px 0',padding:13,borderRadius:9,background:'rgba(173,130,255,.15)',border:'1px solid var(--gold)',color:'var(--gold)',fontWeight:700,cursor:'pointer'}}>
             🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} waiting for approval — Review in Members
           </button>}
           <div className="pkr-event-hero-actions">
@@ -680,7 +680,7 @@ export default function EventPage() {
                         <span style={{
                           padding:'1px 6px',borderRadius:2,fontSize:9,fontWeight:600,letterSpacing:'0.1em',
                           textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
-                          background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.06)',
+                          background: m.role==='host'?'rgba(173,130,255,0.15)':m.role==='cohost'?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.06)',
                           color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
                         }}>{m.role}</span>
                         {m.email && <span style={{marginLeft:8}}>{m.email}</span>}
@@ -799,8 +799,8 @@ export default function EventPage() {
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                         {((g as any).top_players||[]).slice(0,expandedHistory.includes(g.id)?undefined:3).map((p:any,i:number)=>(
                           <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
-                            background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
-                            border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
+                            background:i===0?'rgba(173,130,255,0.08)':'rgba(255,255,255,0.03)',
+                            border:`1px solid ${i===0?'rgba(173,130,255,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
                             <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}>{i===0?'♛':i===1?'♝':'♞'}</span>
                             <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
                             <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
@@ -834,7 +834,7 @@ export default function EventPage() {
         <div className="modal-overlay" onClick={()=>setConfirmEndEvent(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
             <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
-              <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
+              <div style={{fontSize:16,color:'var(--white)',fontFamily:"var(--font-display),system-ui,sans-serif",fontWeight:600,marginBottom:8}}>End Event?</div>
               <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.5}}>
                 This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
               </div>
@@ -1077,7 +1077,7 @@ export default function EventPage() {
             )}
 
             {!isPWA && iosDevice && safariOnly && (
-              <div style={{padding:'10px 14px',background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:4,marginBottom:14}}>
+              <div style={{padding:'10px 14px',background:'rgba(173,130,255,0.06)',border:'1px solid rgba(173,130,255,0.2)',borderRadius:4,marginBottom:14}}>
                 <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}>📱 iPhone: Add to Home Screen</div>
                 <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                   Tap <strong style={{color:'var(--ivory)'}}>Share ↑</strong> → <strong style={{color:'var(--ivory)'}}>Add to Home Screen</strong> to install PKR as a native app.
@@ -1188,8 +1188,8 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
   const isLive = isLiveGame(game);
   const isUnfinished = isUnfinishedGame(game);
   const statusBg:Record<string,string> = {
-    scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
-    lobby:'rgba(201,168,76,0.12)', settled:'transparent',
+    scheduled:'rgba(173,130,255,0.08)', active:'rgba(0,255,136,0.08)',
+    lobby:'rgba(173,130,255,0.12)', settled:'transparent',
   };
   const statusDot:Record<string,string> = {
     scheduled:'var(--amber)', active:'var(--green)', lobby:'var(--gold)', settled:'var(--muted)',
@@ -1211,7 +1211,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
           {(game as any).format && (game as any).format !== 'cash' && (
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
-              background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
+              background:'rgba(173,130,255,0.08)',border:'1px solid rgba(173,130,255,0.2)',color:'var(--gold)'}}>
               {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
             </span>
           )}
@@ -1247,7 +1247,7 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
           )}
           {isHost && (game.status==='scheduled'||game.status==='lobby') && (
             <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
-              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(173,130,255,0.3)'}}>
               ⚡ Quick Seat
             </button>
           )}

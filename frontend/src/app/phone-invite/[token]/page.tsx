@@ -83,7 +83,7 @@ export default function PhoneInvite(){
      {data&&<p style={{fontSize:12}}>Private invite for <strong style={{color:'var(--ivory)'}}>{data.masked_phone}</strong>
        {' · '}{data.role==='cohost'?'Co-host':'Player'} access</p>}
      {!claim&&installFirst&&<div style={{margin:'15px 0',padding:14,borderRadius:9,
-       border:'1px solid rgba(201,168,76,.32)',background:'rgba(201,168,76,.07)'}}>
+       border:'1px solid rgba(173,130,255,.32)',background:'rgba(173,130,255,.07)'}}>
        <strong style={{color:'var(--gold)',fontSize:13}}>iPhone: install PKR before joining</strong>
        <p>For reliable app notifications and sign-in, install PKR to your Home Screen first,
          open the new app and paste your invitation on the welcome screen. Safari and a Home Screen app
@@ -108,7 +108,7 @@ export default function PhoneInvite(){
          <p>Your host must approve this request. Scanning the QR never gives automatic access or verifies your phone number.</p>
        </form>:
        <div className="pkr-pending-actions">
-         <div style={{borderRadius:10,padding:13,background:'rgba(201,168,76,.09)',border:'1px solid rgba(201,168,76,.25)'}}>
+         <div style={{borderRadius:10,padding:13,background:'rgba(173,130,255,.09)',border:'1px solid rgba(173,130,255,.25)'}}>
            <strong style={{color:'var(--gold)',fontSize:14}}>◷ Waiting for host approval</strong>
            <p style={{marginBottom:0}}>Your host will see a request in <strong>PKR → Members → Approvals</strong>.
              If they enabled push alerts, they'll also get a notification on their device.</p>

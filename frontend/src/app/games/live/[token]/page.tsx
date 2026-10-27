@@ -33,11 +33,11 @@ function LiveCardSubmit({ gameId, handId, apiUrl = '' }: { gameId: string; handI
   );
 
   return (
-    <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16}}>
+    <div style={{background:'rgba(173,130,255,0.06)',border:'1px solid rgba(173,130,255,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16}}>
       <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:8}}>🃏 Submit your hole cards</div>
       <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:10}}>
         {[0,1].map(i => (
-          <div key={i} onClick={() => setPicking(true)} style={{width:36,height:50,background:cards[i]?'#fff':'rgba(255,255,255,0.06)',border:'1px solid '+(cards[i]?'transparent':'rgba(201,168,76,0.3)'),borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontWeight:700,fontSize:14,color:cards[i]&&(cards[i].includes('♥')||cards[i].includes('♦'))?'#d63031':'#1a1a1a'}}>
+          <div key={i} onClick={() => setPicking(true)} style={{width:36,height:50,background:cards[i]?'#fff':'rgba(255,255,255,0.06)',border:'1px solid '+(cards[i]?'transparent':'rgba(173,130,255,0.3)'),borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontWeight:700,fontSize:14,color:cards[i]&&(cards[i].includes('♥')||cards[i].includes('♦'))?'#d63031':'#1a1a1a'}}>
             {cards[i] || '?'}
           </div>
         ))}
@@ -53,7 +53,7 @@ function LiveCardSubmit({ gameId, handId, apiUrl = '' }: { gameId: string; handI
             const isRed = suit === '♥' || suit === '♦';
             return (
               <div key={suit} style={{display:'flex',gap:2,marginBottom:4,alignItems:'center'}}>
-                <span style={{width:16,textAlign:'center',color:isRed?'#e74c3c':'#f0e6c8'}}>{suit}</span>
+                <span style={{width:16,textAlign:'center',color:isRed?'#e74c3c':'#f8f6ff'}}>{suit}</span>
                 {ranks.map(rank => {
                   const card = rank + suit;
                   const isSel = cards.includes(card);
@@ -61,7 +61,7 @@ function LiveCardSubmit({ gameId, handId, apiUrl = '' }: { gameId: string; handI
                     <button key={rank} onClick={() => {
                       if (isSel) { setCards(cards.filter(c => c !== card)); }
                       else if (cards.length < 2) { const nc = [...cards, card]; setCards(nc); if (nc.length === 2) setPicking(false); }
-                    }} style={{flex:1,padding:'5px 1px',background:isSel?'var(--gold)':'rgba(255,255,255,0.05)',color:isSel?'#000':isRed?'#e74c3c':'#f0e6c8',border:'1px solid '+(isSel?'var(--gold)':'rgba(255,255,255,0.08)'),borderRadius:3,cursor:'pointer',fontSize:'clamp(0.6rem,2vw,0.75rem)',fontWeight:700}}>
+                    }} style={{flex:1,padding:'5px 1px',background:isSel?'var(--gold)':'rgba(255,255,255,0.05)',color:isSel?'#000':isRed?'#e74c3c':'#f8f6ff',border:'1px solid '+(isSel?'var(--gold)':'rgba(255,255,255,0.08)'),borderRadius:3,cursor:'pointer',fontSize:'clamp(0.6rem,2vw,0.75rem)',fontWeight:700}}>
                       {rank}
                     </button>
                   );
@@ -126,7 +126,7 @@ export default function LivePage() {
   },[data]);
 
   if (error) return (
-    <div style={{minHeight:'100vh',background:'#060e07',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{minHeight:'100vh',background:'#0d0f1d',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{padding:32,textAlign:'center',color:'#e74c3c',fontSize:14}}>{error}</div>
     </div>
   );
@@ -142,36 +142,36 @@ export default function LivePage() {
   const resultsUrl = game.results_token ? `${appUrl}/games/results/${game.results_token}` : '';
 
   return (
-    <div style={{minHeight:'100vh',background:'#060e07',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      <div style={{flexShrink:0,background:'#060e07',borderBottom:'1px solid rgba(201,168,76,0.15)',
+    <div style={{minHeight:'100vh',background:'#0d0f1d',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <div style={{flexShrink:0,background:'#0d0f1d',borderBottom:'1px solid rgba(173,130,255,0.15)',
         display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',height:52}}>
-        <button onClick={()=>{ if(window.history.length>1){window.history.back();}else{window.close();} }} style={{background:'none',border:'none',color:'#6b8c6e',cursor:'pointer',fontSize:22,padding:'4px 8px',marginRight:4,lineHeight:1}}>‹</button>
+        <button onClick={()=>{ if(window.history.length>1){window.history.back();}else{window.close();} }} style={{background:'none',border:'none',color:'#adb0ca',cursor:'pointer',fontSize:22,padding:'4px 8px',marginRight:4,lineHeight:1}}>‹</button>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:'1.05rem',fontWeight:700,color:'#c9a84c',
+          <div style={{fontFamily:"var(--font-display),system-ui,sans-serif",fontSize:'1.05rem',fontWeight:700,color:'#ad82ff',
             overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60vw'}}>{event.name}</div>
-          <div style={{fontSize:'0.7rem',color:'#6b8c6e',marginTop:1}}>
+          <div style={{fontSize:'0.7rem',color:'#adb0ca',marginTop:1}}>
             {isSettled ? 'Game settled' : connStatus==='offline' ? '⚠ Connection lost — retrying...' : connStatus==='reconnecting' ? '⟳ Reconnecting...' : `Live · Updated ${secsAgo}s ago`}
           </div>
         </div>
         <span style={{fontSize:'0.7rem',padding:'3px 9px',borderRadius:2,fontWeight:500,letterSpacing:'0.16em',
-          textTransform:'uppercase',border:`1px solid ${isSettled?'rgba(46,204,113,0.3)':'rgba(201,168,76,0.3)'}`,
-          color:isSettled?'#2ecc71':'#c9a84c',background:isSettled?'rgba(46,204,113,0.06)':'rgba(201,168,76,0.06)'}}>
+          textTransform:'uppercase',border:`1px solid ${isSettled?'rgba(46,204,113,0.3)':'rgba(173,130,255,0.3)'}`,
+          color:isSettled?'#2ecc71':'#ad82ff',background:isSettled?'rgba(46,204,113,0.06)':'rgba(173,130,255,0.06)'}}>
           {game.status}
         </span>
       </div>
 
       <div style={{flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',
-        borderBottom:'1px solid rgba(201,168,76,0.15)',background:'#060e07'}}>
+        borderBottom:'1px solid rgba(173,130,255,0.15)',background:'#0d0f1d'}}>
         {[
           {l:'Buy-ins', v:fmt(totalIn)},
           {l:'Cashouts',v:fmt(totalOut)},
           {l:'In Bank', v:fmt(bank), gold:bank>0},
         ].map(s=>(
-          <div key={s.l} style={{padding:'10px 0',textAlign:'center',borderRight:'1px solid rgba(201,168,76,0.08)'}}>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:'1rem',
-              color:(s as any).gold?'#c9a84c':'#f0e6c8',fontWeight:500}}>{s.v}</div>
+          <div key={s.l} style={{padding:'10px 0',textAlign:'center',borderRight:'1px solid rgba(173,130,255,0.08)'}}>
+            <div style={{fontFamily:"var(--font-display),system-ui,sans-serif",fontSize:'1rem',
+              color:(s as any).gold?'#ad82ff':'#f8f6ff',fontWeight:500}}>{s.v}</div>
             <div style={{fontSize:'0.6rem',letterSpacing:'0.16em',textTransform:'uppercase',
-              color:'#6b8c6e',marginTop:2}}>{s.l}</div>
+              color:'#adb0ca',marginTop:2}}>{s.l}</div>
           </div>
         ))}
       </div>
@@ -181,7 +181,7 @@ export default function LivePage() {
           borderBottom:'1px solid rgba(46,204,113,0.2)',
           padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div style={{fontSize:12,color:'#2ecc71',fontWeight:600}}>✓ Game Settled</div>
-          <a href={resultsUrl} style={{padding:'6px 12px',background:'#c9a84c',color:'#000',borderRadius:3,
+          <a href={resultsUrl} style={{padding:'6px 12px',background:'#ad82ff',color:'#000',borderRadius:3,
             fontSize:11,fontWeight:700,textDecoration:'none',whiteSpace:'nowrap'}}>View Results →</a>
         </div>
       )}
@@ -192,11 +192,11 @@ export default function LivePage() {
           <div id="liveTableOuter"></div>
           <div id="liveTableFelt" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
             <div style={{textAlign:'center',zIndex:1,padding:8,pointerEvents:'none'}}>
-              <div id="liveTableName" style={{fontFamily:"'Playfair Display',serif",
+              <div id="liveTableName" style={{fontFamily:"var(--font-display),system-ui,sans-serif",
                 fontSize:'clamp(0.7rem,2vw,1rem)',color:'rgba(240,230,200,0.55)',
                 letterSpacing:2,textTransform:'uppercase'}}></div>
               <div id="liveTableStats" style={{fontSize:'clamp(0.6rem,1.5vw,0.75rem)',
-                color:'rgba(201,168,76,0.45)',marginTop:5,letterSpacing:1}}></div>
+                color:'rgba(173,130,255,0.45)',marginTop:5,letterSpacing:1}}></div>
             </div>
           </div>
           <div id="liveSeatsContainer" style={{position:'absolute',inset:0}}></div>
@@ -205,7 +205,7 @@ export default function LivePage() {
 
       {/* ── Live card submission ── */}
       {liveCardsEnabled && (data as any).handData && !(data as any).handData?.result && (
-        <div style={{flexShrink:0,padding:'10px 16px',borderTop:'1px solid rgba(201,168,76,0.15)'}}>
+        <div style={{flexShrink:0,padding:'10px 16px',borderTop:'1px solid rgba(173,130,255,0.15)'}}>
           <LiveCardSubmit
             gameId={game.id || ''}
             handId={(data as any).handData.id || ''}
@@ -214,7 +214,7 @@ export default function LivePage() {
       )}
 
       <div style={{flexShrink:0,padding:'10px 16px',textAlign:'center',
-        fontSize:11,color:'rgba(107,140,110,0.6)',borderTop:'1px solid rgba(201,168,76,0.08)'}}>
+        fontSize:11,color:'rgba(107,140,110,0.6)',borderTop:'1px solid rgba(173,130,255,0.08)'}}>
         {fmtDate(game.scheduled_at)}{game.location?` · ${game.location}`:''}
       </div>
     </div>
@@ -238,7 +238,7 @@ function renderTable(container: HTMLDivElement, data: any) {
 
   const outer = container.querySelector('#liveTableOuter') as HTMLElement;
   const felt  = container.querySelector('#liveTableFelt') as HTMLElement;
-  if (outer) outer.style.cssText = `position:absolute;border-radius:36px;background:linear-gradient(135deg,#5a3010,#3d1f08);box-shadow:0 8px 40px rgba(0,0,0,0.7);width:${tW+pad*2}px;height:${tH+pad*2}px;left:${cx-(tW+pad*2)/2}px;top:${cy-(tH+pad*2)/2}px`;
+  if (outer) outer.style.cssText = `position:absolute;border-radius:36px;background:linear-gradient(135deg,#59536d,#26253c);box-shadow:0 8px 40px rgba(0,0,0,0.7);width:${tW+pad*2}px;height:${tH+pad*2}px;left:${cx-(tW+pad*2)/2}px;top:${cy-(tH+pad*2)/2}px`;
   if (felt)  felt.style.cssText  = `position:absolute;border-radius:28px;background:radial-gradient(ellipse at 50% 40%,#1e6b2a,#155220 55%,#0e3a18);display:flex;align-items:center;justify-content:center;width:${tW}px;height:${tH}px;left:${cx-tW/2}px;top:${cy-tH/2}px`;
 
   const tnEl = container.querySelector('#liveTableName') as HTMLElement;
@@ -281,24 +281,24 @@ function renderTable(container: HTMLDivElement, data: any) {
       const biAmt = (p.buy_in_total||0)>0 ? p.buy_in_total : (p.buy_ins||0)*(buyInAmt||0);
       const co = p.cashout||0;
       const net = p.net!=null ? p.net : (co>0 ? co-biAmt : null);
-      const netColor = net==null?'':net>0?'#2ecc71':net<0?'#e74c3c':'#6b8c6e';
-      const chipBg = co>0?'linear-gradient(135deg,#0a2a1a,#061510)':'linear-gradient(135deg,#1a3a1a,#0d2010)';
-      const chipBorder = co>0?'rgba(46,204,113,0.5)':'#c9a84c';
+      const netColor = net==null?'':net>0?'#2ecc71':net<0?'#e74c3c':'#adb0ca';
+      const chipBg = co>0?'linear-gradient(135deg,#20243a,#121527)':'linear-gradient(135deg,#262940,#15192d)';
+      const chipBorder = co>0?'rgba(46,204,113,0.5)':'#ad82ff';
       const initials = p.display_name.split(' ').map((w:string)=>w[0]||'').join('').slice(0,2).toUpperCase();
       const netStr = net==null?'':(net>0?`+${fmt(net)}`:fmt(net));
       seat.innerHTML = `
         <div style="width:${cs};height:${cs};border-radius:50%;border:2.5px solid ${chipBorder};background:${chipBg};display:flex;align-items:center;justify-content:center">
-          <span style="font-size:${initFs};font-weight:700;color:#f0e6c8">${esc(initials)}</span>
+          <span style="font-size:${initFs};font-weight:700;color:#f8f6ff">${esc(initials)}</span>
         </div>
-        <div style="font-family:'Playfair Display',serif;font-size:clamp(0.75rem,2vw,0.9rem);font-weight:700;color:#fff;max-width:clamp(68px,16vw,96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(0,0,0,0.6);padding:2px 7px;border-radius:5px;text-shadow:0 1px 3px rgba(0,0,0,0.9)">${esc(p.display_name)}</div>
-        ${p.buy_ins>0?`<div style="font-size:clamp(0.6rem,1.5vw,0.72rem);color:rgba(201,168,76,0.7)">×${p.buy_ins}${buyInAmt?` · ${fmt(biAmt)}`:''}</div>`:''}
-        ${(game.chip_value>0&&game.starting_chips>0&&p.buy_ins>0)?`<div style="font-size:clamp(0.55rem,1.3vw,0.65rem);color:rgba(201,168,76,0.85);background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);border-radius:3px;padding:1px 4px;margin-top:1px">${game.starting_chips*p.buy_ins} chips</div>`:''}
+        <div style="font-family:var(--font-display),system-ui,sans-serif;font-size:clamp(0.75rem,2vw,0.9rem);font-weight:700;color:#fff;max-width:clamp(68px,16vw,96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(0,0,0,0.6);padding:2px 7px;border-radius:5px;text-shadow:0 1px 3px rgba(0,0,0,0.9)">${esc(p.display_name)}</div>
+        ${p.buy_ins>0?`<div style="font-size:clamp(0.6rem,1.5vw,0.72rem);color:rgba(173,130,255,0.7)">×${p.buy_ins}${buyInAmt?` · ${fmt(biAmt)}`:''}</div>`:''}
+        ${(game.chip_value>0&&game.starting_chips>0&&p.buy_ins>0)?`<div style="font-size:clamp(0.55rem,1.3vw,0.65rem);color:rgba(173,130,255,0.85);background:rgba(173,130,255,0.1);border:1px solid rgba(173,130,255,0.2);border-radius:3px;padding:1px 4px;margin-top:1px">${game.starting_chips*p.buy_ins} chips</div>`:''}
         ${net!=null?`<div style="font-size:clamp(0.62rem,1.6vw,0.78rem);font-weight:700;color:${netColor};text-shadow:0 1px 2px rgba(0,0,0,0.8)">${netStr}</div>`:''}
       `;
     } else {
       seat.innerHTML = `
-        <div style="width:${cs};height:${cs};border-radius:50%;border:2px solid rgba(201,168,76,0.25);background:#0d1a0f;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:${emptyFs};color:rgba(201,168,76,0.3)">·</span>
+        <div style="width:${cs};height:${cs};border-radius:50%;border:2px solid rgba(173,130,255,0.25);background:#1b1e32;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:${emptyFs};color:rgba(173,130,255,0.3)">·</span>
         </div>
         <div style="opacity:0.3;font-size:0.8rem;color:#fff;background:rgba(0,0,0,0.4);padding:2px 7px;border-radius:5px">Seat ${seatNum}</div>
       `;
@@ -309,11 +309,11 @@ function renderTable(container: HTMLDivElement, data: any) {
 
 function Loader() {
   return (
-    <div style={{minHeight:'100vh',background:'#060e07',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:48,color:'#c9a84c',opacity:0.5}}>PKR</div>
+    <div style={{minHeight:'100vh',background:'#0d0f1d',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style={{fontFamily:"var(--font-display),system-ui,sans-serif",fontSize:48,color:'#ad82ff',opacity:0.5}}>PKR</div>
       <div style={{fontSize:'0.75rem',color:'rgba(107,140,110,0.6)',letterSpacing:'0.15em',textTransform:'uppercase'}}>Loading table...</div>
-      <div style={{width:120,height:2,background:'rgba(201,168,76,0.1)',borderRadius:1,overflow:'hidden'}}>
-        <div style={{width:'40%',height:'100%',background:'rgba(201,168,76,0.4)',borderRadius:1,animation:'slide 1.2s ease-in-out infinite'}}></div>
+      <div style={{width:120,height:2,background:'rgba(173,130,255,0.1)',borderRadius:1,overflow:'hidden'}}>
+        <div style={{width:'40%',height:'100%',background:'rgba(173,130,255,0.4)',borderRadius:1,animation:'slide 1.2s ease-in-out infinite'}}></div>
       </div>
       <style>{`@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}`}</style>
     </div>

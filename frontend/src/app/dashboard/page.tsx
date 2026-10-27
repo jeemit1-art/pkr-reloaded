@@ -269,13 +269,13 @@ function DashboardInner() {
         letterSpacing:'0.1em',textTransform:'uppercase'}}>Subscription required</span>
     );
     if (plan === 'lifetime') return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
-        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(173,130,255,0.15)',
+        color:'rgba(173,130,255,0.9)',fontFamily:'var(--font-body),sans-serif',
         letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>⚡ Lifetime</span>
     );
     if (plan === 'pro') return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
-        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
+      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(173,130,255,0.15)',
+        color:'rgba(173,130,255,0.9)',fontFamily:'var(--font-body),sans-serif',
         letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>✦ Pro</span>
     );
     if (plan === 'starter') return (
@@ -475,7 +475,7 @@ function DashboardInner() {
             {(onTrial || needsUpgrade) && (
               <button
                 className="btn btn-primary"
-                style={{fontSize:11,padding:'4px 12px',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,120,40,0.85))',color:'#000'}}
+                style={{fontSize:11,padding:'4px 12px',background:'linear-gradient(135deg,rgba(173,130,255,0.9),rgba(115,85,190,0.85))',color:'#000'}}
                 onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Start your subscription to keep the game going.'}}))}
               >
                 Upgrade
@@ -494,7 +494,7 @@ function DashboardInner() {
         {totalPending > 0 && (
           <section aria-label="Pending membership approvals" role="status"
             style={{padding:'14px 17px',marginBottom:17,border:'1px solid var(--gold)',
-              background:'rgba(201,168,76,.12)',borderRadius:10,color:'var(--ivory)'}}>
+              background:'rgba(173,130,255,.12)',borderRadius:10,color:'var(--ivory)'}}>
             <strong style={{color:'var(--gold)'}}>🔔 {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>
             <div style={{display:'flex',gap:9,flexWrap:'wrap',marginTop:10}}>
               {activeRooms.filter(room=>pendingByRoom[room.id]>0).map(room=>(
@@ -507,8 +507,8 @@ function DashboardInner() {
           </section>
         )}
         {featuredRoom && activeRooms.every(room=>room.role!=='host') && (
-          <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid rgba(201,168,76,.28)',
-            borderRadius:12,background:'linear-gradient(115deg,rgba(21,47,32,.97),rgba(7,17,11,.97))',
+          <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid rgba(173,130,255,.28)',
+            borderRadius:12,background:'linear-gradient(115deg,rgba(34,31,62,.97),rgba(13,16,29,.97))',
             padding:'17px 19px',display:'flex',gap:15,justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
             <div><span className="pkr-eyebrow">YOUR PLAYER SETUP</span>
               <h2 style={{margin:'4px 0',fontSize:20,fontFamily:'var(--font-display),serif',color:'var(--white)'}}>Ready for poker night?</h2>
@@ -540,7 +540,7 @@ function DashboardInner() {
             <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
             <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
             <button type="button" onClick={()=>featuredRoom&&router.push('/events/'+featuredRoom.id+'?tab=games')}
-              style={{marginTop:8,padding:'8px 12px',color:'#f8db9e',border:'1px solid #b9965f',borderRadius:8,background:'#153324'}}>Review unfinished games</button>
+              style={{marginTop:8,padding:'8px 12px',color:'#d8c7ff',border:'1px solid #8470bc',borderRadius:8,background:'#24243c'}}>Review unfinished games</button>
           </div>}
           <div className="pkr-pro-hero">
             <div className="pkr-pro-hero-content">
@@ -610,9 +610,9 @@ function DashboardInner() {
         {/* QR Scanner Modal */}
         {showScanner && (
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
-            <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
+            <div style={{width:'100%',maxWidth:360,background:'#1a1e32',borderRadius:12,border:'1px solid rgba(173,130,255,0.3)',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(173,130,255,0.15)'}}>
+                <div style={{fontFamily:"var(--font-display),system-ui,sans-serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
                 <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
               </div>
               <div style={{padding:20}}>
@@ -708,7 +708,7 @@ function DashboardInner() {
           <div className="modal-overlay" onClick={()=>setConfirmEndEventId(null)}>
             <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:360}}>
               <div style={{padding:'24px 24px 16px',borderBottom:'1px solid var(--border-sub)'}}>
-                <div style={{fontSize:16,color:'var(--white)',fontFamily:"'Playfair Display',serif",fontWeight:600,marginBottom:8}}>End Event?</div>
+                <div style={{fontSize:16,color:'var(--white)',fontFamily:"var(--font-display),system-ui,sans-serif",fontWeight:600,marginBottom:8}}>End Event?</div>
                 <div style={{fontSize:13,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                   This will archive the event. All game history and leaderboard data will be preserved. Members will lose access and no new games can be created.
                 </div>
