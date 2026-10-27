@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "wrangler.toml"
 DB = "DB"
+EXPORT_DATABASE_NAME = "pkr-reloaded-db"
 ACCOUNT = "4b4794b983d6966f4207d2ff4fd8c991"
 DATABASE_ID = "e21a4823-ef28-496a-9f49-fa3e04dc73bf"
 WORKER = "pkr-reloaded-worker"
@@ -115,6 +116,7 @@ def verify_target():
     config = CONFIG.read_text()
     for marker in ('account_id = "' + ACCOUNT + '"',
                    'database_id = "' + DATABASE_ID + '"',
+                   'database_name = "' + EXPORT_DATABASE_NAME + '"',
                    'name = "' + WORKER + '"',
                    'PKR_ENV = "production"',
                    'FRONTEND_URL = "https://mypkr.app"'):
@@ -178,7 +180,7 @@ def preflight_backup():
           bookmark_match.group(1), flush=True)
     with tempfile.TemporaryDirectory(prefix="pkr-d1-private-") as folder:
         backup = Path(folder) / "d1-export.sql"
-        wrangler("d1", "export", DB, "--config", "wrangler.toml",
+        wrangler("d1", "export", EXPORT_DATABASE_NAME, "--config", "wrangler.toml",
                  "--remote", "--skip-confirmation", "--output", str(backup))
         if not backup.exists() or backup.stat().st_size < 4000:
             raise Stop("D1 export absent or suspiciously small.")
