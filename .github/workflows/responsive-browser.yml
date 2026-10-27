@@ -38,6 +38,9 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+      - name: Validate tournament script and long blind structures without changing game data
+        working-directory: frontend
+        run: node tests/tournament-structure.cjs
       - name: Install browser test runner without changing package lock
         working-directory: frontend
         run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
