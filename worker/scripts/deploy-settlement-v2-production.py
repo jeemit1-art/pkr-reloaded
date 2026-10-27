@@ -12,6 +12,10 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -155,6 +159,102 @@ def preflight_secrets():
     print("Existing push/auth secrets: PRESENT (values never read)", flush=True)
 
 
+
+def export_backup_via_api(destination, *, open_url=None, sleep=None):
+    """Official Cloudflare D1 export API fallback for Wrangler CLI failures.
+
+    Only the reviewed account and database are targeted. The full SQL export
+    is downloaded into the existing private CI temporary directory and
+    independently restored/validated by preflight_backup. No URLs, HTTP
+    response bodies, export data or credentials are logged.
+    """
+    if open_url is None:
+        open_url = urllib.request.urlopen
+    if sleep is None:
+        sleep = time.sleep
+    token = os.environ.get("CLOUDFLARE_API_TOKEN")
+    if not token:
+        raise Stop("Cloudflare API token absent; no export attempted.")
+    endpoint = (
+        "https://api.cloudflare.com/client/v4/accounts/" + ACCOUNT +
+        "/d1/database/" + DATABASE_ID + "/export"
+    )
+    bookmark = None
+    signed_url = None
+    for attempt in range(90):
+        payload = {"output_format": "polling"}
+        if bookmark:
+            payload["current_bookmark"] = bookmark
+        request = urllib.request.Request(
+            endpoint, method="POST", data=json.dumps(payload).encode("utf-8"),
+            headers={"Authorization": "Bearer " + token,
+                     "Content-Type": "application/json",
+                     "Accept": "application/json"},
+        )
+        try:
+            with open_url(request, timeout=30) as response:
+                body = response.read(65536)
+        except urllib.error.HTTPError as exc:
+            # HTTP status codes are safe. Never print the response body.
+            raise Stop("Cloudflare D1 export API returned HTTP " +
+                       str(exc.code) + "; no backup or migration attempted.") from None
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise Stop("Cloudflare D1 export API could not be reached; no migration.") from None
+        try:
+            doc = json.loads(body)
+        except (ValueError, TypeError):
+            raise Stop("Cloudflare D1 export API returned an invalid response.") from None
+        if not isinstance(doc, dict) or doc.get("success") is False:
+            codes = [str(item.get("code")) for item in doc.get("errors", [])
+                     if isinstance(item, dict) and isinstance(item.get("code"), int)]
+            raise Stop("Cloudflare D1 export API declined the operation" +
+                       (" (code " + codes[0] + ")" if codes else "") +
+                       "; production data unchanged.")
+        item = doc.get("result")
+        if not isinstance(item, dict) or item.get("type") not in (None, "export"):
+            raise Stop("Unexpected D1 export result; no migration.")
+        if item.get("status") == "error":
+            reason = safe_export_error_class(str(item.get("error", "")))
+            raise Stop("D1 export API rejected full backup: " + reason +
+                       "; migration not attempted.")
+        if item.get("status") == "complete":
+            candidate = item.get("result")
+            if isinstance(candidate, dict):
+                signed_url = candidate.get("signed_url")
+            break
+        next_bookmark = item.get("at_bookmark") or item.get("current_bookmark")
+        if not isinstance(next_bookmark, str) or not next_bookmark:
+            raise Stop("D1 export API provided no polling bookmark; no migration.")
+        bookmark = next_bookmark
+        sleep(2)
+    if not isinstance(signed_url, str):
+        raise Stop("Cloudflare D1 export did not complete; migration not attempted.")
+    parsed = urllib.parse.urlsplit(signed_url)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        raise Stop("Cloudflare D1 export returned an invalid download URL; no migration.")
+    # The signed download URL is returned by the authenticated, fixed Cloudflare
+    # endpoint and never logged or persisted. No Bearer token is sent to it.
+    max_bytes = 512 * 1024 * 1024
+    total = 0
+    try:
+        with open_url(signed_url, timeout=60) as source:
+            with destination.open("wb") as output:
+                while True:
+                    chunk = source.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise Stop("D1 backup exceeded the safe export size limit.")
+                    output.write(chunk)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise Stop("Cloudflare D1 signed export could not be downloaded; no migration.") from None
+    os.chmod(destination, 0o600)
+    if total < 4000:
+        raise Stop("Cloudflare D1 API export is suspiciously small; no migration.")
+    print("Full private D1 export downloaded through official Cloudflare API.", flush=True)
+
+
 def preflight_backup():
     before = {table: aggregate(table) for table in
               ("settlement_transfers", "game_players")}
@@ -180,8 +280,12 @@ def preflight_backup():
           bookmark_match.group(1), flush=True)
     with tempfile.TemporaryDirectory(prefix="pkr-d1-private-") as folder:
         backup = Path(folder) / "d1-export.sql"
-        wrangler("d1", "export", EXPORT_DATABASE_NAME, "--config", "wrangler.toml",
-                 "--remote", "--skip-confirmation", "--output", str(backup))
+        try:
+            wrangler("d1", "export", EXPORT_DATABASE_NAME, "--config", "wrangler.toml",
+                     "--remote", "--skip-confirmation", "--output", str(backup))
+        except Stop:
+            print("Wrangler full D1 export unavailable; trying official Cloudflare export API.", flush=True)
+            export_backup_via_api(backup)
         if not backup.exists() or backup.stat().st_size < 4000:
             raise Stop("D1 export absent or suspiciously small.")
         conn = sqlite3.connect(":memory:")
