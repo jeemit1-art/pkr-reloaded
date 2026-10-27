@@ -13,6 +13,8 @@ import './pkr-landing-premium.css';
 import './pkr-marketing-pages.css';
 import './pkr-product-gallery.css';
 import './pkr-2026-graphite.css';
+// Approved Classic Poker Studio layer must be imported after legacy themes.
+import './pkr-classic-poker-studio.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
