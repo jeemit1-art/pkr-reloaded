@@ -33,8 +33,9 @@ const photos=[
   id:'photo-1518133120397-258d5eb470c6',
   author:'Chris Liverani',
   source:'https://unsplash.com/photos/closeup-photography-of-poker-chip-set-MJX7-BAdkt0',
-  description:'Close-up photograph of a real set of poker chips',
-  width:1350
+  description:'Close-up photograph of a real set of poker chips, cropped to omit playing-card branding',
+  width:1350,
+  cropLeft:0.28
  }
 ];
 
@@ -65,6 +66,12 @@ async function main(){
   const img=sharp(body).rotate();
   const meta=await img.metadata();
   if(meta.width<750||meta.height<450)throw Error('Photograph too small: '+photo.name);
+  // Crop recognizable commercial playing-card branding out of the close-up,
+  // retaining only the actual chip stacks and casino case.
+  if(photo.cropLeft){
+    const left=Math.floor(meta.width*photo.cropLeft);
+    img.extract({left,top:0,width:meta.width-left,height:meta.height});
+  }
   const target=path.join(destination,photo.name);
   await img.resize({width:photo.width,withoutEnlargement:true}).webp({quality:83,effort:5}).toFile(target);
   const stat=await fs.stat(target);
