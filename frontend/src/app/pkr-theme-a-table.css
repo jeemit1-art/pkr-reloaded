@@ -728,3 +728,21 @@
 #gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-status-dot{
  right:-4px!important;bottom:-3px!important;width:15px!important;height:15px!important;
 }
+
+
+/* Empty seats stay light and unobtrusive, matching the approved table rather than occupying a full player-card box. */
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-empty-seat{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:4px!important;width:64px!important;height:64px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip{
+ width:34px!important;height:34px!important;flex:0 0 34px!important;
+ border:1px solid #35645E!important;background:#0B2423!important;box-shadow:0 2px 7px #0006!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip.empty .seat-inner{
+ color:#D8E7E5!important;font:700 18px/1 var(--font-body),sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-label{
+ display:block!important;max-width:64px!important;padding:0!important;background:transparent!important;
+ color:#8FA5A5!important;text-shadow:none!important;font:650 9px/1.1 var(--font-body),sans-serif!important;
+}
