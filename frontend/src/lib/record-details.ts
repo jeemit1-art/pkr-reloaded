@@ -136,20 +136,47 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
   if(request.kind==='transfers'||request.kind==='player'){
     const {records,warning}=await settledRecords(request,signal);
     if(request.kind==='player'){
-      const rows:RecordRow[]=[];let net=0;
-      for(const {game,data} of records){
-        for(const player of data.players||[]){
-          // Identity, not name, is authoritative where an ID is available.
-          if(request.playerId?player.user_id!==request.playerId:player.display_name!==request.playerName)continue;
-          if(request.filter==='profitable'&&!(Number(player.net)>0))continue;
-          net+=Number(player.net)||0;
-          rows.push({id:game.id+':'+player.user_id,label:fmtDate(game.scheduled_at),
-            detail:(game.location||'Settled game')+' - '+player.buy_ins+' buy-in(s)'+
-              (player.cashout!=null?' - Cash-out '+fmt(player.cashout):''),
-            value:player.net!=null?fmtSign(player.net):'Not recorded',href:gameUrl(game)});
+      const rows:RecordRow[]=[];
+      let net=0,profitable=0,ambiguous=0;
+      // The room leaderboard groups historic results by lower-case player
+      // name, but stores the user_id of only one earlier game. Prefer the
+      // exact ID in each game, then fall back to ONE matching room-scoped name.
+      const wantedName=(request.playerName||'').trim().toLocaleLowerCase();
+      for(const {game,data} of [...records].sort((a,b)=>b.game.scheduled_at-a.game.scheduled_at)){
+        const candidates=data.players||[];
+        const exact=request.playerId?candidates.find(p=>p.user_id===request.playerId):undefined;
+        const sameName=wantedName?candidates.filter(p=>
+          p.display_name.trim().toLocaleLowerCase()===wantedName):[];
+        const player=exact||(sameName.length===1?sameName[0]:undefined);
+        if(!player){
+          if(!exact&&sameName.length>1)ambiguous++;
+          continue;
         }
+        const playerNet=typeof player.net==='number'&&Number.isFinite(player.net)?player.net:null;
+        if(request.filter==='profitable'&&!(playerNet!==null&&playerNet>0))continue;
+        if(playerNet!==null){net+=playerNet;if(playerNet>0)profitable++;}
+        const cashout=typeof player.cashout==='number'&&Number.isFinite(player.cashout)?player.cashout:null;
+        const buyInTotal=(player as GamePlayer&{buy_in_total?:number}).buy_in_total;
+        // Net = cash-out minus buy-ins. This yields the true total buy-in
+        // when both final values exist; never estimate individual deposits.
+        const totalIn=typeof buyInTotal==='number'&&Number.isFinite(buyInTotal)
+          ?buyInTotal:cashout!==null&&playerNet!==null?cashout-playerNet:null;
+        const details=[
+          game.location||'Poker game',
+          player.buy_ins+' buy-in'+(player.buy_ins===1?'':'s'),
+          totalIn!==null?'Buy-ins '+fmt(totalIn):null,
+          cashout!==null?'Cash-out '+fmt(cashout):null,
+        ].filter(Boolean).join(' · ');
+        rows.push({id:game.id+':'+player.user_id,
+          label:fmtDate(game.scheduled_at),detail:details,
+          value:playerNet!==null?fmtSign(playerNet):'Not recorded',
+          href:game.results_token?'/games/results/'+encodeURIComponent(game.results_token):gameUrl(game)});
       }
-      return {rows,summary:rows.length+' settled results - net '+fmtSign(net),warning};
+      const incomplete=[warning,ambiguous?
+        ambiguous+' game(s) have multiple players sharing this name without a matching ID. They were excluded to avoid mixing people’s results.':
+        undefined].filter(Boolean).join(' ')||undefined;
+      return {rows,summary:rows.length+' settled game'+(rows.length===1?'':'s')+
+        ' · '+profitable+' profitable · net '+fmtSign(net),warning:incomplete};
     }
     let payments:Payment[]=records.flatMap(({game,data})=>(data.transfers||[]).map(transfer=>({game,transfer})));
     if(request.filter==='paid')payments=payments.filter(row=>row.transfer.status==='paid');
