@@ -183,6 +183,60 @@ async function check(browser,width,height,count){
    assert.deepEqual(actual[sid].transactions.map(t=>[t.type,t.amount]),p.transactions.map(t=>[t.type,t.amount]));
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
+
+  // Critical production regression: a real newly-created table has zero
+  // seated players. Earlier populated-only screenshots missed detached
+  // legacy labels and made Full / Compact appear identical.
+  await page.evaluate(()=>{
+    window.state.players={};
+    window.pkrSetSeatLayout('auto');
+    window.renderTable();
+  });
+  assert.equal(await page.locator('#seatsContainer>.pkr-empty-seat').count(),count);
+  const emptyModes=['auto','full','compact'];
+  const modeMetrics={};
+  for(const selection of emptyModes){
+    await page.getByRole('button',{name:'Open table controls'}).click();
+    const sheet=page.locator('.pkr-table-tools-dialog');
+    await sheet.waitFor();
+    const button=sheet.getByRole('button',{name:(selection==='auto'?'Auto':selection==='full'?'Full':'Compact')+' table view',exact:true});
+    await button.click();
+    assert.equal(await button.getAttribute('aria-pressed'),'true');
+    await page.getByRole('button',{name:'Close table controls'}).click();
+    const effective=selection==='auto'?expectedAuto:selection==='full'?'balanced':'compact';
+    await page.waitForFunction(m=>document.querySelectorAll('#seatsContainer>.pkr-empty-seat.pkr-layout-'+m).length===document.querySelectorAll('#seatsContainer>.pkr-empty-seat').length,effective);
+    const metrics=await page.evaluate(()=>{
+      const seats=[...document.querySelectorAll('#seatsContainer>.pkr-empty-seat')];
+      return seats.map(s=>{
+        const a=s.querySelector('.pkr-empty-seat-add');
+        const n=s.querySelector('.pkr-empty-seat-number');
+        if(!a||!n)return {error:'Empty seat control missing'};
+        const parent=s.getBoundingClientRect(),plus=a.getBoundingClientRect(),label=n.getBoundingClientRect();
+        const contained=r=>r.left>=parent.left-2&&r.right<=parent.right+2&&r.top>=parent.top-2&&r.bottom<=parent.bottom+2;
+        return {id:s.id,text:n.textContent,plus:a.textContent,
+          width:parent.width,height:parent.height,
+          direction:getComputedStyle(s).flexDirection,
+          inside:contained(plus)&&contained(label),
+          visible:getComputedStyle(n).display!=='none'&&label.width>=22,
+          left:parent.left,right:parent.right,
+          plusCenterX:(plus.left+plus.right)/2,labelCenterX:(label.left+label.right)/2};
+      });
+    });
+    assert.equal(metrics.length,count);
+    for(const [i,m] of metrics.entries()){
+      assert(!m.error,'Empty seat markup incomplete: '+JSON.stringify(m));
+      assert.equal(m.text,'Seat '+(i+1));
+      assert.equal(m.plus,'+');
+      assert(m.inside&&m.visible,'Seat number detached or clipped from plus: '+JSON.stringify({width,height,count,selection,m}));
+      assert(m.left>=-2&&m.right<=width+2,'Empty seat card outside viewport: '+JSON.stringify({width,height,count,selection,m}));
+    }
+    assert(metrics.every(m=>m.direction===(effective==='compact'?'column':'row')),
+      'Auto / Full / Compact must have visibly different empty-card presentations: '+JSON.stringify({width,height,count,selection,metrics}));
+    modeMetrics[selection]=metrics[0];
+    if(count===9||count===13)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-empty-'+selection+'.png')});
+  }
+  assert(Math.abs(modeMetrics.full.width-modeMetrics.compact.width)>=15,
+    'Full / Compact toggle must resize an empty game even before players join: '+JSON.stringify(modeMetrics));
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
   console.log('PASS approved table layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, approved default/'+expectedAuto+', full/compact renderers, bank totals, no financial writes');
  }finally{await ctx.close();}
@@ -194,7 +248,7 @@ async function check(browser,width,height,count){
    // Chromium: 9 and 13 players on every practical device size.
    // WebKit: phone and tablet cross-browser regression coverage.
    const dimensions=engine===chromium?[
-    [320,720],[390,844],[844,390],[768,1024],[1024,768],[1440,900]
+    [320,720],[390,844],[844,390],[768,1024],[1024,768],[1440,900],[1780,864]
    ]:[[390,844],[768,1024]];
    for(const [w,h] of dimensions){
     for(const count of [9,13])await check(browser,w,h,count);
