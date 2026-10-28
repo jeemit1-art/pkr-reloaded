@@ -1870,7 +1870,8 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
   }else{
     var top=Math.max(g.cardHeight/2+8,cy-tH/2-g.cardHeight*.55),bottom=Math.min(g.height-g.cardHeight/2-8,cy+tH/2+g.cardHeight*.55);
     var leftX=Math.max(g.cardWidth/2+6,cx-tW/2-g.cardWidth*.52),rightX=Math.min(g.width-g.cardWidth/2-6,cx+tW/2+g.cardWidth*.52);
-    var first=top+g.cardHeight*.70,last=bottom-g.cardHeight*.70,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
+    var railInset=(g.compact&&g.width<350)?.45:.70;
+    var first=top+g.cardHeight*railInset,last=bottom-g.cardHeight*railInset,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
     positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
     for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
   }
