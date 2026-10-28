@@ -76,6 +76,32 @@ async function run(){
      if(index===4)assert.match(await page.locator('.pkr-record-heading').innerText(),/\$100/);
      await closeSheet(page);
     }
+    if(width<=700){
+      const card=page.locator('.pkr-insights-player-mobile-row').first();
+      const action=card.locator('button.pkr-metric-trigger');
+      await action.waitFor({state:'visible'});
+      await action.scrollIntoViewIfNeeded();
+      const geometry=await card.evaluate(row=>{
+        const button=row.querySelector('button.pkr-metric-trigger');
+        const info=button?.querySelector('.pkr-insights-player-mobile-info');
+        const amount=button?.querySelector('.pkr-vnext-positive,.pkr-vnext-negative');
+        if(!button||!info||!amount)return {ok:false,reason:'missing name or net'};
+        const a=row.getBoundingClientRect(),b=button.getBoundingClientRect();
+        const n=info.getBoundingClientRect(),m=amount.getBoundingClientRect();
+        const collision=n.left<m.right-2&&n.right>m.left+2&&n.top<m.bottom-2&&n.bottom>m.top+2;
+        return {ok:b.width>=a.width-3&&b.height<=180&&
+          n.width>=80&&m.width>50&&!collision&&
+          n.left>=a.left-2&&n.right<=a.right+2&&m.left>=a.left-2&&m.right<=a.right+2,
+          reason:JSON.stringify({row:a.toJSON(),button:b.toJSON(),name:n.toJSON(),net:m.toJSON(),collision})};
+      });
+      assert(geometry.ok,'Mobile player data must not overlap and the full card must be clickable: '+geometry.reason);
+      await action.click();await loaded(page);
+      assert.match(await page.locator('.pkr-record-heading').innerText(),/game history/i);
+      assert.match(await page.locator('.pkr-record-heading').innerText(),/2 settled games/);
+      assert.equal(await page.locator('.pkr-record-row').count(),2);
+      assert.match(await page.locator('.pkr-record-row').first().innerText(),/Buy-ins.*Cash-out/);
+      await closeSheet(page);
+    }
     await page.locator('.pkr-insights-balance-tiles .pkr-metric-trigger').nth(0).click();await loaded(page);
     assert.equal(await page.locator('.pkr-record-row').count(),1);await page.locator('.pkr-record-row').click();await loaded(page);
     assert.equal(await page.locator('.pkr-record-row').count(),2);await page.getByRole('button',{name:'Back to breakdown'}).click();await loaded(page);await closeSheet(page);
