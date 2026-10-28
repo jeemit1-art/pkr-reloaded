@@ -32,6 +32,11 @@ export async function advanceExpiredTournamentLevels(
      WHERE ts.status='running' AND g.status NOT IN ('settled','cancelled')
        AND ts.level_started_at IS NOT NULL
        AND ts.level_started_at+lv.duration_secs<=?
+       AND EXISTS (
+         SELECT 1 FROM tournament_levels following
+          WHERE following.game_id=ts.game_id
+            AND following.level_num=ts.current_level+1
+       )
      ORDER BY ts.level_started_at
      LIMIT 25
   `).bind(now).all<{
