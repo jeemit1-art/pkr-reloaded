@@ -13,6 +13,7 @@ import tournament from './routes/tournament';
 import analysis   from './routes/analysis';
 import payments   from './routes/payments';
 import { sendPaymentReminders,sendGameReminders } from './reminders';
+import { advanceExpiredTournamentLevels } from './tournament-clock';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -67,8 +68,19 @@ app.notFound(               (c) => c.json({ error:'Not found' }, 404));
 
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    if (env.PKR_ENV === 'staging') return;
-    ctx.waitUntil(Promise.allSettled([sendPaymentReminders(env),sendGameReminders(env)]).then(()=>{}));
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    if(env.PKR_ENV==='staging')return;
+    // Split the frequencies: hourly reminders must not run every minute.
+    if(event.cron==='* * * * *'){
+      ctx.waitUntil(advanceExpiredTournamentLevels(env.DB).then((r)=>{
+        if(r.advanced||r.conflicts)console.log('PKR tournament clock',r);
+      }));
+      return;
+    }
+    if(event.cron==='0 * * * *'){
+      ctx.waitUntil(Promise.allSettled([
+        sendPaymentReminders(env),sendGameReminders(env),
+      ]).then(()=>{}));
+    }
   },
 };

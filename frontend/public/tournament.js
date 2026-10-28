@@ -161,12 +161,22 @@ function loadTournament(){
     renderBody();
   }).catch(function(e){console.warn('loadTournament:',e.message);toast('Tournament could not load: '+e.message);renderBody();});
 }
-window.openTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.add('open');loadTournament();};
-window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');stopLocalTimer();};
+window.openTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.add('open');ensureTournamentRefresh();loadTournament();};
+var _tourneyRefreshTimer=null;
+function ensureTournamentRefresh(){
+  if(_tourneyRefreshTimer)return;
+  _tourneyRefreshTimer=setInterval(function(){
+    if(!document.hidden&&ts.state&&ts.state.status==='running')loadTournament();
+  },30000);
+}
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&ts.state&&ts.state.status==='running')loadTournament();
+});
+window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');/* Tournament remains running when the sheet closes. */};
 window.tStart=function(){
   tApi('/games/'+getGameId()+'/tournament/start',{method:'POST'}).then(function(r){
     ts.state.status='running';ts.state.current_level=1;ts.state.level_started_at=r.level_started_at;ts.state.total_chips_in_play=r.total_chips_in_play;
-    startLocalTimer();toast('\ud83c\udfc6 Tournament started!');renderBody();
+    ensureTournamentRefresh();startLocalTimer();toast('\ud83c\udfc6 Tournament started!');renderBody();
   }).catch(function(e){toast('\u26a0\ufe0f '+e.message);});
 };
 window.tNextLevel=function(){

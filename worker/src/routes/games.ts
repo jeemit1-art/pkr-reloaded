@@ -791,6 +791,22 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
         ...(enabled?{revision:version?.revision}:{})},
     },409);
   }
+  if(result.meta.changes>0 && cashout!==null){
+    const player=await c.env.DB.prepare(
+      'SELECT display_name,buy_in_total FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{display_name:string;buy_in_total:number}>();
+    if(player?.display_name){
+      const formatCents=(n:number)=>String.fromCharCode(36)+(n/100).toFixed(2);
+      const invested=Number.isSafeInteger(player.buy_in_total)?player.buy_in_total:0;
+      const balance=cashout-invested;
+      const balanceText=(balance<0?'-':'+')+formatCents(Math.abs(balance));
+      c.executionCtx.waitUntil(sendPushToPlayer(c.env,game.event_id,player.display_name,{
+        title:'Cash-out '+(expected_cashout===null?'recorded':'updated')+' — '+formatCents(cashout),
+        body:'Saved in PKR. Net: '+balanceText+'. This is not payment confirmation.',
+        data:{gameId,eventId:game.event_id,type:'cashout'},
+      }).catch((error)=>{console.warn('Cash-out notification failed',String(error));}));
+    }
+  }
   return c.json({ok:true,cashout,
     ...(enabled?{revision:version?.revision}:{})});
 });

@@ -724,7 +724,7 @@ window.htAuditStacks = function(){
 };
 
 window.htAct = function(action, playerName) {
-  if (!hs.hand) return;
+  if (!hs.hand || _htActionSaving) return;
 
   var chips = parseInt(hs.chipInput) || 0;
 
@@ -776,6 +776,8 @@ window.htAct = function(action, playerName) {
     if (p && p.name === playerName) pE = p;
   });
 
+  _htActionSaving=true;
+  toast('Saving action...');
   htApi('/games/' + getGameId() + '/hands/' + hs.hand.id + '/actions', {
     method: 'POST',
     body: JSON.stringify({
@@ -861,7 +863,7 @@ window.htAct = function(action, playerName) {
       return;
     }
     toast('Error: ' + e.message);
-  });
+  }).finally(function(){_htActionSaving=false;});
 };
 
 window.htSetStreet = function(s){hs.street=s;hs.chipInput='';renderBody();};
@@ -1393,6 +1395,7 @@ function updateSeatVisuals() {
 
 // --- COMPACT ACTION PANEL (floating on felt) ---
 var _apOpen = true; // panel expanded state
+var _htActionSaving = false;
 
 function renderActionPanel(){
   // Remove existing panel
@@ -1420,7 +1423,7 @@ function renderActionPanel(){
   var panel=document.createElement('div');
   panel.id='htActionPanel';
   // Fixed bottom-left, above bottom nav
-  panel.style.cssText='position:fixed;bottom:70px;left:8px;z-index:999;width:260px;font-family:DM Sans,sans-serif;';
+  panel.style.cssText='position:fixed;bottom:calc(75px + env(safe-area-inset-bottom));left:8px;z-index:900;width:min(260px,calc(100vw - 16px));max-height:65dvh;overflow-y:auto;font-family:DM Sans,sans-serif;';
 
   if(!_apOpen){
     // Collapsed tab
@@ -1497,13 +1500,14 @@ function renderActionPanel(){
     who.style.cssText='font-size:0.78rem;font-weight:700;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     who.textContent='\u25B6 '+nextPlayer+(callAmt>0?' \u00B7 call '+callAmt:'')+(isOption?' \u00B7 option':'');
     box.appendChild(who);
+    var instruction=document.createElement('small');instruction.style.cssText='display:block;color:#c6d2ca;margin-bottom:6px';instruction.textContent=callAmt>0?'Call requires '+callAmt+' chips. Raise amount is additional chips.':'Nothing to call — check is available.';box.appendChild(instruction);
 
     // Action buttons
     // With nothing owed, offer Check (not Call) at the start of a fresh street.
     var acts=(callAmt===0)?[
       {a:'fold',l:'Fold',bg:'rgba(231,76,60,0.15)',col:'#e74c3c',br:'rgba(231,76,60,0.3)'},
       {a:'check',l:'Check',bg:'rgba(255,255,255,0.05)',col:'rgba(255,255,255,0.6)',br:'rgba(255,255,255,0.15)'},
-      {a:'bet',l:'Bet',bg:'rgba(201,168,76,0.1)',col:'var(--gold,#c9a84c)',br:'rgba(201,168,76,0.3)'},
+      {a:(hs.street==='pre'&&maxBet>0?'raise':'bet'),l:(hs.street==='pre'&&maxBet>0?'Raise':'Bet'),bg:'rgba(201,168,76,0.1)',col:'var(--gold,#c9a84c)',br:'rgba(201,168,76,0.3)'},
       {a:'allin',l:'All-in',bg:'rgba(46,204,113,0.1)',col:'#2ecc71',br:'rgba(46,204,113,0.3)'},
     ]:[
       {a:'fold',l:'Fold',bg:'rgba(231,76,60,0.15)',col:'#e74c3c',br:'rgba(231,76,60,0.3)'},
@@ -1913,7 +1917,7 @@ function renderMain(body){
       var acts=isOption2?[
         {a:'fold', l:'Fold',   bg:'rgba(231,76,60,0.12)', col:'#e74c3c',   br:'rgba(231,76,60,0.3)'},
         {a:'check',l:'Check',  bg:'rgba(107,140,110,0.1)',col:'var(--muted)',br:'var(--border)'},
-        {a:'bet',  l:'Bet',    bg:'rgba(201,168,76,0.1)', col:'var(--gold)',br:'rgba(201,168,76,0.3)'},
+        {a:(hs.street==='pre'&&maxBet>0?'raise':'bet'),  l:(hs.street==='pre'&&maxBet>0?'Raise':'Bet'),    bg:'rgba(201,168,76,0.1)', col:'var(--gold)',br:'rgba(201,168,76,0.3)'},
         {a:'allin',l:'All-in', bg:'rgba(46,204,113,0.1)', col:'var(--green)',br:'rgba(46,204,113,0.3)'},
       ]:[
         {a:'fold', l:'Fold',          bg:'rgba(231,76,60,0.12)', col:'#e74c3c',   br:'rgba(231,76,60,0.3)'},
