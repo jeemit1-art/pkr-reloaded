@@ -272,7 +272,7 @@ export default function PlayPage() {
           onClick={() => (window as any).toggleBank?.()}
           onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="pkr-bank-quick">
-            <span className="pkr-bank-quick-item pkr-bank-count"><span aria-hidden="true">🪙</span><small>Banks</small><strong id="bbBanks">0b</strong></span>
+            <span className="pkr-bank-quick-item pkr-bank-count"><span className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></span><small>Banks</small><strong id="bbBanks">0b</strong></span>
             <span className="pkr-bank-quick-divider" aria-hidden="true"></span>
             <span className="pkr-bank-quick-item pkr-bank-inplay-quick"><span aria-hidden="true">💵</span><strong id="bbInPlay">$0</strong><small>In Play</small></span>
           </div>
