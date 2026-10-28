@@ -1828,8 +1828,11 @@ function renderTable() {
   var hasStacks=!!state.game.hand_tracking;
   var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2),maxSide=Math.max(leftCount,rightCount);
   var wideTable=!mobileRail&&(mode==='balanced'?W>=650:(W>=700||W>availableHeight*1.08));
-  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?88:150):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
-  var cardHeight=mobileRail?(hasStacks?96:84):compact?(hasStacks?98:82):(hasStacks?96:76);
+  var tightWide=wideTable&&count>=10&&W<1024;
+  var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
+  var compactWidth=wideTable?Math.min(88,Math.max(64,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
+  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
+  var cardHeight=mobileRail?(hasStacks?96:84):compact?(hasStacks?98:82):tightWide?(hasStacks?86:68):(hasStacks?96:76);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
@@ -1857,7 +1860,7 @@ function renderTable() {
   var caption=active+' active · '+players.length+' seated';
   if(stats)stats.textContent=players.length?caption:'';
   if(meta)meta.textContent=caption;
-  buildSeats(count,tW,tH,cx,cy,wideTable,seatChipRows(),{width:W,height:H,cardWidth:cardWidth,cardHeight:cardHeight,mode:mode,compact:compact,mobileRail:mobileRail,hasStacks:hasStacks});
+  buildSeats(count,tW,tH,cx,cy,wideTable,seatChipRows(),{width:W,height:H,cardWidth:cardWidth,cardHeight:cardHeight,mode:mode,compact:compact,mobileRail:mobileRail,tightWide:tightWide,hasStacks:hasStacks});
   updateBank();updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
@@ -1896,10 +1899,10 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     var sid='seat'+(i+1),p=state.players[sid],seat=document.createElement('div');
     seat.className='seat pkr-mockup-player-seat pkr-layout-'+g.mode;seat.id=sid;seat.style.left=pos.x+'px';seat.style.top=pos.y+'px';
     seat.style.setProperty('--pkr-card-width',g.cardWidth+'px');seat.style.setProperty('--pkr-card-height',g.cardHeight+'px');
-    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):wideTable?42:g.width<=360?28:34)+'px');
-    seat.style.setProperty('--pkr-name-size',(g.mobileRail?(g.width<=360?10:11):wideTable?13:g.width<=360?10:11)+'px');
-    seat.style.setProperty('--pkr-bank-size',(g.mobileRail?(g.width<=360?9:10):wideTable?12:g.width<=360?9:10)+'px');
-    seat.style.setProperty('--pkr-result-size',(g.mobileRail?(g.width<=360?12:14):wideTable?17:g.width<=360?12:14)+'px');
+    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?28:34)+'px');
+    seat.style.setProperty('--pkr-name-size',(g.mobileRail?(g.width<=360?10:11):g.tightWide?10:wideTable?13:g.width<=360?10:11)+'px');
+    seat.style.setProperty('--pkr-bank-size',(g.mobileRail?(g.width<=360?9:10):g.tightWide?9:wideTable?12:g.width<=360?9:10)+'px');
+    seat.style.setProperty('--pkr-result-size',(g.mobileRail?(g.width<=360?12:14):g.tightWide?13:wideTable?17:g.width<=360?12:14)+'px');
     if(i>0&&i<=leftCount)seat.dataset.side='left';else if(i>leftCount+1)seat.dataset.side='right';seat.setAttribute('role','button');seat.tabIndex=0;
     if(p&&p.name){
       var bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
