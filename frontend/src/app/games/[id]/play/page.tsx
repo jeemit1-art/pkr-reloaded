@@ -1840,7 +1840,7 @@ function renderTable() {
   var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
   var cardHeight=mobileRail?(hasStacks?96:84):compact?(tightWide?(hasStacks?82:70):(hasStacks?98:82)):tightWide?(hasStacks?86:68):(hasStacks?96:76);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
-  var H=Math.max(Math.min(availableHeight,wideTable?680:690),Math.min(minimumHeight,wideTable?560:680));
+  var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
