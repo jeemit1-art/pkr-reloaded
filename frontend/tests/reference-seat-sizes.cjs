@@ -30,6 +30,7 @@ async function check(browser,width,height,count){
  const page=await ctx.newPage();page.setDefaultTimeout(14000);
  const failures=[],browserErrors=[];
  page.on('pageerror',e=>browserErrors.push(e.message));
+ await page.route('**/fixture-avatar-missing.png',route=>route.fulfill({status:404,contentType:'text/plain',body:'Synthetic missing image'}));
  await page.route('**/*.workers.dev/**',async route=>{
   const request=route.request(),u=new URL(request.url());
   if(u.origin!==API||request.method()!=='GET'){
@@ -72,6 +73,10 @@ async function check(browser,width,height,count){
       numbers:[...e.querySelectorAll('.pkr-game-seat-bank,.pkr-game-compact-bank,.pkr-game-seat-result')].map(n=>{
        const range=document.createRange();range.selectNodeContents(n);
        return {text:n.textContent,width:n.clientWidth,textWidth:range.getBoundingClientRect().width};
+      }),
+      status:[...e.querySelectorAll('.pkr-game-seat-status,.pkr-game-compact-status')].map(n=>{
+       const range=document.createRange();range.selectNodeContents(n);
+       return {text:n.textContent,bottom:range.getBoundingClientRect().bottom};
       })}));
     const overlap=[];
     for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++){
@@ -86,9 +91,19 @@ async function check(browser,width,height,count){
    for(const c of geometry.cards){
     assert(c.r.left>=-2&&c.r.right<=width+2,'Seat extends past phone edge: '+JSON.stringify(c));
     for(const n of c.numbers)assert(n.textWidth<=n.width+3,'Amount is clipped: '+JSON.stringify({width,count,compact,card:c.id,...n}));
+    for(const st of c.status)assert(st.bottom<=c.r.bottom+1,'Status falls below its card: '+JSON.stringify({width,count,compact,card:c.id,cardBottom:c.r.bottom,...st}));
    }
    if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+(compact?'compact':'full')+'.png')});
   }
+  // A failed member photo must not display a broken image over the initials.
+  await page.evaluate(()=>{
+   const member=window._eventMembers.find(m=>m.id==='ref-1');
+   member.avatar_url='/fixture-avatar-missing.png';
+   window.renderTable();
+  });
+  await page.locator('#seat1 .pkr-game-seat-avatar img[hidden]').waitFor({state:'attached'});
+  assert.equal(await page.locator('#seat1 .pkr-game-seat-avatar img').isVisible(),false);
+  assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').isVisible(),true);
   // Changing view may not write or change the transaction ledger.
   const actual=await page.evaluate(()=>JSON.parse(JSON.stringify(window.state.players)));
   for(const [sid,p] of Object.entries(players)){
@@ -97,7 +112,7 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS reference layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Full/Compact, all numbers visible, no financial writes');
+  console.log('PASS reference layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Full/Compact, all numbers/status visible, broken-photo fallback, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
