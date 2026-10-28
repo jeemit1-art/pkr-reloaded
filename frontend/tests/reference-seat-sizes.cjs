@@ -62,10 +62,10 @@ async function check(browser,width,height,count){
     return {felt:{left:felt.left,right:felt.right,width:felt.width,height:felt.height},
       left:{right:left.right},right:{left:right.left}};
    });
-   assert(approved.felt.width>=190&&approved.felt.width<=225,'Approved phone felt must stay compact and wide enough: '+JSON.stringify(approved));
-   assert(approved.felt.height>=320&&approved.felt.height<=385,'Approved phone felt must not stretch vertically: '+JSON.stringify(approved));
+   assert(approved.felt.width>=165&&approved.felt.width<=205,'Approved phone felt must leave space for full player names: '+JSON.stringify(approved));
+   assert(approved.felt.height>=300&&approved.felt.height<=365,'Approved phone felt must not stretch vertically: '+JSON.stringify(approved));
    const ratio=approved.felt.height/approved.felt.width;
-   assert(ratio>=1.55&&ratio<=1.85,'Approved felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
+   assert(ratio>=1.6&&ratio<=1.9,'Approved felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
    assert(approved.left.right<=approved.felt.left+22,'Left player cards must sit off the felt: '+JSON.stringify(approved));
    assert(approved.right.left>=approved.felt.right-22,'Right player cards must sit off the felt: '+JSON.stringify(approved));
   }
