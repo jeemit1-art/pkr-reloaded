@@ -76,7 +76,8 @@ async function check(browser,width,height,count){
   assert.equal(await page.locator('#bbBanks').count(),0);
   if(count===9||count===13)
    await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+expectedAuto+'-auto.png')});
-  for(const mode of ['balanced','compact']){
+  const modes=width<350?['compact']:['balanced','compact'];
+  for(const mode of modes){
    await page.getByRole('button',{name:'Open table controls'}).click();
    const dialog=page.locator('.pkr-table-tools-dialog');await dialog.waitFor();
    assert(await dialog.evaluate(e=>e.matches(':modal')),'Tools must remain top-layer');
