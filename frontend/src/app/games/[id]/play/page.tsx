@@ -1869,7 +1869,7 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
     // the bank and results chips to overlap one another on small iPhones.
     var denseVertical=count>=10;
     var verticalTop=denseVertical?Math.max(22,chipSize/2+10):cy-tH/2;
-    var verticalBottom=denseVertical?H-Math.max(22,chipSize/2+10):cy+tH/2;
+    var verticalBottom=denseVertical?(document.getElementById('tableWrap').offsetHeight)-Math.max(22,chipSize/2+10):cy+tH/2;
     for (var i = 0; i < leftCount; i++) {
       var spacing = (verticalBottom-verticalTop) / (leftCount + 1);
       positions.push({ x: cx - hOff, y: verticalTop + spacing*(i+1) });
