@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import AppDialog from '@/components/AppDialog';
 
 export default function PlayPage() {
   const params = useParams();
@@ -127,6 +128,14 @@ export default function PlayPage() {
         qrScript.onerror = () => console.warn('PKR: optional QR library unavailable; table remains functional');
         document.head.appendChild(qrScript);
       }
+      // The chip ledger never writes to game history or payment records.
+      const oldLedger=document.getElementById('pkr-seat-stack-lib');
+      if(oldLedger)oldLedger.remove();
+      const ledgerScript=document.createElement('script');
+      ledgerScript.id='pkr-seat-stack-lib';
+      ledgerScript.src='/seat-stack-ledger.js?v=1';
+      ledgerScript.onload=()=>{(window as any).refreshSeatStacks?.();(window as any).renderTable?.();};
+      document.head.appendChild(ledgerScript);
       // Load hand tracker as separate static file (always reload to pick up updates)
       const existingHt = document.getElementById('pkr-hand-tracker');
       if (existingHt) existingHt.remove();
@@ -198,25 +207,50 @@ export default function PlayPage() {
             </span>
           </div>
           <div className="pkr-table-head-actions">
-            <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}
-              aria-label="Share live poker table" title="Share live table"><span aria-hidden="true">⇧</span></button>
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
-              aria-controls="pkr-table-tools" aria-label={toolsOpen?'Close table tools':'Open table tools'}
-              onClick={() => setToolsOpen(v=>!v)} title="Table tools">
-              <span aria-hidden="true">•••</span>
+              aria-haspopup="dialog" aria-label="Open table controls"
+              onClick={() => setToolsOpen(true)} title="Table controls">
+              <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
         </div>
 
-        <div id="pkr-table-tools" className={'pkr-mobile-tools pkr-approved-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
-          <span className="pkr-tools-caption">Table tools</span>
-          <button id="trackHandsBtn" type="button" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>🃏 Hand tracking</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>🏆 Tournament controls</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
-        </div>
+        {/* One accessible, compact tools sheet. Sharing remains in the
+            permanent bottom action dock: no duplicate header button. */}
+        {toolsOpen&&<AppDialog className="pkr-table-tools-dialog" aria-label="Table controls"
+            onDismiss={()=>setToolsOpen(false)}
+            onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
+          <div className="pkr-table-tools-sheet" id="pkr-table-tools">
+            <header className="pkr-table-tools-sheet-header">
+              <div><span>POKER NIGHT</span><h2>Table controls</h2>
+                <p>Manage hands, seating and table extras.</p></div>
+              <button type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>✕</button>
+            </header>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">GAMEPLAY</span>
+              <div className="pkr-tools-action-grid">
+                <button id="trackHandsBtn" type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
+                  <span aria-hidden="true">🃏</span><strong>Hand tracker</strong><small>Record betting and winners</small></button>
+                <button type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>
+                  <span aria-hidden="true">🏆</span><strong>Tournament</strong><small>Blinds, timer and levels</small></button>
+              </div>
+            </div>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">SEATING</span>
+              <div className="pkr-tools-seat-actions">
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
+              </div>
+            </div>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">TABLE EXTRAS</span>
+              <div className="pkr-tools-seat-actions">
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
+              </div>
+            </div>
+          </div>
+        </AppDialog>}
 
         {/* Bank Bar */}
         <div className="bank-bar" id="bankBar" role="button" tabIndex={0}
