@@ -34,6 +34,15 @@ const localPlayers={
  seat3:{name:'Alex',userId:'member-two',transactions:[{type:'buyin',amount:25,ts:Date.now()}]},
 };
 const expectClose=(a,b,msg)=>assert(Math.abs(a-b)<3,msg+': '+a+' vs '+b);
+async function requireColour(page,selector,colour){
+ // Chip audit completion can replace a seat between locator resolution and
+ // evaluate. Read the current connected element in one browser task, retaining
+ // the exact required colour rather than accepting a detached-node empty style.
+ await page.waitForFunction(({selector,colour})=>{
+  const element=document.querySelector(selector);
+  return !!element?.isConnected&&getComputedStyle(element).color===colour;
+ },{selector,colour},{timeout:16000});
+}
 async function check(browser,name,width,height){
  const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
  await context.addInitScript(({inputGame,localPlayers,API})=>{
@@ -81,9 +90,10 @@ async function check(browser,name,width,height){
  });
  try{
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
-  await page.locator('#seat7 .seat-money').filter({hasText:'$25.00'}).waitFor();
+  await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
   assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
+  await requireColour(page,'#seat7 .seat-money','rgb(255, 93, 114)');
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
@@ -109,11 +119,11 @@ async function check(browser,name,width,height){
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'95 chips'}).waitFor();
   await page.locator('#seat3 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor();
   await page.locator('#seat7').click();
-  // WebKit can report an empty innerText while the opening panel is
-  // mid-transition. Wait for the actual financial text to be committed.
   await page.locator('.side-panel.open #pNetDisplay')
    .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
+  await requireColour(page,'.side-panel.open #pNetDisplay','rgb(255, 93, 114)');
+  await requireColour(page,'.side-panel.open .pkr-panel-buyin','rgb(255, 93, 114)');
   assert.equal(await page.locator('.side-panel').getByText('Pending',{exact:true}).count(),0);
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
