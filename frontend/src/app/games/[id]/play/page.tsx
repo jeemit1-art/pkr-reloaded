@@ -1864,14 +1864,20 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
     for (var j=0;j<rightCount;j++) positions.push(polar(Math.PI/2-Math.PI*(j+1)/(rightCount+1)));
   } else {
     positions.push({ x: cx, y: cy - vOff });
+    // Dense side seats should use the entire playable screen height, not
+    // only the felt height. With 13 seats the original tH/7 spacing caused
+    // the bank and results chips to overlap one another on small iPhones.
+    var denseVertical=count>=10;
+    var verticalTop=denseVertical?Math.max(22,chipSize/2+10):cy-tH/2;
+    var verticalBottom=denseVertical?H-Math.max(22,chipSize/2+10):cy+tH/2;
     for (var i = 0; i < leftCount; i++) {
-      var spacing = tH / (leftCount + 1);
-      positions.push({ x: cx - hOff, y: cy + (-tH/2 + spacing*(i+1)) });
+      var spacing = (verticalBottom-verticalTop) / (leftCount + 1);
+      positions.push({ x: cx - hOff, y: verticalTop + spacing*(i+1) });
     }
     positions.push({ x: cx, y: cy + vOff });
     for (var j = 0; j < rightCount; j++) {
-      var spacingR = tH / (rightCount + 1);
-      positions.push({ x: cx + hOff, y: cy + (-tH/2 + spacingR*(j+1)) });
+      var spacingR = (verticalBottom-verticalTop) / (rightCount + 1);
+      positions.push({ x: cx + hOff, y: verticalTop + spacingR*(j+1) });
     }
   }
   positions.forEach(function(pos, i) {
