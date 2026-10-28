@@ -70,9 +70,10 @@ async function check(browser,width,height,count){
    const geometry=await page.evaluate(()=>{
     const seats=[...document.querySelectorAll('#seatsContainer>.pkr-mockup-player-seat')];
     const cards=seats.map(e=>({id:e.id,r:e.getBoundingClientRect().toJSON(),
-      numbers:[...e.querySelectorAll('.pkr-game-seat-bank,.pkr-game-compact-bank,.pkr-game-seat-result')].map(n=>{
+      content:[...e.querySelectorAll('.pkr-game-seat-name,.pkr-game-seat-bank,.pkr-game-compact-bank,.pkr-game-seat-result')].map(n=>{
        const range=document.createRange();range.selectNodeContents(n);
-       return {text:n.textContent,width:n.clientWidth,textWidth:range.getBoundingClientRect().width};
+       const r=range.getBoundingClientRect();
+       return {text:n.textContent,width:n.clientWidth,textWidth:r.width,left:r.left,right:r.right,top:r.top,bottom:r.bottom};
       }),
       status:[...e.querySelectorAll('.pkr-game-seat-status,.pkr-game-compact-status')].map(n=>{
        const range=document.createRange();range.selectNodeContents(n);
@@ -90,7 +91,11 @@ async function check(browser,width,height,count){
    assert(geometry.scroll<=geometry.w+3,'No page horizontal overflow');
    for(const c of geometry.cards){
     assert(c.r.left>=-2&&c.r.right<=width+2,'Seat extends past phone edge: '+JSON.stringify(c));
-    for(const n of c.numbers)assert(n.textWidth<=n.width+3,'Amount is clipped: '+JSON.stringify({width,count,compact,card:c.id,...n}));
+    for(const n of c.content){
+     assert(n.textWidth<=n.width+3,'Name or amount is clipped: '+JSON.stringify({width,count,compact,card:c.id,...n}));
+     assert(n.left>=c.r.left-1&&n.right<=c.r.right+1&&n.top>=c.r.top-1&&n.bottom<=c.r.bottom+1,
+      'Name/amount sits outside its player card: '+JSON.stringify({width,count,compact,card:c.id,cardBox:c.r,...n}));
+    }
     for(const st of c.status)assert(st.bottom<=c.r.bottom+1,'Status falls below its card: '+JSON.stringify({width,count,compact,card:c.id,cardBottom:c.r.bottom,...st}));
    }
    if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+(compact?'compact':'full')+'.png')});
@@ -112,7 +117,7 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS reference layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Full/Compact, all numbers/status visible, broken-photo fallback, no financial writes');
+  console.log('PASS reference layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Full/Compact, names/money/status contained, broken-photo fallback, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
