@@ -100,6 +100,13 @@ async function check(browser,width,height,count){
    assert.equal(await dialog.locator('.pkr-reference-tool-grid button').count(),6);
    assert.equal(await dialog.locator('.pkr-responsive-view-select').count(),0,'Legacy four-mode selector remains removed');
    assert.equal(await dialog.locator('.pkr-approved-view-buttons button').count(),3,'Tools offers Auto, Full and Compact');
+   const toolSpacing=await dialog.evaluate(root=>{
+    const grid=root.querySelector('.pkr-reference-tool-grid').getBoundingClientRect();
+    const note=root.querySelector('.pkr-tools-reconciliation-note').getBoundingClientRect();
+    return {gridBottom:grid.bottom,noteTop:note.top,noteBottom:note.bottom};
+   });
+   assert(toolSpacing.noteTop>=toolSpacing.gridBottom+3,
+    'Tools note overlaps the last row of controls: '+JSON.stringify(toolSpacing));
    const selected=mode==='balanced'?'Full table view':'Compact table view';
    await dialog.getByRole('button',{name:selected,exact:true}).click();
    assert.equal(await dialog.getByRole('button',{name:selected,exact:true}).getAttribute('aria-pressed'),'true');
