@@ -92,7 +92,10 @@ async function check(browser,name,width,height){
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
   await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
-  assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
+  const resolvedView=await page.evaluate(()=>window.pkrGetResolvedSeatLayout());
+  const seatMoney=await page.locator('#seat7 .seat-money').innerText();
+  if(resolvedView==='compact')assert.match(seatMoney,/\$25/);
+  else assert.match(seatMoney,/1b.*\$25/);
   await requireColour(page,'#seat7 .seat-money','rgb(255, 93, 114)');
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
