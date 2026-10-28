@@ -249,8 +249,8 @@ export default function PlayPage() {
           </div>
           <strong id="bbTotal" className="pkr-bank-total pkr-bank-total-hidden">$0.00</strong>
           <div className="bank-right pkr-bank-detail-pills" aria-hidden="true">
-            <span className="bank-pill g"><span className="pkr-bank-visual pkr-bank-in" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>IN</small><b id="bbIn">$0</b></span></span>
-            <span className="bank-pill pkr-bank-out"><span className="pkr-bank-visual pkr-bank-out-icon" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>OUT</small><b id="bbOut">$0</b></span></span>
+            <span className="bank-pill g"><span className="pkr-bank-metric"><small><span className="pkr-inline-bank-dot pkr-inline-bank-in" aria-hidden="true"></span>IN</small><b id="bbIn">$0</b></span></span>
+            <span className="bank-pill pkr-bank-out"><span className="pkr-bank-metric"><small><span className="pkr-inline-bank-dot pkr-inline-bank-out" aria-hidden="true"></span>OUT</small><b id="bbOut">$0</b></span></span>
             <span className="bank-pill pkr-bank-current"><span className="pkr-bank-visual pkr-bank-balance" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>BANK</small><b id="bbBank">$0</b></span></span>
           </div>
           <span className="bank-caret" aria-hidden="true">⌄</span>
