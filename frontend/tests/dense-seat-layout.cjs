@@ -39,6 +39,11 @@ async function check(browser,width){
  });
  try{
   await page.goto(url+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
+  // Wait for the embedded poker table to complete its async boot and state
+  // hydration before checking the dense-seat geometry.
+  await page.waitForFunction(()=>!!window.state?.game&&
+    typeof window.renderTable==='function',{timeout:17000});
+  await page.evaluate(()=>window.renderTable());
   await page.locator('#seat3 .pkr-dense-info').waitFor();
   await page.locator('#seat3 .pkr-seat-photo').waitFor();
   assert.match(await page.locator('#seat3 .pkr-dense-bank').textContent(),/1b.*25/);
