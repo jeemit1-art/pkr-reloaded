@@ -47,7 +47,7 @@ async function check(browser,width,height,count){
  });
  try{
   await page.goto(BASE+'/games/'+id+'/play',{waitUntil:'domcontentloaded'});
-  await page.locator('#seat1 .pkr-game-seat-bank').waitFor();
+  await page.locator('#seat1 .pkr-game-seat-card').waitFor();
   await page.waitForFunction(()=>!!window._eventMembers);
   const expectedAuto=(width<700&&height>=width)?'mobile':width<1024?'compact':'balanced';
   assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
