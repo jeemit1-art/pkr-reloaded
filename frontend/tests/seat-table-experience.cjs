@@ -109,8 +109,11 @@ async function check(browser,name,width,height){
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'95 chips'}).waitFor();
   await page.locator('#seat3 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor();
   await page.locator('#seat7').click();
-  await page.locator('.side-panel.open #pNetDisplay').waitFor({state:'visible'});
-  assert.match(await page.locator('.side-panel #pNetDisplay').innerText(),/\$25/);
+  // WebKit can report an empty innerText while the opening panel is
+  // mid-transition. Wait for the actual financial text to be committed.
+  await page.locator('.side-panel.open #pNetDisplay')
+   .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
+  assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
   assert.equal(await page.locator('.side-panel').getByText('Pending',{exact:true}).count(),0);
   assert.match(await page.locator('#pkrSeatChipSummary').innerText(),/95 chips/);
   if(width<=700){
