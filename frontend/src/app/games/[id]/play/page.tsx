@@ -219,20 +219,9 @@ export default function PlayPage() {
             </span>
           </div>
           <div className="pkr-table-head-actions">
-            <label className="pkr-table-view-toolbar" title="Choose table view">
-              <span className="pkr-view-toolbar-icon" aria-hidden="true">▦</span>
-              <span className="pkr-view-toolbar-label">View</span>
-              <select aria-label="Table view" value={seatLayout}
-                onChange={(e)=>selectTableLayout(e.target.value as 'auto'|'balanced'|'compact'|'mobile')}>
-                <option value="auto">Auto</option>
-                <option value="balanced">Balanced</option>
-                <option value="compact">Compact</option>
-                <option value="mobile">Mobile Rail</option>
-              </select>
-            </label>
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
               aria-haspopup="dialog" aria-label="Open table controls"
-              onClick={() => { setSeatLayout(savedTableLayout()); setToolsOpen(true); }} title="Table controls">
+              onClick={() => { setToolsOpen(true); }} title="Table controls">
               <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
@@ -248,12 +237,6 @@ export default function PlayPage() {
               <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools</p></div>
               <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
-            <div className="pkr-reference-view-select pkr-responsive-view-select" role="group" aria-label="Table view">
-              <button type="button" aria-label="Auto table view" aria-pressed={seatLayout==='auto'} onClick={()=>selectTableLayout('auto')}><strong>Auto</strong><small>Best view for this screen</small></button>
-              <button type="button" aria-label="Balanced table view" aria-pressed={seatLayout==='balanced'} onClick={()=>selectTableLayout('balanced')}><strong>Balanced</strong><small>Desktop / large screens</small></button>
-              <button type="button" aria-label="Compact table view" aria-pressed={seatLayout==='compact'} onClick={()=>selectTableLayout('compact')}><strong>Compact</strong><small>Tablet / landscape</small></button>
-              <button type="button" aria-label="Mobile Rail table view" aria-pressed={seatLayout==='mobile'} onClick={()=>selectTableLayout('mobile')}><strong>Mobile Rail</strong><small>Vertical phone table</small></button>
-            </div>
             <div className="pkr-reference-tool-grid">
               <button id="trackHandsBtn" type="button" aria-label="Hand tracker" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}><span aria-hidden="true">♠</span><span>Hand<br/>Tracking</span></button>
               <button type="button" aria-label="Tournament" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}><span aria-hidden="true">🏆</span><span>Tournament<br/>Controls</span></button>
@@ -1883,7 +1866,8 @@ function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,mode,stackRow){
   }
   var chips=chipLabel?'<span class="seat-stack pkr-game-stack-readout '+(stackRow.source||'issued')+'">'+esc(chipLabel)+'</span>':'';
   if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
-  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+(cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+status+'</span>'):'<span class="pkr-game-seat-main">'+avatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span><span class="pkr-game-seat-status '+statusClass+'"><span aria-hidden="true">'+badge+'</span> '+status+'</span>';
+  var fullAvatar='<span class="pkr-game-full-avatar">'+avatar+(cashed?'<span class="pkr-game-status-dot cashed" aria-label="Cashed out">✓</span>':'')+'</span>';
+  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+(cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+status+'</span>'):'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>';
   return '<span class="pkr-game-seat-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span>'+main+chips+'</span>';
 }
 function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
