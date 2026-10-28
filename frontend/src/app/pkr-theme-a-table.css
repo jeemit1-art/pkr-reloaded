@@ -869,3 +869,15 @@
   padding:2px 2px 1px!important;gap:2px!important;
  }
 }
+
+
+/* The legacy .seat-label adds 14px of horizontal padding and a dark pill.
+   It was clipping player names in the new full cards on 390px phones. */
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{
+ padding:0!important;margin:0!important;border:0!important;
+ background:transparent!important;box-shadow:none!important;
+ text-shadow:none!important;text-align:left!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
+ min-width:0!important;overflow:hidden!important;
+}
