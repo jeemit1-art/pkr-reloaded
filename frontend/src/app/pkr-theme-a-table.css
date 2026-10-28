@@ -520,3 +520,52 @@
   display:none!important;
  }
 }
+
+/* Short landscape tables: keep photos, player names, bank money and
+   the red/green result on two short lines rather than stacking 13 cards
+   over one another. This adaptation does not change the poker felt. */
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat{
+ --pkr-avatar-size:16px;
+ --pkr-seat-card-height:var(--pkr-seat-row-fit,22px);
+ width:var(--pkr-seat-card-width)!important;
+ padding:1px 3px!important;
+ column-gap:3px!important;
+ border-radius:6px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .pkr-seat-details{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) auto!important;
+ grid-template-rows:10px 10px!important;
+ gap:0 3px!important;
+ align-items:center!important;
+ justify-content:start!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .seat-label{
+ grid-column:1;grid-row:1;font-size:8px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .seat-money{
+ grid-column:2;grid-row:1;
+ font-size:8px!important;
+ width:auto!important;
+ max-width:35px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .seat-net{
+ grid-column:1/span 2;grid-row:2;
+ font-size:9px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .seat-stack{
+ display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .pkr-seat-money-full{
+ display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .pkr-seat-money-short{
+ display:inline!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .pkr-seat-result-prefix{
+ display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="ultra"] .seat.pkr-occupied-seat .pkr-seat-number{
+ top:0;right:1px;font-size:7px;line-height:1;
+ border:0;padding:0;min-width:0;min-height:0;
+}

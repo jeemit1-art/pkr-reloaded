@@ -108,7 +108,9 @@ async function check(browser,name,width,height){
    throw new Error('Table did not remain rendered after layout switch: '+
      JSON.stringify(diagnosis)+'; browser errors: '+errors.join('; '));
   }
-  await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
+  const denseSeat=await page.locator('#gameScreen').getAttribute('data-seat-density');
+  await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'})
+   .waitFor({state:denseSeat==='normal'?'visible':'attached',timeout:18000});
   await page.locator('#seat7 .seat-chip.pkr-has-photo').waitFor({state:'visible'});
   assert.equal(await page.locator('#seat7 .pkr-seat-avatar-photo').getAttribute('alt'),'');
   assert.equal(await page.locator('#seat3 .pkr-seat-avatar-photo').count(),0,'No avatar: keep initials');
@@ -119,7 +121,7 @@ async function check(browser,name,width,height){
     'Win must be green and loss red');
   assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
-  assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
+  assert.match((await page.locator('#seat3 .seat-stack').textContent())||'',/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
   if(width<=700){
    assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),false);
@@ -140,8 +142,8 @@ async function check(browser,name,width,height){
   winner='Alex';
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:hand-state-changed',
    {detail:{gameId:'seat-test-game',path:'/games/seat-test-game/hands/hand-one/result'}})));
-  await page.locator('#seat7 .seat-stack.verified').filter({hasText:'95 chips'}).waitFor();
-  await page.locator('#seat3 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor();
+  await page.locator('#seat7 .seat-stack.verified').filter({hasText:'95 chips'}).waitFor({state:'attached'});
+  await page.locator('#seat3 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({state:'attached'});
   await page.locator('#seat7').click();
   // WebKit can report an empty innerText while the opening panel is
   // mid-transition. Wait for the actual financial text to be committed.

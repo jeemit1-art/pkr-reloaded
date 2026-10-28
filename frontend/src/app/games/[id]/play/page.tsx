@@ -1836,7 +1836,9 @@ function renderTable() {
   if (screen) {
     screen.classList.toggle('pkr-wide-table',wideTable);
     var sideRows=Math.ceil(Math.max(0,(state.game.seats||9)-2)/2);
-    screen.dataset.seatDensity=tH/(sideRows+1)<53?'tight':'normal';
+    var rowSpacing=tH/(sideRows+1);
+    screen.dataset.seatDensity=rowSpacing<35?'ultra':rowSpacing<53?'tight':'normal';
+    screen.style.setProperty('--pkr-seat-row-fit',Math.max(18,Math.floor(rowSpacing)-2)+'px');
   }
   var cx = W / 2, cy = H / 2;
   var pad = 14;
