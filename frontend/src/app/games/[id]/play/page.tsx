@@ -1774,13 +1774,13 @@ function buildSeats(count, tW, tH, cx, cy, wideTable) {
       var bi = pBuyin(p), co = pCash(p), net = pNet(p);
       var isRsvp = p.rsvp && bi === 0;
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
-      var netHtml = bi > 0 ? '<div class="seat-net ' + nc(net) + '">' + fmtBNet(net) + '</div>' : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
+      var netHtml = bi > 0 ? (cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">' + fmtBNet(net) + '</div>' : '<div class="seat-net" style="color:var(--muted)">Result pending</div>') : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
       var chipHtml = '';
       var _g = state && state.game;
       if (bi > 0 && _g && _g.chip_value > 0 && _g.starting_chips > 0) {
         var buyCt = p.transactions ? p.transactions.filter(function(t){return t.type!=='cashout';}).length : (p.buy_ins||1);
         var chips = _g.starting_chips * Math.max(1, buyCt);
-        chipHtml = '<div style="font-size:clamp(0.55rem,1.3vw,0.68rem);color:var(--gold);background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);border-radius:3px;padding:1px 5px;margin-top:1px;font-family:DM Sans,sans-serif;line-height:1.4;">' + chips + ' chips</div>';
+        chipHtml = '<div style="font-size:clamp(0.55rem,1.3vw,0.68rem);color:var(--gold);background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);border-radius:3px;padding:1px 5px;margin-top:1px;font-family:DM Sans,sans-serif;line-height:1.4;">' + chips + ' chips issued</div>';
       }
       seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml + chipHtml;
     } else {
@@ -1820,7 +1820,7 @@ function refreshPanelSummary(sid) {
   var p = state.players[sid];
   if (!p) return;
   var el = document.getElementById('pNetDisplay');
-  if (el) { var n = pNet(p); el.className = 'p-net ' + nc(n); el.textContent = fmtBNet(n); }
+  if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'; el.textContent=final?fmtBNet(n):'Pending'; }
 }
 
 function buildPanel(sid) {
@@ -1835,7 +1835,8 @@ function buildPanel(sid) {
 
   // Summary
   var sum = document.createElement('div'); sum.className = 'p-sum';
-  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &nbsp;&middot;&nbsp; In: ' + fmt(bi) + ' &middot; Out: ' + fmt(co) + '</div></div><div class="p-net ' + nc(net) + '" id="pNetDisplay">' + fmtNet(net) + '</div>';
+  var cashedOut=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
+  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &nbsp;&middot;&nbsp; In: ' + fmt(bi) + (cashedOut?' &middot; Out: '+fmt(co):' &middot; Result pending') + '</div></div><div class="p-net ' + (cashedOut?nc(net):'') + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):'Pending') + '</div>';
   body.appendChild(sum);
 
   // Transactions
@@ -1862,19 +1863,54 @@ function buildPanel(sid) {
       var badge = document.createElement('span'); badge.className = 'tx-badge ' + typeCls; badge.textContent = typeLabel;
       var amt = document.createElement('input');
       amt.className = 'tx-amt'; amt.type = 'number'; amt.inputMode = 'decimal'; amt.value = tx.amount.toFixed(2);
-      amt.addEventListener('click', function(){ amt.select(); });
+      amt.addEventListener('click', function(){ if(!amt.readOnly) amt.select(); });
       amt.addEventListener('mousedown', function(e){ e.stopPropagation(); });
       var capturedIdx = idx;
-      var saveTxAmt = function() {
-        var v = parseFloat(amt.value);
-        if (isNaN(v) || v < 0) return;
-        p.transactions[capturedIdx].amount = v;
-        p.transactions[capturedIdx].pkrEstimated = false;
-        p.transactions[capturedIdx].pkrReconstructed = false;
-        window.saveState(); refreshPanelSummary(sid); renderTable();
-      };
-      amt.addEventListener('blur', saveTxAmt);
-      amt.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); amt.blur(); } });
+      // Editing financial amounts must be explicit: a tap outside cannot
+      // accidentally rewrite a buy-in or cash-out.
+      amt.readOnly=true;
+      amt.setAttribute('aria-label', typeLabel + ' amount in dollars');
+      var originalCents=Math.round(tx.amount*100);
+      var editBtn=document.createElement('button');
+      editBtn.type='button';editBtn.className='tx-del';editBtn.textContent='Edit';
+      editBtn.setAttribute('aria-label','Edit '+typeLabel+' amount');
+      var saveBtn=document.createElement('button');
+      saveBtn.type='button';saveBtn.className='tx-del';saveBtn.textContent='Save';
+      saveBtn.style.display='none';
+      var cancelBtn=document.createElement('button');
+      cancelBtn.type='button';cancelBtn.className='tx-del';cancelBtn.textContent='Cancel';
+      cancelBtn.style.display='none';
+      function setEditing(enabled){
+        amt.readOnly=!enabled;
+        editBtn.style.display=enabled?'none':'';
+        saveBtn.style.display=enabled?'':'none';
+        cancelBtn.style.display=enabled?'':'none';
+        if(enabled){amt.focus();amt.select();}
+      }
+      editBtn.addEventListener('click',function(){setEditing(true);});
+      cancelBtn.addEventListener('click',function(){
+        amt.value=(originalCents/100).toFixed(2);setEditing(false);
+      });
+      saveBtn.addEventListener('click',function(){
+        var raw=amt.value.trim();
+        if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid dollar amount with up to two decimals');return;}
+        var cents=Math.round(Number(raw)*100);
+        if(!Number.isSafeInteger(cents)||cents<0){toast('Enter a valid amount');return;}
+        var latest=state.players[sid];
+        if(!latest||(latest.transactions||[])[capturedIdx]!==tx){
+          toast('Transaction changed on this device. Review the latest record.');
+          buildPanel(sid);return;
+        }
+        if(cents===originalCents){setEditing(false);return;}
+        tx.amount=cents/100;
+        tx.pkrEstimated=false;tx.pkrReconstructed=false;
+        window.saveState();buildPanel(sid);renderTable();
+        toast('Amount updated. Check the sync status before final settlement.');
+      });
+      amt.addEventListener('keydown',function(e){
+        if(e.key==='Escape'){e.preventDefault();cancelBtn.click();}
+        if(e.key==='Enter'&&!amt.readOnly){e.preventDefault();saveBtn.click();}
+      });
       var timeEl = document.createElement('span'); timeEl.className = 'tx-time'; timeEl.textContent = time;
       var del = document.createElement('button'); del.className = 'tx-del'; del.textContent = '✕';
       del.addEventListener('click', function() {
@@ -1884,7 +1920,7 @@ function buildPanel(sid) {
           window.saveState(); buildPanel(sid); renderTable();
         });
       });
-      row.append(badge, amt, timeEl, del);
+      row.append(badge, amt, editBtn, saveBtn, cancelBtn, timeEl, del);
       txList.appendChild(row);
     });
   }
@@ -2809,12 +2845,68 @@ if (ctx && ctx.gameId) {
   if (state.game) renderTable();
 }
 
+// Follow read-only server changes from a co-host without ever replaying them
+// as new financial PUTs. Preserve unsynced local work and identity conflicts.
+var _remoteGameRefreshBusy=false;
+function refreshVisibleGameFromServer(game){
+  if(!game||!Array.isArray(game.players)||!state||!state.players||!state.game) return;
+  if(!_isOnline||_offlineQueue.length||_flushingQueue||_syncConflict||_syncError||
+     window._pkrResultsSaved||document.querySelector('.tx-amt:not([readonly])'))return;
+  var changed=false,needsReview=false;
+  game.players.forEach(function(server){
+    if(!Number.isSafeInteger(server.seat_number)||server.seat_number<1) return;
+    var sid='seat'+server.seat_number;
+    var local=state.players[sid];
+    if(local&&local.name&&local.name.toLowerCase()!==String(server.display_name||'').toLowerCase()){
+      needsReview=true;return; // Same seat was reassigned elsewhere.
+    }
+    if(local&&local.userId&&server.user_id&&local.userId!==server.user_id){
+      needsReview=true;return; // Never merge two identities by seat or name.
+    }
+    // The actual individual buy-in denominations are not persisted in D1.
+    // Only hydrate from absolute server totals, labelling reconstructed rows.
+    var existingCents=local?Math.round(pBuyin(local)*100):0;
+    var localCount=local?(local.transactions||[]).filter(function(tx){return tx.type!=='cashout';}).length:0;
+    var serverCount=Number(server.buy_ins||0);
+    var invested=Number.isSafeInteger(server.buy_in_total)&&server.buy_in_total>0
+      ?server.buy_in_total:serverCount*Math.round((state.game.defaultBuyin||0)*100);
+    var cashed=server.cashout===null||server.cashout===undefined?null:Number(server.cashout);
+    if(!Number.isSafeInteger(invested)||invested<0||
+       (cashed!==null&&(!Number.isSafeInteger(cashed)||cashed<0))) {
+      needsReview=true;return;
+    }
+    var localCashPresent=local&&(local.transactions||[]).some(function(tx){return tx.type==='cashout';});
+    var localCash=local?Math.round(pCash(local)*100):null;
+    var amountChanged=!local||existingCents!==invested||localCount!==serverCount||
+      !!localCashPresent!==(cashed!==null)||
+      (cashed!==null&&localCash!==cashed);
+    if(!amountChanged)return;
+    var banks=pkrBuildBankTransactions(server,state.game.defaultBuyin||0);
+    if(banks.length!==serverCount){needsReview=true;return;}
+    if(cashed!==null)banks.push({type:'cashout',amount:cashed/100,ts:Date.now(),pkrReconstructed:true});
+    state.players[sid]=Object.assign({},local||{},{name:server.display_name,userId:server.user_id,transactions:banks});
+    changed=true;
+  });
+  if(changed){
+    // No window.saveState(): a co-host's saved data must not be written back.
+    _origSaveState();
+    _pkrLastSnapshot=_pkrSnapshotPlayers();
+    renderTable();updateSaveResultsBtn();
+    toast('Table refreshed from PKR. Amounts changed on another device; review reconstructed bank rows.');
+  }
+  if(needsReview&&!window._pkrRemoteSeatWarning){
+    window._pkrRemoteSeatWarning=true;
+    toast('A seat or player identity changed elsewhere. Reload to review before editing.');
+  }
+}
 // Poll for updates every 15s (non-blocking)
 var _pollInterval = setInterval(function() {
   var ctx2 = getPkrCtx();
-  if (!ctx2 || !ctx2.gameId) return;
+  if (!ctx2 || !ctx2.gameId || _remoteGameRefreshBusy) return;
+  _remoteGameRefreshBusy=true;
   pkrApi('/games/' + ctx2.gameId).then(function(game) {
     if (!game || !game.players) return;
+    refreshVisibleGameFromServer(game);
     // Sync new players/buyins that may have come from other sources
     game.players.forEach(function(p) {
       var sid = 'seat' + (p.seat_number || 1);
@@ -2831,7 +2923,7 @@ var _pollInterval = setInterval(function() {
         shareBtn.dataset.shareUrl = window.location.origin + '/games/results/' + game.results_token;
       }
     }
-  }).catch(function(){});
+  }).catch(function(){}).finally(function(){_remoteGameRefreshBusy=false;});
 }, 15000);
 
 window._pkrTableCleanup = function() { clearInterval(_pollInterval); };
