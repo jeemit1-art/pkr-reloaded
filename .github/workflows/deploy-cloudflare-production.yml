@@ -27,7 +27,7 @@ on:
       reconcile_authorised_legacy:
         description: 'Apply the owner-authorised 326-transfer / $75,235 historical batch after backup checks'
         type: boolean
-        default: true
+        default: false
         required: true
 
 permissions:
@@ -109,7 +109,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python3 scripts/settlement-push-dependencies-ci.py --activate
       - name: Back up again and reconcile only the owner-authorised historical batch
-        if: github.event_name == 'push' || inputs.reconcile_authorised_legacy
+        if: github.event_name == 'workflow_dispatch' && inputs.reconcile_authorised_legacy
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

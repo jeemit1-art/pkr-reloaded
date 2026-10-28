@@ -791,6 +791,931 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
         ...(enabled?{revision:version?.revision}:{})},
     },409);
   }
+  // Only the successful conditional cash-out write generates the notice.
+  // Retry/no-op responses must never trigger another notification.
+  if(result.meta.changes>0 && cashout!==null){
+    const player=await c.env.DB.prepare(
+      'SELECT display_name,buy_in_total FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{display_name:string;buy_in_total:number}>();
+    if(player?.display_name){
+      const changeType=expected_cashout===null?'recorded':'updated';
+      const cashoutText='
+});
+
+// Legacy incremental buy-in is deliberately fail-closed: a duplicated request
+// after an HTTP timeout must never charge or count a second buy-in.
+// Use the conditional absolute PUT endpoint, with original values, instead.
+games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
+  return c.json({
+    error:'Unprotected incremental buy-ins are disabled. Refresh the app and use the guarded buy-in update.',
+    code:'PRECONDITION_REQUIRED',
+  },428);
+});
+
+games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { cashout } = await c.req.json<{cashout:number}>();
+  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Cashout must be integer cents'},400);
+  // Legacy POST can only record the FIRST cash-out. Unlike the guarded PUT,
+  // it carries no expected amount, so it must never overwrite a recorded value.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS NULL ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(cashout,gameId,userId,gameId).run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare(
+      'SELECT cashout FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{cashout:number|null}>();
+    if (!current) return c.json({error:'Player not found'},404);
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game has closed; review before editing',code:'GAME_CLOSED'},409);
+    if (current.cashout!==cashout)
+      return c.json({
+        error:'Cash-out already exists. Review it and use a conditional correction instead.',
+        code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+      },409);
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  const player = players.results.find((p:any) => p.user_id===userId) as any;
+  if (player && result.meta.changes > 0 && cashout != null) {
+    const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const totalBuyIn = player.buy_in_total || ((player.buy_ins||1) * (evData2?.buy_in||0));
+    const net2 = cashout - totalBuyIn;
+    const netStr = net2 > 0 ? `+$${(net2/100).toFixed(0)}` : net2 < 0 ? `-$${Math.abs(net2/100).toFixed(0)}` : 'even';
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
+      body: `Net: ${netStr} (bought in $${(totalBuyIn/100).toFixed(0)})`,
+      data: { gameId, eventId: game.event_id, type: 'cashout' },
+    }));
+  }
+  return c.json({ok:true, players:players.results});
+});
+
+/* ── Event known players (quick-select) ── */
+games.get('/events/:eventId/players', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const players = await c.env.DB.prepare('SELECT id,event_id,display_name,user_id,games_played,created_at FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+  return c.json(players.results);
+});
+
+/* ═══════════════════════════════════════════
+   PLAYER LINK / UNLINK
+═══════════════════════════════════════════ */
+
+games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { real_user_id } = await c.req.json<{real_user_id:string}>();
+  if (!real_user_id) return c.json({error:'real_user_id required'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
+  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
+  if (player?.display_name) {
+    await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const newUserId = 'manual_' + crypto.randomUUID();
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(newUserId,gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+/* ═══════════════════════════════════════════
+   SETTLEMENT
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/settle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const body = await c.req.json().catch(() => null) as SettleRequest | null;
+  if (!body || typeof body !== 'object') return c.json({error:'Invalid settlement request'},400);
+  const { idempotency_key, results } = body;
+  if (typeof idempotency_key !== 'string' || !idempotency_key.trim() || idempotency_key.length > 200) {
+    return c.json({error:'A valid idempotency_key is required'},400);
+  }
+  if (!Array.isArray(results) || results.length < 2) {
+    return c.json({error:'At least two player results are required'},400);
+  }
+
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+
+  // Scope idempotency to this game, and only reveal cached results to its host/cohost.
+  // A key reused for another game must never expose that game's private payload.
+  const cached = await c.env.DB.prepare(
+    'SELECT game_id,payload_json FROM settlements WHERE idempotency_key=?'
+  ).bind(idempotency_key).first<{game_id:string;payload_json:string}>();
+  if (cached && cached.game_id !== gameId) {
+    return c.json({error:'Idempotency key has already been used for a different game'},409);
+  }
+  if (game.status === 'settled') {
+    if (cached) return c.json({...JSON.parse(cached.payload_json),cached:true});
+    const existing = await c.env.DB.prepare('SELECT id,created_at FROM settlements WHERE game_id=?')
+      .bind(gameId).first<{id:string;created_at:number}>();
+    return c.json({
+      error:'Game already settled',
+      already_settled: true,
+      settlement_id: existing?.id,
+      settled_at: existing?.created_at,
+    }, 409);
+  }
+  if (game.status === 'cancelled') {
+    return c.json({error:'Cannot settle a cancelled game'},409);
+  }
+  if (cached) return c.json({error:'Previous settlement state must be reviewed'},409);
+
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?')
+    .bind(game.event_id).first<{buy_in:number}>();
+  let positions;
+  let variance;
+  try {
+    ({ positions, variance } = prepareSettlementPositions(results, eventData?.buy_in ?? 0));
+  } catch (error) {
+    if (error instanceof SettlementValidationError) {
+      return c.json({ error: error.message, ...error.detail }, error.status);
+    }
+    throw error;
+  }
+  const transfers = minimumTransfers(positions);
+  const sid = generateId();
+  const now = Math.floor(Date.now()/1000);
+  const resultsToken = generateId();
+  const carried = (await c.env.DB.prepare('SELECT from_user,to_user,amount,paid_at FROM paid_carryover WHERE game_id=?').bind(gameId).all<any>()).results;
+  const paidAt = (t:any) => { const m = carried.find((x:any)=>x.from_user===t.from && x.to_user===t.to && x.amount===t.amount); return m ? (m.paid_at||now) : null; };
+  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, variance, settled_at:now, results_token:resultsToken };
+
+  try {
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
+      .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
+    c.env.DB.prepare("UPDATE games SET status='settled',results_token=?,variance=? WHERE id=?").bind(resultsToken,variance,gameId),
+    ...positions.map((p:any) => c.env.DB.prepare(`
+      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net,settled_at,created_at)
+      VALUES(?,?,?,?,?,?,?,?,unixepoch())
+      ON CONFLICT(game_id,display_name) DO UPDATE SET
+        user_id=excluded.user_id, buy_ins=excluded.buy_ins, buy_in_total=excluded.buy_in_total, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.buy_in_total??0,p.cashout??0,p.net,now)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount,from_name,to_name,status,paid_at) VALUES(?,?,?,?,?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.amount,t.from_name||null,t.to_name||null,paidAt(t)?'paid':'owed',paidAt(t))),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+  ]);
+  } catch(batchErr:any) {
+    console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
+    if (/settlements\.game_id/i.test(batchErr?.message||'')) return c.json({error:'Game already settled', already_settled:true}, 409);
+    return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
+  }
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  await c.env.DB.batch(positions.map(p =>
+    c.env.DB.prepare(`
+      INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
+      ON CONFLICT(event_id,display_name) DO UPDATE SET games_played=games_played+1
+    `).bind(generateId(),game.event_id,p.display_name)
+  ));
+
+  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  // Settlement V2 deliberately waits for the host to dispatch individual
+  // payment requests from the game summary after saving and ending the game.
+  // Keep the legacy results announcement unchanged when V2 is disabled.
+  if(c.env.PKR_SETTLEMENT_V2!=='1') c.executionCtx.waitUntil((async () => {
+    for (const p of positions) {
+      const netCents = p.net || 0;
+      const netStr = netCents > 0 ? `+$${(netCents/100).toFixed(0)}` : netCents < 0 ? `-$${(Math.abs(netCents)/100).toFixed(0)}` : '$0';
+      const emoji = netCents > 0 ? '🟢' : netCents < 0 ? '🔴' : '⚪';
+      await sendPushToPlayer(c.env, game.event_id, p.display_name, {
+        title: `${emoji} Game Settled — ${netStr}`,
+        body: `${p.display_name}: cashed $${(p.cashout/100).toFixed(0)}, net ${netStr}. Check results!`,
+        data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+      }).catch(() => {});
+    }
+    await sendPushToEvent(c.env, game.event_id, {
+      title: `✅ ${event?.name||'PKR'} — Game Settled`,
+      body: 'Results are in. Check the leaderboard!',
+      data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+    });
+  })());
+
+  return c.json(payload,201);
+});
+
+/* ── UNSETTLE ── */
+games.post('/games/:id/unsettle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);
+  if (game.status !== 'settled') return c.json({error:'Game is not settled'},400);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("INSERT INTO paid_carryover(game_id,from_user,to_user,amount,paid_at) SELECT game_id,from_user,to_user,amount,paid_at FROM settlement_transfers WHERE game_id=? AND status='paid'").bind(gameId),
+    c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
+  ]);
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  return c.json({ok:true, message:'Game unsettled. You can now modify players and re-settle.'});
+});
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD — always rebuilt from source data
+═══════════════════════════════════════════ */
+
+async function rebuildLeaderboard(db: D1Database, eventId: string) {
+  const settled = await db.prepare(`
+    SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
+    FROM game_players gp
+    JOIN games g ON g.id=gp.game_id
+    WHERE g.event_id=? AND g.status='settled' AND gp.net IS NOT NULL
+    ORDER BY gp.user_id
+  `).bind(eventId).all<any>();
+
+  if (!settled.results.length) {
+    await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
+    return;
+  }
+
+  const players: Record<string, {
+    user_id:string; display_name:string; games_played:number; games_won:number;
+    total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
+  }> = {};
+
+  for (const row of settled.results) {
+    const key = row.display_name.trim().toLowerCase();
+    if (!players[key]) {
+      players[key] = {
+        user_id:row.user_id, display_name:row.display_name,
+        games_played:0, games_won:0, total_net:0,
+        biggest_win:0, biggest_loss:0, last_played:0,
+      };
+    }
+    const p = players[key];
+    p.games_played++;
+    p.total_net += row.net;
+    if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
+    if (row.net < 0) { p.biggest_loss = Math.max(p.biggest_loss, -row.net); }
+    p.last_played = Math.max(p.last_played, row.settled_at||0);
+  }
+
+  await db.batch([
+    db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
+    ...Object.values(players).map(p =>
+      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
+        VALUES(?,?,?,?,?,?,?,?,?)`)
+        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
+    ),
+  ]);
+}
+
+/* ═══════════════════════════════════════════
+   MINIMUM TRANSFERS ALGORITHM
+═══════════════════════════════════════════ */
+
+export default games;+(cashout/100).toFixed(2);
+      const invested=Number.isSafeInteger(player.buy_in_total)?player.buy_in_total:0;
+      const net=cashout-invested;
+      const netText=(net<0?'-
+});
+
+// Legacy incremental buy-in is deliberately fail-closed: a duplicated request
+// after an HTTP timeout must never charge or count a second buy-in.
+// Use the conditional absolute PUT endpoint, with original values, instead.
+games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
+  return c.json({
+    error:'Unprotected incremental buy-ins are disabled. Refresh the app and use the guarded buy-in update.',
+    code:'PRECONDITION_REQUIRED',
+  },428);
+});
+
+games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { cashout } = await c.req.json<{cashout:number}>();
+  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Cashout must be integer cents'},400);
+  // Legacy POST can only record the FIRST cash-out. Unlike the guarded PUT,
+  // it carries no expected amount, so it must never overwrite a recorded value.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS NULL ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(cashout,gameId,userId,gameId).run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare(
+      'SELECT cashout FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{cashout:number|null}>();
+    if (!current) return c.json({error:'Player not found'},404);
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game has closed; review before editing',code:'GAME_CLOSED'},409);
+    if (current.cashout!==cashout)
+      return c.json({
+        error:'Cash-out already exists. Review it and use a conditional correction instead.',
+        code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+      },409);
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  const player = players.results.find((p:any) => p.user_id===userId) as any;
+  if (player && result.meta.changes > 0 && cashout != null) {
+    const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const totalBuyIn = player.buy_in_total || ((player.buy_ins||1) * (evData2?.buy_in||0));
+    const net2 = cashout - totalBuyIn;
+    const netStr = net2 > 0 ? `+$${(net2/100).toFixed(0)}` : net2 < 0 ? `-$${Math.abs(net2/100).toFixed(0)}` : 'even';
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
+      body: `Net: ${netStr} (bought in $${(totalBuyIn/100).toFixed(0)})`,
+      data: { gameId, eventId: game.event_id, type: 'cashout' },
+    }));
+  }
+  return c.json({ok:true, players:players.results});
+});
+
+/* ── Event known players (quick-select) ── */
+games.get('/events/:eventId/players', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const players = await c.env.DB.prepare('SELECT id,event_id,display_name,user_id,games_played,created_at FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+  return c.json(players.results);
+});
+
+/* ═══════════════════════════════════════════
+   PLAYER LINK / UNLINK
+═══════════════════════════════════════════ */
+
+games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { real_user_id } = await c.req.json<{real_user_id:string}>();
+  if (!real_user_id) return c.json({error:'real_user_id required'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
+  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
+  if (player?.display_name) {
+    await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const newUserId = 'manual_' + crypto.randomUUID();
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(newUserId,gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+/* ═══════════════════════════════════════════
+   SETTLEMENT
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/settle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const body = await c.req.json().catch(() => null) as SettleRequest | null;
+  if (!body || typeof body !== 'object') return c.json({error:'Invalid settlement request'},400);
+  const { idempotency_key, results } = body;
+  if (typeof idempotency_key !== 'string' || !idempotency_key.trim() || idempotency_key.length > 200) {
+    return c.json({error:'A valid idempotency_key is required'},400);
+  }
+  if (!Array.isArray(results) || results.length < 2) {
+    return c.json({error:'At least two player results are required'},400);
+  }
+
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+
+  // Scope idempotency to this game, and only reveal cached results to its host/cohost.
+  // A key reused for another game must never expose that game's private payload.
+  const cached = await c.env.DB.prepare(
+    'SELECT game_id,payload_json FROM settlements WHERE idempotency_key=?'
+  ).bind(idempotency_key).first<{game_id:string;payload_json:string}>();
+  if (cached && cached.game_id !== gameId) {
+    return c.json({error:'Idempotency key has already been used for a different game'},409);
+  }
+  if (game.status === 'settled') {
+    if (cached) return c.json({...JSON.parse(cached.payload_json),cached:true});
+    const existing = await c.env.DB.prepare('SELECT id,created_at FROM settlements WHERE game_id=?')
+      .bind(gameId).first<{id:string;created_at:number}>();
+    return c.json({
+      error:'Game already settled',
+      already_settled: true,
+      settlement_id: existing?.id,
+      settled_at: existing?.created_at,
+    }, 409);
+  }
+  if (game.status === 'cancelled') {
+    return c.json({error:'Cannot settle a cancelled game'},409);
+  }
+  if (cached) return c.json({error:'Previous settlement state must be reviewed'},409);
+
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?')
+    .bind(game.event_id).first<{buy_in:number}>();
+  let positions;
+  let variance;
+  try {
+    ({ positions, variance } = prepareSettlementPositions(results, eventData?.buy_in ?? 0));
+  } catch (error) {
+    if (error instanceof SettlementValidationError) {
+      return c.json({ error: error.message, ...error.detail }, error.status);
+    }
+    throw error;
+  }
+  const transfers = minimumTransfers(positions);
+  const sid = generateId();
+  const now = Math.floor(Date.now()/1000);
+  const resultsToken = generateId();
+  const carried = (await c.env.DB.prepare('SELECT from_user,to_user,amount,paid_at FROM paid_carryover WHERE game_id=?').bind(gameId).all<any>()).results;
+  const paidAt = (t:any) => { const m = carried.find((x:any)=>x.from_user===t.from && x.to_user===t.to && x.amount===t.amount); return m ? (m.paid_at||now) : null; };
+  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, variance, settled_at:now, results_token:resultsToken };
+
+  try {
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
+      .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
+    c.env.DB.prepare("UPDATE games SET status='settled',results_token=?,variance=? WHERE id=?").bind(resultsToken,variance,gameId),
+    ...positions.map((p:any) => c.env.DB.prepare(`
+      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net,settled_at,created_at)
+      VALUES(?,?,?,?,?,?,?,?,unixepoch())
+      ON CONFLICT(game_id,display_name) DO UPDATE SET
+        user_id=excluded.user_id, buy_ins=excluded.buy_ins, buy_in_total=excluded.buy_in_total, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.buy_in_total??0,p.cashout??0,p.net,now)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount,from_name,to_name,status,paid_at) VALUES(?,?,?,?,?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.amount,t.from_name||null,t.to_name||null,paidAt(t)?'paid':'owed',paidAt(t))),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+  ]);
+  } catch(batchErr:any) {
+    console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
+    if (/settlements\.game_id/i.test(batchErr?.message||'')) return c.json({error:'Game already settled', already_settled:true}, 409);
+    return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
+  }
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  await c.env.DB.batch(positions.map(p =>
+    c.env.DB.prepare(`
+      INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
+      ON CONFLICT(event_id,display_name) DO UPDATE SET games_played=games_played+1
+    `).bind(generateId(),game.event_id,p.display_name)
+  ));
+
+  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  // Settlement V2 deliberately waits for the host to dispatch individual
+  // payment requests from the game summary after saving and ending the game.
+  // Keep the legacy results announcement unchanged when V2 is disabled.
+  if(c.env.PKR_SETTLEMENT_V2!=='1') c.executionCtx.waitUntil((async () => {
+    for (const p of positions) {
+      const netCents = p.net || 0;
+      const netStr = netCents > 0 ? `+$${(netCents/100).toFixed(0)}` : netCents < 0 ? `-$${(Math.abs(netCents)/100).toFixed(0)}` : '$0';
+      const emoji = netCents > 0 ? '🟢' : netCents < 0 ? '🔴' : '⚪';
+      await sendPushToPlayer(c.env, game.event_id, p.display_name, {
+        title: `${emoji} Game Settled — ${netStr}`,
+        body: `${p.display_name}: cashed $${(p.cashout/100).toFixed(0)}, net ${netStr}. Check results!`,
+        data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+      }).catch(() => {});
+    }
+    await sendPushToEvent(c.env, game.event_id, {
+      title: `✅ ${event?.name||'PKR'} — Game Settled`,
+      body: 'Results are in. Check the leaderboard!',
+      data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+    });
+  })());
+
+  return c.json(payload,201);
+});
+
+/* ── UNSETTLE ── */
+games.post('/games/:id/unsettle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);
+  if (game.status !== 'settled') return c.json({error:'Game is not settled'},400);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("INSERT INTO paid_carryover(game_id,from_user,to_user,amount,paid_at) SELECT game_id,from_user,to_user,amount,paid_at FROM settlement_transfers WHERE game_id=? AND status='paid'").bind(gameId),
+    c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
+  ]);
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  return c.json({ok:true, message:'Game unsettled. You can now modify players and re-settle.'});
+});
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD — always rebuilt from source data
+═══════════════════════════════════════════ */
+
+async function rebuildLeaderboard(db: D1Database, eventId: string) {
+  const settled = await db.prepare(`
+    SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
+    FROM game_players gp
+    JOIN games g ON g.id=gp.game_id
+    WHERE g.event_id=? AND g.status='settled' AND gp.net IS NOT NULL
+    ORDER BY gp.user_id
+  `).bind(eventId).all<any>();
+
+  if (!settled.results.length) {
+    await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
+    return;
+  }
+
+  const players: Record<string, {
+    user_id:string; display_name:string; games_played:number; games_won:number;
+    total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
+  }> = {};
+
+  for (const row of settled.results) {
+    const key = row.display_name.trim().toLowerCase();
+    if (!players[key]) {
+      players[key] = {
+        user_id:row.user_id, display_name:row.display_name,
+        games_played:0, games_won:0, total_net:0,
+        biggest_win:0, biggest_loss:0, last_played:0,
+      };
+    }
+    const p = players[key];
+    p.games_played++;
+    p.total_net += row.net;
+    if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
+    if (row.net < 0) { p.biggest_loss = Math.max(p.biggest_loss, -row.net); }
+    p.last_played = Math.max(p.last_played, row.settled_at||0);
+  }
+
+  await db.batch([
+    db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
+    ...Object.values(players).map(p =>
+      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
+        VALUES(?,?,?,?,?,?,?,?,?)`)
+        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
+    ),
+  ]);
+}
+
+/* ═══════════════════════════════════════════
+   MINIMUM TRANSFERS ALGORITHM
+═══════════════════════════════════════════ */
+
+export default games;:'+
+});
+
+// Legacy incremental buy-in is deliberately fail-closed: a duplicated request
+// after an HTTP timeout must never charge or count a second buy-in.
+// Use the conditional absolute PUT endpoint, with original values, instead.
+games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
+  return c.json({
+    error:'Unprotected incremental buy-ins are disabled. Refresh the app and use the guarded buy-in update.',
+    code:'PRECONDITION_REQUIRED',
+  },428);
+});
+
+games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot edit a settled or cancelled game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const { cashout } = await c.req.json<{cashout:number}>();
+  if (!Number.isSafeInteger(cashout) || cashout < 0) return c.json({error:'Cashout must be integer cents'},400);
+  // Legacy POST can only record the FIRST cash-out. Unlike the guarded PUT,
+  // it carries no expected amount, so it must never overwrite a recorded value.
+  const result = await c.env.DB.prepare(
+    'UPDATE game_players SET cashout=? WHERE game_id=? AND user_id=? AND cashout IS NULL ' +
+    "AND EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('settled','cancelled'))"
+  ).bind(cashout,gameId,userId,gameId).run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare(
+      'SELECT cashout FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(gameId,userId).first<{cashout:number|null}>();
+    if (!current) return c.json({error:'Player not found'},404);
+    const latest = await c.env.DB.prepare('SELECT status FROM games WHERE id=?').bind(gameId).first<any>();
+    if (!latest||latest.status==='settled'||latest.status==='cancelled')
+      return c.json({error:'Game has closed; review before editing',code:'GAME_CLOSED'},409);
+    if (current.cashout!==cashout)
+      return c.json({
+        error:'Cash-out already exists. Review it and use a conditional correction instead.',
+        code:'EDIT_CONFLICT',current:{cashout:current.cashout},
+      },409);
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST,created_at ASC').bind(gameId).all();
+  const player = players.results.find((p:any) => p.user_id===userId) as any;
+  if (player && result.meta.changes > 0 && cashout != null) {
+    const evData2 = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<{name:string; buy_in:number}>();
+    const totalBuyIn = player.buy_in_total || ((player.buy_ins||1) * (evData2?.buy_in||0));
+    const net2 = cashout - totalBuyIn;
+    const netStr = net2 > 0 ? `+$${(net2/100).toFixed(0)}` : net2 < 0 ? `-$${Math.abs(net2/100).toFixed(0)}` : 'even';
+    c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
+      title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
+      body: `Net: ${netStr} (bought in $${(totalBuyIn/100).toFixed(0)})`,
+      data: { gameId, eventId: game.event_id, type: 'cashout' },
+    }));
+  }
+  return c.json({ok:true, players:players.results});
+});
+
+/* ── Event known players (quick-select) ── */
+games.get('/events/:eventId/players', authMiddleware, async (c) => {
+  const eventId = c.req.param('eventId');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  const players = await c.env.DB.prepare('SELECT id,event_id,display_name,user_id,games_played,created_at FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
+  return c.json(players.results);
+});
+
+/* ═══════════════════════════════════════════
+   PLAYER LINK / UNLINK
+═══════════════════════════════════════════ */
+
+games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const { real_user_id } = await c.req.json<{real_user_id:string}>();
+  if (!real_user_id) return c.json({error:'real_user_id required'},400);
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
+  const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
+  if (player?.display_name) {
+    await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
+  }
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const userId = c.req.param('userId');
+  const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (game.status==='settled' || game.status==='cancelled') {
+    return c.json({error:'Cannot change player identity in a closed game'},409);
+  }
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+  const newUserId = 'manual_' + crypto.randomUUID();
+  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(newUserId,gameId,userId).run();
+  const players = await c.env.DB.prepare('SELECT * FROM game_players WHERE game_id=? ORDER BY seat_number ASC NULLS LAST').bind(gameId).all();
+  return c.json({ok:true, players:players.results});
+});
+
+/* ═══════════════════════════════════════════
+   SETTLEMENT
+═══════════════════════════════════════════ */
+
+games.post('/games/:id/settle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const body = await c.req.json().catch(() => null) as SettleRequest | null;
+  if (!body || typeof body !== 'object') return c.json({error:'Invalid settlement request'},400);
+  const { idempotency_key, results } = body;
+  if (typeof idempotency_key !== 'string' || !idempotency_key.trim() || idempotency_key.length > 200) {
+    return c.json({error:'A valid idempotency_key is required'},400);
+  }
+  if (!Array.isArray(results) || results.length < 2) {
+    return c.json({error:'At least two player results are required'},400);
+  }
+
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Game not found'},404);
+  if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
+
+  // Scope idempotency to this game, and only reveal cached results to its host/cohost.
+  // A key reused for another game must never expose that game's private payload.
+  const cached = await c.env.DB.prepare(
+    'SELECT game_id,payload_json FROM settlements WHERE idempotency_key=?'
+  ).bind(idempotency_key).first<{game_id:string;payload_json:string}>();
+  if (cached && cached.game_id !== gameId) {
+    return c.json({error:'Idempotency key has already been used for a different game'},409);
+  }
+  if (game.status === 'settled') {
+    if (cached) return c.json({...JSON.parse(cached.payload_json),cached:true});
+    const existing = await c.env.DB.prepare('SELECT id,created_at FROM settlements WHERE game_id=?')
+      .bind(gameId).first<{id:string;created_at:number}>();
+    return c.json({
+      error:'Game already settled',
+      already_settled: true,
+      settlement_id: existing?.id,
+      settled_at: existing?.created_at,
+    }, 409);
+  }
+  if (game.status === 'cancelled') {
+    return c.json({error:'Cannot settle a cancelled game'},409);
+  }
+  if (cached) return c.json({error:'Previous settlement state must be reviewed'},409);
+
+  const eventData = await c.env.DB.prepare('SELECT buy_in FROM events WHERE id=?')
+    .bind(game.event_id).first<{buy_in:number}>();
+  let positions;
+  let variance;
+  try {
+    ({ positions, variance } = prepareSettlementPositions(results, eventData?.buy_in ?? 0));
+  } catch (error) {
+    if (error instanceof SettlementValidationError) {
+      return c.json({ error: error.message, ...error.detail }, error.status);
+    }
+    throw error;
+  }
+  const transfers = minimumTransfers(positions);
+  const sid = generateId();
+  const now = Math.floor(Date.now()/1000);
+  const resultsToken = generateId();
+  const carried = (await c.env.DB.prepare('SELECT from_user,to_user,amount,paid_at FROM paid_carryover WHERE game_id=?').bind(gameId).all<any>()).results;
+  const paidAt = (t:any) => { const m = carried.find((x:any)=>x.from_user===t.from && x.to_user===t.to && x.amount===t.amount); return m ? (m.paid_at||now) : null; };
+  const payload = { settlement_id:sid, game_id:gameId, results:positions, transfers, variance, settled_at:now, results_token:resultsToken };
+
+  try {
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO settlements(id,game_id,idempotency_key,payload_json) VALUES(?,?,?,?)')
+      .bind(sid,gameId,idempotency_key,JSON.stringify(payload)),
+    c.env.DB.prepare("UPDATE games SET status='settled',results_token=?,variance=? WHERE id=?").bind(resultsToken,variance,gameId),
+    ...positions.map((p:any) => c.env.DB.prepare(`
+      INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net,settled_at,created_at)
+      VALUES(?,?,?,?,?,?,?,?,unixepoch())
+      ON CONFLICT(game_id,display_name) DO UPDATE SET
+        user_id=excluded.user_id, buy_ins=excluded.buy_ins, buy_in_total=excluded.buy_in_total, cashout=excluded.cashout, net=excluded.net, settled_at=excluded.settled_at
+    `).bind(gameId,p.user_id,p.display_name,p.buy_ins,p.buy_in_total??0,p.cashout??0,p.net,now)),
+    ...transfers.map(t => c.env.DB.prepare('INSERT INTO settlement_transfers(id,game_id,from_user,to_user,amount,from_name,to_name,status,paid_at) VALUES(?,?,?,?,?,?,?,?,?)')
+      .bind(generateId(),gameId,t.from,t.to,t.amount,t.from_name||null,t.to_name||null,paidAt(t)?'paid':'owed',paidAt(t))),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+  ]);
+  } catch(batchErr:any) {
+    console.error('Settle batch error:', batchErr?.message, JSON.stringify(positions));
+    if (/settlements\.game_id/i.test(batchErr?.message||'')) return c.json({error:'Game already settled', already_settled:true}, 409);
+    return c.json({error:'Settlement failed: ' + (batchErr?.message||'unknown'), positions}, 500);
+  }
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  await c.env.DB.batch(positions.map(p =>
+    c.env.DB.prepare(`
+      INSERT INTO event_players(id,event_id,display_name,games_played) VALUES(?,?,?,1)
+      ON CONFLICT(event_id,display_name) DO UPDATE SET games_played=games_played+1
+    `).bind(generateId(),game.event_id,p.display_name)
+  ));
+
+  const event = await c.env.DB.prepare('SELECT name FROM events WHERE id=?').bind(game.event_id).first<{name:string}>();
+  // Settlement V2 deliberately waits for the host to dispatch individual
+  // payment requests from the game summary after saving and ending the game.
+  // Keep the legacy results announcement unchanged when V2 is disabled.
+  if(c.env.PKR_SETTLEMENT_V2!=='1') c.executionCtx.waitUntil((async () => {
+    for (const p of positions) {
+      const netCents = p.net || 0;
+      const netStr = netCents > 0 ? `+$${(netCents/100).toFixed(0)}` : netCents < 0 ? `-$${(Math.abs(netCents)/100).toFixed(0)}` : '$0';
+      const emoji = netCents > 0 ? '🟢' : netCents < 0 ? '🔴' : '⚪';
+      await sendPushToPlayer(c.env, game.event_id, p.display_name, {
+        title: `${emoji} Game Settled — ${netStr}`,
+        body: `${p.display_name}: cashed $${(p.cashout/100).toFixed(0)}, net ${netStr}. Check results!`,
+        data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+      }).catch(() => {});
+    }
+    await sendPushToEvent(c.env, game.event_id, {
+      title: `✅ ${event?.name||'PKR'} — Game Settled`,
+      body: 'Results are in. Check the leaderboard!',
+      data: { gameId, eventId: game.event_id, type: 'game_settled', results_token: resultsToken },
+    });
+  })());
+
+  return c.json(payload,201);
+});
+
+/* ── UNSETTLE ── */
+games.post('/games/:id/unsettle', authMiddleware, async (c) => {
+  const gameId = c.req.param('id');
+  const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
+  if (!game) return c.json({error:'Not found'},404);
+  if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);
+  if (game.status !== 'settled') return c.json({error:'Game is not settled'},400);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM settlements WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('DELETE FROM paid_carryover WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("INSERT INTO paid_carryover(game_id,from_user,to_user,amount,paid_at) SELECT game_id,from_user,to_user,amount,paid_at FROM settlement_transfers WHERE game_id=? AND status='paid'").bind(gameId),
+    c.env.DB.prepare('DELETE FROM settlement_transfers WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare('UPDATE game_players SET cashout=NULL,net=NULL,settled_at=NULL WHERE game_id=?').bind(gameId),
+    c.env.DB.prepare("UPDATE games SET status='active',results_token=NULL WHERE id=?").bind(gameId),
+  ]);
+
+  await rebuildLeaderboard(c.env.DB, game.event_id);
+
+  return c.json({ok:true, message:'Game unsettled. You can now modify players and re-settle.'});
+});
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD — always rebuilt from source data
+═══════════════════════════════════════════ */
+
+async function rebuildLeaderboard(db: D1Database, eventId: string) {
+  const settled = await db.prepare(`
+    SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
+    FROM game_players gp
+    JOIN games g ON g.id=gp.game_id
+    WHERE g.event_id=? AND g.status='settled' AND gp.net IS NOT NULL
+    ORDER BY gp.user_id
+  `).bind(eventId).all<any>();
+
+  if (!settled.results.length) {
+    await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
+    return;
+  }
+
+  const players: Record<string, {
+    user_id:string; display_name:string; games_played:number; games_won:number;
+    total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
+  }> = {};
+
+  for (const row of settled.results) {
+    const key = row.display_name.trim().toLowerCase();
+    if (!players[key]) {
+      players[key] = {
+        user_id:row.user_id, display_name:row.display_name,
+        games_played:0, games_won:0, total_net:0,
+        biggest_win:0, biggest_loss:0, last_played:0,
+      };
+    }
+    const p = players[key];
+    p.games_played++;
+    p.total_net += row.net;
+    if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
+    if (row.net < 0) { p.biggest_loss = Math.max(p.biggest_loss, -row.net); }
+    p.last_played = Math.max(p.last_played, row.settled_at||0);
+  }
+
+  await db.batch([
+    db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
+    ...Object.values(players).map(p =>
+      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
+        VALUES(?,?,?,?,?,?,?,?,?)`)
+        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
+    ),
+  ]);
+}
+
+/* ═══════════════════════════════════════════
+   MINIMUM TRANSFERS ALGORITHM
+═══════════════════════════════════════════ */
+
+export default games;)+(Math.abs(net)/100).toFixed(2);
+      c.executionCtx.waitUntil(sendPushToPlayer(c.env,game.event_id,player.display_name,{
+        title:'Cash-out '+changeType+' — '+cashoutText,
+        body:'Saved in PKR. Net after buy-ins: '+netText+'. This does not confirm payment.',
+        data:{gameId,eventId:game.event_id,type:'cashout'},
+      }).catch((error)=>{console.warn('Cash-out notification failed',String(error));}));
+    }
+  }
   return c.json({ok:true,cashout,
     ...(enabled?{revision:version?.revision}:{})});
 });
