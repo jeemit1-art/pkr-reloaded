@@ -899,3 +899,21 @@
 #gameScreen.pkr-casino-live-table.pkr-wide-table #tableFelt{
  border-radius:24% / 50%!important;
 }
+
+
+/* Tools sheet spacing: six controls must finish before the reconciliation
+   guidance begins, including wrapped labels on 320px phones. */
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid{
+ grid-auto-rows:minmax(94px,auto)!important;
+ align-items:stretch!important;
+ margin-bottom:4px!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid button{
+ height:auto!important;min-height:94px!important;
+ padding:7px 3px 10px!important;overflow:visible!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-reconciliation-note{
+ position:relative!important;display:block!important;inset:auto!important;
+ margin:14px 0 0!important;padding:11px 0 0!important;
+ background:transparent!important;clear:both!important;
+}
