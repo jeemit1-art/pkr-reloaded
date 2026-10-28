@@ -169,7 +169,7 @@ function ensureTournamentRefresh(){
     if(!document.hidden&&ts.state&&ts.state.status==='running')loadTournament();
   },30000);
 }
-document.addEventListener('visibilitychange',function(){
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&ts.state&&ts.state.status==='running')loadTournament();
 });
 window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');/* Tournament remains running when the sheet closes. */};
