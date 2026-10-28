@@ -49,7 +49,7 @@ async function check(browser,width,height,count){
   await page.goto(BASE+'/games/'+id+'/play',{waitUntil:'domcontentloaded'});
   await page.locator('#seat1 .pkr-game-seat-card').waitFor();
   await page.waitForFunction(()=>!!window._eventMembers);
-  const expectedAuto=(width<700&&height>=width)?'mobile':width<1024?'compact':'balanced';
+  const expectedAuto=(width<350||(width<900&&height<width))?'compact':'balanced';
   assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
   assert.equal(await page.locator('#seatsContainer>.pkr-layout-'+expectedAuto).count(),count,
     'Auto view must match the device.');
@@ -58,16 +58,18 @@ async function check(browser,width,height,count){
   assert.equal(await page.locator('#bbOut').isVisible(),true);
   assert.match(await page.locator('#bbBankQuick').textContent(),/\$/);
   assert.equal(await page.locator('#bbBanks').count(),0);
-  if(expectedAuto==='mobile'&&(count===9||count===13))
-   await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-mobile-auto.png')});
+  if(count===9||count===13)
+   await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+expectedAuto+'-auto.png')});
   for(const mode of ['balanced','compact']){
    await page.getByRole('button',{name:'Open table controls'}).click();
    const dialog=page.locator('.pkr-table-tools-dialog');await dialog.waitFor();
    assert(await dialog.evaluate(e=>e.matches(':modal')),'Tools must remain top-layer');
    assert.equal(await dialog.locator('.pkr-reference-tool-grid button').count(),6);
-   assert.equal(await dialog.locator('.pkr-responsive-view-select button').count(),4);
+   assert.equal(await dialog.locator('.pkr-responsive-view-select').count(),0,'Approved Tools menu has no table-view selector');
    if(mode==='balanced'&&count===13&&width===390)await page.screenshot({path:path.join(out,browser.browserType().name()+'-390-tools.png')});
-   await page.getByRole('button',{name:mode==='compact'?'Compact table view':'Balanced table view',exact:true}).click();
+   await page.getByRole('button',{name:'Close table controls'}).click();
+   await page.evaluate(m=>window.pkrSetSeatLayout(m),mode);
+   await page.waitForFunction(m=>document.querySelectorAll('#seatsContainer>.pkr-layout-'+m).length>0,mode);
    const expected='pkr-layout-'+mode;
    assert.equal(await page.locator('#seatsContainer>.pkr-mockup-player-seat.'+expected).count(),count,
     'Every seat count and device must use the same renderer');
@@ -130,7 +132,7 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS responsive layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Auto/'+expectedAuto+', Balanced/Compact overrides, bank totals, no financial writes');
+  console.log('PASS approved table layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Auto/'+expectedAuto+', Balanced/Compact overrides, bank totals, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
