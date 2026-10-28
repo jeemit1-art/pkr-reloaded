@@ -1828,6 +1828,11 @@ function renderTable() {
   var hasStacks=!!state.game.hand_tracking;
   var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2),maxSide=Math.max(leftCount,rightCount);
   var wideTable=!mobileRail&&(mode==='balanced'?W>=650:(W>=700||W>availableHeight*1.08));
+  // Crowded short landscape screens cannot physically fit 10+ full seat
+  // cards around a horizontal ellipse. Keep the selected view and its
+  // information, but use the vertical rail geometry inside the scrollable
+  // table canvas instead of overlapping neighbouring players.
+  if(count>=10&&availableHeight<520)wideTable=false;
   var tightWide=wideTable&&count>=10&&W<1024;
   var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var compactWidth=wideTable?Math.min(tightWide?76:88,Math.max(62,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
