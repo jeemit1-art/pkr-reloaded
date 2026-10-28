@@ -1965,6 +1965,10 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
       var cashed=cls==='cashed',tracked=stackRow&&(stackRow.source==='verified'||stackRow.source==='tracked')&&
         stackRow.cashValue!==null&&Number(stackRow.unsettledChips||0)===0;
+      // The invested bank amount remains red until cash-out, while
+      // the final net result follows its actual profit/loss sign.
+      if(bi>0&&!cashed)seat.classList.add('pkr-inplay-seat');
+      if(cashed)seat.classList.add('pkr-cashed-seat');
       var amount=cashed?net:tracked?stackRow.cashValue-bi:0;
       var result=cashed?fmtBNet(net):tracked?fmtNet(amount):'';
       var smallInfo='<span class="pkr-dense-info"><span class="pkr-dense-name">'+esc(p.name)+'</span><span class="pkr-dense-bank">'+esc(seatBankLabel(bi))+'</span>'+(result?'<span class="pkr-dense-result '+nc(amount)+'">'+esc(result)+'</span>':'')+'</span>';
@@ -2007,7 +2011,7 @@ function refreshPanelSummary(sid) {
   var p = state.players[sid];
   if (!p) return;
   var el = document.getElementById('pNetDisplay');
-  if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'; el.textContent=final?fmtBNet(n):fmtB(pBuyin(p))+' in'; }
+  if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'+(pBuyin(p)>0?' inplay':''); el.textContent=final?fmtBNet(n):fmtB(pBuyin(p))+' in'; }
   var chips=document.getElementById('pkrSeatChipSummary');
   if(chips)chips.textContent=seatStackText(seatChipRows()[sid]);
 }
@@ -2026,7 +2030,7 @@ function buildPanel(sid) {
   var sum = document.createElement('div'); sum.className = 'p-sum';
   var cashedOut=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
   var row=seatChipRows()[sid],chipSummary=seatStackText(row);
-  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &middot; In: ' + esc(seatBankLabel(bi)) + (cashedOut?' &middot; Out: '+fmt(co):'') + '</div><div class="p-chip-summary" id="pkrSeatChipSummary">'+esc(chipSummary)+'</div></div><div class="p-net ' + (cashedOut?nc(net):'') + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):fmtB(bi)+' in') + '</div>';
+  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &middot; In: <span class="pkr-panel-buyin '+(!cashedOut&&bi>0?'inplay':'')+'">' + esc(seatBankLabel(bi)) + '</span>' + (cashedOut?' &middot; Out: '+fmt(co):'') + '</div><div class="p-chip-summary" id="pkrSeatChipSummary">'+esc(chipSummary)+'</div></div><div class="p-net ' + (cashedOut?nc(net):(bi>0?'inplay':'')) + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):fmtB(bi)+' in') + '</div>';
   body.appendChild(sum);
 
   // Transactions

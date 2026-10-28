@@ -84,6 +84,8 @@ async function check(browser,name,width,height){
   await page.locator('#seat7 .seat-money').filter({hasText:'$25.00'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
   assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
+  assert.equal(await page.locator('#seat7 .seat-money').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','The legacy 9-seat bank amount must also be red while IN PLAY.');
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
@@ -114,6 +116,10 @@ async function check(browser,name,width,height){
   await page.locator('.side-panel.open #pNetDisplay')
    .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
+  assert.equal(await page.locator('.side-panel.open #pNetDisplay').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','Outstanding in-play bank money in the player panel must be red.');
+  assert.equal(await page.locator('.side-panel.open .pkr-panel-buyin').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','The panel bank count and buy-in amount must be red before cash-out.');
   assert.equal(await page.locator('.side-panel').getByText('Pending',{exact:true}).count(),0);
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});

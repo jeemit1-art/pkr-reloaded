@@ -53,9 +53,14 @@ async function check(browser,width){
   assert.match(await inPlay.locator('.pkr-game-seat-result').textContent(),/-\$25/);
   assert.equal(await inPlay.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','In-play buy-in must be red.');
+  assert.match(await inPlay.locator('.pkr-game-seat-bank').textContent(),/1b/);
+  assert.equal(await inPlay.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','The bank count AND invested dollar figure must be red while IN PLAY.');
   const cashed=page.locator('#seat7');
   assert.match(await cashed.locator('.pkr-game-seat-status').innerText(),/CASHED OUT/);
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
+  assert.notEqual(await cashed.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','CASHED OUT bank amount must no longer be marked outstanding.');
   for(const label of ['.bank-right>.bank-pill.g','.bank-right>.pkr-bank-out','.bank-right>.pkr-bank-current']){
     assert.equal(await page.locator(label).isVisible(),true,
       'Bank, IN and OUT segments must all be visible on the phone.');
@@ -124,6 +129,10 @@ async function check(browser,width){
   assert.equal(await page.locator('.pkr-game-status-dot.cashed').count()>0,true,
     'Compact mode shows the green check without repeated CASHED OUT text.');
   assert.equal(await page.locator('.pkr-game-compact-status.inplay').count()>0,true);
+  assert.equal(await page.locator('#seat3 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','Compact in-play bank amount must be red.');
+  assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
   await page.getByRole('button',{name:'Full details'}).click();
