@@ -368,3 +368,28 @@
 #gameScreen.pkr-casino-live-table .pkr-summary-status{
  color:#A7BAB7;font-size:10px;line-height:1.3;font-weight:650;
 }
+
+/* Extra-dense 13-player phone layout: three concise lines must stay
+   below the gap between the centre-points of adjacent side seats. */
+@media (max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat{
+  min-height:32px!important;
+  gap:3px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-info{
+  box-sizing:border-box;
+  padding:2px 4px!important;
+  gap:0!important;
+  font:650 9px/1.06 var(--font-num),monospace!important;
+  min-height:0!important;
+  max-height:36px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-name{
+  font:750 10px/1.08 var(--font-body),Inter,sans-serif!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-bank,
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-result{
+  font-size:9px!important;
+  line-height:1.06!important;
+ }
+}
