@@ -767,3 +767,10 @@
  #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
  #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
 }
+
+
+/* Phone full-card typography: preserve approved compact footprint while keeping longer names readable. */
+@media(min-width:350px) and (max-width:430px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-main{gap:3px!important;padding:3px 3px 2px!important}
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{font-size:9px!important;letter-spacing:-.01em!important}
+}
