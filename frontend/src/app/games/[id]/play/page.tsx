@@ -667,7 +667,7 @@ function pkrAvatar(p){
   if(!member&&p.name){var same=members.filter(function(m){return String(m.name||'').toLowerCase()===String(p.name).toLowerCase();});if(same.length===1)member=same[0];}
   var url=member&&member.avatar_url;
   if(typeof url!=='string'||!(url.startsWith('/')&&!url.startsWith('//'))&&!/^https:\/\//i.test(url))url='';
-  return url?'<img class="pkr-seat-photo" src="'+esc(url)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="pkr-avatar-fallback" style="display:none">'+esc(inits(p.name))+'</span>':
+  return url?'<img class="pkr-seat-photo" src="'+esc(url).replace(/\"/g,'&quot;').replace(/'/g,'&#39;')+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="pkr-avatar-fallback" style="display:none">'+esc(inits(p.name))+'</span>':
     '<span class="pkr-avatar-fallback">'+esc(inits(p.name))+'</span>';
 }
 
