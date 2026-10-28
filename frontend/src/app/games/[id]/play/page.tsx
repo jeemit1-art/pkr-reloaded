@@ -702,7 +702,7 @@ var SK      = 'pokerState_'   + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var HIST_K  = 'pokerHistory_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
 var _pkrSeatLayoutKey='pkrSeatLayout_'+_ctx.gameId;
-var _pkrSeatLayout=localStorage.getItem(_pkrSeatLayoutKey)==='full'?'full':'compact';
+var _pkrSeatLayout=localStorage.getItem(_pkrSeatLayoutKey)==='compact'?'compact':'full';
 window.pkrSetSeatLayout=function(mode){if(mode!=='full'&&mode!=='compact')return;_pkrSeatLayout=mode;localStorage.setItem(_pkrSeatLayoutKey,mode);renderTable();};
 function pkrAvatar(p){
   var members=window._eventMembers||[],id=p.userId||p.user_id;
@@ -1825,12 +1825,11 @@ function seatStackText(row){
 // ── Table render ──
 function renderTable() {
   if (!state.game) return;
-  // Put the full balance strip in document flow before measuring the felt.
-  // Otherwise the first/top seat is obscured by the absolute overlay.
-  var fullSummary=state.game.seats>=10&&_pkrSeatLayout==='full';
+  // Approved mockup: no disconnected horizontal summary strip.
+  // Full and Compact cards both belong to their actual table seats.
   var area=document.getElementById('tableArea'),summary=document.getElementById('pkrSeatSummary');
-  if(area)area.classList.toggle('pkr-table-summary-on',fullSummary);
-  if(summary){summary.hidden=!fullSummary;summary.classList.toggle('is-visible',fullSummary);}
+  if(area)area.classList.remove('pkr-table-summary-on');
+  if(summary){summary.hidden=true;summary.classList.remove('is-visible');summary.replaceChildren();}
   var wrap = document.getElementById('tableWrap');
   if (!wrap) return;
   var W = wrap.offsetWidth, H = wrap.offsetHeight;
@@ -1859,30 +1858,33 @@ function renderTable() {
   if (headerMeta) headerMeta.textContent = active + ' active · ' + players.length + ' seated';
   var seatRows=seatChipRows();
   buildSeats(state.game.seats, tW, tH, cx, cy, wideTable, seatRows);
-  renderSeatBalanceStrip(seatRows);
   updateBank();
   updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
 
-function renderSeatBalanceStrip(rows){
-  var el=document.getElementById('pkrSeatSummary');if(!el||!state.game)return;
-  var full=state.game.seats>=10&&_pkrSeatLayout==='full';
-  el.hidden=!full;el.classList.toggle('is-visible',full);
-  if(!full)return;
-  el.innerHTML='';
-  Object.keys(state.players).filter(function(sid){return state.players[sid]&&state.players[sid].name;}).sort(function(a,b){return Number(a.slice(4))-Number(b.slice(4));}).forEach(function(sid){
-    var p=state.players[sid],r=rows[sid],bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
-    var net=cashed?pNet(p):null;
-    var tracked=r&&(r.source==='tracked'||r.source==='verified')&&
-      r.cashValue!==null&&Number(r.unsettledChips||0)===0;
-    var display=cashed?fmtBNet(net):tracked?fmtNet(r.cashValue-bi):'';
-    var amount=cashed?net:tracked?r.cashValue-bi:0;
-    var card=document.createElement('button');card.type='button';card.className='pkr-seat-summary-card';
-    card.innerHTML='<span class="pkr-summary-photo">'+pkrAvatar(p)+'</span><span class="pkr-summary-copy"><b>'+esc(p.name)+'</b><small>'+esc(seatBankLabel(bi))+'</small><small>'+esc(seatStackText(r))+'</small>'+(display?'<strong class="pkr-balance '+nc(amount)+'">'+esc(display)+'</strong>':
-     '<small class="pkr-summary-status">'+(bi>0?'In play':'Not bought in')+'</small>')+'</span>';
-    card.addEventListener('click',function(){onSeatClick(sid);});el.appendChild(card);
-  });
+// Full/Compact seat cards replace the old detached scrolling summary.
+function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,compact){
+  var bought=bankIn>0;
+  var status=cashed?'CASHED OUT':bought?'IN PLAY':'SEATED';
+  var statusClass=cashed?'cashed':bought?'inplay':'waiting';
+  var amount=cashed?fmtNet(finalNet):bought?('-'+fmt(bankIn)):fmt(bankIn);
+  var amountClass=cashed?nc(finalNet):bought?'neg':'zero';
+  var banks=seatBankLabel(bankIn).replace(/ in$/,'');
+  var avatar='<span class="pkr-game-seat-avatar">'+pkrAvatar(p)+'</span>';
+  var badge=cashed?'✓':bought?'›':'•';
+  var main=compact?
+    '<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'">'+badge+'</span></span>'+
+    '<span class="pkr-game-compact-bank">'+esc(fmt(bankIn))+'</span>'+
+    '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+
+    '<span class="pkr-game-compact-status '+statusClass+'">'+esc(status)+'</span>':
+    '<span class="pkr-game-seat-main">'+avatar+
+      '<span class="pkr-game-seat-copy"><strong class="pkr-game-seat-name">'+esc(p.name)+'</strong>'+
+        '<small class="pkr-game-seat-bank">'+esc(banks)+'</small>'+
+        '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>'+
+    '<span class="pkr-game-seat-status '+statusClass+'"><span aria-hidden="true">'+badge+'</span> '+esc(status)+'</span>';
+  return '<span class="pkr-game-seat-card '+statusClass+'">'+
+    '<span class="pkr-game-seat-number">'+esc(sid.replace('seat',''))+'</span>'+main+'</span>';
 }
 function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   var cont = document.getElementById('seatsContainer');
@@ -1930,14 +1932,22 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
     var seat = document.createElement('div');
     seat.className = 'seat';
     var dense=count>=10&&!wideTable;
-    if(dense)seat.classList.add('pkr-dense-seat',_pkrSeatLayout==='full'?'pkr-layout-full':'pkr-layout-compact');
+    if(dense){
+      seat.classList.add('pkr-mockup-player-seat',_pkrSeatLayout==='full'?'pkr-layout-full':'pkr-layout-compact');
+      var cardHeight=Math.floor(Math.min(83,Math.max(48,(document.getElementById('tableWrap').offsetHeight-40)/(Math.max(leftCount,rightCount)+1)-7)));
+      var cardWidth=Math.floor(Math.min(116,Math.max(86,document.getElementById('tableWrap').offsetWidth*.29)));
+      seat.style.setProperty('--pkr-card-height',cardHeight+'px');
+      seat.style.setProperty('--pkr-card-width',cardWidth+'px');
+    }
     // Side seats place the name and balance outside the felt so neighbouring
     // players do not cover each other's labels on a laptop.
     if (i > 0 && i <= leftCount) seat.dataset.side = 'left';
     else if (i > leftCount + 1) seat.dataset.side = 'right';
     seat.setAttribute('role','button');
     seat.setAttribute('tabindex','0');
-    seat.setAttribute('aria-label',p && p.name ? 'Open player '+p.name : 'Assign player to seat '+(i+1));
+    seat.setAttribute('aria-label',p && p.name ?
+      'Open player '+p.name+': '+(p.transactions&&p.transactions.some(function(t){return t.type==='cashout';})?'Cashed out':'In play'):
+      'Assign player to seat '+(i+1));
     seat.id = sid;
     seat.style.left = pos.x + 'px';
     seat.style.top = pos.y + 'px';
@@ -1958,7 +1968,7 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var amount=cashed?net:tracked?stackRow.cashValue-bi:0;
       var result=cashed?fmtBNet(net):tracked?fmtNet(amount):'';
       var smallInfo='<span class="pkr-dense-info"><span class="pkr-dense-name">'+esc(p.name)+'</span><span class="pkr-dense-bank">'+esc(seatBankLabel(bi))+'</span>'+(result?'<span class="pkr-dense-result '+nc(amount)+'">'+esc(result)+'</span>':'')+'</span>';
-      seat.innerHTML = dense?'<span class="seat-chip '+cls+' pkr-dense-portrait" style="width:'+cs+';height:'+cs+'"><span class="seat-inner">'+pkrAvatar(p)+'</span></span>'+smallInfo:
+      seat.innerHTML = dense?pkrMockupSeatCard(p,sid,bi,net,cashed,_pkrSeatLayout==='compact'):
         '<div class="seat-chip '+cls+'" style="width:'+cs+';height:'+cs+'"><span class="seat-inner">'+pkrAvatar(p)+'</span></div><div class="seat-label">'+esc(p.name)+'</div>'+moneyHtml+chipHtml+netHtml;
     } else {
       seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
