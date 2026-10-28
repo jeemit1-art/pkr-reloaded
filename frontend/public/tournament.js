@@ -162,7 +162,13 @@ function loadTournament(){
   }).catch(function(e){console.warn('loadTournament:',e.message);toast('Tournament could not load: '+e.message);renderBody();});
 }
 window.openTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.add('open');loadTournament();};
-window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');stopLocalTimer();};
+var _tourneyRefreshTimer=setInterval(function(){
+  if(!document.hidden && ts.state && ts.state.status==='running')loadTournament();
+},30000);
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&ts.state&&ts.state.status==='running')loadTournament();
+});
+window.closeTournament=function(){var s=document.getElementById('tournamentSheet');if(s)s.classList.remove('open');/* Tournament remains running when the sheet closes. */};
 window.tStart=function(){
   tApi('/games/'+getGameId()+'/tournament/start',{method:'POST'}).then(function(r){
     ts.state.status='running';ts.state.current_level=1;ts.state.level_started_at=r.level_started_at;ts.state.total_chips_in_play=r.total_chips_in_play;
