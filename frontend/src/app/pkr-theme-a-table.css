@@ -721,7 +721,7 @@
 #gameScreen.pkr-casino-live-table #tableOuter,#gameScreen.pkr-casino-live-table #tableFelt{max-height:100%!important}
 @media(max-width:700px){
  #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.bank-pill{padding:0 2px!important}
- #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{gap:1px!important;justify-items:start!important;text-align:left!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{gap:1px!important;justify-items:start!important;text-align:left!important;width:auto!important;flex:1 1 auto!important}
  #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .bank-pill b{font-size:11px!important}
  #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:10px!important}
 }
