@@ -513,3 +513,10 @@
 }
 /* The existing game player panel retains the complete dollar and chip
    details, even where the miniature seat card must use an ellipsis. */
+
+/* On phones the green/red money figure takes priority over its 'Live' text. */
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-result-prefix{
+  display:none!important;
+ }
+}
