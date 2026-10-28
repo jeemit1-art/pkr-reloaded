@@ -10,6 +10,19 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [seatLayout, setSeatLayout] = useState<'compact'|'full'>('compact');
+  // Seat presentation is a per-device preference, not game financial state.
+  useEffect(()=>{
+    try{
+      const remembered=localStorage.getItem('pkr_seat_layout_v1:'+gameId);
+      if(remembered==='full'||remembered==='compact')setSeatLayout(remembered);
+      else if(window.innerWidth>=850)setSeatLayout('full');
+    }catch{}
+  },[gameId]);
+  function chooseSeatLayout(next:'compact'|'full'){
+    setSeatLayout(next);
+    try{localStorage.setItem('pkr_seat_layout_v1:'+gameId,next);}catch{}
+  }
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
@@ -189,7 +202,7 @@ export default function PlayPage() {
       <style>{getApprovedTableChromeCSS()}</style>
 
       {/* ── GAME SCREEN ── */}
-      <div id="gameScreen" className="screen pkr-casino-live-table">
+      <div id="gameScreen" className="screen pkr-casino-live-table" data-seat-layout={seatLayout}>
         <div className="topbar pkr-approved-topbar">
           <button className="tb-back" id="backBtn" aria-label="Back to room" onClick={() => {
             try {
@@ -280,6 +293,15 @@ export default function PlayPage() {
         {/* Table + Side Panel */}
         <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
           <div className="table-area" id="tableArea">
+            <div className="pkr-seat-layout-switch" role="group" aria-label="Seat layout">
+              <span aria-hidden="true">SEATS</span>
+              <button type="button" aria-pressed={seatLayout==='compact'}
+                className={seatLayout==='compact'?'is-selected':''}
+                onClick={()=>chooseSeatLayout('compact')}>Compact</button>
+              <button type="button" aria-pressed={seatLayout==='full'}
+                className={seatLayout==='full'?'is-selected':''}
+                onClick={()=>chooseSeatLayout('full')}>Full</button>
+            </div>
             <div className="table-wrap" id="tableWrap">
               <div id="tableOuter"></div>
               <div id="tableFelt"><div id="tableCenter"><div id="tableName"></div><div id="tableStats"></div></div></div>
