@@ -1850,6 +1850,16 @@ function renderTable() {
   updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
+// The player details drawer animates the table viewport width. The seating
+// layout must follow its final measured size or dense cards can be off-screen.
+var _pkrSeatResizeTimer=null;
+var _pkrSeatResizeObserver=typeof ResizeObserver==='function'
+  ?new ResizeObserver(function(){
+    if(_pkrSeatResizeTimer)clearTimeout(_pkrSeatResizeTimer);
+    _pkrSeatResizeTimer=setTimeout(function(){_pkrSeatResizeTimer=null;renderTable();},100);
+  }):null;
+var _pkrSeatCanvas=document.getElementById('tableWrap');
+if(_pkrSeatCanvas&&_pkrSeatResizeObserver)_pkrSeatResizeObserver.observe(_pkrSeatCanvas);
 
 function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   var cont = document.getElementById('seatsContainer');
@@ -3179,6 +3189,8 @@ var _pkrSeatStackPoll=setInterval(function(){
 },15000);
 window._pkrTableCleanup = function() {
   clearInterval(_pollInterval);clearInterval(_pkrSeatStackPoll);
+  if(_pkrSeatResizeTimer)clearTimeout(_pkrSeatResizeTimer);
+  if(_pkrSeatResizeObserver)_pkrSeatResizeObserver.disconnect();
   window.removeEventListener('pkr:hand-state-changed',_pkrOnHandStateChanged);
 };
 
