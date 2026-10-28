@@ -50,7 +50,8 @@ async function check(browser,width){
     'Balanced override must use the large-card renderer.');
   await page.locator('#seat3 .pkr-seat-photo').waitFor();
   const inPlay=page.locator('#seat3');
-  assert.match(await inPlay.locator('.pkr-game-seat-status').innerText(),/IN PLAY/);
+  assert.equal(await inPlay.getAttribute('data-status'),'inplay');
+  assert.equal(await inPlay.locator('.pkr-game-seat-status').count(),0,'Approved full card has no repeated status strip');
   assert.match(await inPlay.locator('.pkr-game-seat-result').textContent(),/-\$25/);
   assert.equal(await inPlay.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','In-play buy-in must be red.');
@@ -58,14 +59,15 @@ async function check(browser,width){
   assert.equal(await inPlay.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','The bank count AND invested dollar figure must be red while IN PLAY.');
   const cashed=page.locator('#seat7');
-  assert.match(await cashed.locator('.pkr-game-seat-status').innerText(),/CASHED OUT/);
+  assert.equal(await cashed.getAttribute('data-status'),'cashed');
+  assert.equal(await cashed.locator('.pkr-game-full-avatar .pkr-game-status-dot.cashed').count(),1,'Cashed-out full card uses a compact green check');
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
   assert.notEqual(await cashed.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','CASHED OUT bank amount must no longer be marked outstanding.');
-  for(const label of ['.bank-right>.bank-pill.g','.bank-right>.pkr-bank-out','.bank-right>.pkr-bank-current']){
-    assert.equal(await page.locator(label).isVisible(),true,
-      'Bank, IN and OUT segments must all be visible on the phone.');
-  }
+  assert.equal(await page.locator('#bbBankQuick').isVisible(),true,'Bank balance must be visible once');
+  assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true,'IN must be visible');
+  assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true,'OUT must be visible');
+  assert.equal(await page.locator('.bank-right>.pkr-bank-current').isVisible(),false,'Duplicate BANK segment must stay hidden');
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false,
     'Do not show Save Results before all cash-outs reconcile.');
   const sheet=page.locator('.pkr-mockup-tools-sheet');
@@ -118,8 +120,9 @@ async function check(browser,width){
     'All occupied full cards show bank figures.');
   assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
   assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
-  assert.equal(await page.locator('.pkr-game-seat-status.cashed').count()>0,true);
-  assert.equal(await page.locator('.pkr-game-seat-status.inplay').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-full-avatar .pkr-game-status-dot.cashed').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-seat-card.inplay').count()>0,true);
+  assert.equal(await page.locator('.pkr-layout-balanced .pkr-game-seat-status').count(),0,'Full approved cards do not repeat status text');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
   await page.evaluate(()=>window.pkrSetSeatLayout('compact'));
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
