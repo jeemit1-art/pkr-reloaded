@@ -1838,7 +1838,7 @@ function renderTable() {
   var compactWidth=wideTable?Math.min(105,Math.max(77,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var cardWidth=wideTable?(compact?compactWidth:balancedWidth):
     compact?Math.floor(Math.min(tabletPortrait?108:84,Math.max(vpW<355?64:74,W*.215))):
-    Math.floor(Math.min(tabletPortrait?142:101,Math.max(tabletPortrait?102:80,W*(tabletPortrait?.22:.245))));
+    Math.floor(Math.min(tabletPortrait?142:101,Math.max(tabletPortrait?102:vpW<355?90:80,W*(tabletPortrait?.22:.245))));
   var cardHeight=wideTable?(compact?(hasStacks?100:86):(hasStacks?108:82)):
     compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
   // When thirteen players cannot fit at the requested scale, extend the
