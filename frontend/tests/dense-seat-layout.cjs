@@ -46,33 +46,38 @@ async function check(browser,width){
   await page.locator('#seat3 .pkr-game-seat-card').waitFor({state:'visible'});
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false,
     'No detached player-strip overlay is allowed in either layout.');
-  assert.equal(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-balanced')),true,
-    'Balanced override must use the large-card renderer.');
+  const expectedInitial=width<350?'compact':'balanced';
+  assert.equal(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-'+expectedInitial)),true,
+    'Approved responsive renderer must match phone width.');
   await page.locator('#seat3 .pkr-seat-photo').waitFor();
   const inPlay=page.locator('#seat3');
-  assert.match(await inPlay.locator('.pkr-game-seat-status').innerText(),/IN PLAY/);
+  assert.equal(await inPlay.getAttribute('data-status'),'inplay');
+  assert.equal(await inPlay.locator('.pkr-game-seat-status').count(),0,'Approved card has no repeated status strip');
   assert.match(await inPlay.locator('.pkr-game-seat-result').textContent(),/-\$25/);
   assert.equal(await inPlay.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','In-play buy-in must be red.');
-  assert.match(await inPlay.locator('.pkr-game-seat-bank').textContent(),/1b/);
-  assert.equal(await inPlay.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','The bank count AND invested dollar figure must be red while IN PLAY.');
+  const inPlayBank=inPlay.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
+  assert.match(await inPlayBank.textContent(),/\$25/);
+  assert.equal(await inPlayBank.evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','The invested dollar figure must be red while IN PLAY.');
   const cashed=page.locator('#seat7');
-  assert.match(await cashed.locator('.pkr-game-seat-status').innerText(),/CASHED OUT/);
+  assert.equal(await cashed.getAttribute('data-status'),'cashed');
+  assert.equal(await cashed.locator('.pkr-game-status-dot.cashed').count(),1,'Cashed-out card uses a compact green check');
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
-  assert.notEqual(await cashed.locator('.pkr-game-seat-bank').evaluate(el=>getComputedStyle(el).color),
+  const cashedBank=cashed.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
+  assert.notEqual(await cashedBank.evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','CASHED OUT bank amount must no longer be marked outstanding.');
-  for(const label of ['.bank-right>.bank-pill.g','.bank-right>.pkr-bank-out','.bank-right>.pkr-bank-current']){
-    assert.equal(await page.locator(label).isVisible(),true,
-      'Bank, IN and OUT segments must all be visible on the phone.');
-  }
+  assert.equal(await page.locator('#bbBankQuick').isVisible(),true,'Bank balance must be visible once');
+  assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true,'IN must be visible');
+  assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true,'OUT must be visible');
+  assert.equal(await page.locator('.bank-right>.pkr-bank-current').isVisible(),false,'Duplicate BANK segment must stay hidden');
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false,
     'Do not show Save Results before all cash-outs reconcile.');
   const sheet=page.locator('.pkr-mockup-tools-sheet');
   await page.getByRole('button',{name:'Open table controls'}).click();
   await sheet.waitFor({state:'visible'});
   assert.equal(await page.locator('.pkr-table-tools-dialog').evaluate(el=>el.matches(':modal')),true);
-  assert.equal(await page.getByRole('button',{name:'Balanced table view'}).getAttribute('aria-pressed'),'true');
+  assert.equal(await sheet.locator('.pkr-responsive-view-select').count(),0,'Approved Tools menu must stay clean');
   await page.screenshot({path:path.join(screenshots,'webkit-or-chromium-'+browser.browserType().name()+'-'+width+'-tools.png')});
   await page.getByRole('button',{name:'Close table controls'}).click();
   // Recreate the actual 13 occupied positions with no production Worker calls.
@@ -92,7 +97,7 @@ async function check(browser,width){
     window.renderTable();
   });
   const seats=page.locator('#seatsContainer>.pkr-mockup-player-seat');
-  assert.equal(await seats.count(),13,'Full mode must have thirteen attached cards.');
+  assert.equal(await seats.count(),13,'Approved table must have thirteen attached cards.');
   async function geometry(mode){
     return page.evaluate(mode=>{
       const items=[...document.querySelectorAll('#seatsContainer>.pkr-mockup-player-seat')];
@@ -111,33 +116,43 @@ async function check(browser,width){
         stripVisible:document.getElementById('pkrSeatSummary').getBoundingClientRect().height>0};
     },mode);
   }
-  const full=await geometry('full');
-  assert.equal(full.stripVisible,false,'Mockup has no horizontal roster strip.');
-  assert.equal(full.bounds.length,13);
-  assert(full.bounds.every(p=>p.bank.includes('1b')||p.bank.includes('2b')),
-    'All occupied full cards show bank figures.');
-  assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
-  assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
-  assert.equal(await page.locator('.pkr-game-seat-status.cashed').count()>0,true);
-  assert.equal(await page.locator('.pkr-game-seat-status.inplay').count()>0,true);
-  await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
-  await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Compact table view'}).click();
+  if(width>=350){
+    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
+    const full=await geometry('full');
+    assert.equal(full.stripVisible,false,'Mockup has no horizontal roster strip.');
+    assert.equal(full.bounds.length,13);
+    assert(full.bounds.every(p=>p.bank.includes('1b')||p.bank.includes('2b')),
+      'All occupied full cards show bank figures.');
+    assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
+    assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
+    assert.equal(await page.locator('.pkr-game-full-avatar .pkr-game-status-dot.cashed').count()>0,true);
+    assert.equal(await page.locator('.pkr-game-seat-card.inplay').count()>0,true);
+    assert.equal(await page.locator('.pkr-layout-balanced .pkr-game-seat-status').count(),0,'Full approved cards do not repeat status text');
+    await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
+  }
+  await page.evaluate(()=>window.pkrSetSeatLayout('compact'));
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
   const compact=await geometry('compact');
   assert.deepEqual(compact.overlaps,[],'Compact cards must not overlap: '+JSON.stringify(compact));
   assert(compact.scroll<=compact.viewport+3,'Compact mode must not widen the page.');
   assert.equal(await page.locator('.pkr-game-status-dot.cashed').count()>0,true,
     'Compact mode shows the green check without repeated CASHED OUT text.');
-  assert.equal(await page.locator('.pkr-game-compact-status.inplay').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-status-dot.inplay').count()>0,true,
+    'Compact in-play status is shown by the red indicator without repeated text.');
   assert.equal(await page.locator('#seat3 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','Compact in-play bank amount must be red.');
   assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
-  await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Balanced table view'}).click();
-  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-balanced').count(),13);
+  if(width>=350){
+    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
+  }else{
+    await page.evaluate(()=>window.pkrSetSeatLayout('auto'));
+    assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),'compact',
+      'Sub-350px phones must remain on the compact approved renderer.');
+  }
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
   // Gated cash-out/save action: no premature CTA for outstanding cashouts,
   // unbalanced money or unsynced edits. No real backend write occurs.

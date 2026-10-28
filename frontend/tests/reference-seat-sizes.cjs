@@ -49,28 +49,84 @@ async function check(browser,width,height,count){
   await page.goto(BASE+'/games/'+id+'/play',{waitUntil:'domcontentloaded'});
   await page.locator('#seat1 .pkr-game-seat-card').waitFor();
   await page.waitForFunction(()=>!!window._eventMembers);
-  const expectedAuto=(width<700&&height>=width)?'mobile':width<1024?'compact':'balanced';
+  const expectedAuto=(width<355||(width<930&&height<width&&count>=10))?'compact':'balanced';
   assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
   assert.equal(await page.locator('#seatsContainer>.pkr-layout-'+expectedAuto).count(),count,
-    'Auto view must match the device.');
-  assert.equal(await page.locator('#bbBanks').isVisible(),true);
-  assert.equal(await page.locator('#bbInPlay').isVisible(),true);
-  assert.match(await page.locator('#bbBanks').textContent(),/b$/);
-  if(expectedAuto==='mobile'&&(count===9||count===13))
-   await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-mobile-auto.png')});
-  for(const mode of ['balanced','compact']){
+    'Approved responsive view must match the device.');
+  assert.equal(await page.locator('.pkr-table-view-toolbar').count(),0,'Approved game header has no view selector');
+  if(width===390&&height===844&&count===13){
+   const approved=await page.evaluate(()=>{
+    const felt=document.getElementById('tableFelt').getBoundingClientRect();
+    const left=document.getElementById('seat4').getBoundingClientRect();
+    const right=document.getElementById('seat11').getBoundingClientRect();
+    return {felt:{left:felt.left,right:felt.right,width:felt.width,height:felt.height},
+      left:{right:left.right},right:{left:right.left}};
+   });
+   assert(approved.felt.width>=165&&approved.felt.width<=205,'Approved phone felt must leave space for full player names: '+JSON.stringify(approved));
+   assert(approved.felt.height>=300&&approved.felt.height<=365,'Approved phone felt must not stretch vertically: '+JSON.stringify(approved));
+   const ratio=approved.felt.height/approved.felt.width;
+   assert(ratio>=1.6&&ratio<=1.9,'Approved felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
+   assert(approved.left.right<=approved.felt.left+22,'Left player cards must sit off the felt: '+JSON.stringify(approved));
+   assert(approved.right.left>=approved.felt.right-22,'Right player cards must sit off the felt: '+JSON.stringify(approved));
+  }
+  if(width===768&&height===1024){
+   const dimensions=await page.evaluate(()=>{
+    const felt=document.getElementById('tableFelt').getBoundingClientRect();
+    return {width:felt.width,height:felt.height};
+   });
+   assert(dimensions.height>dimensions.width*1.25,
+    'Portrait tablet must use a taller portrait felt, not the broken horizontal layout: '+JSON.stringify(dimensions));
+  }
+  if(width===1024&&height===768){
+   const dimensions=await page.evaluate(()=>{
+    const felt=document.getElementById('tableFelt').getBoundingClientRect();
+    return {width:felt.width,height:felt.height};
+   });
+   assert(dimensions.width>dimensions.height*1.3,
+    'Landscape tablet must use a horizontal felt: '+JSON.stringify(dimensions));
+  }
+  assert.equal(await page.locator('#bbBankQuick').isVisible(),true);
+  assert.equal(await page.locator('#bbIn').isVisible(),true);
+  assert.equal(await page.locator('#bbOut').isVisible(),true);
+  assert.match(await page.locator('#bbBankQuick').textContent(),/\$/);
+  assert.equal(await page.locator('#bbBanks').count(),0);
+  if(count===9||count===13)
+   await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-auto.png')});
+  const modes=['balanced','compact'];
+  for(const mode of modes){
    await page.getByRole('button',{name:'Open table controls'}).click();
    const dialog=page.locator('.pkr-table-tools-dialog');await dialog.waitFor();
    assert(await dialog.evaluate(e=>e.matches(':modal')),'Tools must remain top-layer');
    assert.equal(await dialog.locator('.pkr-reference-tool-grid button').count(),6);
-   assert.equal(await dialog.locator('.pkr-responsive-view-select button').count(),4);
+   assert.equal(await dialog.locator('.pkr-responsive-view-select').count(),0,'Legacy four-mode selector remains removed');
+   assert.equal(await dialog.locator('.pkr-approved-view-buttons button').count(),3,'Tools offers Auto, Full and Compact');
+   const toolSpacing=await dialog.evaluate(root=>{
+    const grid=root.querySelector('.pkr-reference-tool-grid').getBoundingClientRect();
+    const note=root.querySelector('.pkr-tools-reconciliation-note').getBoundingClientRect();
+    return {gridBottom:grid.bottom,noteTop:note.top,noteBottom:note.bottom};
+   });
+   assert(toolSpacing.noteTop>=toolSpacing.gridBottom+3,
+    'Tools note overlaps the last row of controls: '+JSON.stringify(toolSpacing));
+   const selected=mode==='balanced'?'Full table view':'Compact table view';
+   await dialog.getByRole('button',{name:selected,exact:true}).click();
+   assert.equal(await dialog.getByRole('button',{name:selected,exact:true}).getAttribute('aria-pressed'),'true');
    if(mode==='balanced'&&count===13&&width===390)await page.screenshot({path:path.join(out,browser.browserType().name()+'-390-tools.png')});
-   await page.getByRole('button',{name:mode==='compact'?'Compact table view':'Balanced table view',exact:true}).click();
+   await page.getByRole('button',{name:'Close table controls'}).click();
+   await page.waitForFunction(m=>document.querySelectorAll('#seatsContainer>.pkr-layout-'+m).length>0,mode);
+   assert.equal(await page.evaluate(()=>localStorage.getItem('pkrTableViewChoice_reference-table')),
+     mode==='balanced'?'full':'compact','Manual view selection must be persisted');
    const expected='pkr-layout-'+mode;
    assert.equal(await page.locator('#seatsContainer>.pkr-mockup-player-seat.'+expected).count(),count,
     'Every seat count and device must use the same renderer');
    assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
    const compact=mode==='compact';
+   if(compact){
+    const name=page.locator('#seat1 .pkr-game-compact-name');
+    assert.equal(await name.isVisible(),true,'Compact seats must have visible names');
+    assert.equal(await name.textContent(),'Alex');
+    assert((await name.boundingBox()).width>=30,'Compact player name has readable width');
+    assert.equal(await page.locator('#seat1 .pkr-game-compact-name').getAttribute('title'),'Alex');
+   }
    const bank=compact?'.pkr-game-compact-bank':'.pkr-game-seat-bank';
    assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
    assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
@@ -109,7 +165,7 @@ async function check(browser,width,height,count){
     }
     for(const st of c.status)assert(st.bottom<=c.r.bottom+1,'Status falls below its card: '+JSON.stringify({width,count,compact,card:c.id,cardBottom:c.r.bottom,...st}));
    }
-   if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+mode+'.png')});
+   if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-'+(mode==='balanced'?'full':'compact')+'.png')});
   }
   // A failed member photo must not display a broken image over the initials.
   await page.evaluate(()=>{
@@ -128,16 +184,21 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS responsive layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Auto/'+expectedAuto+', Balanced/Compact overrides, bank totals, no financial writes');
+  console.log('PASS approved table layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, approved default/'+expectedAuto+', full/compact renderers, bank totals, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
  for(const engine of [chromium,webkit]){
   const browser=await engine.launch({headless:true});
   try{
-   for(const count of [6,9,13])await check(browser,390,844,count);
-   await check(browser,320,720,13);
-   if(engine===chromium){await check(browser,844,390,13);await check(browser,1440,900,13);}
+   // Chromium: 9 and 13 players on every practical device size.
+   // WebKit: phone and tablet cross-browser regression coverage.
+   const dimensions=engine===chromium?[
+    [320,720],[390,844],[844,390],[768,1024],[1024,768],[1440,900]
+   ]:[[390,844],[768,1024]];
+   for(const [w,h] of dimensions){
+    for(const count of [9,13])await check(browser,w,h,count);
+   }
   }finally{await browser.close();}
  }
 })().catch(e=>{console.error(e);process.exitCode=1;});

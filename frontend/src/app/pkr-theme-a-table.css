@@ -692,3 +692,228 @@
  #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:9px}
  #gameScreen.pkr-casino-live-table .pkr-bank-quick-item strong{font-size:11px}
 }
+
+
+/* Approved reference corrections: concise bank strip and controlled felt proportions. */
+#gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar{justify-content:space-between!important;gap:6px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick{flex:1!important;max-width:none!important;justify-content:space-evenly!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-item{flex:1 1 0!important;gap:3px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-count .bank-icon{width:21px!important;height:21px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-count .bank-icon img{width:100%!important;height:100%!important;object-fit:contain!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count{
+ display:grid!important;grid-template-columns:auto auto!important;grid-template-rows:auto auto!important;
+ column-gap:5px!important;row-gap:1px!important;align-items:center!important;justify-content:center!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count .bank-icon{
+ grid-column:1!important;grid-row:1 / 3!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count small{
+ grid-column:2!important;grid-row:1!important;justify-self:start!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count strong{
+ grid-column:2!important;grid-row:2!important;justify-self:start!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills{display:flex!important;flex:2 1 0!important;min-width:0!important;justify-content:space-evenly!important;gap:0!important;grid-template-columns:none!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.pkr-bank-current{display:none!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.bank-pill{flex:1 1 0!important;min-width:0!important;padding:0 4px!important;flex-direction:row!important;gap:5px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-divider{display:none!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-inplay-quick{display:none!important}
+#gameScreen.pkr-casino-live-table #tableOuter,#gameScreen.pkr-casino-live-table #tableFelt{max-height:100%!important}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.bank-pill{padding:0 2px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{gap:1px!important;justify-items:start!important;text-align:left!important;width:auto!important;flex:1 1 auto!important;margin-left:0!important}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-dot{
+ display:inline-block!important;width:10px!important;height:10px!important;margin-right:4px!important;
+ border-radius:50%!important;vertical-align:-1px!important;box-sizing:border-box!important;
+ border:1.5px dashed #C8F8E4!important;box-shadow:0 1px 0 #092C22!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-in{background:#237E5F!important}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-out{background:#9B3442!important;border-color:#FFD2D5!important;box-shadow:0 1px 0 #561F2A!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .bank-pill b{font-size:11px!important}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:10px!important}
+}
+@media(max-width:350px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-visual{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{margin-left:0!important}
+}
+
+
+/* Approved player-card detail: full cards use the avatar/name/bank/net stack from the reference,
+   with only a small cash-out check rather than a repeated status strip. */
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ flex:0 0 var(--pkr-avatar-size,34px);height:var(--pkr-avatar-size,34px);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-seat-avatar{
+ flex:0 0 var(--pkr-avatar-size,34px)!important;height:var(--pkr-avatar-size,34px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-status-dot{
+ right:-4px!important;bottom:-3px!important;width:15px!important;height:15px!important;
+}
+
+
+/* Empty seats stay light and unobtrusive, matching the approved table rather than occupying a full player-card box. */
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-empty-seat{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:4px!important;width:64px!important;height:64px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip{
+ width:34px!important;height:34px!important;flex:0 0 34px!important;
+ border:1px solid #35645E!important;background:#0B2423!important;box-shadow:0 2px 7px #0006!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip.empty .seat-inner{
+ color:#D8E7E5!important;font:700 18px/1 var(--font-body),sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-label{
+ display:block!important;max-width:64px!important;padding:0!important;background:transparent!important;
+ color:#8FA5A5!important;text-shadow:none!important;font:650 9px/1.1 var(--font-body),sans-serif!important;
+}
+
+
+/* Approved phone felt silhouette: soft oval-ended rail without the stretched Mobile Rail geometry. */
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
+ #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
+}
+
+
+/* Phone full-card typography: preserve approved compact footprint while keeping longer names readable. */
+@media(min-width:350px) and (max-width:430px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-main{gap:3px!important;padding:3px 3px 2px!important}
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{font-size:9px!important;letter-spacing:-.01em!important}
+}
+
+
+/* PKR approved adaptive view controls. Auto is the default; user override is
+   confined to Tools so the gameplay header remains compact. */
+.pkr-dialog-root .pkr-approved-view-controls{
+ display:grid!important;gap:9px!important;padding:12px 14px!important;
+ border-bottom:1px solid #2B4F53!important;
+}
+.pkr-dialog-root .pkr-approved-view-caption{display:grid!important;gap:3px!important}
+.pkr-dialog-root .pkr-approved-view-caption strong{
+ font:800 12px/1.2 var(--font-body),sans-serif!important;color:#EAF2F2!important;
+}
+.pkr-dialog-root .pkr-approved-view-caption small{
+ color:#A9C0C4!important;font:500 10px/1.35 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-approved-view-buttons{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+.pkr-dialog-root .pkr-approved-view-buttons button{
+ min-width:0!important;min-height:37px!important;padding:8px 4px!important;
+ border:1px solid #38636B!important;border-radius:9px!important;
+ background:#14282F!important;color:#E2EEEF!important;
+ font:800 12px/1.15 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-approved-view-buttons button[aria-pressed="true"]{
+ background:#0B4032!important;border-color:#4CE6A8!important;color:#8DFBC6!important;
+ box-shadow:inset 0 0 0 1px #45E5A350!important;
+}
+
+/* Compact means reduced detail, not anonymity. Name is always visible even
+   if the avatar is only initials, and the full name is on the accessible seat. */
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-layout-compact{
+ width:var(--pkr-card-width,82px)!important;
+ height:var(--pkr-card-height,82px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+ padding:4px 4px 3px!important;gap:2px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-avatar{
+ height:26px!important;min-height:26px!important;flex:0 0 26px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-avatar .pkr-game-seat-avatar{
+ width:26px!important;height:26px!important;flex:0 0 26px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-name{
+ display:block!important;width:100%!important;min-width:0!important;
+ font:800 clamp(8px,1.25vw,11px)/1.13 var(--font-body),Inter,sans-serif!important;
+ color:#EBF6F3!important;text-align:center!important;
+ white-space:nowrap!important;text-overflow:ellipsis!important;
+ overflow:hidden!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-bank{
+ font-size:clamp(9px,1.12vw,11px)!important;max-width:100%!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:clamp(10px,1.3vw,13px)!important;max-width:100%!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+@media(max-width:600px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-name{
+  font-size:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+  padding:3px 2px 2px!important;gap:1px!important;
+ }
+}
+@media(orientation:portrait) and (min-width:701px) and (max-width:950px){
+ #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
+ #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
+}
+
+
+/* A manual Full override on a 320px phone remains usable: allow two rows
+   instead of hiding real player names or clipping buy-in details. */
+@media(max-width:355px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
+  gap:0!important;justify-content:center!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name,
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-bank{
+  white-space:normal!important;overflow-wrap:anywhere!important;
+  text-overflow:clip!important;line-height:1.13!important;
+  font-size:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-main{
+  padding:2px 2px 1px!important;gap:2px!important;
+ }
+}
+
+
+/* The legacy .seat-label adds 14px of horizontal padding and a dark pill.
+   It was clipping player names in the new full cards on 390px phones. */
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{
+ padding:0!important;margin:0!important;border:0!important;
+ background:transparent!important;box-shadow:none!important;
+ text-shadow:none!important;text-align:left!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
+ min-width:0!important;overflow:hidden!important;
+}
+
+
+/* Final visual review: compact status ticks must not cover player names.
+   Keep badges at the top corner of the avatar, not the name baseline. */
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-status-dot{
+ top:-5px!important;right:-6px!important;bottom:auto!important;
+ width:14px!important;height:14px!important;
+ font-size:10px!important;
+}
+
+/* A true casino oval at tablet-landscape and desktop widths. The geometric
+   seat coordinates stay unchanged; only the felt and rail paint changes. */
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableOuter{
+ border-radius:24% / 50%!important;
+}
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableFelt{
+ border-radius:24% / 50%!important;
+}
+
+
+/* Tools sheet spacing: six controls must finish before the reconciliation
+   guidance begins, including wrapped labels on 320px phones. */
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid{
+ grid-auto-rows:minmax(94px,auto)!important;
+ align-items:stretch!important;
+ margin-bottom:4px!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid button{
+ height:auto!important;min-height:94px!important;
+ padding:7px 3px 10px!important;overflow:visible!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-reconciliation-note{
+ position:relative!important;display:block!important;inset:auto!important;
+ margin:14px 0 0!important;padding:11px 0 0!important;
+ background:transparent!important;clear:both!important;
+}

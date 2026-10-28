@@ -10,17 +10,11 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [seatLayout, setSeatLayout] = useState<'auto'|'balanced'|'compact'|'mobile'>('auto');
-  function selectTableLayout(mode:'auto'|'balanced'|'compact'|'mobile'){
-    (window as any).pkrSetSeatLayout?.(mode);
-    setSeatLayout(mode);
-    setToolsOpen(false);
-  }
-  function savedTableLayout(){
-    const raw=localStorage.getItem('pkrSeatLayout_'+gameId);
-    if(raw==='full') return 'balanced' as const;
-    if(raw==='balanced'||raw==='compact'||raw==='mobile'||raw==='auto') return raw;
-    return 'auto' as const;
+  const [tableView, setTableView] = useState<'auto'|'full'|'compact'>('auto');
+  function chooseTableView(next:'auto'|'full'|'compact'){
+    localStorage.setItem('pkrTableViewChoice_'+gameId,next);
+    setTableView(next);
+    (window as any).pkrSetSeatLayout?.(next);
   }
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
@@ -61,6 +55,8 @@ export default function PlayPage() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+    const savedView = localStorage.getItem('pkrTableViewChoice_'+gameId);
+    setTableView(savedView==='full'||savedView==='compact'?savedView:'auto');
 
     // Approved Theme A fonts are bundled once by RootLayout.
 
@@ -219,20 +215,9 @@ export default function PlayPage() {
             </span>
           </div>
           <div className="pkr-table-head-actions">
-            <label className="pkr-table-view-toolbar" title="Choose table view">
-              <span className="pkr-view-toolbar-icon" aria-hidden="true">▦</span>
-              <span className="pkr-view-toolbar-label">View</span>
-              <select aria-label="Table view" value={seatLayout}
-                onChange={(e)=>selectTableLayout(e.target.value as 'auto'|'balanced'|'compact'|'mobile')}>
-                <option value="auto">Auto</option>
-                <option value="balanced">Balanced</option>
-                <option value="compact">Compact</option>
-                <option value="mobile">Mobile Rail</option>
-              </select>
-            </label>
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
               aria-haspopup="dialog" aria-label="Open table controls"
-              onClick={() => { setSeatLayout(savedTableLayout()); setToolsOpen(true); }} title="Table controls">
+              onClick={() => { setToolsOpen(true); }} title="Table controls">
               <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
@@ -245,14 +230,19 @@ export default function PlayPage() {
             onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
           <div className="pkr-table-tools-sheet pkr-mockup-tools-sheet pkr-reference-tools" id="pkr-table-tools">
             <header className="pkr-table-tools-sheet-header">
-              <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools and table view</p></div>
+              <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools</p></div>
               <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
-            <div className="pkr-reference-view-select pkr-responsive-view-select" role="group" aria-label="Table view">
-              <button type="button" aria-label="Auto table view" aria-pressed={seatLayout==='auto'} onClick={()=>selectTableLayout('auto')}><strong>Auto</strong><small>Best view for this screen</small></button>
-              <button type="button" aria-label="Balanced table view" aria-pressed={seatLayout==='balanced'} onClick={()=>selectTableLayout('balanced')}><strong>Balanced</strong><small>Desktop / large screens</small></button>
-              <button type="button" aria-label="Compact table view" aria-pressed={seatLayout==='compact'} onClick={()=>selectTableLayout('compact')}><strong>Compact</strong><small>Tablet / landscape</small></button>
-              <button type="button" aria-label="Mobile Rail table view" aria-pressed={seatLayout==='mobile'} onClick={()=>selectTableLayout('mobile')}><strong>Mobile Rail</strong><small>Vertical phone table</small></button>
+            <div className="pkr-approved-view-controls" role="group" aria-label="Table display">
+              <div className="pkr-approved-view-caption">
+                <strong>Table view</strong>
+                <small>Auto adapts to your screen and the number of players</small>
+              </div>
+              <div className="pkr-approved-view-buttons">
+                <button type="button" aria-label="Auto table view" aria-pressed={tableView==='auto'} onClick={()=>chooseTableView('auto')}>Auto</button>
+                <button type="button" aria-label="Full table view" aria-pressed={tableView==='full'} onClick={()=>chooseTableView('full')}>Full</button>
+                <button type="button" aria-label="Compact table view" aria-pressed={tableView==='compact'} onClick={()=>chooseTableView('compact')}>Compact</button>
+              </div>
             </div>
             <div className="pkr-reference-tool-grid">
               <button id="trackHandsBtn" type="button" aria-label="Hand tracker" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}><span aria-hidden="true">♠</span><span>Hand<br/>Tracking</span></button>
@@ -272,14 +262,14 @@ export default function PlayPage() {
           onClick={() => (window as any).toggleBank?.()}
           onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="pkr-bank-quick">
-            <span className="pkr-bank-quick-item pkr-bank-count"><span className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></span><small>Banks</small><strong id="bbBanks">0b</strong></span>
+            <span className="pkr-bank-quick-item pkr-bank-count"><span className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></span><small>Bank</small><strong id="bbBankQuick">$0</strong></span>
             <span className="pkr-bank-quick-divider" aria-hidden="true"></span>
-            <span className="pkr-bank-quick-item pkr-bank-inplay-quick"><span aria-hidden="true">💵</span><strong id="bbInPlay">$0</strong><small>In Play</small></span>
+            <span className="pkr-bank-quick-item pkr-bank-inplay-quick"><small>In Play</small><strong id="bbInPlay">$0</strong></span>
           </div>
           <strong id="bbTotal" className="pkr-bank-total pkr-bank-total-hidden">$0.00</strong>
           <div className="bank-right pkr-bank-detail-pills" aria-hidden="true">
-            <span className="bank-pill g"><span className="pkr-bank-visual pkr-bank-in" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>IN</small><b id="bbIn">$0</b></span></span>
-            <span className="bank-pill pkr-bank-out"><span className="pkr-bank-visual pkr-bank-out-icon" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>OUT</small><b id="bbOut">$0</b></span></span>
+            <span className="bank-pill g"><span className="pkr-bank-metric"><small><span className="pkr-inline-bank-dot pkr-inline-bank-in" aria-hidden="true"></span>IN</small><b id="bbIn">$0</b></span></span>
+            <span className="bank-pill pkr-bank-out"><span className="pkr-bank-metric"><small><span className="pkr-inline-bank-dot pkr-inline-bank-out" aria-hidden="true"></span>OUT</small><b id="bbOut">$0</b></span></span>
             <span className="bank-pill pkr-bank-current"><span className="pkr-bank-visual pkr-bank-balance" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>BANK</small><b id="bbBank">$0</b></span></span>
           </div>
           <span className="bank-caret" aria-hidden="true">⌄</span>
@@ -667,21 +657,25 @@ if (!_ctx || !_ctx.gameId) { window.location.href = '/dashboard'; return; }
 var SK      = 'pokerState_'   + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var HIST_K  = 'pokerHistory_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
-var _pkrSeatLayoutKey='pkrSeatLayout_'+_ctx.gameId;
+// A new preference key prevents an old four-mode choice forcing the wrong
+// view on first load. Auto is the default until the player chooses otherwise.
+var _pkrSeatLayoutKey='pkrTableViewChoice_'+_ctx.gameId;
 var _pkrSavedLayout=localStorage.getItem(_pkrSeatLayoutKey);
-if(_pkrSavedLayout==='full')_pkrSavedLayout='balanced';
-var _pkrSeatLayout=['auto','balanced','compact','mobile'].includes(_pkrSavedLayout)?_pkrSavedLayout:'auto';
+var _pkrSeatLayout=_pkrSavedLayout==='full'||_pkrSavedLayout==='compact'?_pkrSavedLayout:'auto';
 function pkrResolveSeatLayout(){
-  if(_pkrSeatLayout!=='auto')return _pkrSeatLayout;
+  if(_pkrSeatLayout==='full')return 'balanced';
+  if(_pkrSeatLayout==='compact')return 'compact';
   var w=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
   var h=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  if(w<700&&h>=w)return 'mobile';
-  if(w<1024)return 'compact';
+  var n=Math.max(2,Math.min(36,Number(state&&state.game&&state.game.seats)||9));
+  if(w<355||(w<930&&h<w&&n>=10))return 'compact';
   return 'balanced';
 }
 window.pkrGetResolvedSeatLayout=pkrResolveSeatLayout;
+window.pkrGetTableViewChoice=function(){return _pkrSeatLayout;};
 window.pkrSetSeatLayout=function(mode){
-  if(!['auto','balanced','compact','mobile'].includes(mode))return;
+  if(mode==='balanced')mode='full';
+  if(mode!=='auto'&&mode!=='full'&&mode!=='compact')return;
   _pkrSeatLayout=mode;localStorage.setItem(_pkrSeatLayoutKey,mode);renderTable();
 };
 var _pkrViewportTimer=0;
@@ -1761,6 +1755,7 @@ function updateBank() {
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
   set('bbTotal', fmt(totalIn));
   set('bbBanks', totalBanks+'b');
+  set('bbBankQuick', fmt(inBank));
   set('bbInPlay', fmt(inBank));
   var inPlayEl=document.getElementById('bbInPlay');
   if(inPlayEl)inPlayEl.className=inBank<0?'neg':'pos';
@@ -1824,28 +1819,41 @@ function renderTable() {
   var W=area.clientWidth,availableHeight=area.clientHeight;
   if(!W||!availableHeight){setTimeout(renderTable,80);return;}
   var count=Math.max(2,Math.min(36,Number(state.game.seats)||9));
-  var mode=pkrResolveSeatLayout(),mobileRail=mode==='mobile',compact=mode==='compact';
+  var mode=pkrResolveSeatLayout(),compact=mode==='compact',mobileRail=false;
   var hasStacks=!!state.game.hand_tracking;
   var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2),maxSide=Math.max(leftCount,rightCount);
-  var wideTable=!mobileRail&&(mode==='balanced'?W>=650:(W>=700||W>availableHeight*1.08));
-  // Crowded short landscape screens cannot physically fit 10+ full seat
-  // cards around a horizontal ellipse. Keep the selected view and its
-  // information, but use the vertical rail geometry inside the scrollable
-  // table canvas instead of overlapping neighbouring players.
-  if(count>=10&&availableHeight<520)wideTable=false;
-  var tightWide=wideTable&&count>=10&&W<1024;
-  var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
-  var compactWidth=wideTable?Math.min(tightWide?76:88,Math.max(62,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
-  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
-  var cardHeight=mobileRail?(hasStacks?96:84):compact?(tightWide?(hasStacks?82:70):(hasStacks?98:82)):tightWide?(hasStacks?86:68):(hasStacks?96:76);
-  var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
+  // Density and geometry are separate: Auto / Full / Compact control the
+  // amount of seat detail. Orientation determines whether the felt is
+  // horizontal (laptop/tablet landscape) or portrait (phone/tablet portrait).
+  var vpW=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
+  var vpH=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
+  var portrait=vpH>vpW*1.08&&W<950;
+  var tabletPortrait=portrait&&W>=560;
+  // Landscape phones need a wide tabletop too. If the visible height is
+  // short, keep a scrollable 520px canvas instead of crushing a narrow table.
+  var wideTable=!portrait&&W>=720;
+  if(count>14&&W<1050)wideTable=false;
+  var tightWide=wideTable&&count>=10&&W<1150;
+  var balancedWidth=wideTable?Math.min(148,Math.max(90,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
+  var compactWidth=wideTable?Math.min(105,Math.max(77,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
+  var cardWidth=wideTable?(compact?compactWidth:balancedWidth):
+    compact?Math.floor(Math.min(tabletPortrait?108:84,Math.max(vpW<355?64:74,W*.215))):
+    Math.floor(Math.min(tabletPortrait?142:120,Math.max(tabletPortrait?102:90,W*(tabletPortrait?.22:.27))));
+  var cardHeight=wideTable?(compact?(hasStacks?100:86):(hasStacks?108:82)):
+    compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
+  // When thirteen players cannot fit at the requested scale, extend the
+  // table canvas vertically and scroll it. Never overlap or silently hide seats.
+  var minimumHeight=wideTable?(count>=10?520:460):Math.max(440,(maxSide+1)*(cardHeight+9)+34);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
   if(summary){summary.hidden=true;summary.replaceChildren();}
-  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):mobileRail?Math.max(250,H-2*(cardHeight*.58+24)):Math.max(190,H-2*(cardHeight+22));
-  var tW=wideTable?Math.min(W*.72,1000):mobileRail?Math.min(W*.67,tH*.46):Math.min(W*.57,tH*.64);
+  var tW=wideTable?Math.min(W*.72,1000):
+    tabletPortrait?Math.min(W*.47,380):Math.min(W*(compact?.49:.45),250);
+  var tH=wideTable?(tightWide?Math.min(H*.63,340):Math.min(H*.59,460)):
+    tabletPortrait?Math.min(H*.72,tW*1.56):
+    Math.min(H*.63,compact?tW*1.77:Math.max(tW*1.77,vpW>=355?320:0));
   var screen=document.getElementById('gameScreen');
   if(screen){
     screen.classList.toggle('pkr-wide-table',wideTable);
@@ -1882,7 +1890,8 @@ function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,mode,stackRow){
   }
   var chips=chipLabel?'<span class="seat-stack pkr-game-stack-readout '+(stackRow.source||'issued')+'">'+esc(chipLabel)+'</span>':'';
   if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
-  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+(cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+status+'</span>'):'<span class="pkr-game-seat-main">'+avatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span><span class="pkr-game-seat-status '+statusClass+'"><span aria-hidden="true">'+badge+'</span> '+status+'</span>';
+  var fullAvatar='<span class="pkr-game-full-avatar">'+avatar+(cashed?'<span class="pkr-game-status-dot cashed" aria-label="Cashed out">✓</span>':'')+'</span>';
+  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="pkr-game-compact-name" title="'+esc(p.name)+'">'+esc(p.name)+'</strong><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>':'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>';
   return '<span class="pkr-game-seat-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span>'+main+chips+'</span>';
 }
 function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
@@ -1894,9 +1903,15 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     for(var a=0;a<leftCount;a++)positions.push(polar(-Math.PI/2-Math.PI*(a+1)/(leftCount+1)));positions.push(polar(Math.PI/2));
     for(var b=0;b<rightCount;b++)positions.push(polar(Math.PI/2-Math.PI*(b+1)/(rightCount+1)));
   }else{
-    var top=g.cardHeight/2+12,bottom=g.height-g.cardHeight/2-12;
-    var leftX=g.mobileRail?Math.max(g.cardWidth/2+3,cx-tW/2-g.cardWidth*.08):Math.max(g.cardWidth/2+8,cx-tW/2-g.cardWidth*.32),rightX=g.width-leftX;
-    var first=top+g.cardHeight*.62,last=bottom-g.cardHeight*.62,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
+    var top=Math.max(g.cardHeight/2+9,cy-tH/2-g.cardHeight*.68),bottom=Math.min(g.height-g.cardHeight/2-9,cy+tH/2+g.cardHeight*.68);
+    var leftX=Math.max(g.cardWidth/2+6,cx-tW/2-g.cardWidth*.70),rightX=Math.min(g.width-g.cardWidth/2-6,cx+tW/2+g.cardWidth*.70);
+    // Reserve one complete card height plus a gap for each side seat.
+    // The felt can be compact; side cards may extend beyond its end curves.
+    var sideGap=9;
+    var sideSpan=(Math.max(1,Math.max(leftCount,rightCount)-1))*(g.cardHeight+sideGap);
+    var first=Math.max(g.cardHeight/2+10,cy-sideSpan/2);
+    var last=Math.min(g.height-g.cardHeight/2-10,cy+sideSpan/2);
+    var spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
     positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
     for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
   }
@@ -1904,7 +1919,7 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     var sid='seat'+(i+1),p=state.players[sid],seat=document.createElement('div');
     seat.className='seat pkr-mockup-player-seat pkr-layout-'+g.mode;seat.id=sid;seat.style.left=pos.x+'px';seat.style.top=pos.y+'px';
     seat.style.setProperty('--pkr-card-width',g.cardWidth+'px');seat.style.setProperty('--pkr-card-height',g.cardHeight+'px');
-    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?28:34)+'px');
+    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?26:32)+'px');
     seat.style.setProperty('--pkr-name-size',(g.mobileRail?(g.width<=360?10:11):g.tightWide?10:wideTable?13:g.width<=360?10:11)+'px');
     seat.style.setProperty('--pkr-bank-size',(g.mobileRail?(g.width<=360?9:10):g.tightWide?9:wideTable?12:g.width<=360?9:10)+'px');
     seat.style.setProperty('--pkr-result-size',(g.mobileRail?(g.width<=360?12:14):g.tightWide?13:wideTable?17:g.width<=360?12:14)+'px');
