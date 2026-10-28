@@ -2469,7 +2469,11 @@ function _doOpenSettleUp(review) {
       }
       body.appendChild(row);
     });
-    if(transfers.length){
+    if(transfers.length && !window._pkrResultsSaved){
+      var previewNote=document.createElement('p');previewNote.textContent='Preview only. Save results first to enable sharing payment instructions.';
+      previewNote.style.cssText='color:#a9bdbe;font-size:13px;margin-top:16px';body.appendChild(previewNote);
+    }
+    if(transfers.length && window._pkrResultsSaved){
       var shareBtn=document.createElement('button');shareBtn.type='button';shareBtn.textContent='Share payment instructions';
       shareBtn.style.cssText='width:100%;margin-top:16px;background:#3ddc97;color:#0b0f12;border:0;border-radius:10px;min-height:48px;font-weight:750;cursor:pointer';
       shareBtn.addEventListener('click',function(){
@@ -2598,7 +2602,9 @@ window.updateSaveResultsBtn = function updateSaveResultsBtn() {
   var players = Object.values(state.players||{}).filter(function(p){ return p && p.name && pBuyin(p)>0; });
   var allCashedOut = players.length >= 2 && players.every(function(p){ return (p.transactions||[]).some(function(t){ return t.type === 'cashout'; }); });
   btn.style.display = players.length>=2 ? '' : 'none';
-  if(!window._pkrResultsSaved){
+  if(window._pkrResultsSaved){
+    btn.innerHTML='<span class="game-tab-icon">✅</span> Results Saved';btn.disabled=true;
+  } else {
     var remaining=players.length-players.filter(function(p){
       return (p.transactions||[]).some(function(t){return t.type==='cashout';});
     }).length;
@@ -2751,6 +2757,8 @@ if (ctx && ctx.gameId) {
   // Fetch live game from PKR to build/sync state
   pkrApi('/games/' + ctx.gameId).then(function(game) {
     if (!game) return;
+    // Restore the server-confirmed saved state after a device refresh.
+    if(game.status==='settled')window._pkrResultsSaved=true;
     // Load event members and determine isHost
     if (game.event_id) {
       pkrApi('/events/' + game.event_id).then(function(ev) {
