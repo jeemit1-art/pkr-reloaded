@@ -53,9 +53,11 @@ async function check(browser,width,height,count){
   assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
   assert.equal(await page.locator('#seatsContainer>.pkr-layout-'+expectedAuto).count(),count,
     'Auto view must match the device.');
-  assert.equal(await page.locator('#bbBanks').isVisible(),true);
-  assert.equal(await page.locator('#bbInPlay').isVisible(),true);
-  assert.match(await page.locator('#bbBanks').textContent(),/b$/);
+  assert.equal(await page.locator('#bbBankQuick').isVisible(),true);
+  assert.equal(await page.locator('#bbIn').isVisible(),true);
+  assert.equal(await page.locator('#bbOut').isVisible(),true);
+  assert.match(await page.locator('#bbBankQuick').textContent(),/\$/);
+  assert.equal(await page.locator('#bbBanks').count(),0);
   if(expectedAuto==='mobile'&&(count===9||count===13))
    await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-mobile-auto.png')});
   for(const mode of ['balanced','compact']){
