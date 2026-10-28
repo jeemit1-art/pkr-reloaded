@@ -55,6 +55,7 @@ async function check(browser,name,width,height){
    body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="16" fill="#3ddc97"/></svg>'});
  });
  const errors=[];let winner='Test';
+ page.on('pageerror',error=>errors.push('Browser script: '+error.message));
  page.on('request',request=>{
   if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))
    errors.push('Production API request attempted: '+request.url());
@@ -90,9 +91,23 @@ async function check(browser,name,width,height){
  try{
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
   const layout=page.getByRole('group',{name:'Seat layout'});
+  // Wait for the real legacy table script to finish booting before changing
+  // React layout state. Then verify the seat remains interactive afterward.
+  await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await layout.getByRole('button',{name:'Full',exact:true}).click();
   assert.equal(await page.locator('#gameScreen').getAttribute('data-seat-layout'),'full');
-  await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
+  try{
+   await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
+  }catch(error){
+   const diagnosis=await page.evaluate(()=>({
+     screen:document.querySelector('#gameScreen')?.getAttribute('data-seat-layout'),
+     seat:document.querySelector('#seat7')?.outerHTML?.slice(0,650),
+     hasRenderer:typeof window.renderTable==='function',
+     game:window.state?.game?.name,
+   }));
+   throw new Error('Table did not remain rendered after layout switch: '+
+     JSON.stringify(diagnosis)+'; browser errors: '+errors.join('; '));
+  }
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
   await page.locator('#seat7 .seat-chip.pkr-has-photo').waitFor({state:'visible'});
   assert.equal(await page.locator('#seat7 .pkr-seat-avatar-photo').getAttribute('alt'),'');
