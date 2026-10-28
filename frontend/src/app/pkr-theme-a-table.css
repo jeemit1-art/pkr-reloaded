@@ -714,3 +714,17 @@
  #gameScreen.pkr-casino-live-table .pkr-bank-detail-pills .bank-pill b{font-size:11px!important}
  #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:10px!important}
 }
+
+
+/* Approved player-card detail: full cards use the avatar/name/bank/net stack from the reference,
+   with only a small cash-out check rather than a repeated status strip. */
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ flex:0 0 var(--pkr-avatar-size,34px);height:var(--pkr-avatar-size,34px);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-seat-avatar{
+ flex:0 0 var(--pkr-avatar-size,34px)!important;height:var(--pkr-avatar-size,34px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-status-dot{
+ right:-4px!important;bottom:-3px!important;width:15px!important;height:15px!important;
+}
