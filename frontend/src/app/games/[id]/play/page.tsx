@@ -10,6 +10,12 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [seatLayout, setSeatLayout] = useState<'full'|'compact'>('full');
+  function selectTableLayout(mode:'full'|'compact'){
+    (window as any).pkrSetSeatLayout?.(mode);
+    setSeatLayout(mode);
+    setToolsOpen(false);
+  }
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
@@ -209,7 +215,11 @@ export default function PlayPage() {
           <div className="pkr-table-head-actions">
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
               aria-haspopup="dialog" aria-label="Open table controls"
-              onClick={() => setToolsOpen(true)} title="Table controls">
+              onClick={() => {
+                const choice=localStorage.getItem('pkrSeatLayout_'+gameId)==='compact'?'compact':'full';
+                setSeatLayout(choice);
+                setToolsOpen(true);
+              }} title="Table controls">
               <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
@@ -220,53 +230,86 @@ export default function PlayPage() {
         {toolsOpen&&<AppDialog className="pkr-table-tools-dialog" aria-label="Table controls"
             onDismiss={()=>setToolsOpen(false)}
             onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
-          <div className="pkr-table-tools-sheet" id="pkr-table-tools">
+          <div className="pkr-table-tools-sheet pkr-mockup-tools-sheet" id="pkr-table-tools">
             <header className="pkr-table-tools-sheet-header">
               <div><span>POKER NIGHT</span><h2>Table controls</h2>
                 <p>Manage hands, seating and table extras.</p></div>
-              <button type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>✕</button>
+              <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
-            <div className="pkr-tools-group">
+            <section className="pkr-tools-group" aria-label="Table view">
               <span className="pkr-tools-section-title">TABLE VIEW</span>
-              <div className="pkr-tools-seat-actions">
-                <button type="button" onClick={()=>{(window as any).pkrSetSeatLayout?.('full');setToolsOpen(false);}}>Full details</button>
-                <button type="button" onClick={()=>{(window as any).pkrSetSeatLayout?.('compact');setToolsOpen(false);}}>Compact seats</button>
+              <div className="pkr-mockup-tools-grid pkr-tools-layout-grid">
+                <button type="button" aria-label="Full details" aria-pressed={seatLayout==='full'}
+                  className={'pkr-mockup-tool-tile pkr-mockup-layout-option'+(seatLayout==='full'?' is-selected':'')}
+                  onClick={()=>selectTableLayout('full')}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">▣</span>
+                  <span><strong>Full details</strong><small>Larger player cards with full information</small></span>
+                </button>
+                <button type="button" aria-label="Compact seats" aria-pressed={seatLayout==='compact'}
+                  className={'pkr-mockup-tool-tile pkr-mockup-layout-option'+(seatLayout==='compact'?' is-selected':'')}
+                  onClick={()=>selectTableLayout('compact')}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙</span>
+                  <span><strong>Compact seats</strong><small>Minimal seat view for more players</small></span>
+                </button>
               </div>
-            </div>
-            <div className="pkr-tools-group">
+            </section>
+            <section className="pkr-tools-group" aria-label="Gameplay">
               <span className="pkr-tools-section-title">GAMEPLAY</span>
-              <div className="pkr-tools-action-grid">
-                <button id="trackHandsBtn" type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
-                  <span aria-hidden="true">🃏</span><strong>Hand tracker</strong><small>Record betting and winners</small></button>
-                <button type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>
-                  <span aria-hidden="true">🏆</span><strong>Tournament</strong><small>Blinds, timer and levels</small></button>
+              <div className="pkr-mockup-tools-grid">
+                <button id="trackHandsBtn" type="button" className="pkr-mockup-tool-tile" aria-label="Hand tracker"
+                  onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">▤</span>
+                  <span><strong>Hand tracker</strong><small>Record betting and winners</small></span>
+                </button>
+                <button type="button" className="pkr-mockup-tool-tile" aria-label="Tournament"
+                  onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🏆</span>
+                  <span><strong>Tournament</strong><small>Blinds, timer and levels</small></span>
+                </button>
               </div>
-            </div>
-            <div className="pkr-tools-group">
+            </section>
+            <section className="pkr-tools-group" aria-label="Seating">
               <span className="pkr-tools-section-title">SEATING</span>
-              <div className="pkr-tools-seat-actions">
-                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
-                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
+              <div className="pkr-mockup-tools-grid">
+                <button type="button" className="pkr-mockup-tool-tile" aria-label="Add seat"
+                  onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙+</span>
+                  <span><strong>Add seat</strong><small>Add another player position</small></span>
+                </button>
+                <button type="button" className="pkr-mockup-tool-tile" aria-label="Remove empty seat"
+                  onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙−</span>
+                  <span><strong>Remove empty seat</strong><small>Only unoccupied seats</small></span>
+                </button>
               </div>
-            </div>
-            <div className="pkr-tools-group">
+            </section>
+            <section className="pkr-tools-group" aria-label="Table extras">
               <span className="pkr-tools-section-title">TABLE EXTRAS</span>
-              <div className="pkr-tools-seat-actions">
-                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
-                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
+              <div className="pkr-mockup-tools-grid">
+                <button type="button" className="pkr-mockup-tool-tile" aria-label="Seat draw"
+                  onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🎲</span>
+                  <span><strong>Seat draw</strong><small>Randomise seat positions</small></span>
+                </button>
+                <button type="button" className="pkr-mockup-tool-tile" aria-label="Rabbit hunt"
+                  onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>
+                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🐇</span>
+                  <span><strong>Rabbit hunt</strong><small>Track rabbit hunt and payouts</small></span>
+                </button>
               </div>
-            </div>
+            </section>
+            <div className="pkr-tools-reconciliation-note">ⓘ &nbsp; Save Results appears only when everyone has cashed out, the bank balances and synchronisation is clear.</div>
           </div>
         </AppDialog>}
 
         {/* Bank Bar */}
-        <div className="bank-bar" id="bankBar" role="button" tabIndex={0}
+        <div className="bank-bar pkr-mockup-bank" id="bankBar" role="button" tabIndex={0}
           aria-label="Toggle bank summary details" aria-expanded={false}
           onClick={() => (window as any).toggleBank?.()}
           onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="bank-left">
             <div className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></div>
-            <span className="bank-label">Bank <span className="pkr-bank-label-extra">Summary</span></span>
+            <span className="bank-label"><span>Bank</span><strong id="bbTotal" className="pkr-bank-total">$0.00</strong></span>
           </div>
           <div className="bank-right">
             <span className="bank-pill g"><span className="pkr-bank-visual pkr-bank-in" aria-hidden="true">●</span><span className="pkr-bank-metric"><small>IN</small><b id="bbIn">$0</b></span></span>
@@ -1726,6 +1769,7 @@ function updateBank() {
   var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
   var cashed = players.filter(function(p){ return pCash(p) > 0; }).length;
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+  set('bbTotal', fmt(totalIn));
   set('bbIn', fmtB(totalIn));
   set('bbOut', fmtB(totalOut));
   set('bbBank', fmtB(inBank));
@@ -2732,21 +2776,19 @@ window.shareLink = async function(url, text) {
 
 // ── Save Results ──
 window.updateSaveResultsBtn = function updateSaveResultsBtn() {
-  var ctx = getPkrCtx();
-  var btn = document.getElementById('saveResultsBtn');
-  if (!btn || !ctx || !ctx.gameId) return;
-  var players = Object.values(state.players||{}).filter(function(p){ return p && p.name && pBuyin(p)>0; });
-  var allCashedOut = players.length >= 2 && players.every(function(p){ return (p.transactions||[]).some(function(t){ return t.type === 'cashout'; }); });
-  btn.style.display = players.length>=2 ? '' : 'none';
-  if(window._pkrResultsSaved){
-    btn.innerHTML='<span class="game-tab-icon">✅</span> Results Saved';btn.disabled=true;
-  } else {
-    var remaining=players.length-players.filter(function(p){
-      return (p.transactions||[]).some(function(t){return t.type==='cashout';});
-    }).length;
-    btn.innerHTML='<span class="game-tab-icon">✅</span> '+(remaining?('Cash out '+remaining+' player'+(remaining===1?'':'s')):'Save Results');
-    btn.title=remaining?'Tap to see which players need cash-out.':'Reconcile and save final results.';
-  }
+  var btn=document.getElementById('saveResultsBtn');
+  if(!btn)return;
+  var ctx=getPkrCtx();
+  var ready=!!(ctx&&ctx.gameId&&state.game&&!window._pkrResultsSaved&&getSettlementReadiness().ready);
+  // Never advertise a bulk cash-out as a quick action. Individual cash-out
+  // remains available from the seat panel, while final saving is strictly
+  // gated by zero bank variance and successful sync/reconciliation.
+  btn.style.display=ready?'flex':'none';
+  btn.setAttribute('aria-hidden',ready?'false':'true');
+  btn.disabled=!ready;
+  btn.innerHTML='<span class="game-tab-icon">✅</span> Save Results';
+  btn.title=ready?'All players cashed out; bank balanced and synced. Save final results.':
+    'Save Results unlocks only when all cash-outs and bank reconciliation are complete.';
 };
 var updateSaveResultsBtn = window.updateSaveResultsBtn;
 
