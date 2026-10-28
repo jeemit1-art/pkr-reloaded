@@ -643,11 +643,12 @@ var _pkrSavedLayout=localStorage.getItem(_pkrSeatLayoutKey);
 if(_pkrSavedLayout==='full')_pkrSavedLayout='balanced';
 var _pkrSeatLayout=_pkrSavedLayout==='compact'?'compact':'auto';
 function pkrResolveSeatLayout(){
-  if(_pkrSeatLayout==='compact')return 'compact';
-  if(_pkrSeatLayout==='balanced')return 'balanced';
   var w=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
   var h=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  if(w<350||(w<900&&h<w))return 'compact';
+  if(w<350)return 'compact';
+  if(_pkrSeatLayout==='compact')return 'compact';
+  if(_pkrSeatLayout==='balanced')return 'balanced';
+  if(w<900&&h<w)return 'compact';
   return 'balanced';
 }
 window.pkrGetResolvedSeatLayout=pkrResolveSeatLayout;
