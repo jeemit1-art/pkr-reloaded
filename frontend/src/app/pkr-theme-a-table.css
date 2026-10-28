@@ -760,3 +760,10 @@
  display:block!important;max-width:64px!important;padding:0!important;background:transparent!important;
  color:#8FA5A5!important;text-shadow:none!important;font:650 9px/1.1 var(--font-body),sans-serif!important;
 }
+
+
+/* Approved phone felt silhouette: soft oval-ended rail without the stretched Mobile Rail geometry. */
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
+ #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
+}
