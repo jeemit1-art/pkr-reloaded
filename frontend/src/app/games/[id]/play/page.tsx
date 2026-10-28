@@ -1838,7 +1838,7 @@ function renderTable() {
     compact?Math.floor(Math.min(tabletPortrait?108:84,Math.max(vpW<355?64:74,W*.215))):
     Math.floor(Math.min(tabletPortrait?142:101,Math.max(tabletPortrait?102:80,W*(tabletPortrait?.22:.245))));
   var cardHeight=wideTable?(compact?(hasStacks?100:86):(hasStacks?108:82)):
-    compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:68);
+    compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
   // When thirteen players cannot fit at the requested scale, extend the
   // table canvas vertically and scroll it. Never overlap or silently hide seats.
   var minimumHeight=wideTable?450:Math.max(440,(maxSide+1)*(cardHeight+9)+34);
