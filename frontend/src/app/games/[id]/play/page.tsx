@@ -1877,7 +1877,7 @@ function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,compact){
     '<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'">'+badge+'</span></span>'+
     '<span class="pkr-game-compact-bank">'+esc(fmt(bankIn))+'</span>'+
     '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+
-    '<span class="pkr-game-compact-status '+statusClass+'">'+esc(status)+'</span>':
+    (cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+esc(status)+'</span>'):
     '<span class="pkr-game-seat-main">'+avatar+
       '<span class="pkr-game-seat-copy"><strong class="pkr-game-seat-name">'+esc(p.name)+'</strong>'+
         '<small class="pkr-game-seat-bank">'+esc(banks)+'</small>'+
