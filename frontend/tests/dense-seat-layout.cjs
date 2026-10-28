@@ -121,7 +121,8 @@ async function check(browser,width){
   const compact=await geometry('compact');
   assert.deepEqual(compact.overlaps,[],'Compact cards must not overlap: '+JSON.stringify(compact));
   assert(compact.scroll<=compact.viewport+3,'Compact mode must not widen the page.');
-  assert.equal(await page.locator('.pkr-game-compact-status.cashed').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-status-dot.cashed').count()>0,true,
+    'Compact mode shows a green check for cashed-out players without duplicate labels.');
   assert.equal(await page.locator('.pkr-game-compact-status.inplay').count()>0,true);
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
