@@ -72,7 +72,7 @@ async function check(browser,width){
   await page.getByRole('button',{name:'Open table controls'}).click();
   await sheet.waitFor({state:'visible'});
   assert.equal(await page.locator('.pkr-table-tools-dialog').evaluate(el=>el.matches(':modal')),true);
-  assert.equal(await page.getByRole('button',{name:'Balanced table view'}).getAttribute('aria-pressed'),'true');
+  assert.equal(await sheet.locator('.pkr-responsive-view-select').count(),0,'Approved Tools menu must stay clean');
   await page.screenshot({path:path.join(screenshots,'webkit-or-chromium-'+browser.browserType().name()+'-'+width+'-tools.png')});
   await page.getByRole('button',{name:'Close table controls'}).click();
   // Recreate the actual 13 occupied positions with no production Worker calls.
@@ -121,8 +121,7 @@ async function check(browser,width){
   assert.equal(await page.locator('.pkr-game-seat-status.cashed').count()>0,true);
   assert.equal(await page.locator('.pkr-game-seat-status.inplay').count()>0,true);
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
-  await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Compact table view'}).click();
+  await page.evaluate(()=>window.pkrSetSeatLayout('compact'));
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
   const compact=await geometry('compact');
   assert.deepEqual(compact.overlaps,[],'Compact cards must not overlap: '+JSON.stringify(compact));
@@ -135,8 +134,7 @@ async function check(browser,width){
   assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
-  await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Balanced table view'}).click();
+  await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-balanced').count(),13);
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
   // Gated cash-out/save action: no premature CTA for outstanding cashouts,
