@@ -1761,6 +1761,7 @@ function updateBank() {
   var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
   set('bbTotal', fmt(totalIn));
   set('bbBanks', totalBanks+'b');
+  set('bbBankQuick', fmt(inBank));
   set('bbInPlay', fmt(inBank));
   var inPlayEl=document.getElementById('bbInPlay');
   if(inPlayEl)inPlayEl.className=inBank<0?'neg':'pos';
