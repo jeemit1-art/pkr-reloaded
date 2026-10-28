@@ -1789,6 +1789,12 @@ function seatResultFor(p,stackRow){
 function seatCompactMoney(dollars){
   return Math.round(dollars*100)%100===0?'$'+Math.round(dollars):fmt(dollars);
 }
+function seatBankBrief(inDollars){
+  var bank=getBankSize();
+  if(!(bank>0))return seatCompactMoney(inDollars);
+  var count=Math.round(inDollars/bank*10)/10;
+  return (Number.isInteger(count)?String(count):count.toFixed(1))+'b · '+seatCompactMoney(inDollars);
+}
 function seatBankLabel(inDollars){
   var bank=getBankSize(),banks=bank>0?inDollars/bank:0;
   if(!bank||!Number.isFinite(banks))return fmt(inDollars)+' in';
@@ -1904,7 +1910,7 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var stackRow=(seatRows||{})[sid],stackLabel=seatStackText(stackRow);
       var result=seatResultFor(p,stackRow);
       var signClass=result.known?nc(result.amount):'pending';
-      var moneyHtml=bi>0?'<div class="seat-money"><span class="pkr-seat-money-full">'+esc(seatBankLabel(bi))+'</span><span class="pkr-seat-money-short">'+esc(seatCompactMoney(bi))+'</span></div>':'';
+      var moneyHtml=bi>0?'<div class="seat-money"><span class="pkr-seat-money-full">'+esc(seatBankBrief(bi))+'</span><span class="pkr-seat-money-short">'+esc(seatCompactMoney(bi))+'</span></div>':'';
       var resultHtml=bi>0?'<div class="seat-net '+signClass+'"><span class="pkr-seat-result-prefix">'+esc(result.prefix)+' </span><span class="pkr-seat-result-amount">'+(result.known?esc(fmtNet(result.amount)):'In play')+'</span></div>':
         (isRsvp?'<div class="seat-net pending"><span class="pkr-seat-result-amount">RSVP</span></div>':'');
       var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'">'+esc(stackRow.chips!=null?Number(stackRow.chips).toLocaleString('en-AU')+' chips':stackLabel)+'</div>':'';
@@ -1914,6 +1920,10 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
         '<div class="pkr-seat-details"><div class="seat-label">'+esc(p.name)+'</div>'+moneyHtml+resultHtml+chipHtml+'</div>';
       // A verified member image replaces initials only after loading.
       // No uploaded photos or unrelated members are exposed on this table.
+      seat.setAttribute('aria-label','Open player '+p.name+', '+(bi>0?seatBankLabel(bi):'no buy-in yet')+
+        (result.known?', '+result.prefix+' '+fmtNet(result.amount):', in play'));
+      var moneyEl=seat.querySelector('.seat-money');
+      if(moneyEl)moneyEl.title=seatBankLabel(bi);
       var photoUrl=seatProfilePhoto(sid,p);
       if(photoUrl){
         var chip=seat.querySelector('.seat-chip');
