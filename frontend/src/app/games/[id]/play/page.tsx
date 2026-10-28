@@ -1838,7 +1838,7 @@ function renderTable() {
   var compactWidth=wideTable?Math.min(105,Math.max(77,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var cardWidth=wideTable?(compact?compactWidth:balancedWidth):
     compact?Math.floor(Math.min(tabletPortrait?108:84,Math.max(vpW<355?64:74,W*.215))):
-    Math.floor(Math.min(tabletPortrait?142:101,Math.max(tabletPortrait?102:vpW<355?90:80,W*(tabletPortrait?.22:.245))));
+    Math.floor(Math.min(tabletPortrait?142:120,Math.max(tabletPortrait?102:90,W*(tabletPortrait?.22:.27))));
   var cardHeight=wideTable?(compact?(hasStacks?100:86):(hasStacks?108:82)):
     compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
   // When thirteen players cannot fit at the requested scale, extend the
@@ -1850,9 +1850,10 @@ function renderTable() {
   area.classList.remove('pkr-table-summary-on');
   if(summary){summary.hidden=true;summary.replaceChildren();}
   var tW=wideTable?Math.min(W*.72,1000):
-    tabletPortrait?Math.min(W*.47,380):Math.min(W*.49,225);
+    tabletPortrait?Math.min(W*.47,380):Math.min(W*(compact?.49:.45),250);
   var tH=wideTable?(tightWide?Math.min(H*.63,340):Math.min(H*.59,460)):
-    tabletPortrait?Math.min(H*.72,tW*1.56):Math.min(H*.63,tW*1.77);
+    tabletPortrait?Math.min(H*.72,tW*1.56):
+    Math.min(H*.63,compact?tW*1.77:Math.max(tW*1.77,vpW>=355?320:0));
   var screen=document.getElementById('gameScreen');
   if(screen){
     screen.classList.toggle('pkr-wide-table',wideTable);
