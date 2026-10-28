@@ -881,3 +881,21 @@
 #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
  min-width:0!important;overflow:hidden!important;
 }
+
+
+/* Final visual review: compact status ticks must not cover player names.
+   Keep badges at the top corner of the avatar, not the name baseline. */
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-status-dot{
+ top:-5px!important;right:-6px!important;bottom:auto!important;
+ width:14px!important;height:14px!important;
+ font-size:10px!important;
+}
+
+/* A true casino oval at tablet-landscape and desktop widths. The geometric
+   seat coordinates stay unchanged; only the felt and rail paint changes. */
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableOuter{
+ border-radius:24% / 50%!important;
+}
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableFelt{
+ border-radius:24% / 50%!important;
+}
