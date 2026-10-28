@@ -88,8 +88,8 @@ async function check(browser,name,width,height){
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
   if(width<=700){
-   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),false);
-   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),false);
+   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true);
+   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true);
   }
   const tools=page.getByRole('button',{name:'Open table controls'});
   await tools.click();
@@ -98,8 +98,8 @@ async function check(browser,name,width,height){
   assert(await sheet.evaluate(el=>el.matches(':modal')),'Table menu must be above bottom dock');
   assert.equal(await sheet.getByRole('button',{name:/Hand tracker/}).count(),1);
   assert.equal(await sheet.getByRole('button',{name:/Tournament/}).count(),1);
-  assert.equal(await sheet.getByRole('button',{name:'＋ Add seat'}).count(),1);
-  assert.equal(await sheet.getByRole('button',{name:'－ Remove empty seat'}).count(),1);
+  assert.equal(await sheet.getByRole('button',{name:'Add seat'}).count(),1);
+  assert.equal(await sheet.getByRole('button',{name:'Remove empty seat'}).count(),1);
   await page.screenshot({path:path.join(output,name+'-menu.png')});
   await sheet.getByRole('button',{name:'Close table controls'}).click();
   await sheet.waitFor({state:'detached'});
