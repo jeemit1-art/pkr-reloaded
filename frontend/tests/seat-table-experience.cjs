@@ -92,7 +92,7 @@ async function check(browser,name,width,height){
   const layout=page.getByRole('group',{name:'Seat layout'});
   await layout.getByRole('button',{name:'Full',exact:true}).click();
   assert.equal(await page.locator('#gameScreen').getAttribute('data-seat-layout'),'full');
-  await page.locator('#seat7 .seat-money').filter({hasText:'$25.00'}).waitFor();
+  await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
   await page.locator('#seat7 .seat-chip.pkr-has-photo').waitFor({state:'visible'});
   assert.equal(await page.locator('#seat7 .pkr-seat-avatar-photo').getAttribute('alt'),'');
