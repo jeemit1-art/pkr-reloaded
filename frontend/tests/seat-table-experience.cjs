@@ -97,7 +97,8 @@ async function check(browser,name,width,height){
   await page.locator('#seat7 .seat-chip.pkr-has-photo').waitFor({state:'visible'});
   assert.equal(await page.locator('#seat7 .pkr-seat-avatar-photo').getAttribute('alt'),'');
   assert.equal(await page.locator('#seat3 .pkr-seat-avatar-photo').count(),0,'No avatar: keep initials');
-  assert.match(await page.locator('#seat7 .seat-net').innerText(),/Live/);
+  assert.match((await page.locator('#seat7 .seat-net').textContent())||'',/Live/);
+  assert.match(await page.locator('#seat7 .seat-net').innerText(),/\+\$/);
   assert(await page.locator('#seat7 .seat-net').evaluate(el=>getComputedStyle(el).color)!==
     await page.locator('#seat3 .seat-net').evaluate(el=>getComputedStyle(el).color),
     'Win must be green and loss red');
