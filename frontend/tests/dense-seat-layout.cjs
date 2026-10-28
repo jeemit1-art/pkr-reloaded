@@ -149,7 +149,7 @@ async function check(browser,width){
     await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
     await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
   }else{
-    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    await page.evaluate(()=>window.pkrSetSeatLayout('auto'));
     assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),'compact',
       'Sub-350px phones must remain on the compact approved renderer.');
   }
