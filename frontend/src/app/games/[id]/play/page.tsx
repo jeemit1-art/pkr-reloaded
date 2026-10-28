@@ -272,9 +272,9 @@ export default function PlayPage() {
           onClick={() => (window as any).toggleBank?.()}
           onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault(); (window as any).toggleBank?.();}}}>
           <div className="pkr-bank-quick">
-            <span className="pkr-bank-quick-item pkr-bank-count"><span className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></span><small>Banks</small><strong id="bbBanks">0b</strong></span>
+            <span className="pkr-bank-quick-item pkr-bank-count"><span className="bank-icon" aria-hidden="true"><img src="/images/casino/real-poker-chips.webp" alt="" /></span><small>Bank</small><strong id="bbBankQuick">$0</strong></span>
             <span className="pkr-bank-quick-divider" aria-hidden="true"></span>
-            <span className="pkr-bank-quick-item pkr-bank-inplay-quick"><span aria-hidden="true">💵</span><strong id="bbInPlay">$0</strong><small>In Play</small></span>
+            <span className="pkr-bank-quick-item pkr-bank-inplay-quick"><small>In Play</small><strong id="bbInPlay">$0</strong></span>
           </div>
           <strong id="bbTotal" className="pkr-bank-total pkr-bank-total-hidden">$0.00</strong>
           <div className="bank-right pkr-bank-detail-pills" aria-hidden="true">
@@ -1839,13 +1839,13 @@ function renderTable() {
   var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
   var cardHeight=mobileRail?(hasStacks?96:84):compact?(tightWide?(hasStacks?82:70):(hasStacks?98:82)):tightWide?(hasStacks?86:68):(hasStacks?96:76);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
-  var H=Math.max(availableHeight,minimumHeight);
+  var H=Math.max(Math.min(availableHeight,wideTable?680:690),Math.min(minimumHeight,wideTable?560:680));
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
   if(summary){summary.hidden=true;summary.replaceChildren();}
-  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):mobileRail?Math.max(250,H-2*(cardHeight*.58+24)):Math.max(190,H-2*(cardHeight+22));
-  var tW=wideTable?Math.min(W*.72,1000):mobileRail?Math.min(W*.67,tH*.46):Math.min(W*.57,tH*.64);
+  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):Math.min(H*.69,Math.max(310,H-2*(cardHeight*.72+24)));
+  var tW=wideTable?Math.min(W*.72,1000):Math.min(W*.62,tH*.70);
   var screen=document.getElementById('gameScreen');
   if(screen){
     screen.classList.toggle('pkr-wide-table',wideTable);
@@ -1895,7 +1895,7 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     for(var b=0;b<rightCount;b++)positions.push(polar(Math.PI/2-Math.PI*(b+1)/(rightCount+1)));
   }else{
     var top=g.cardHeight/2+12,bottom=g.height-g.cardHeight/2-12;
-    var leftX=g.mobileRail?Math.max(g.cardWidth/2+3,cx-tW/2-g.cardWidth*.08):Math.max(g.cardWidth/2+8,cx-tW/2-g.cardWidth*.32),rightX=g.width-leftX;
+    var leftX=Math.max(g.cardWidth/2+7,cx-tW/2-g.cardWidth*.36),rightX=g.width-leftX;
     var first=top+g.cardHeight*.62,last=bottom-g.cardHeight*.62,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
     positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
     for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
