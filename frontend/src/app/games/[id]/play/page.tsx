@@ -1882,9 +1882,10 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   // At 320px wide, a complete player card is wider than the old bare chip.
   // Keep the numbered side seats inside the screen in either view, without
   // changing their order, hit handlers, table felt or the saved game.
-  var fullCardHalf=Math.min(126,W*0.32)/2;
+  var viewportWidth=cx*2; // renderTable centres seats at W/2.
+  var fullCardHalf=Math.min(126,viewportWidth*0.32)/2;
   var leftX=wideTable?cx-hOff:Math.max(cx-hOff,fullCardHalf+6);
-  var rightX=wideTable?cx+hOff:Math.min(cx+hOff,W-fullCardHalf-6);
+  var rightX=wideTable?cx+hOff:Math.min(cx+hOff,viewportWidth-fullCardHalf-6);
   var positions = [];
   if (wideTable) {
     // Seat 1 at the top, then continue down the left and back up the right.
