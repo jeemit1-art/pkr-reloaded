@@ -2,6 +2,9 @@
 /* Synthetic 13-seat browser test. No live game or financial requests. */
 const assert=require('node:assert/strict');
 const {chromium,webkit}=require('playwright');
+const fs=require('node:fs'),path=require('node:path');
+const screenshots=path.resolve(__dirname,'../../artifacts/mockup-gameplay');
+fs.mkdirSync(screenshots,{recursive:true});
 const url='http://127.0.0.1:3000';
 const api='https://pkr-reloaded-worker-staging.jeemit1.workers.dev';
 const now=Math.floor(Date.now()/1000);
@@ -39,107 +42,113 @@ async function check(browser,width){
  });
  try{
   await page.goto(url+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
-  // Wait for the embedded poker table to complete its async boot and state
-  // hydration before checking the dense-seat geometry.
-  await page.waitForFunction(()=>!!window.state?.game&&
-    typeof window.renderTable==='function',{timeout:17000});
-  await page.evaluate(()=>window.renderTable());
-  await page.locator('#seat3 .pkr-dense-info').waitFor();
+  await page.locator('#seat3 .pkr-game-seat-card').waitFor({state:'visible'});
+  assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false,
+    'No detached player-strip overlay is allowed in either layout.');
+  assert.equal(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-full')),true,
+    'The approved mockup defaults to Full details.');
   await page.locator('#seat3 .pkr-seat-photo').waitFor();
-  assert.match(await page.locator('#seat3 .pkr-dense-bank').textContent(),/1b.*25/);
-  assert.match(await page.locator('#seat7 .pkr-dense-result').textContent(),/-/);
-  assert(await page.locator('#seat7 .pkr-dense-result').evaluate(e=>getComputedStyle(e).color==='rgb(255, 104, 118)'));
-  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+3);
-  assert.equal(overflow,false,'No horizontal page overflow');
+  const inPlay=page.locator('#seat3');
+  assert.match(await inPlay.locator('.pkr-game-seat-status').innerText(),/IN PLAY/);
+  assert.match(await inPlay.locator('.pkr-game-seat-result').textContent(),/-\$25/);
+  assert.equal(await inPlay.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 93, 114)','In-play buy-in must be red.');
+  const cashed=page.locator('#seat7');
+  assert.match(await cashed.locator('.pkr-game-seat-status').innerText(),/CASHED OUT/);
+  assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
+  for(const label of ['.bank-right>.bank-pill.g','.bank-right>.pkr-bank-out','.bank-right>.pkr-bank-current']){
+    assert.equal(await page.locator(label).isVisible(),true,
+      'Bank, IN and OUT segments must all be visible on the phone.');
+  }
+  assert.equal(await page.locator('#saveResultsBtn').isVisible(),false,
+    'Do not show Save Results before all cash-outs reconcile.');
+  const sheet=page.locator('.pkr-mockup-tools-sheet');
   await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Full details'}).click();
-  await page.locator('#pkrSeatSummary .pkr-seat-summary-card').first().waitFor();
-  assert.equal(await page.locator('#pkrSeatSummary .pkr-seat-summary-card').count(),2);
-  assert.match(await page.locator('#pkrSeatSummary').innerText(),/Alex/);
-  assert.match(await page.locator('#pkrSeatSummary').innerText(),/Blair/);
-  await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Compact seats'}).click();
-  assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
-  assert(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-compact')));
-  // Original bug: thirteen OCCUPIED seats on a narrow phone, not just
-  // thirteen available seats with two players. All data is synthetic.
+  await sheet.waitFor({state:'visible'});
+  assert.equal(await page.locator('.pkr-table-tools-dialog').evaluate(el=>el.matches(':modal')),true);
+  assert.equal(await page.getByRole('button',{name:'Full details'}).getAttribute('aria-pressed'),'true');
+  await page.screenshot({path:path.join(screenshots,'webkit-or-chromium-'+browser.browserType().name()+'-'+width+'-tools.png')});
+  await page.getByRole('button',{name:'Close table controls'}).click();
+  // Recreate the actual 13 occupied positions with no production Worker calls.
   await page.evaluate(()=>{
     const s=window.state;
     for(let i=1;i<=13;i++){
       const sid='seat'+i;
       const existing=s.players[sid];
-      const money=i%3===0?null:i%2===0?35:15;
+      const result=i%3===0?null:i%2===0?35:15;
       s.players[sid]=existing||{
         name:'Player '+i,userId:'synthetic-member-'+i,transactions:[
           {type:'buyin',amount:25,ts:Date.now()},
-          ...(money===null?[]:[{type:'cashout',amount:money,ts:Date.now()}]),
+          ...(result===null?[]:[{type:'cashout',amount:result,ts:Date.now()}]),
         ],
       };
     }
     window.renderTable();
   });
-  const allSeats=page.locator('#seatsContainer>.seat');
-  assert.equal(await allSeats.count(),13);
+  const seats=page.locator('#seatsContainer>.pkr-mockup-player-seat');
+  assert.equal(await seats.count(),13,'Full mode must have thirteen attached cards.');
+  async function geometry(mode){
+    return page.evaluate(mode=>{
+      const items=[...document.querySelectorAll('#seatsContainer>.pkr-mockup-player-seat')];
+      const bounds=items.map(e=>({n:Number(e.id.slice(4)),x:e.getBoundingClientRect().x,
+        y:e.getBoundingClientRect().y,w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height,
+        text:e.textContent,bank:e.querySelector('.pkr-game-seat-bank,.pkr-game-compact-bank')?.textContent||'',
+        display:getComputedStyle(e).display}));
+      const overlaps=[];
+      for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+        const a=bounds[i],b=bounds[j];
+        const ow=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);
+        const oh=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+        if(ow>7&&oh>7)overlaps.push(a.n+':'+b.n);
+      }
+      return {mode,bounds,overlaps,viewport:innerWidth,scroll:document.documentElement.scrollWidth,
+        stripVisible:document.getElementById('pkrSeatSummary').getBoundingClientRect().height>0};
+    },mode);
+  }
+  const full=await geometry('full');
+  assert.equal(full.stripVisible,false,'Mockup has no horizontal roster strip.');
+  assert.equal(full.bounds.length,13);
+  assert(full.bounds.every(p=>p.bank.includes('1b')||p.bank.includes('2b')),
+    'All occupied full cards show bank figures.');
+  assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
+  assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
+  assert.equal(await page.locator('.pkr-game-seat-status.cashed').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-seat-status.inplay').count()>0,true);
+  await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
   await page.getByRole('button',{name:'Compact seats'}).click();
-  const compact=await page.evaluate(()=>{
-    const seats=[...document.querySelectorAll('#seatsContainer>.seat')];
-    const rect=e=>e.getBoundingClientRect();
-    const parts=seats.map((el,i)=>({
-      seat:i+1,
-      outer:rect(el), info:el.querySelector('.pkr-dense-info')&&rect(el.querySelector('.pkr-dense-info')),
-      bank:el.querySelector('.pkr-dense-bank')?.textContent||'',
-      result:el.querySelector('.pkr-dense-result')?.textContent||'',
-      color:el.querySelector('.pkr-dense-result')?
-        getComputedStyle(el.querySelector('.pkr-dense-result')).color:null,
-      isVisible:!!el.querySelector('.pkr-dense-info')&&rect(el.querySelector('.pkr-dense-info')).width>35,
-    }));
-    const sideGroups=[parts.slice(1,7),parts.slice(8,13)];
-    const overlaps=[];
-    for(const group of sideGroups){
-      const sorted=[...group].sort((a,b)=>a.outer.y-b.outer.y);
-      for(let i=1;i<sorted.length;i++){
-        if(sorted[i].outer.y<sorted[i-1].outer.bottom-3)
-          overlaps.push(sorted[i-1].seat+' overlaps '+sorted[i].seat);
-      }
-    }
-    return {
-      parts:parts.map(p=>({...p,outer:p.outer.toJSON(),info:p.info?.toJSON()})),
-      overlaps,scroll:document.documentElement.scrollWidth,viewport:innerWidth,
-    };
-  });
-  assert.equal(compact.parts.length,13);
-  assert(compact.parts.every(p=>p.isVisible&&p.bank.includes('1b')),
-   'All 13 occupied seats need visible bank counts: '+JSON.stringify(compact.parts));
-  assert.equal(compact.overlaps.length,0,'Compact side seats overlap: '+compact.overlaps.join(', '));
-  assert(compact.scroll<=compact.viewport+3,'Compact layout must not overflow the screen');
-  assert(compact.parts.some(p=>p.color==='rgb(61, 220, 151)'),
-    'At least one profitable seat should show green');
-  assert(compact.parts.some(p=>p.color==='rgb(255, 104, 118)'),
-    'At least one losing seat should show red');
+  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
+  const compact=await geometry('compact');
+  assert.deepEqual(compact.overlaps,[],'Compact cards must not overlap: '+JSON.stringify(compact));
+  assert(compact.scroll<=compact.viewport+3,'Compact mode must not widen the page.');
+  assert.equal(await page.locator('.pkr-game-compact-status.cashed').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-compact-status.inplay').count()>0,true);
+  await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
   await page.getByRole('button',{name:'Full details'}).click();
-  const cards=page.locator('#pkrSeatSummary .pkr-seat-summary-card');
-  assert.equal(await cards.count(),13,'Full mode must retain all thirteen occupied players');
-  await cards.last().scrollIntoViewIfNeeded();
-  const full=await page.evaluate(()=>{
-    const table=document.getElementById('tableWrap').getBoundingClientRect();
-    const strip=document.getElementById('pkrSeatSummary').getBoundingClientRect();
-    const seat1=document.getElementById('seat1').getBoundingClientRect();
-    const cards=[...document.querySelectorAll('#pkrSeatSummary .pkr-seat-summary-card')];
-    const bankText=cards.map(c=>c.textContent||'');
-    return {table:table.toJSON(),strip:strip.toJSON(),seat1:seat1.toJSON(),
-      stripHidden:document.getElementById('pkrSeatSummary').hidden,
-      cards:cards.length,banks:bankText,overflow:document.documentElement.scrollWidth>innerWidth+3};
+  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-full').count(),13);
+  assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
+  // Gated cash-out/save action: no premature CTA for outstanding cashouts,
+  // unbalanced money or unsynced edits. No real backend write occurs.
+  assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
+  await page.evaluate(()=>{
+    for(const p of Object.values(window.state.players)){
+      p.transactions=[{type:'buyin',amount:25,ts:Date.now()},
+        {type:'cashout',amount:25,ts:Date.now()}];
+    }
+    window.renderTable();
   });
-  assert.equal(full.stripHidden,false);
-  assert(full.strip.bottom<=full.table.top+2,
-    'Full layout summary must not overlay the table: '+JSON.stringify(full));
-  assert(full.banks.every(b=>b.includes('1b')),
-    'Full layout must show all bank totals, including scrollable cards');
-  assert(!full.overflow,'Full balance strip should scroll internally, never widen the page');
+  await page.waitForFunction(()=>window.getSettlementReadiness()?.ready===true,{timeout:7000});
+  assert.equal(await page.locator('#saveResultsBtn').isVisible(),true,
+    'Save Results only appears for fully reconciled bank and cash-outs.');
+  await page.evaluate(()=>{
+    window.state.players.seat2.transactions[1].amount=30;
+    window.renderTable();
+  });
+  assert.equal(await page.locator('#saveResultsBtn').isVisible(),false,
+    'Reconciliation mismatch must immediately hide the Save Results action.');
   assert.deepEqual(unexpected,[]);
-  console.log('PASS synthetic 13-occupied-seat compact/full geometry, colours, and accessible bank totals at '+width+'px');
+  console.log('PASS mockup-aligned full/compact 13-seat cards, bank, statuses, safe action gate, modal at '+width+'px');
  }finally{await ctx.close();}
 }
 (async()=>{for(const engine of [chromium,webkit]){
