@@ -115,7 +115,9 @@ async function check(browser,name,width,height){
    .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
   assert.equal(await page.locator('.side-panel').getByText('Pending',{exact:true}).count(),0);
-  assert.match(await page.locator('#pkrSeatChipSummary').innerText(),/95 chips/);
+  await page.locator('.side-panel.open #pkrSeatChipSummary')
+   .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
+  assert.match((await page.locator('#pkrSeatChipSummary').textContent())||'',/95 chips/);
   if(width<=700){
    const geometry=await page.locator('#gameScreen .topbar').evaluate(el=>{
     const r=el.getBoundingClientRect();
