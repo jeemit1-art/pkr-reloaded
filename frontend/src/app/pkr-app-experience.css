@@ -224,3 +224,97 @@ body:has(#gameScreen):has(.sheet.open,.sheet.show,.overlay.open,.overlay.show) .
  .pkr-table-tools-sheet button.pkr-tool-action{min-height:65px}
  .pkr-tools-seat-actions{gap:7px}
 }
+
+/* PKR MOCKUP TABLE CONTROLS 2026-10-28 — visually aligned with approved
+   three-phone reference. All native dialog/safe-area behaviour is preserved. */
+.pkr-dialog-root .pkr-table-tools-dialog.pkr-native-dialog .pkr-mockup-tools-sheet{
+ display:block!important;width:min(448px,100%)!important;max-width:448px!important;
+ min-height:0!important;padding:0!important;overflow-y:auto!important;
+ border:1px solid #3F7775!important;border-radius:19px!important;
+ background:linear-gradient(150deg,#10292D,#07181D)!important;
+ box-shadow:0 25px 75px #000D,0 0 0 1px #14534F!important;
+ color:#EAF0F2!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header{
+ display:flex!important;align-items:start!important;gap:12px!important;
+ padding:20px 16px 16px!important;margin:0!important;
+ border-bottom:1px solid #2C5960!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header h2{
+ font:800 clamp(22px,6vw,29px)/1.2 var(--font-head),Inter,sans-serif!important;
+ margin:5px 0!important;letter-spacing:-.025em;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header p{
+ color:#9DB8C0!important;font-size:12px!important;margin-top:5px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-close{
+ height:46px;min-width:46px!important;flex:0 0 46px!important;
+ margin:0!important;background:#1E353A!important;border:1px solid #56BEA3!important;
+ outline:1px solid #193B41;color:#DAEFF1!important;
+ border-radius:13px!important;font-size:25px!important;
+ box-shadow:0 0 0 3px #113933;cursor:pointer;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-group{
+ margin:0!important;padding:11px 0 1px!important;
+ border-bottom:1px solid #2A4B51!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-section-title{
+ display:block;margin:0 14px 9px!important;
+ color:#A8C3C7!important;letter-spacing:.16em!important;
+ font:850 11px/1.15 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tools-grid{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:9px!important;margin:0 13px 11px!important;width:auto!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile{
+ display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;
+ grid-template-rows:1fr!important;align-items:center!important;
+ column-gap:8px!important;text-align:left!important;
+ width:100%!important;min-width:0!important;height:auto!important;
+ min-height:67px!important;padding:10px!important;margin:0!important;
+ border:1px solid #376A70!important;border-radius:12px!important;
+ background:#112A31!important;color:#EAF0F2!important;cursor:pointer;
+ font-family:var(--font-body),Inter,sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile:hover,
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile:focus-visible{
+ background:#16403C!important;border-color:#3DDC97!important;outline-offset:1px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile.is-selected{
+ background:linear-gradient(120deg,#144338,#0C312F)!important;
+ border:2px solid #3DDC97!important;
+ box-shadow:inset 0 0 0 1px #3DDC9750!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{
+ grid-row:auto!important;display:grid;place-items:center;
+ width:34px;height:34px;min-width:0;
+ border:1px solid #316366;border-radius:9px;
+ background:#18373C!important;color:#A8D7D0!important;
+ font:800 17px/1 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile>span:last-child{
+ min-width:0!important;display:grid!important;gap:4px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile strong{
+ display:block;color:#EAF0F2!important;line-height:1.2!important;
+ font:750 clamp(10px,3vw,13px)/1.2 var(--font-body),sans-serif!important;
+ white-space:normal!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{
+ display:block;color:#A2BFC4!important;
+ font:500 10px/1.25 var(--font-body),sans-serif!important;
+ white-space:normal!important;overflow-wrap:break-word;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-reconciliation-note{
+ display:flex;align-items:center;gap:5px;
+ margin:10px 13px 14px;padding:11px 12px;
+ background:#0D2930;border:1px solid #27545A;border-radius:10px;
+ color:#B4D1D5;font:500 11px/1.4 var(--font-body),sans-serif;
+}
+@media(max-width:360px){
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tools-grid{gap:6px!important;margin:0 8px 8px!important}
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile{padding:6px!important;column-gap:5px!important;grid-template-columns:28px minmax(0,1fr)!important}
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{width:28px;height:28px}
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{font-size:9px!important}
+}

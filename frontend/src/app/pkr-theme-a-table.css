@@ -393,3 +393,222 @@
   line-height:1.06!important;
  }
 }
+
+/* PKR APPROVED MOCKUP 2026-10-28
+   Seat cards anchored to real numbered seats, never a detached top strip.
+   A player's red amount while IN PLAY is the money invested, NOT a realised
+   loss. The realised net is presented only after an actual cash-out record. */
+#gameScreen.pkr-casino-live-table .pkr-seat-summary,
+#gameScreen.pkr-casino-live-table #pkrSeatSummary{display:none!important}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on{
+ display:block!important;
+}
+#gameScreen.pkr-casino-live-table .table-wrap{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat{
+ width:var(--pkr-card-width,105px)!important;
+ height:var(--pkr-card-height,75px)!important;
+ min-width:0;min-height:0;max-width:none!important;
+ position:absolute;box-sizing:border-box;display:block!important;
+ z-index:9;touch-action:manipulation;outline-offset:3px;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat:focus-visible{
+ outline:2px solid #3DDC97!important;border-radius:11px;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card{
+ display:flex;flex-direction:column;position:relative;
+ height:100%;width:100%;min-width:0;min-height:0;
+ border-radius:12px;border:1px solid #315F58;
+ background:linear-gradient(150deg,#0D2525F2,#071416FA);
+ box-shadow:0 5px 15px #0009, inset 0 0 0 1px #09382C;
+ color:#EAF0F2;overflow:visible;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.cashed{
+ border-color:#258A69;background:linear-gradient(155deg,#0D2B25F5,#081D1CF9);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.inplay{
+ border-color:#6E3C45;background:linear-gradient(155deg,#18252AFA,#10171BFA);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-number{
+ position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+ min-width:23px;height:16px;padding:1px 5px;z-index:3;
+ border:1px solid #668A91;border-radius:6px;
+ background:#0B181D;color:#EAF0F2;display:grid;place-items:center;
+ font:800 10px/1 var(--font-num),monospace;white-space:nowrap;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-main{
+ display:flex;align-items:center;gap:5px;width:100%;flex:1;min-height:0;
+ padding:4px 4px 2px;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{
+ display:flex;align-items:center;justify-content:center;
+ flex:0 0 clamp(25px,3.2vw,32px);height:clamp(25px,3.2vw,32px);
+ background:#1A5245;border:2px solid #64B79A;
+ border-radius:50%;overflow:hidden;min-width:0;box-shadow:0 2px 5px #0007;
+ color:#F0F9F5;font:800 11px/1 var(--font-body),sans-serif;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar img,
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .pkr-seat-photo,
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .pkr-avatar-fallback{
+ width:100%;height:100%;min-width:0;object-fit:cover;border-radius:50%;display:grid;place-items:center;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-copy{
+ min-width:0;display:flex;flex-direction:column;align-items:flex-start;
+ justify-content:center;gap:1px;flex:1;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-name{
+ display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;font:800 10px/1.16 var(--font-body),Inter,sans-serif;
+ color:#F0FAF6;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-bank{
+ display:block;max-width:100%;overflow:hidden;white-space:nowrap;
+ font:650 9px/1.18 var(--font-num),monospace;color:#D4E4E0;
+ letter-spacing:-.035em;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result{
+ display:block;max-width:100%;font:900 12px/1.2 var(--font-num),monospace;
+ font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.04em;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.pos{color:#3DDC97!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.neg{color:#FF5D72!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.zero{color:#D5E3E5!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status{
+ flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+ width:100%;min-width:0;min-height:14px;height:17px;
+ border-top:1px solid #36665D;border-radius:0 0 11px 11px;
+ font:800 8px/1.15 var(--font-body),Inter,sans-serif;letter-spacing:.035em;
+ white-space:nowrap;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.cashed,
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.cashed{
+ color:#3FF0AE;background:#043B2B;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.inplay,
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.inplay{
+ color:#FF6078;background:#32121F;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.waiting{color:#B5C8C9;background:#192830}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status>span{
+ display:inline-grid;place-items:center;width:12px;height:12px;
+ margin-right:3px;border-radius:50%;
+ border:1px solid currentColor;font:900 9px/1 sans-serif;
+}
+/* Compact mockup: avatar, bank dollars, net/in-play and an unambiguous icon. */
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-layout-compact{
+ width:min(59px,calc(var(--pkr-card-width,110px) * .58))!important;
+ height:var(--pkr-card-height,75px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+ align-items:center;justify-content:center;gap:1px;padding:4px 2px 2px;
+ border-radius:12px;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-avatar{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ height:clamp(23px,3.6vw,32px);flex:0 0 auto;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-avatar .pkr-game-seat-avatar{
+ flex-basis:clamp(23px,3.6vw,32px);height:clamp(23px,3.6vw,32px);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot{
+ position:absolute;right:-5px;bottom:-2px;display:grid;place-items:center;
+ width:15px;height:15px;border:1px solid currentColor;border-radius:50%;
+ font:900 11px/1 sans-serif;box-shadow:0 0 0 2px #112426;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-bank{
+ color:#DCEAE8;font:800 9px/1.15 var(--font-num),monospace;
+ letter-spacing:-.04em;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:11px;line-height:1.12;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status{
+ display:block;font:800 7px/1.12 var(--font-body),sans-serif;
+ max-width:100%;white-space:nowrap;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status.cashed{color:#3FF0AE}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status.inplay{color:#FF6078}
+/* Complete bank breakdown at phone width, just like the supplied mockup. */
+#gameScreen.pkr-casino-live-table #bankBar.bank-bar.pkr-mockup-bank{
+ display:flex!important;align-items:center!important;
+ min-width:0!important;height:58px!important;min-height:58px!important;
+ margin:5px 8px 4px!important;padding:5px 7px!important;gap:3px!important;
+ border:1px solid #37676A!important;border-radius:12px!important;
+ background:#05191C!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{
+ display:flex!important;gap:4px!important;min-width:0;flex:0 0 auto;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{
+ flex:0 0 23px;width:23px!important;height:23px!important;
+ background:#06352C!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{
+ display:grid;gap:3px;line-height:1.05;color:#DCEBE8!important;
+ font:750 10px/1.08 var(--font-body),sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{
+ color:#F2B84B;font:900 11px/1.05 var(--font-num),monospace;
+ white-space:nowrap;letter-spacing:-.04em;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right{
+ flex:1 1 0!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr)) 9px;
+ align-items:center!important;gap:0!important;justify-content:stretch!important;min-width:0!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.bank-pill.g,
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.pkr-bank-out,
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.pkr-bank-current{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;gap:1px!important;min-width:0!important;
+ height:40px!important;margin:0!important;padding:0 2px!important;
+ border:0!important;border-left:1px solid #285258!important;
+ border-radius:0!important;background:transparent!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-visual{
+ display:inline-block!important;flex:0 0 11px!important;
+ width:11px!important;height:11px!important;margin:0!important;border-radius:50%;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-metric{
+ display:grid!important;align-items:center!important;justify-items:center!important;
+ gap:2px!important;min-width:0!important;width:100%!important;text-align:center!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill small{
+ font:700 9px/1 var(--font-body),sans-serif!important;color:#A9C1C4!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{
+ font:850 clamp(8px,2.1vw,10px)/1.12 var(--font-num),monospace!important;
+ letter-spacing:-.045em;white-space:nowrap!important;
+ overflow:visible!important;max-width:none!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill.g b{color:#3DDC97!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-out b{color:#F28FA9!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-current b{color:#F2B84B!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-caret{
+ font-size:12px!important;justify-self:center!important;color:#A8C8CB!important;
+}
+@media(max-width:380px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank{
+  margin:4px 5px!important;padding:4px 4px!important;gap:2px!important;
+ }
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{font-size:9px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{font-size:9px}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{
+  font-size:clamp(7px,2vw,9px)!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-main{gap:3px;padding:3px 2px 1px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{flex-basis:24px;height:24px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-name{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-bank{font-size:8px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-size:10px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-status{height:13px;font-size:7px}
+}
+@media(max-height:690px){
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-main{padding-top:2px;padding-bottom:0}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-status{height:13px;font-size:7px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{flex-basis:23px;height:23px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-name{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-bank{font-size:8px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-size:10px}
+}
