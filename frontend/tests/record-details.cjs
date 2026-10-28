@@ -22,7 +22,12 @@ const api={events:{
  list:async id=>{requests++;return id==='r1'?games:[];},
  live:async()=>({players,totalIn:20000,totalOut:17000,bank:3000}),
  get:async id=>({...game(id),players,rsvps:[{id:'yes1',display_name:'Alex',status:'yes'},{id:'no1',display_name:'Casey',status:'no'}]}),
- results:async token=>{if(failResults&&token==='token-g2')throw new Error('Temporary outage');return {game:games.find(g=>g.results_token===token),players,transfers:token==='token-g1'?payments:[]};},
+ results:async token=>{if(failResults&&token==='token-g2')throw new Error('Temporary outage');return {
+  game:games.find(g=>g.results_token===token),
+  players:token==='token-g2'?
+    [{...players[0],user_id:'historic-alex-id',display_name:' Alex ',buy_ins:3,buy_in_total:10000},
+     {...players[1],user_id:'old-other-id',display_name:'Casey'}]:players,
+  transfers:token==='token-g1'?payments:[]};},
 }};
 const fmt=n=>(n<0?'-':'')+'$'+(Math.abs(n)/100).toFixed(2),fmtSign=n=>(n>0?'+':'')+fmt(n);
 const moduleObject={exports:{}};
@@ -51,6 +56,14 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  assert.equal(balance.rows.length,3);assert.match(balance.summary,/net to pay \$19\.00/);
  const person=await load({kind:'player',title:'Alex',roomId:'r1',playerId:'a',playerName:'Alex'});
  assert.equal(person.rows.length,2);assert.match(person.summary,/\+\$40\.00/);
+ assert.match(person.summary,/2 settled games/);
+ assert.deepEqual(person.rows.map(row=>row.href).sort(),
+  ['/games/results/token-g1','/games/results/token-g2']);
+ assert(person.rows.every(row=>row.detail.includes('Buy-ins')&&row.detail.includes('Cash-out')),
+  'Each game history entry shows buy-ins and cash-outs');
+ assert(person.rows.some(row=>row.detail.includes('3 buy-ins')),
+  'Historical games must match the leaderboard name even if user IDs change');
+ assert.equal((await load({kind:'player',title:'Alex wins',roomId:'r1',playerId:'a',playerName:'Alex',filter:'profitable'})).rows.length,2);
  assert.equal((await load({kind:'transfers',title:'Recent',roomId:'r1',filter:'paid',period:'90d'})).rows.length,1);
  assert.equal((await load({kind:'rsvps',title:'Attending',gameId:'g3',filter:'yes'})).rows.length,1);
  assert.equal((await load({kind:'seats',title:'Seats',gameId:'g3'})).rows.length,9);
