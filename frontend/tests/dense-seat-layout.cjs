@@ -98,8 +98,6 @@ async function check(browser,width){
   });
   const seats=page.locator('#seatsContainer>.pkr-mockup-player-seat');
   assert.equal(await seats.count(),13,'Approved table must have thirteen attached cards.');
-  await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
-  await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
   async function geometry(mode){
     return page.evaluate(mode=>{
       const items=[...document.querySelectorAll('#seatsContainer>.pkr-mockup-player-seat')];
@@ -118,17 +116,21 @@ async function check(browser,width){
         stripVisible:document.getElementById('pkrSeatSummary').getBoundingClientRect().height>0};
     },mode);
   }
-  const full=await geometry('full');
-  assert.equal(full.stripVisible,false,'Mockup has no horizontal roster strip.');
-  assert.equal(full.bounds.length,13);
-  assert(full.bounds.every(p=>p.bank.includes('1b')||p.bank.includes('2b')),
-    'All occupied full cards show bank figures.');
-  assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
-  assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
-  assert.equal(await page.locator('.pkr-game-full-avatar .pkr-game-status-dot.cashed').count()>0,true);
-  assert.equal(await page.locator('.pkr-game-seat-card.inplay').count()>0,true);
-  assert.equal(await page.locator('.pkr-layout-balanced .pkr-game-seat-status').count(),0,'Full approved cards do not repeat status text');
-  await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
+  if(width>=350){
+    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
+    const full=await geometry('full');
+    assert.equal(full.stripVisible,false,'Mockup has no horizontal roster strip.');
+    assert.equal(full.bounds.length,13);
+    assert(full.bounds.every(p=>p.bank.includes('1b')||p.bank.includes('2b')),
+      'All occupied full cards show bank figures.');
+    assert.deepEqual(full.overlaps,[],'Full cards must not overlap: '+JSON.stringify(full));
+    assert(full.scroll<=full.viewport+3,'Full mode must not overflow the phone width.');
+    assert.equal(await page.locator('.pkr-game-full-avatar .pkr-game-status-dot.cashed').count()>0,true);
+    assert.equal(await page.locator('.pkr-game-seat-card.inplay').count()>0,true);
+    assert.equal(await page.locator('.pkr-layout-balanced .pkr-game-seat-status').count(),0,'Full approved cards do not repeat status text');
+    await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
+  }
   await page.evaluate(()=>window.pkrSetSeatLayout('compact'));
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
   const compact=await geometry('compact');
@@ -143,8 +145,14 @@ async function check(browser,width){
   assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
-  await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
-  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-balanced').count(),13);
+  if(width>=350){
+    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    await page.waitForFunction(()=>document.querySelectorAll('#seatsContainer>.pkr-layout-balanced').length===13);
+  }else{
+    await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));
+    assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),'compact',
+      'Sub-350px phones must remain on the compact approved renderer.');
+  }
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
   // Gated cash-out/save action: no premature CTA for outstanding cashouts,
   // unbalanced money or unsynced edits. No real backend write occurs.
