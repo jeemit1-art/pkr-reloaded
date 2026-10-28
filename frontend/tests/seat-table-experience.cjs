@@ -148,6 +148,9 @@ async function check(browser,name,width,height){
   expectClose(fit.w,fit.viewport,'No page-width overflow');
   await page.screenshot({path:path.join(output,name+'-player.png')});
   await page.locator('#panelCloseBtn').click();
+  await page.waitForFunction(()=>document.getElementById('sidePanel').getBoundingClientRect().width<5);
+  // The table viewport has finished its width transition. The observer will
+  // rerender the same logical seats against that final canvas width.
   // Stress a fully occupied 13-seat table without saving any money or seat.
   await page.evaluate(()=>{
     window.state.game.seats=13;
