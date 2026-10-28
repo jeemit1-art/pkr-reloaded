@@ -1829,8 +1829,10 @@ function renderTable() {
   var vpH=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
   var portrait=vpH>vpW*1.08&&W<950;
   var tabletPortrait=portrait&&W>=560;
-  var wideTable=!portrait&&W>=650&&availableHeight>=390;
-  if(count>=10&&availableHeight<490)wideTable=false;
+  // Landscape phones need a wide tabletop too. If the visible height is
+  // short, keep a scrollable 520px canvas instead of crushing a narrow table.
+  var wideTable=!portrait&&W>=720;
+  if(count>14&&W<1050)wideTable=false;
   var tightWide=wideTable&&count>=10&&W<1150;
   var balancedWidth=wideTable?Math.min(148,Math.max(90,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var compactWidth=wideTable?Math.min(105,Math.max(77,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
@@ -1841,7 +1843,7 @@ function renderTable() {
     compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
   // When thirteen players cannot fit at the requested scale, extend the
   // table canvas vertically and scroll it. Never overlap or silently hide seats.
-  var minimumHeight=wideTable?450:Math.max(440,(maxSide+1)*(cardHeight+9)+34);
+  var minimumHeight=wideTable?(count>=10?520:460):Math.max(440,(maxSide+1)*(cardHeight+9)+34);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
