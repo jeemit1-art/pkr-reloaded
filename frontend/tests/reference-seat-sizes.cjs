@@ -49,17 +49,28 @@ async function check(browser,width,height,count){
   await page.goto(BASE+'/games/'+id+'/play',{waitUntil:'domcontentloaded'});
   await page.locator('#seat1 .pkr-game-seat-bank').waitFor();
   await page.waitForFunction(()=>!!window._eventMembers);
-  for(const compact of [false,true]){
+  const expectedAuto=(width<700&&height>=width)?'mobile':width<1024?'compact':'balanced';
+  assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
+  assert.equal(await page.locator('#seatsContainer>.pkr-layout-'+expectedAuto).count(),count,
+    'Auto view must match the device.');
+  assert.equal(await page.locator('#bbBanks').isVisible(),true);
+  assert.equal(await page.locator('#bbInPlay').isVisible(),true);
+  assert.match(await page.locator('#bbBanks').textContent(),/b$/);
+  if(expectedAuto==='mobile'&&(count===9||count===13))
+   await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-mobile-auto.png')});
+  for(const mode of ['balanced','compact']){
    await page.getByRole('button',{name:'Open table controls'}).click();
    const dialog=page.locator('.pkr-table-tools-dialog');await dialog.waitFor();
    assert(await dialog.evaluate(e=>e.matches(':modal')),'Tools must remain top-layer');
    assert.equal(await dialog.locator('.pkr-reference-tool-grid button').count(),6);
-   if(!compact&&count===13&&width===390)await page.screenshot({path:path.join(out,browser.browserType().name()+'-390-tools.png')});
-   await page.getByRole('button',{name:compact?'Compact seats':'Full details',exact:true}).click();
-   const expected=compact?'pkr-layout-compact':'pkr-layout-full';
+   assert.equal(await dialog.locator('.pkr-responsive-view-select button').count(),4);
+   if(mode==='balanced'&&count===13&&width===390)await page.screenshot({path:path.join(out,browser.browserType().name()+'-390-tools.png')});
+   await page.getByRole('button',{name:mode==='compact'?'Compact table view':'Balanced table view',exact:true}).click();
+   const expected='pkr-layout-'+mode;
    assert.equal(await page.locator('#seatsContainer>.pkr-mockup-player-seat.'+expected).count(),count,
     'Every seat count and device must use the same renderer');
    assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
+   const compact=mode==='compact';
    const bank=compact?'.pkr-game-compact-bank':'.pkr-game-seat-bank';
    assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
    assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
@@ -98,7 +109,7 @@ async function check(browser,width,height,count){
     }
     for(const st of c.status)assert(st.bottom<=c.r.bottom+1,'Status falls below its card: '+JSON.stringify({width,count,compact,card:c.id,cardBottom:c.r.bottom,...st}));
    }
-   if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+(compact?'compact':'full')+'.png')});
+   if(count===13||count===9)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'-'+count+'-'+mode+'.png')});
   }
   // A failed member photo must not display a broken image over the initials.
   await page.evaluate(()=>{
@@ -117,7 +128,7 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS reference layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Full/Compact, names/money/status contained, broken-photo fallback, no financial writes');
+  console.log('PASS responsive layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Auto/'+expectedAuto+', Balanced/Compact overrides, bank totals, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
@@ -126,7 +137,7 @@ async function check(browser,width,height,count){
   try{
    for(const count of [6,9,13])await check(browser,390,844,count);
    await check(browser,320,720,13);
-   if(engine===chromium)await check(browser,1440,900,13);
+   if(engine===chromium){await check(browser,844,390,13);await check(browser,1440,900,13);}
   }finally{await browser.close();}
  }
 })().catch(e=>{console.error(e);process.exitCode=1;});

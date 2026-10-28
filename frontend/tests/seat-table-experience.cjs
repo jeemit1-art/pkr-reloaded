@@ -97,10 +97,11 @@ async function check(browser,name,width,height){
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
-  if(width<=700){
-   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true);
-   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true);
-  }
+  assert.equal(await page.locator('#bbBanks').isVisible(),true);
+  assert.equal(await page.locator('#bbInPlay').isVisible(),true);
+  assert.match(await page.locator('#bbBanks').innerText(),/2b/);
+  assert.match(await page.locator('#bbInPlay').innerText(),/\$50/);
+  if(width<=700)assert.equal(await page.locator('.pkr-bank-quick').isVisible(),true);
   const tools=page.getByRole('button',{name:'Open table controls'});
   await tools.click();
   const sheet=page.locator('.pkr-table-tools-dialog');

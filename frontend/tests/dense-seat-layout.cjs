@@ -17,6 +17,7 @@ async function check(browser,width){
   seat7:{name:'Blair',userId:'member-two',transactions:[{type:'buyin',amount:25,ts:Date.now()},{type:'cashout',amount:10,ts:Date.now()}]}};
  await ctx.addInitScript(({api,game,local})=>{
   localStorage.setItem('pkr_token','synthetic-token');
+  localStorage.setItem('pkrSeatLayout_'+game.id,'balanced');
   localStorage.setItem('pkrCtx',JSON.stringify({gameId:game.id,eventId:game.event_id,
    userId:'host-test',userName:'Test Host',token:'synthetic-token',apiUrl:api}));
   localStorage.setItem('pokerState_'+game.id+'_host-test',JSON.stringify({game,players:local}));
@@ -45,8 +46,8 @@ async function check(browser,width){
   await page.locator('#seat3 .pkr-game-seat-card').waitFor({state:'visible'});
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false,
     'No detached player-strip overlay is allowed in either layout.');
-  assert.equal(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-full')),true,
-    'The approved mockup defaults to Full details.');
+  assert.equal(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-balanced')),true,
+    'Balanced override must use the large-card renderer.');
   await page.locator('#seat3 .pkr-seat-photo').waitFor();
   const inPlay=page.locator('#seat3');
   assert.match(await inPlay.locator('.pkr-game-seat-status').innerText(),/IN PLAY/);
@@ -71,7 +72,7 @@ async function check(browser,width){
   await page.getByRole('button',{name:'Open table controls'}).click();
   await sheet.waitFor({state:'visible'});
   assert.equal(await page.locator('.pkr-table-tools-dialog').evaluate(el=>el.matches(':modal')),true);
-  assert.equal(await page.getByRole('button',{name:'Full details'}).getAttribute('aria-pressed'),'true');
+  assert.equal(await page.getByRole('button',{name:'Balanced table view'}).getAttribute('aria-pressed'),'true');
   await page.screenshot({path:path.join(screenshots,'webkit-or-chromium-'+browser.browserType().name()+'-'+width+'-tools.png')});
   await page.getByRole('button',{name:'Close table controls'}).click();
   // Recreate the actual 13 occupied positions with no production Worker calls.
@@ -121,7 +122,7 @@ async function check(browser,width){
   assert.equal(await page.locator('.pkr-game-seat-status.inplay').count()>0,true);
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-full.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Compact seats'}).click();
+  await page.getByRole('button',{name:'Compact table view'}).click();
   assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-compact').count(),13);
   const compact=await geometry('compact');
   assert.deepEqual(compact.overlaps,[],'Compact cards must not overlap: '+JSON.stringify(compact));
@@ -135,8 +136,8 @@ async function check(browser,width){
     'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
   await page.getByRole('button',{name:'Open table controls'}).click();
-  await page.getByRole('button',{name:'Full details'}).click();
-  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-full').count(),13);
+  await page.getByRole('button',{name:'Balanced table view'}).click();
+  assert.equal(await page.locator('.pkr-mockup-player-seat.pkr-layout-balanced').count(),13);
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
   // Gated cash-out/save action: no premature CTA for outstanding cashouts,
   // unbalanced money or unsynced edits. No real backend write occurs.
