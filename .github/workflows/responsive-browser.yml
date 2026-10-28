@@ -66,9 +66,10 @@ jobs:
       - name: Test records, visible popups and app layouts using synthetic API data
         working-directory: frontend
         run: |
+          # Exercise the newest gameplay surface first for quick feedback.
+          node tests/seat-table-experience.cjs
           node tests/app-experience.cjs
           node tests/viewport-smoke.cjs
-          node tests/seat-table-experience.cjs
       - name: Upload synthetic-data screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
