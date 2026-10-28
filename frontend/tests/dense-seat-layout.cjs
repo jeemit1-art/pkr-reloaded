@@ -56,8 +56,85 @@ async function check(browser,width){
   await page.getByRole('button',{name:'Compact seats'}).click();
   assert.equal(await page.locator('#pkrSeatSummary').isVisible(),false);
   assert(await page.locator('#seat3').getAttribute('class').then(x=>x.includes('pkr-layout-compact')));
+  // Original bug: thirteen OCCUPIED seats on a narrow phone, not just
+  // thirteen available seats with two players. All data is synthetic.
+  await page.evaluate(()=>{
+    const s=window.state;
+    for(let i=1;i<=13;i++){
+      const sid='seat'+i;
+      const existing=s.players[sid];
+      const money=i%3===0?null:i%2===0?35:15;
+      s.players[sid]=existing||{
+        name:'Player '+i,userId:'synthetic-member-'+i,transactions:[
+          {type:'buyin',amount:25,ts:Date.now()},
+          ...(money===null?[]:[{type:'cashout',amount:money,ts:Date.now()}]),
+        ],
+      };
+    }
+    window.renderTable();
+  });
+  const allSeats=page.locator('#seatsContainer>.seat');
+  assert.equal(await allSeats.count(),13);
+  await page.getByRole('button',{name:'Open table controls'}).click();
+  await page.getByRole('button',{name:'Compact seats'}).click();
+  const compact=await page.evaluate(()=>{
+    const seats=[...document.querySelectorAll('#seatsContainer>.seat')];
+    const rect=e=>e.getBoundingClientRect();
+    const parts=seats.map((el,i)=>({
+      seat:i+1,
+      outer:rect(el), info:el.querySelector('.pkr-dense-info')&&rect(el.querySelector('.pkr-dense-info')),
+      bank:el.querySelector('.pkr-dense-bank')?.textContent||'',
+      result:el.querySelector('.pkr-dense-result')?.textContent||'',
+      color:el.querySelector('.pkr-dense-result')?
+        getComputedStyle(el.querySelector('.pkr-dense-result')).color:null,
+      isVisible:!!el.querySelector('.pkr-dense-info')&&rect(el.querySelector('.pkr-dense-info')).width>35,
+    }));
+    const sideGroups=[parts.slice(1,7),parts.slice(8,13)];
+    const overlaps=[];
+    for(const group of sideGroups){
+      const sorted=[...group].sort((a,b)=>a.outer.y-b.outer.y);
+      for(let i=1;i<sorted.length;i++){
+        if(sorted[i].outer.y<sorted[i-1].outer.bottom-3)
+          overlaps.push(sorted[i-1].seat+' overlaps '+sorted[i].seat);
+      }
+    }
+    return {
+      parts:parts.map(p=>({...p,outer:p.outer.toJSON(),info:p.info?.toJSON()})),
+      overlaps,scroll:document.documentElement.scrollWidth,viewport:innerWidth,
+    };
+  });
+  assert.equal(compact.parts.length,13);
+  assert(compact.parts.every(p=>p.isVisible&&p.bank.includes('1b')),
+   'All 13 occupied seats need visible bank counts: '+JSON.stringify(compact.parts));
+  assert.equal(compact.overlaps.length,0,'Compact side seats overlap: '+compact.overlaps.join(', '));
+  assert(compact.scroll<=compact.viewport+3,'Compact layout must not overflow the screen');
+  assert(compact.parts.some(p=>p.color==='rgb(61, 220, 151)'),
+    'At least one profitable seat should show green');
+  assert(compact.parts.some(p=>p.color==='rgb(255, 104, 118)'),
+    'At least one losing seat should show red');
+  await page.getByRole('button',{name:'Open table controls'}).click();
+  await page.getByRole('button',{name:'Full details'}).click();
+  const cards=page.locator('#pkrSeatSummary .pkr-seat-summary-card');
+  assert.equal(await cards.count(),13,'Full mode must retain all thirteen occupied players');
+  await cards.last().scrollIntoViewIfNeeded();
+  const full=await page.evaluate(()=>{
+    const table=document.getElementById('tableWrap').getBoundingClientRect();
+    const strip=document.getElementById('pkrSeatSummary').getBoundingClientRect();
+    const seat1=document.getElementById('seat1').getBoundingClientRect();
+    const cards=[...document.querySelectorAll('#pkrSeatSummary .pkr-seat-summary-card')];
+    const bankText=cards.map(c=>c.textContent||'');
+    return {table:table.toJSON(),strip:strip.toJSON(),seat1:seat1.toJSON(),
+      stripHidden:document.getElementById('pkrSeatSummary').hidden,
+      cards:cards.length,banks:bankText,overflow:document.documentElement.scrollWidth>innerWidth+3};
+  });
+  assert.equal(full.stripHidden,false);
+  assert(full.strip.bottom<=full.table.top+2,
+    'Full layout summary must not overlay the table: '+JSON.stringify(full));
+  assert(full.banks.every(b=>b.includes('1b')),
+    'Full layout must show all bank totals, including scrollable cards');
+  assert(!full.overflow,'Full balance strip should scroll internally, never widen the page');
   assert.deepEqual(unexpected,[]);
-  console.log('PASS 13-seat layout toggle, room photo, money and red loss at '+width+'px');
+  console.log('PASS synthetic 13-occupied-seat compact/full geometry, colours, and accessible bank totals at '+width+'px');
  }finally{await ctx.close();}
 }
 (async()=>{for(const engine of [chromium,webkit]){

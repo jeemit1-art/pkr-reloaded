@@ -1781,6 +1781,12 @@ function seatStackText(row){
 // ── Table render ──
 function renderTable() {
   if (!state.game) return;
+  // Put the full balance strip in document flow before measuring the felt.
+  // Otherwise the first/top seat is obscured by the absolute overlay.
+  var fullSummary=state.game.seats>=10&&_pkrSeatLayout==='full';
+  var area=document.getElementById('tableArea'),summary=document.getElementById('pkrSeatSummary');
+  if(area)area.classList.toggle('pkr-table-summary-on',fullSummary);
+  if(summary){summary.hidden=!fullSummary;summary.classList.toggle('is-visible',fullSummary);}
   var wrap = document.getElementById('tableWrap');
   if (!wrap) return;
   var W = wrap.offsetWidth, H = wrap.offsetHeight;
@@ -1824,11 +1830,13 @@ function renderSeatBalanceStrip(rows){
   Object.keys(state.players).filter(function(sid){return state.players[sid]&&state.players[sid].name;}).sort(function(a,b){return Number(a.slice(4))-Number(b.slice(4));}).forEach(function(sid){
     var p=state.players[sid],r=rows[sid],bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
     var net=cashed?pNet(p):null;
-    var tracked=r&&(r.source==='tracked'||r.source==='verified')&&r.cashValue!==null;
+    var tracked=r&&(r.source==='tracked'||r.source==='verified')&&
+      r.cashValue!==null&&Number(r.unsettledChips||0)===0;
     var display=cashed?fmtBNet(net):tracked?fmtNet(r.cashValue-bi):'';
     var amount=cashed?net:tracked?r.cashValue-bi:0;
     var card=document.createElement('button');card.type='button';card.className='pkr-seat-summary-card';
-    card.innerHTML='<span class="pkr-summary-photo">'+pkrAvatar(p)+'</span><span class="pkr-summary-copy"><b>'+esc(p.name)+'</b><small>'+esc(seatBankLabel(bi))+'</small><small>'+esc(seatStackText(r))+'</small>'+(display?'<strong class="pkr-balance '+nc(amount)+'">'+esc(display)+'</strong>':'')+'</span>';
+    card.innerHTML='<span class="pkr-summary-photo">'+pkrAvatar(p)+'</span><span class="pkr-summary-copy"><b>'+esc(p.name)+'</b><small>'+esc(seatBankLabel(bi))+'</small><small>'+esc(seatStackText(r))+'</small>'+(display?'<strong class="pkr-balance '+nc(amount)+'">'+esc(display)+'</strong>':
+     '<small class="pkr-summary-status">'+(bi>0?'In play':'Not bought in')+'</small>')+'</span>';
     card.addEventListener('click',function(){onSeatClick(sid);});el.appendChild(card);
   });
 }
@@ -1895,7 +1903,8 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var netHtml = cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">Net ' + fmtBNet(net) + '</div>' :
         (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.7rem">RSVP</div>' : '');
       var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
-      var cashed=cls==='cashed',tracked=stackRow&&(stackRow.source==='verified'||stackRow.source==='tracked')&&stackRow.cashValue!==null;
+      var cashed=cls==='cashed',tracked=stackRow&&(stackRow.source==='verified'||stackRow.source==='tracked')&&
+        stackRow.cashValue!==null&&Number(stackRow.unsettledChips||0)===0;
       var amount=cashed?net:tracked?stackRow.cashValue-bi:0;
       var result=cashed?fmtBNet(net):tracked?fmtNet(amount):'';
       var smallInfo='<span class="pkr-dense-info"><span class="pkr-dense-name">'+esc(p.name)+'</span><span class="pkr-dense-bank">'+esc(seatBankLabel(bi))+'</span>'+(result?'<span class="pkr-dense-result '+nc(amount)+'">'+esc(result)+'</span>':'')+'</span>';
