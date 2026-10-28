@@ -227,6 +227,13 @@ export default function PlayPage() {
               <button type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>✕</button>
             </header>
             <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">TABLE VIEW</span>
+              <div className="pkr-tools-seat-actions">
+                <button type="button" onClick={()=>{(window as any).pkrSetSeatLayout?.('full');setToolsOpen(false);}}>Full details</button>
+                <button type="button" onClick={()=>{(window as any).pkrSetSeatLayout?.('compact');setToolsOpen(false);}}>Compact seats</button>
+              </div>
+            </div>
+            <div className="pkr-tools-group">
               <span className="pkr-tools-section-title">GAMEPLAY</span>
               <div className="pkr-tools-action-grid">
                 <button id="trackHandsBtn" type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
@@ -279,7 +286,7 @@ export default function PlayPage() {
 
         {/* Table + Side Panel */}
         <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
-          <div className="table-area" id="tableArea">
+          <div className="table-area" id="tableArea"><div className="pkr-seat-summary" id="pkrSeatSummary" aria-label="Player balances" hidden></div>
             <div className="table-wrap" id="tableWrap">
               <div id="tableOuter"></div>
               <div id="tableFelt"><div id="tableCenter"><div id="tableName"></div><div id="tableStats"></div></div></div>
@@ -651,6 +658,18 @@ if (!_ctx || !_ctx.gameId) { window.location.href = '/dashboard'; return; }
 var SK      = 'pokerState_'   + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var HIST_K  = 'pokerHistory_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
+var _pkrSeatLayoutKey='pkrSeatLayout_'+_ctx.gameId;
+var _pkrSeatLayout=localStorage.getItem(_pkrSeatLayoutKey)==='full'?'full':'compact';
+window.pkrSetSeatLayout=function(mode){if(mode!=='full'&&mode!=='compact')return;_pkrSeatLayout=mode;localStorage.setItem(_pkrSeatLayoutKey,mode);renderTable();};
+function pkrAvatar(p){
+  var members=window._eventMembers||[],id=p.userId||p.user_id;
+  var member=id?members.find(function(m){return m.id===id;}):null;
+  if(!member&&p.name){var same=members.filter(function(m){return String(m.name||'').toLowerCase()===String(p.name).toLowerCase();});if(same.length===1)member=same[0];}
+  var url=member&&member.avatar_url;
+  if(typeof url!=='string'||!(url.startsWith('/')&&!url.startsWith('//'))&&!/^https:\/\//i.test(url))url='';
+  return url?'<img class="pkr-seat-photo" src="'+esc(url)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="pkr-avatar-fallback" style="display:none">'+esc(inits(p.name))+'</span>':
+    '<span class="pkr-avatar-fallback">'+esc(inits(p.name))+'</span>';
+}
 
 // ── Rebuild display-only transaction rows from authoritative integer cents ──
 // D1 stores buy-in COUNT and TOTAL, not individual bank transaction amounts.
@@ -1787,12 +1806,31 @@ function renderTable() {
   if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
   var headerMeta = document.getElementById('topbarGameMeta');
   if (headerMeta) headerMeta.textContent = active + ' active · ' + players.length + ' seated';
-  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable, seatChipRows());
+  var seatRows=seatChipRows();
+  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable, seatRows);
+  renderSeatBalanceStrip(seatRows);
   updateBank();
   updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
 
+function renderSeatBalanceStrip(rows){
+  var el=document.getElementById('pkrSeatSummary');if(!el||!state.game)return;
+  var full=state.game.seats>=10&&_pkrSeatLayout==='full';
+  el.hidden=!full;el.classList.toggle('is-visible',full);
+  if(!full)return;
+  el.innerHTML='';
+  Object.keys(state.players).filter(function(sid){return state.players[sid]&&state.players[sid].name;}).sort(function(a,b){return Number(a.slice(4))-Number(b.slice(4));}).forEach(function(sid){
+    var p=state.players[sid],r=rows[sid],bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
+    var net=cashed?pNet(p):null;
+    var tracked=r&&(r.source==='tracked'||r.source==='verified')&&r.cashValue!==null;
+    var display=cashed?fmtBNet(net):tracked?fmtNet(r.cashValue-bi):'';
+    var amount=cashed?net:tracked?r.cashValue-bi:0;
+    var card=document.createElement('button');card.type='button';card.className='pkr-seat-summary-card';
+    card.innerHTML='<span class="pkr-summary-photo">'+pkrAvatar(p)+'</span><span class="pkr-summary-copy"><b>'+esc(p.name)+'</b><small>'+esc(seatBankLabel(bi))+'</small><small>'+esc(seatStackText(r))+'</small>'+(display?'<strong class="pkr-balance '+nc(amount)+'">'+esc(display)+'</strong>':'')+'</span>';
+    card.addEventListener('click',function(){onSeatClick(sid);});el.appendChild(card);
+  });
+}
 function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   var cont = document.getElementById('seatsContainer');
   if (!cont) return;
@@ -1832,6 +1870,8 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
     var p = state.players[sid];
     var seat = document.createElement('div');
     seat.className = 'seat';
+    var dense=count>=10&&!wideTable;
+    if(dense)seat.classList.add('pkr-dense-seat',_pkrSeatLayout==='full'?'pkr-layout-full':'pkr-layout-compact');
     // Side seats place the name and balance outside the felt so neighbouring
     // players do not cover each other's labels on a laptop.
     if (i > 0 && i <= leftCount) seat.dataset.side = 'left';
@@ -1854,7 +1894,12 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var netHtml = cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">Net ' + fmtBNet(net) + '</div>' :
         (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.7rem">RSVP</div>' : '');
       var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
-      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + moneyHtml + chipHtml + netHtml;
+      var cashed=cls==='cashed',tracked=stackRow&&(stackRow.source==='verified'||stackRow.source==='tracked')&&stackRow.cashValue!==null;
+      var amount=cashed?net:tracked?stackRow.cashValue-bi:0;
+      var result=cashed?fmtBNet(net):tracked?fmtNet(amount):'';
+      var smallInfo='<span class="pkr-dense-info"><span class="pkr-dense-name">'+esc(p.name)+'</span><span class="pkr-dense-bank">'+esc(seatBankLabel(bi))+'</span>'+(result?'<span class="pkr-dense-result '+nc(amount)+'">'+esc(result)+'</span>':'')+'</span>';
+      seat.innerHTML = dense?'<span class="seat-chip '+cls+' pkr-dense-portrait" style="width:'+cs+';height:'+cs+'"><span class="seat-inner">'+pkrAvatar(p)+'</span></span>'+smallInfo:
+        '<div class="seat-chip '+cls+'" style="width:'+cs+';height:'+cs+'"><span class="seat-inner">'+pkrAvatar(p)+'</span></div><div class="seat-label">'+esc(p.name)+'</div>'+moneyHtml+chipHtml+netHtml;
     } else {
       seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
     }
@@ -2838,7 +2883,7 @@ if (ctx && ctx.gameId) {
     if (game.event_id) {
       pkrApi('/events/' + game.event_id).then(function(ev) {
         if (!ev) return;
-        window._eventMembers = ev.members || [];
+        window._eventMembers = ev.members || [];renderTable();
         // Determine if current user is host/cohost
         var me = ctx.userId;
         var myRole = (ev.members||[]).find(function(m){ return m.id === me; });
