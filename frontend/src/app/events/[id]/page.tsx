@@ -716,8 +716,12 @@ export default function EventPage() {
                         : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,
-                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name}</div>
+                      <RecordMetric request={{kind:'player',title:m.name+' — game history',roomId:id,playerId:m.id,playerName:m.name}}
+                        className="pkr-member-history-link" style={{minHeight:44,alignItems:'flex-start',justifyContent:'center',gap:3}}>
+                        <strong style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),sans-serif',fontWeight:600,
+                          overflowWrap:'anywhere',textAlign:'left'}}>{m.name}</strong>
+                        <small style={{fontSize:11,color:'var(--pkr-a-primary)'}}>View game history ›</small>
+                      </RecordMetric>
                       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
                         <span style={{
                           padding:'1px 6px',borderRadius:2,fontSize:9,fontWeight:600,letterSpacing:'0.1em',
@@ -1400,6 +1404,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
   leader: any;
   onClose: () => void;
 }) {
+  const router=useRouter();
   const playerGames = history.filter((g:any)=>
     (g.top_players||[]).some((p:any)=>p.display_name===player)
   ).sort((a:any,b:any)=>b.scheduled_at-a.scheduled_at);
@@ -1432,19 +1437,24 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
-          <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
-            borderBottom:'1px solid var(--border-sub)'}}>
+          <button type="button" key={g.id}
+            aria-label={'View saved game results for '+player+' on '+new Date(g.scheduled_at*1000).toLocaleDateString('en-AU')}
+            onClick={()=>{onClose();router.push(g.results_token?'/games/results/'+encodeURIComponent(g.results_token):'/games/'+encodeURIComponent(g.id));}}
+            style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',width:'100%',textAlign:'left',
+              background:'transparent',border:0,color:'inherit',cursor:'pointer',minHeight:52,
+              borderBottom:'1px solid var(--border-sub)'}}>
             <div style={{flex:1}}>
               <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif'}}>{new Date(g.scheduled_at*1000).toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'})}</div>
               {g.location && <div style={{fontSize:10,color:'var(--faint)',marginTop:1}}>{g.location}</div>}
             </div>
             {net!==null && (
-              <div style={{fontSize:15,fontWeight:600,fontFamily:'serif',
+              <div style={{fontSize:15,fontWeight:600,fontFamily:'var(--font-num),monospace',
                 color:net>0?'var(--green)':net<0?'var(--red)':'var(--muted)'}}>
                 {fmtSign(net)}
               </div>
             )}
-          </div>
+            <span aria-hidden="true" style={{fontSize:16,color:'var(--gold)'}}>›</span>
+          </button>
         );
       })}
     </div>
