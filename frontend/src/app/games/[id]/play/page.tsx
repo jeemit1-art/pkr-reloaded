@@ -23,6 +23,13 @@ export default function PlayPage() {
     setSeatLayout(next);
     try{localStorage.setItem('pkr_seat_layout_v1:'+gameId,next);}catch{}
   }
+  // React changes the screen's presentation attribute. The underlying table
+  // is a legacy imperative renderer, so repaint its seat DOM AFTER React has
+  // committed the new mode to avoid losing injected player cards.
+  useEffect(()=>{
+    if(typeof (window as any).renderTable==='function')
+      (window as any).renderTable();
+  },[seatLayout]);
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
