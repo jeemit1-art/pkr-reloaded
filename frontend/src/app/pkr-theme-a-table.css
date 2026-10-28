@@ -294,3 +294,222 @@
   font-size:9px!important;
  }
 }
+
+
+/* PKR switchable seat views v1 — Theme A Midnight Felt.
+   Presentation only. The original felt, rail, seat coordinates, bank records,
+   hand actions and settlement engine are not changed. */
+#gameScreen.pkr-casino-live-table .table-area .pkr-seat-layout-switch{
+  position:absolute;top:9px;right:10px;z-index:24;
+  display:flex;align-items:center;gap:3px;
+  padding:4px;background:#101d20f2;
+  border:1px solid #3b5859;border-radius:12px;
+  box-shadow:0 5px 18px #0008;
+  font:650 11px/1.15 var(--font-body),Inter,sans-serif;
+}
+#gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>span{
+  padding:0 5px 0 6px;color:#92aaa9;
+  font-size:9px;font-weight:750;letter-spacing:.1em;
+}
+#gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>button{
+  appearance:none;border:1px solid transparent;border-radius:8px;
+  padding:8px 9px;min-height:35px;min-width:51px;
+  background:transparent;color:#b8c9c8;
+  font:750 11px/1 var(--font-body),Inter,sans-serif;
+  cursor:pointer;touch-action:manipulation;
+}
+#gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>button.is-selected,
+#gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>button[aria-pressed="true"]{
+  color:#061610;background:#3ddc97;
+  border-color:#3ddc97;
+}
+#gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>button:focus-visible{
+  outline:2px solid #f2b84b;outline-offset:2px;
+}
+
+/* All occupied seats use an actual player-card grid. The legacy side-seat
+   absolute labels would otherwise pile up underneath 13-15 nearby chips. */
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat{
+  box-sizing:border-box;
+  display:grid!important;
+  grid-template-columns:var(--pkr-avatar-size) minmax(0,1fr)!important;
+  grid-template-rows:auto!important;
+  align-items:center!important;
+  column-gap:5px!important;row-gap:0!important;
+  flex-direction:row!important;
+  padding:5px!important;
+  width:var(--pkr-seat-card-width)!important;
+  min-width:0!important;
+  height:auto;
+  min-height:var(--pkr-seat-card-height)!important;
+  max-height:var(--pkr-seat-card-height)!important;
+  background:#10201de8!important;
+  border:1px solid #385c53!important;
+  border-radius:12px!important;
+  box-shadow:0 3px 13px #0009!important;
+  --pkr-avatar-size:28px;
+  --pkr-seat-card-width:min(118px,32vw);
+  --pkr-seat-card-height:57px;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-chip{
+  position:relative!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  grid-column:1;
+  width:var(--pkr-avatar-size)!important;
+  height:var(--pkr-avatar-size)!important;
+  min-width:var(--pkr-avatar-size)!important;
+  min-height:var(--pkr-avatar-size)!important;
+  max-width:var(--pkr-avatar-size)!important;
+  max-height:var(--pkr-avatar-size)!important;
+  border-radius:50%!important;
+  flex:none!important;
+  overflow:hidden!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-chip .seat-inner{
+  z-index:1;line-height:1!important;
+  font-size:clamp(10px,2.5vw,12px)!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-avatar-photo{
+  position:absolute;inset:0;
+  width:100%;height:100%;border-radius:50%;
+  object-fit:cover;object-position:center;
+  z-index:2;
+  visibility:hidden;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-chip.pkr-has-photo .pkr-seat-avatar-photo{
+  visibility:visible;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-chip.pkr-has-photo .seat-inner{
+  opacity:0;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-details{
+  display:flex;flex-direction:column;align-items:flex-start;
+  justify-content:center;gap:1px;grid-column:2;
+  min-width:0!important;width:100%;
+  text-align:left;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-number{
+  position:absolute;right:5px;top:-8px;
+  min-width:17px;min-height:15px;
+  padding:2px 3px;border:1px solid #486f68;border-radius:6px;
+  background:#0a191b;color:#dcece8;
+  font:750 9px/1 var(--font-num),monospace;
+  text-align:center;z-index:9;pointer-events:none;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-details :is(.seat-label,.seat-money,.seat-stack,.seat-net){
+  position:static!important;left:auto!important;right:auto!important;top:auto!important;
+  display:block!important;width:100%!important;max-width:100%!important;
+  min-width:0!important;min-height:0!important;
+  border:0!important;background:transparent!important;
+  padding:0!important;margin:0!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+  text-align:left!important;
+  letter-spacing:0!important;text-shadow:none!important;
+  line-height:1.2!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-details .seat-label{
+  color:#f0f7f4!important;
+  font:750 11px/1.18 var(--font-body),Inter,sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-money{
+  color:#b7ceca!important;
+  font:700 10px/1.2 var(--font-num),monospace!important;
+  font-variant-numeric:tabular-nums!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net{
+  font:800 11px/1.2 var(--font-num),monospace!important;
+  font-variant-numeric:tabular-nums!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net.pos{
+  color:#3ddc97!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net.neg{
+  color:#ff6677!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net.pending,
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net.zero{
+  color:#9fb0b9!important;
+  font-weight:600!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-stack{
+  color:#f2b84b!important;
+  font:650 9px/1.12 var(--font-num),monospace!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-stack:is(.verified,.tracked){
+  color:#85deb7!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-money-short{
+  display:none!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-result-prefix{
+  font-size:9px!important;
+  font-weight:600!important;
+}
+
+/* Full: seated member photo + name + exact bank amount + live/net +
+   confirmed chip stack where space allows. */
+#gameScreen.pkr-casino-live-table[data-seat-layout="full"] .seat.pkr-occupied-seat{
+  --pkr-avatar-size:26px;
+  --pkr-seat-card-width:min(126px,32vw);
+  --pkr-seat-card-height:57px;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="full"] .seat.pkr-occupied-seat .pkr-seat-money-full{
+  display:inline!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="full"] .seat.pkr-occupied-seat .seat-stack{
+  display:block!important;
+}
+/* Compact: still shows the player's image/name, cash in, and coloured
+   result; only the secondary stack line is concealed, never the amount. */
+#gameScreen.pkr-casino-live-table[data-seat-layout="compact"] .seat.pkr-occupied-seat{
+  --pkr-avatar-size:28px;
+  --pkr-seat-card-width:min(104px,30vw);
+  --pkr-seat-card-height:49px;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="compact"] .seat.pkr-occupied-seat .pkr-seat-money-full{
+  display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="compact"] .seat.pkr-occupied-seat .pkr-seat-money-short{
+  display:inline!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="compact"] .seat.pkr-occupied-seat .seat-stack{
+  display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-layout="compact"] .seat.pkr-occupied-seat .pkr-seat-result-prefix{
+  display:none!important;
+}
+
+/* The mobile felt is never resized or recoloured. Tighter seating rows
+   only shorten the information card rather than overlapping the next one.
+   All financial details remain available by tapping an occupied seat. */
+#gameScreen.pkr-casino-live-table[data-seat-density="tight"] .seat.pkr-occupied-seat{
+  --pkr-avatar-size:23px;
+  --pkr-seat-card-height:40px;
+  padding:3px 4px!important;
+  column-gap:4px!important;
+  border-radius:9px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="tight"] .seat.pkr-occupied-seat .seat-stack{
+  display:none!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="tight"] .seat.pkr-occupied-seat .seat-label{
+  font-size:10px!important;
+}
+#gameScreen.pkr-casino-live-table[data-seat-density="tight"] .seat.pkr-occupied-seat .pkr-seat-number{
+  top:0;right:1px;font-size:7px;border:0;padding:0;min-height:0;
+}
+@media(max-width:380px){
+ #gameScreen.pkr-casino-live-table .table-area .pkr-seat-layout-switch{top:6px;right:6px;padding:2px}
+ #gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>span{display:none}
+ #gameScreen.pkr-casino-live-table .pkr-seat-layout-switch>button{min-width:55px;min-height:32px;padding:6px}
+ #gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat{
+  --pkr-avatar-size:23px;
+  column-gap:4px!important;
+  padding:3px!important;
+ }
+ #gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .pkr-seat-details .seat-label{font-size:10px!important}
+ #gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-net{font-size:10px!important}
+ #gameScreen.pkr-casino-live-table .seat.pkr-occupied-seat .seat-money{font-size:9px!important}
+}
+/* The existing game player panel retains the complete dollar and chip
+   details, even where the miniature seat card must use an ellipsis. */
