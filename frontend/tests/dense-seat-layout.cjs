@@ -136,7 +136,8 @@ async function check(browser,width){
   assert(compact.scroll<=compact.viewport+3,'Compact mode must not widen the page.');
   assert.equal(await page.locator('.pkr-game-status-dot.cashed').count()>0,true,
     'Compact mode shows the green check without repeated CASHED OUT text.');
-  assert.equal(await page.locator('.pkr-game-compact-status.inplay').count()>0,true);
+  assert.equal(await page.locator('.pkr-game-status-dot.inplay').count()>0,true,
+    'Compact in-play status is shown by the red indicator without repeated text.');
   assert.equal(await page.locator('#seat3 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
     'rgb(255, 93, 114)','Compact in-play bank amount must be red.');
   assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
