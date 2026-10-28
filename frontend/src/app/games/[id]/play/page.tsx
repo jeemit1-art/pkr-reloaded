@@ -1902,8 +1902,13 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
   }else{
     var top=Math.max(g.cardHeight/2+9,cy-tH/2-g.cardHeight*.68),bottom=Math.min(g.height-g.cardHeight/2-9,cy+tH/2+g.cardHeight*.68);
     var leftX=Math.max(g.cardWidth/2+6,cx-tW/2-g.cardWidth*.70),rightX=Math.min(g.width-g.cardWidth/2-6,cx+tW/2+g.cardWidth*.70);
-    var topRail=top+g.cardHeight*.82,bottomRail=bottom-g.cardHeight*.82;
-    var spread=function(i,n){return n<=1?g.height/2:topRail+(bottomRail-topRail)*i/(n-1);};
+    // Reserve one complete card height plus a gap for each side seat.
+    // The felt can be compact; side cards may extend beyond its end curves.
+    var sideGap=9;
+    var sideSpan=(Math.max(1,Math.max(leftCount,rightCount)-1))*(g.cardHeight+sideGap);
+    var first=Math.max(g.cardHeight/2+10,cy-sideSpan/2);
+    var last=Math.min(g.height-g.cardHeight/2-10,cy+sideSpan/2);
+    var spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
     positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
     for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
   }
