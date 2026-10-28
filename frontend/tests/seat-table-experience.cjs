@@ -22,7 +22,11 @@ const roster=[
  buy_ins:1,buy_in_total:2500,cashout:null,revision:1},
 ];
 const event={id:game.event_id,name:'Poker Night',role:'host',status:'active',buy_in:2500,
- members:[{id:'host-test',name:'Test Host',role:'host'}]};
+ members:[
+  {id:'host-test',name:'Test Host',role:'host',avatar_url:null},
+  {id:'member-one',name:'Test',role:'member',avatar_url:'https://lh3.googleusercontent.com/pkr-synthetic-test-avatar'},
+  {id:'member-two',name:'Alex',role:'member',avatar_url:null},
+ ]};
 const actions=[
  {id:'action-one',display_name:'Test',street:'pre',action:'post',chips:5},
  {id:'action-two',display_name:'Alex',street:'pre',action:'call',chips:5},
@@ -46,6 +50,10 @@ async function check(browser,name,width,height){
  },{inputGame,localPlayers,API});
  const page=await context.newPage();
  page.setDefaultTimeout(16000);
+ await page.route('https://lh3.googleusercontent.com/**',async route=>{
+  await route.fulfill({status:200,contentType:'image/svg+xml',
+   body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="16" fill="#3ddc97"/></svg>'});
+ });
  const errors=[];let winner='Test';
  page.on('request',request=>{
   if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))
@@ -81,8 +89,18 @@ async function check(browser,name,width,height){
  });
  try{
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
+  const layout=page.getByRole('group',{name:'Seat layout'});
+  await layout.getByRole('button',{name:'Full',exact:true}).click();
+  assert.equal(await page.locator('#gameScreen').getAttribute('data-seat-layout'),'full');
   await page.locator('#seat7 .seat-money').filter({hasText:'$25.00'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
+  await page.locator('#seat7 .seat-chip.pkr-has-photo').waitFor({state:'visible'});
+  assert.equal(await page.locator('#seat7 .pkr-seat-avatar-photo').getAttribute('alt'),'');
+  assert.equal(await page.locator('#seat3 .pkr-seat-avatar-photo').count(),0,'No avatar: keep initials');
+  assert.match(await page.locator('#seat7 .seat-net').innerText(),/Live/);
+  assert(await page.locator('#seat7 .seat-net').evaluate(el=>getComputedStyle(el).color)!==
+    await page.locator('#seat3 .seat-net').evaluate(el=>getComputedStyle(el).color),
+    'Win must be green and loss red');
   assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
@@ -128,6 +146,46 @@ async function check(browser,name,width,height){
   const fit=await page.evaluate(()=>({w:document.documentElement.scrollWidth,viewport:innerWidth}));
   expectClose(fit.w,fit.viewport,'No page-width overflow');
   await page.screenshot({path:path.join(output,name+'-player.png')});
+  await page.locator('#panelCloseBtn').click();
+  // Stress a fully occupied 13-seat table without saving any money or seat.
+  await page.evaluate(()=>{
+    window.state.game.seats=13;
+    for(let n=1;n<=13;n++){
+      const sid='seat'+n;
+      if(window.state.players[sid]?.name)continue;
+      window.state.players[sid]={name:'Player '+n,transactions:[{type:'buyin',amount:25,ts:Date.now()}]};
+    }
+    window.renderTable();
+  });
+  assert.equal(await page.locator('.seat.pkr-occupied-seat').count(),13);
+  for(const variant of ['compact','full']){
+    await layout.getByRole('button',{name:variant==='full'?'Full':'Compact',exact:true}).click();
+    assert.equal(await page.locator('#gameScreen').getAttribute('data-seat-layout'),variant);
+    assert.equal(await layout.getByRole('button',{name:variant==='full'?'Full':'Compact',exact:true}).getAttribute('aria-pressed'),'true');
+    const layoutState=await page.locator('.seat.pkr-occupied-seat').evaluateAll(seats=>{
+      const parts=seats.map(el=>{
+        const r=el.getBoundingClientRect();
+        return {side:el.getAttribute('data-side')||'',id:el.id,left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+          text:el.textContent,hasPhoto:!!el.querySelector('.pkr-seat-avatar-photo')};
+      });
+      const viewport=window.innerWidth;
+      const outside=parts.filter(p=>p.left<-3||p.right>viewport+3);
+      const overlapped=[];
+      for(const side of ['left','right']){
+        const group=parts.filter(p=>p.side===side).sort((a,b)=>a.top-b.top);
+        for(let i=1;i<group.length;i++)if(group[i-1].bottom>group[i].top+3)
+          overlapped.push(group[i-1].id+' / '+group[i].id);
+      }
+      return {outside,overlapped,parts};
+    });
+    assert.deepEqual(layoutState.outside,[],'Seat cards must stay within phone width: '+JSON.stringify(layoutState.outside));
+    assert.deepEqual(layoutState.overlapped,[],'Occupied side cards must not overlap: '+JSON.stringify(layoutState.overlapped));
+    assert(layoutState.parts.every(x=>x.text.includes('$25')),
+      'Full/compact views must display the bought-in cash at every seat');
+    await page.screenshot({path:path.join(output,name+'-13-seats-'+variant+'.png')});
+  }
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#gameScreen[data-seat-layout="full"]').waitFor({state:'visible'});
   assert.deepEqual(errors,[]);
   console.log('PASS synthetic gameplay '+name+'; restored buy-ins, verified stacks, winner changes, table menu, bank bar');
  }finally{await context.close();}
