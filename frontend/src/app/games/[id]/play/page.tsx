@@ -1763,6 +1763,32 @@ function seatChipRows(){
   }
   return rows;
 }
+function seatProfilePhoto(sid,p){
+  // Room-scoped Google avatar only. Ambiguous historic names use initials.
+  var members=Array.isArray(window._eventMembers)?window._eventMembers:[];
+  var ids=[p.userId,(_pkrSeatedPlayers[sid]||{}).user_id].filter(Boolean);
+  var member=members.find(function(m){return ids.indexOf(m.id)>=0;});
+  if(!member){
+    var name=String(p.name||'').trim().toLocaleLowerCase();
+    var matches=members.filter(function(m){return String(m.name||'').trim().toLocaleLowerCase()===name;});
+    if(matches.length===1)member=matches[0];
+  }
+  if(!member||typeof member.avatar_url!=='string')return '';
+  try{var url=new URL(member.avatar_url);return url.protocol==='https:'?url.href:'';}catch(e){return '';}
+}
+function seatResultFor(p,stackRow){
+  var cashed=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
+  if(cashed)return {prefix:'Net',amount:pNet(p),known:true};
+  if(stackRow&&(stackRow.source==='tracked'||stackRow.source==='verified')&&
+     typeof stackRow.cashValue==='number'&&Number.isFinite(stackRow.cashValue)&&
+     !(Number(stackRow.unsettledChips)>0)){
+    return {prefix:'Live',amount:Math.round((stackRow.cashValue-pBuyin(p))*100)/100,known:true};
+  }
+  return {prefix:'In play',amount:0,known:false};
+}
+function seatCompactMoney(dollars){
+  return Math.round(dollars*100)%100===0?'$'+Math.round(dollars):fmt(dollars);
+}
 function seatBankLabel(inDollars){
   var bank=getBankSize(),banks=bank>0?inDollars/bank:0;
   if(!bank||!Number.isFinite(banks))return fmt(inDollars)+' in';
@@ -1794,7 +1820,11 @@ function renderTable() {
   var tH = wideTable ? Math.min(H * 0.62, 520) : Math.min(H * (W < 530 ? 0.64 : 0.72), 480);
   var tW = wideTable ? Math.min(W * 0.72, tH * 1.78, 1050) : Math.min(W * (W < 530 ? 0.48 : 0.46), tH * 0.58);
   var screen = document.getElementById('gameScreen');
-  if (screen) screen.classList.toggle('pkr-wide-table',wideTable);
+  if (screen) {
+    screen.classList.toggle('pkr-wide-table',wideTable);
+    var sideRows=Math.ceil(Math.max(0,(state.game.seats||9)-2)/2);
+    screen.dataset.seatDensity=tH/(sideRows+1)<53?'tight':'normal';
+  }
   var cx = W / 2, cy = H / 2;
   var pad = 14;
   var outer = document.getElementById('tableOuter');
@@ -2861,6 +2891,7 @@ if (ctx && ctx.gameId) {
       pkrApi('/events/' + game.event_id).then(function(ev) {
         if (!ev) return;
         window._eventMembers = ev.members || [];
+        renderTable(); // show approved room-member photos without editing player records
         // Determine if current user is host/cohost
         var me = ctx.userId;
         var myRole = (ev.members||[]).find(function(m){ return m.id === me; });
