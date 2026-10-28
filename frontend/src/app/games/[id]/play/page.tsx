@@ -10,6 +10,12 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [tableView, setTableView] = useState<'auto'|'full'|'compact'>('auto');
+  function chooseTableView(next:'auto'|'full'|'compact'){
+    localStorage.setItem('pkrTableViewChoice_'+gameId,next);
+    setTableView(next);
+    (window as any).pkrSetSeatLayout?.(next);
+  }
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
@@ -49,6 +55,8 @@ export default function PlayPage() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+    const savedView = localStorage.getItem('pkrTableViewChoice_'+gameId);
+    setTableView(savedView==='full'||savedView==='compact'?savedView:'auto');
 
     // Approved Theme A fonts are bundled once by RootLayout.
 
@@ -225,6 +233,17 @@ export default function PlayPage() {
               <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools</p></div>
               <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
+            <div className="pkr-approved-view-controls" role="group" aria-label="Table display">
+              <div className="pkr-approved-view-caption">
+                <strong>Table view</strong>
+                <small>Auto adapts to your screen and the number of players</small>
+              </div>
+              <div className="pkr-approved-view-buttons">
+                <button type="button" aria-label="Auto table view" aria-pressed={tableView==='auto'} onClick={()=>chooseTableView('auto')}>Auto</button>
+                <button type="button" aria-label="Full table view" aria-pressed={tableView==='full'} onClick={()=>chooseTableView('full')}>Full</button>
+                <button type="button" aria-label="Compact table view" aria-pressed={tableView==='compact'} onClick={()=>chooseTableView('compact')}>Compact</button>
+              </div>
+            </div>
             <div className="pkr-reference-tool-grid">
               <button id="trackHandsBtn" type="button" aria-label="Hand tracker" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}><span aria-hidden="true">♠</span><span>Hand<br/>Tracking</span></button>
               <button type="button" aria-label="Tournament" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}><span aria-hidden="true">🏆</span><span>Tournament<br/>Controls</span></button>
@@ -638,22 +657,25 @@ if (!_ctx || !_ctx.gameId) { window.location.href = '/dashboard'; return; }
 var SK      = 'pokerState_'   + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var HIST_K  = 'pokerHistory_' + _ctx.gameId + '_' + (_ctx.userId || 'host');
 var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
-var _pkrSeatLayoutKey='pkrSeatLayout_'+_ctx.gameId;
+// A new preference key prevents an old four-mode choice forcing the wrong
+// view on first load. Auto is the default until the player chooses otherwise.
+var _pkrSeatLayoutKey='pkrTableViewChoice_'+_ctx.gameId;
 var _pkrSavedLayout=localStorage.getItem(_pkrSeatLayoutKey);
-if(_pkrSavedLayout==='full')_pkrSavedLayout='balanced';
-var _pkrSeatLayout=_pkrSavedLayout==='compact'?'compact':'auto';
+var _pkrSeatLayout=_pkrSavedLayout==='full'||_pkrSavedLayout==='compact'?_pkrSavedLayout:'auto';
 function pkrResolveSeatLayout(){
+  if(_pkrSeatLayout==='full')return 'balanced';
+  if(_pkrSeatLayout==='compact')return 'compact';
   var w=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
   var h=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  if(w<350)return 'compact';
-  if(_pkrSeatLayout==='compact')return 'compact';
-  if(_pkrSeatLayout==='balanced')return 'balanced';
-  if(w<900&&h<w)return 'compact';
+  var n=Math.max(2,Math.min(36,Number(state&&state.game&&state.game.seats)||9));
+  if(w<355||(w<930&&h<w&&n>=10))return 'compact';
   return 'balanced';
 }
 window.pkrGetResolvedSeatLayout=pkrResolveSeatLayout;
+window.pkrGetTableViewChoice=function(){return _pkrSeatLayout;};
 window.pkrSetSeatLayout=function(mode){
-  if(mode!=='auto'&&mode!=='balanced'&&mode!=='compact')return;
+  if(mode==='balanced')mode='full';
+  if(mode!=='auto'&&mode!=='full'&&mode!=='compact')return;
   _pkrSeatLayout=mode;localStorage.setItem(_pkrSeatLayoutKey,mode);renderTable();
 };
 var _pkrViewportTimer=0;
