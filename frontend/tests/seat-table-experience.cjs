@@ -92,15 +92,19 @@ async function check(browser,name,width,height){
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
   await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
-  assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
+  const resolvedView=await page.evaluate(()=>window.pkrGetResolvedSeatLayout());
+  const seatMoney=await page.locator('#seat7 .seat-money').innerText();
+  if(resolvedView==='compact')assert.match(seatMoney,/\$25/);
+  else assert.match(seatMoney,/1b.*\$25/);
   await requireColour(page,'#seat7 .seat-money','rgb(255, 93, 114)');
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
-  if(width<=700){
-   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true);
-   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true);
-  }
+  assert.equal(await page.locator('#bbBanks').isVisible(),true);
+  assert.equal(await page.locator('#bbInPlay').isVisible(),true);
+  assert.match(await page.locator('#bbBanks').innerText(),/2b/);
+  assert.match(await page.locator('#bbInPlay').innerText(),/\$50/);
+  if(width<=700)assert.equal(await page.locator('.pkr-bank-quick').isVisible(),true);
   const tools=page.getByRole('button',{name:'Open table controls'});
   await tools.click();
   const sheet=page.locator('.pkr-table-tools-dialog');
