@@ -218,3 +218,79 @@
  #gameScreen.pkr-casino-live-table :is(.bank-label,.bank-pill){font-size:inherit}
  /* No changes to table/seat scale; existing responsive table geometry wins. */
 }
+
+/* Player seats: show recorded bank money immediately and only describe
+   hand stacks as tracked when saved actions/pots reconcile. The felt/rail
+   geometry, seat positions and table colours remain unchanged. */
+#gameScreen.pkr-casino-live-table .seat-money,
+#gameScreen.pkr-casino-live-table .seat-stack{
+ display:block;max-width:min(112px,33vw);min-width:0;
+ padding:3px 5px;border-radius:6px;border:1px solid #44675E;
+ background:#10231EDC;text-align:center;line-height:1.3;
+ overflow-wrap:normal;white-space:normal;
+ font:650 clamp(9px,1.7vw,11px)/1.32 var(--font-num),monospace!important;
+ font-variant-numeric:tabular-nums;
+}
+#gameScreen.pkr-casino-live-table .seat-money{color:#EAF0F2!important;border-color:#476A5C}
+#gameScreen.pkr-casino-live-table .seat-stack{color:#F2B84B!important;border-color:#6E683F}
+#gameScreen.pkr-casino-live-table .seat-stack.tracked,
+#gameScreen.pkr-casino-live-table .seat-stack.verified{color:#3DDC97!important;border-color:#367F60}
+#gameScreen.pkr-casino-live-table .seat-stack.review{color:#FFD47C!important;border-color:#9A6D3E}
+#gameScreen.pkr-casino-live-table .side-panel .p-chip-summary{
+ margin-top:5px;font:650 12px/1.35 var(--font-num),monospace;
+ color:#3DDC97;
+}
+#gameScreen.pkr-casino-live-table .side-panel .p-net{
+ font-family:var(--font-num),monospace;
+ font-size:clamp(12px,1.5vw,17px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar{
+ overflow:visible!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle{
+ display:inline-flex!important;align-items:center!important;gap:7px!important;
+ width:auto!important;min-width:76px!important;height:42px!important;
+ padding:0 11px!important;border-radius:11px!important;
+ font:700 12px/1.15 var(--font-body),Inter,sans-serif!important;
+ letter-spacing:0!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle span{
+ transform:none!important;font-size:15px!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-table-head-actions .pkr-tools-label{
+ display:inline!important;
+}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .bank-right>.bank-pill.g,
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-out{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.bank-bar{
+  min-height:53px!important;height:53px!important;padding:6px 12px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right{justify-content:flex-end!important}
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current{
+  display:flex!important;border:none!important;padding:0!important;
+  margin:0!important;gap:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current .pkr-bank-metric{
+  display:flex!important;flex-direction:row!important;align-items:baseline!important;gap:7px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current b{
+  font-size:13px!important;max-width:160px;
+  overflow:hidden;text-overflow:ellipsis;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current small{font-size:10px!important}
+ #gameScreen.pkr-casino-live-table .pkr-approved-topbar .tb-title{
+  font-size:clamp(13px,3.7vw,16px)!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle{
+  min-width:58px!important;padding:0 7px!important;font-size:11px!important;
+ }
+}
+@media(max-width:360px){
+ #gameScreen.pkr-casino-live-table .pkr-table-identity-icon{display:none!important}
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current .pkr-bank-visual{display:none!important}
+ #gameScreen.pkr-casino-live-table .seat-money,#gameScreen.pkr-casino-live-table .seat-stack{
+  max-width:96px;
+  font-size:9px!important;
+ }
+}

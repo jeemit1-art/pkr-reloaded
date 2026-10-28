@@ -43,6 +43,7 @@ jobs:
           node tests/record-details.cjs
           node tests/tournament-structure.cjs
           node tests/gameplay-safety.cjs
+          node tests/seat-stack-ledger.cjs
       - name: Build and type-check the actual application
         working-directory: frontend
         run: npm run build
@@ -65,6 +66,8 @@ jobs:
       - name: Test records, visible popups and app layouts using synthetic API data
         working-directory: frontend
         run: |
+          # Exercise the newest gameplay surface first for quick feedback.
+          node tests/seat-table-experience.cjs
           node tests/app-experience.cjs
           node tests/viewport-smoke.cjs
       - name: Upload synthetic-data screenshots

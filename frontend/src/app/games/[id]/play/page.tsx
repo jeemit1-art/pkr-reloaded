@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import AppDialog from '@/components/AppDialog';
 
 export default function PlayPage() {
   const params = useParams();
@@ -127,6 +128,14 @@ export default function PlayPage() {
         qrScript.onerror = () => console.warn('PKR: optional QR library unavailable; table remains functional');
         document.head.appendChild(qrScript);
       }
+      // The chip ledger never writes to game history or payment records.
+      const oldLedger=document.getElementById('pkr-seat-stack-lib');
+      if(oldLedger)oldLedger.remove();
+      const ledgerScript=document.createElement('script');
+      ledgerScript.id='pkr-seat-stack-lib';
+      ledgerScript.src='/seat-stack-ledger.js?v=1';
+      ledgerScript.onload=()=>{(window as any).refreshSeatStacks?.();(window as any).renderTable?.();};
+      document.head.appendChild(ledgerScript);
       // Load hand tracker as separate static file (always reload to pick up updates)
       const existingHt = document.getElementById('pkr-hand-tracker');
       if (existingHt) existingHt.remove();
@@ -198,25 +207,50 @@ export default function PlayPage() {
             </span>
           </div>
           <div className="pkr-table-head-actions">
-            <button className="share-btn" id="shareBtn" onClick={() => (window as any).openShare?.()}
-              aria-label="Share live poker table" title="Share live table"><span aria-hidden="true">⇧</span></button>
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
-              aria-controls="pkr-table-tools" aria-label={toolsOpen?'Close table tools':'Open table tools'}
-              onClick={() => setToolsOpen(v=>!v)} title="Table tools">
-              <span aria-hidden="true">•••</span>
+              aria-haspopup="dialog" aria-label="Open table controls"
+              onClick={() => setToolsOpen(true)} title="Table controls">
+              <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
         </div>
 
-        <div id="pkr-table-tools" className={'pkr-mobile-tools pkr-approved-tools' + (toolsOpen?' is-open':'')} hidden={!toolsOpen}>
-          <span className="pkr-tools-caption">Table tools</span>
-          <button id="trackHandsBtn" type="button" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>🃏 Hand tracking</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>🏆 Tournament controls</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
-          <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
-        </div>
+        {/* One accessible, compact tools sheet. Sharing remains in the
+            permanent bottom action dock: no duplicate header button. */}
+        {toolsOpen&&<AppDialog className="pkr-table-tools-dialog" aria-label="Table controls"
+            onDismiss={()=>setToolsOpen(false)}
+            onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
+          <div className="pkr-table-tools-sheet" id="pkr-table-tools">
+            <header className="pkr-table-tools-sheet-header">
+              <div><span>POKER NIGHT</span><h2>Table controls</h2>
+                <p>Manage hands, seating and table extras.</p></div>
+              <button type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>✕</button>
+            </header>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">GAMEPLAY</span>
+              <div className="pkr-tools-action-grid">
+                <button id="trackHandsBtn" type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
+                  <span aria-hidden="true">🃏</span><strong>Hand tracker</strong><small>Record betting and winners</small></button>
+                <button type="button" className="pkr-tool-action" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>
+                  <span aria-hidden="true">🏆</span><strong>Tournament</strong><small>Blinds, timer and levels</small></button>
+              </div>
+            </div>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">SEATING</span>
+              <div className="pkr-tools-seat-actions">
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>＋ Add seat</button>
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>－ Remove empty seat</button>
+              </div>
+            </div>
+            <div className="pkr-tools-group">
+              <span className="pkr-tools-section-title">TABLE EXTRAS</span>
+              <div className="pkr-tools-seat-actions">
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>🎲 Seat draw</button>
+                <button type="button" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>🐰 Rabbit hunt</button>
+              </div>
+            </div>
+          </div>
+        </AppDialog>}
 
         {/* Bank Bar */}
         <div className="bank-bar" id="bankBar" role="button" tabIndex={0}
@@ -1683,6 +1717,47 @@ function updateBank() {
   set('bcStatusSub', cashed ? cashed + ' cashed out' : '');
 }
 
+// Read-only chip labels: bank dollars are independent of hand-tracked
+// chip stacks. Never turn an unfinished game into a recorded loss.
+var _pkrSeatHands=[];
+var _pkrVerifiedHandAudit=null;
+function seatChipRows(){
+  var ledger=window.pkrSeatStackLedger;
+  if(!ledger||!state.game)return {};
+  var rows=ledger.compute(state.game,state.players,_pkrSeatHands);
+  if(_pkrVerifiedHandAudit&&state.game.hand_tracking){
+    var latest=_pkrSeatHands.find(function(hand){return hand&&!hand.voided;});
+    if(latest&&latest.id===_pkrVerifiedHandAudit.handId){
+      (_pkrVerifiedHandAudit.stacks||[]).forEach(function(stack){
+        var sid='seat'+stack.seat_number,row=rows[sid],p=state.players[sid];
+        if(!row||!p||p.name!==stack.display_name||
+           !Number.isSafeInteger(stack.closing_chips)||stack.closing_chips<0)return;
+        row.chips=stack.closing_chips;row.source='verified';row.reason='';
+        row.unsettledChips=_pkrVerifiedHandAudit.unsettled||0;
+        var value=Number(state.game.chip_value);
+        row.cashValue=Number.isFinite(value)&&value>0?Math.round(row.chips*value)/100:null;
+      });
+    }
+  }
+  return rows;
+}
+function seatBankLabel(inDollars){
+  var bank=getBankSize(),banks=bank>0?inDollars/bank:0;
+  if(!bank||!Number.isFinite(banks))return fmt(inDollars)+' in';
+  var rounded=Math.round(banks*10)/10;
+  var count=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1);
+  return count+'b · '+fmt(inDollars)+' in';
+}
+function seatStackText(row){
+  if(!row)return '';
+  if(row.source==='review')return '⚠ Check chip stack';
+  if(row.chips===null||row.chips===undefined)return '';
+  var chips=Number(row.chips).toLocaleString('en-AU')+' chips';
+  if(row.source==='tracked'||row.source==='verified'){
+    return 'Stack '+chips+(row.cashValue!==null?' · '+fmt(row.cashValue):'');
+  }
+  return chips+' issued';
+}
 // ── Table render ──
 function renderTable() {
   if (!state.game) return;
@@ -1712,13 +1787,13 @@ function renderTable() {
   if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
   var headerMeta = document.getElementById('topbarGameMeta');
   if (headerMeta) headerMeta.textContent = active + ' active · ' + players.length + ' seated';
-  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable);
+  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable, seatChipRows());
   updateBank();
   updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
 
-function buildSeats(count, tW, tH, cx, cy, wideTable) {
+function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   var cont = document.getElementById('seatsContainer');
   if (!cont) return;
   cont.innerHTML = '';
@@ -1774,15 +1849,12 @@ function buildSeats(count, tW, tH, cx, cy, wideTable) {
       var bi = pBuyin(p), co = pCash(p), net = pNet(p);
       var isRsvp = p.rsvp && bi === 0;
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
-      var netHtml = bi > 0 ? (cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">' + fmtBNet(net) + '</div>' : '<div class="seat-net" style="color:var(--muted)">Result pending</div>') : (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.88rem">RSVP</div>' : '');
-      var chipHtml = '';
-      var _g = state && state.game;
-      if (bi > 0 && _g && _g.chip_value > 0 && _g.starting_chips > 0) {
-        var buyCt = p.transactions ? p.transactions.filter(function(t){return t.type!=='cashout';}).length : (p.buy_ins||1);
-        var chips = _g.starting_chips * Math.max(1, buyCt);
-        chipHtml = '<div style="font-size:clamp(0.55rem,1.3vw,0.68rem);color:var(--gold);background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);border-radius:3px;padding:1px 5px;margin-top:1px;font-family:DM Sans,sans-serif;line-height:1.4;">' + chips + ' chips issued</div>';
-      }
-      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + netHtml + chipHtml;
+      var stackRow=(seatRows||{})[sid],stackLabel=seatStackText(stackRow);
+      var moneyHtml=bi>0?'<div class="seat-money">'+esc(seatBankLabel(bi))+'</div>':'';
+      var netHtml = cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">Net ' + fmtBNet(net) + '</div>' :
+        (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.7rem">RSVP</div>' : '');
+      var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
+      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + moneyHtml + chipHtml + netHtml;
     } else {
       seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
     }
@@ -1820,7 +1892,9 @@ function refreshPanelSummary(sid) {
   var p = state.players[sid];
   if (!p) return;
   var el = document.getElementById('pNetDisplay');
-  if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'; el.textContent=final?fmtBNet(n):'Pending'; }
+  if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'; el.textContent=final?fmtBNet(n):fmtB(pBuyin(p))+' in'; }
+  var chips=document.getElementById('pkrSeatChipSummary');
+  if(chips)chips.textContent=seatStackText(seatChipRows()[sid]);
 }
 
 function buildPanel(sid) {
@@ -1836,7 +1910,8 @@ function buildPanel(sid) {
   // Summary
   var sum = document.createElement('div'); sum.className = 'p-sum';
   var cashedOut=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
-  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &nbsp;&middot;&nbsp; In: ' + fmt(bi) + (cashedOut?' &middot; Out: '+fmt(co):' &middot; Result pending') + '</div></div><div class="p-net ' + (cashedOut?nc(net):'') + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):'Pending') + '</div>';
+  var row=seatChipRows()[sid],chipSummary=seatStackText(row);
+  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &middot; In: ' + esc(seatBankLabel(bi)) + (cashedOut?' &middot; Out: '+fmt(co):'') + '</div><div class="p-chip-summary" id="pkrSeatChipSummary">'+esc(chipSummary)+'</div></div><div class="p-net ' + (cashedOut?nc(net):'') + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):fmtB(bi)+' in') + '</div>';
   body.appendChild(sum);
 
   // Transactions
@@ -2773,6 +2848,21 @@ if (ctx && ctx.gameId) {
         if (c) { c.isHost = !!isHost; localStorage.setItem('pkrCtx', JSON.stringify(c)); }
       }).catch(function(){});
     }
+    // Refresh display-only game configuration from the server, including
+    // chip value and hand tracking. This is never a financial or seat write.
+    if(state.game){
+      ['chip_value','starting_chips','hand_tracking','small_blind','big_blind'].forEach(function(field){
+        if(game[field]!==undefined&&game[field]!==null)state.game[field]=game[field];
+      });
+      if(Number(game.buy_in)>0){
+        state.game.defaultBuyin=game.buy_in/100;
+        // Bank size is a separate display denomination. Never overwrite a
+        // host-selected bank size with the room's default buy-in amount.
+        if(!(Number(state.game.bank_size)>0))
+          state.game.bank_size=Number(game.bank_size)>0?Number(game.bank_size):game.buy_in/100;
+      }
+      _origSaveState();
+    }
     // Build state.game if we don't have one
     if (!state.game) {
       state.game = {
@@ -2841,6 +2931,7 @@ if (ctx && ctx.gameId) {
     if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
     if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
     renderTable();
+    if(state.game&&state.game.hand_tracking)window.refreshSeatStacks&&window.refreshSeatStacks();
     updateSaveResultsBtn();
     maybeShowNotifBanner();
     if (restoredBanks) toast('Restored whole-cent bank amounts from PKR. Check reconstructed bank rows before settling.');
@@ -2934,7 +3025,74 @@ var _pollInterval = setInterval(function() {
   }).catch(function(){}).finally(function(){_remoteGameRefreshBusy=false;});
 }, 15000);
 
-window._pkrTableCleanup = function() { clearInterval(_pollInterval); };
+// Read-only hand history and immutable stack audits update the seat display.
+// Never infer a player's real chip count from buy-in dollars when the bank
+// denominations or hand awards cannot be reconciled.
+var _pkrSeatRefreshBusy=false;
+var _pkrSeatRefreshAgain=false;
+window.refreshSeatStacks=function(){
+  var ctx=getPkrCtx();
+  if(!ctx||!ctx.gameId||!state.game||!window.pkrSeatStackLedger)return Promise.resolve();
+  if(!state.game.hand_tracking){
+    _pkrSeatHands=[];_pkrVerifiedHandAudit=null;renderTable();
+    return Promise.resolve();
+  }
+  if(_pkrSeatRefreshBusy){_pkrSeatRefreshAgain=true;return Promise.resolve();}
+  _pkrSeatRefreshBusy=true;
+  return pkrApi('/games/'+ctx.gameId+'/hands').then(function(hands){
+    if(!Array.isArray(hands))throw new Error('Hand history must be an array');
+    var latest=hands.find(function(h){return h&&!h.voided;});
+    var audit=null;
+    // Optional, canonical stack read: the existing API calculates available
+    // chips from physically verified openings, wagers, returns and pot awards.
+    // Older rooms without the integrity flag use the reconciled action ledger.
+    var verify=Promise.resolve();
+    if(latest&&latest.mode==='full'){
+      verify=pkrApi('/games/'+ctx.gameId+'/hands/'+latest.id+'/stack-baseline')
+        .then(function(baseline){
+          if(!baseline||!baseline.enabled||!baseline.confirmed)return;
+          return pkrApi('/games/'+ctx.gameId+'/hands/'+latest.id+'/audit-stacks',{
+            method:'POST',body:JSON.stringify({})
+          }).then(function(data){
+            if(data&&data.ok&&data.persisted_baseline&&data.audit&&
+               Array.isArray(data.audit.stacks)){
+              audit={handId:latest.id,stacks:data.audit.stacks,
+                unsettled:data.audit.unsettled_pot_chips||0};
+            }
+          });
+        }).catch(function(){ /* Leave the read-only ledger visible. */ });
+    }
+    return verify.then(function(){
+      if(!state.game||!state.game.hand_tracking||getPkrCtx()?.gameId!==ctx.gameId)return;
+      _pkrSeatHands=hands;_pkrVerifiedHandAudit=audit;
+      renderTable();
+      if(activePanel&&!document.querySelector('.tx-amt:not([readonly])'))
+        refreshPanelSummary(activePanel);
+    });
+  }).catch(function(error){
+    console.warn('PKR seat stack refresh unavailable:',error&&error.message);
+  }).finally(function(){
+    _pkrSeatRefreshBusy=false;
+    if(_pkrSeatRefreshAgain){
+      _pkrSeatRefreshAgain=false;
+      window.refreshSeatStacks();
+    }
+  });
+};
+function _pkrOnHandStateChanged(event){
+  var ctx=getPkrCtx(),detail=event&&event.detail;
+  if(!ctx||!detail||detail.gameId!==ctx.gameId)return;
+  window.refreshSeatStacks();
+}
+window.addEventListener('pkr:hand-state-changed',_pkrOnHandStateChanged);
+var _pkrSeatStackPoll=setInterval(function(){
+  if(document.visibilityState==='visible'&&state.game&&state.game.hand_tracking)
+    window.refreshSeatStacks();
+},15000);
+window._pkrTableCleanup = function() {
+  clearInterval(_pollInterval);clearInterval(_pkrSeatStackPoll);
+  window.removeEventListener('pkr:hand-state-changed',_pkrOnHandStateChanged);
+};
 
 window.addSeat = function() {
   var ctx=getPkrCtx(); if(!ctx||!ctx.gameId) return;

@@ -296,11 +296,16 @@ async function test(){
          if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
            errors.push(size.name+' gameplay settlement/end-game control missing');
        }
-       const toolsButton=page.getByRole('button',{name:'Open table tools'});
+       const toolsButton=page.getByRole('button',{name:'Open table controls'});
        await toolsButton.click();
-       if(!await page.getByRole('button',{name:/Add seat/i}).isVisible())
-         errors.push(size.name+' seat controls inaccessible in gameplay overflow menu');
-       await page.getByRole('button',{name:'Close table tools'}).click();
+       const toolSheet=page.locator('.pkr-table-tools-dialog');
+       await toolSheet.waitFor({state:'visible'});
+       if(!await toolSheet.evaluate(el=>el.matches(':modal')))
+         errors.push(size.name+' game controls must open in a top-layer dialog');
+       if(!await toolSheet.getByRole('button',{name:/Add seat/i}).isVisible())
+         errors.push(size.name+' seat controls inaccessible in game tools sheet');
+       await toolSheet.getByRole('button',{name:'Close table controls'}).click();
+       await toolSheet.waitFor({state:'detached'});
        await page.locator('#bankBar').click();
        if(!await page.locator('#bankPanel').evaluate(el=>el.classList.contains('open')))
          errors.push(size.name+' bank summary did not expand');

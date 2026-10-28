@@ -25,7 +25,17 @@ function htApi(path, opts) {
       error.toCall = typeof e.to_call === 'number' ? e.to_call : null;
       throw error;
     });
-    return r.json();
+    return r.json().then(function(data){
+      // Notify the live seat rendering only after the authoritative Worker
+      // accepts a hand, wager, pot result, correction or tracking toggle.
+      var verb=String(opts.method||'GET').toUpperCase();
+      if(verb!=='GET'&&(/\/hands(?:\/|$)/.test(path)||/\/tracking\/toggle$/.test(path))){
+        window.dispatchEvent(new CustomEvent('pkr:hand-state-changed',{
+          detail:{gameId:getGameId(),path:path,action:verb}
+        }));
+      }
+      return data;
+    });
   });
 }
 
@@ -363,6 +373,8 @@ window.toggleHandTracking = function() {
     updateUI(r.hand_tracking);
     toast(r.hand_tracking?'\uD83C\uDCCF Hand tracking ON':'Hand tracking OFF');
     if(r.hand_tracking) loadCurrentHand();
+    if(window.refreshSeatStacks)window.refreshSeatStacks();
+    if(window.renderTable)window.renderTable();
   }).catch(function(e){toast('\u26A0 '+e.message);});
 };
 
