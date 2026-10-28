@@ -1902,11 +1902,30 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
       var isRsvp = p.rsvp && bi === 0;
       var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
       var stackRow=(seatRows||{})[sid],stackLabel=seatStackText(stackRow);
-      var moneyHtml=bi>0?'<div class="seat-money">'+esc(seatBankLabel(bi))+'</div>':'';
-      var netHtml = cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">Net ' + fmtBNet(net) + '</div>' :
-        (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.7rem">RSVP</div>' : '');
-      var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
-      seat.innerHTML = '<div class="seat-chip ' + cls + '" style="width:' + cs + ';height:' + cs + ';' + (isRsvp?'border-style:dashed;opacity:0.7':'') + '"><span class="seat-inner" style="font-size:' + initFs + '">' + esc(inits(p.name)) + '</span></div><div class="seat-label">' + esc(p.name) + '</div>' + moneyHtml + chipHtml + netHtml;
+      var result=seatResultFor(p,stackRow);
+      var signClass=result.known?nc(result.amount):'pending';
+      var moneyHtml=bi>0?'<div class="seat-money"><span class="pkr-seat-money-full">'+esc(seatBankLabel(bi))+'</span><span class="pkr-seat-money-short">'+esc(seatCompactMoney(bi))+'</span></div>':'';
+      var resultHtml=bi>0?'<div class="seat-net '+signClass+'"><span class="pkr-seat-result-prefix">'+esc(result.prefix)+' </span><span class="pkr-seat-result-amount">'+(result.known?esc(fmtNet(result.amount)):'In play')+'</span></div>':
+        (isRsvp?'<div class="seat-net pending"><span class="pkr-seat-result-amount">RSVP</span></div>':'');
+      var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'">'+esc(stackRow.chips!=null?Number(stackRow.chips).toLocaleString('en-AU')+' chips':stackLabel)+'</div>':'';
+      seat.classList.add('pkr-occupied-seat');
+      seat.innerHTML = '<span class="pkr-seat-number" aria-hidden="true">'+(i+1)+'</span>'+
+        '<div class="seat-chip '+cls+'" style="width:'+cs+';height:'+cs+';'+(isRsvp?'border-style:dashed;opacity:0.7':'')+'"><span class="seat-inner" style="font-size:'+initFs+'">'+esc(inits(p.name))+'</span></div>'+
+        '<div class="pkr-seat-details"><div class="seat-label">'+esc(p.name)+'</div>'+moneyHtml+resultHtml+chipHtml+'</div>';
+      // A verified member image replaces initials only after loading.
+      // No uploaded photos or unrelated members are exposed on this table.
+      var photoUrl=seatProfilePhoto(sid,p);
+      if(photoUrl){
+        var chip=seat.querySelector('.seat-chip');
+        var img=document.createElement('img');
+        img.className='pkr-seat-avatar-photo';img.alt='';
+        img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
+        img.addEventListener('load',function(){
+          if(img.naturalWidth>0)chip.classList.add('pkr-has-photo');
+        });
+        img.addEventListener('error',function(){img.remove();});
+        img.src=photoUrl;chip.appendChild(img);
+      }
     } else {
       seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
     }
