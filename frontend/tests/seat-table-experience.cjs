@@ -81,7 +81,7 @@ async function check(browser,name,width,height){
  });
  try{
   await page.goto(BASE+'/games/'+game.id+'/play',{waitUntil:'domcontentloaded'});
-  await page.locator('#seat7 .seat-money').filter({hasText:'$25.00'}).waitFor();
+  await page.locator('#seat7 .seat-money').filter({hasText:'$25'}).waitFor();
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor({timeout:18000});
   assert.match(await page.locator('#seat7 .seat-money').innerText(),/1b.*\$25/);
   assert.equal(await page.locator('#seat7 .seat-money').evaluate(el=>getComputedStyle(el).color),

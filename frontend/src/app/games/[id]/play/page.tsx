@@ -230,75 +230,24 @@ export default function PlayPage() {
         {toolsOpen&&<AppDialog className="pkr-table-tools-dialog" aria-label="Table controls"
             onDismiss={()=>setToolsOpen(false)}
             onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
-          <div className="pkr-table-tools-sheet pkr-mockup-tools-sheet" id="pkr-table-tools">
+          <div className="pkr-table-tools-sheet pkr-mockup-tools-sheet pkr-reference-tools" id="pkr-table-tools">
             <header className="pkr-table-tools-sheet-header">
-              <div><span>POKER NIGHT</span><h2>Table controls</h2>
-                <p>Manage hands, seating and table extras.</p></div>
+              <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools and table view</p></div>
               <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
-            <section className="pkr-tools-group" aria-label="Table view">
-              <span className="pkr-tools-section-title">TABLE VIEW</span>
-              <div className="pkr-mockup-tools-grid pkr-tools-layout-grid">
-                <button type="button" aria-label="Full details" aria-pressed={seatLayout==='full'}
-                  className={'pkr-mockup-tool-tile pkr-mockup-layout-option'+(seatLayout==='full'?' is-selected':'')}
-                  onClick={()=>selectTableLayout('full')}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">▣</span>
-                  <span><strong>Full details</strong><small>Larger player cards with full information</small></span>
-                </button>
-                <button type="button" aria-label="Compact seats" aria-pressed={seatLayout==='compact'}
-                  className={'pkr-mockup-tool-tile pkr-mockup-layout-option'+(seatLayout==='compact'?' is-selected':'')}
-                  onClick={()=>selectTableLayout('compact')}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙</span>
-                  <span><strong>Compact seats</strong><small>Minimal seat view for more players</small></span>
-                </button>
-              </div>
-            </section>
-            <section className="pkr-tools-group" aria-label="Gameplay">
-              <span className="pkr-tools-section-title">GAMEPLAY</span>
-              <div className="pkr-mockup-tools-grid">
-                <button id="trackHandsBtn" type="button" className="pkr-mockup-tool-tile" aria-label="Hand tracker"
-                  onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">▤</span>
-                  <span><strong>Hand tracker</strong><small>Record betting and winners</small></span>
-                </button>
-                <button type="button" className="pkr-mockup-tool-tile" aria-label="Tournament"
-                  onClick={()=>{setToolsOpen(false);openTournamentReliably();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🏆</span>
-                  <span><strong>Tournament</strong><small>Blinds, timer and levels</small></span>
-                </button>
-              </div>
-            </section>
-            <section className="pkr-tools-group" aria-label="Seating">
-              <span className="pkr-tools-section-title">SEATING</span>
-              <div className="pkr-mockup-tools-grid">
-                <button type="button" className="pkr-mockup-tool-tile" aria-label="Add seat"
-                  onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙+</span>
-                  <span><strong>Add seat</strong><small>Add another player position</small></span>
-                </button>
-                <button type="button" className="pkr-mockup-tool-tile" aria-label="Remove empty seat"
-                  onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">♙−</span>
-                  <span><strong>Remove empty seat</strong><small>Only unoccupied seats</small></span>
-                </button>
-              </div>
-            </section>
-            <section className="pkr-tools-group" aria-label="Table extras">
-              <span className="pkr-tools-section-title">TABLE EXTRAS</span>
-              <div className="pkr-mockup-tools-grid">
-                <button type="button" className="pkr-mockup-tool-tile" aria-label="Seat draw"
-                  onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🎲</span>
-                  <span><strong>Seat draw</strong><small>Randomise seat positions</small></span>
-                </button>
-                <button type="button" className="pkr-mockup-tool-tile" aria-label="Rabbit hunt"
-                  onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}>
-                  <span className="pkr-mockup-tool-icon" aria-hidden="true">🐇</span>
-                  <span><strong>Rabbit hunt</strong><small>Track rabbit hunt and payouts</small></span>
-                </button>
-              </div>
-            </section>
-            <div className="pkr-tools-reconciliation-note">ⓘ &nbsp; Save Results appears only when everyone has cashed out, the bank balances and synchronisation is clear.</div>
+            <div className="pkr-reference-view-select" role="group" aria-label="Table view">
+              <button type="button" aria-label="Full details" aria-pressed={seatLayout==='full'} onClick={()=>selectTableLayout('full')}>Full details</button>
+              <button type="button" aria-label="Compact seats" aria-pressed={seatLayout==='compact'} onClick={()=>selectTableLayout('compact')}>Compact seats</button>
+            </div>
+            <div className="pkr-reference-tool-grid">
+              <button id="trackHandsBtn" type="button" aria-label="Hand tracker" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}><span aria-hidden="true">♠</span><span>Hand<br/>Tracking</span></button>
+              <button type="button" aria-label="Tournament" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}><span aria-hidden="true">🏆</span><span>Tournament<br/>Controls</span></button>
+              <button type="button" aria-label="Add seat" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}><span aria-hidden="true">♙+</span><span>Add<br/>Seat</span></button>
+              <button type="button" aria-label="Remove empty seat" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}><span aria-hidden="true">−</span><span>Remove<br/>Empty Seat</span></button>
+              <button type="button" aria-label="Seat draw" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}><span aria-hidden="true">🎲</span><span>Seat<br/>Draw</span></button>
+              <button type="button" aria-label="Rabbit hunt" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}><span aria-hidden="true">🐇</span><span>Rabbit<br/>Hunt</span></button>
+            </div>
+            <div className="pkr-tools-reconciliation-note">Save Results becomes available after all cash-outs are recorded, the bank balances and synchronisation is clear.</div>
           </div>
         </AppDialog>}
 
@@ -1824,162 +1773,130 @@ function seatStackText(row){
 }
 // ── Table render ──
 function renderTable() {
-  if (!state.game) return;
-  // Approved mockup: no disconnected horizontal summary strip.
-  // Full and Compact cards both belong to their actual table seats.
-  var area=document.getElementById('tableArea'),summary=document.getElementById('pkrSeatSummary');
-  if(area)area.classList.remove('pkr-table-summary-on');
-  if(summary){summary.hidden=true;summary.classList.remove('is-visible');summary.replaceChildren();}
-  var wrap = document.getElementById('tableWrap');
-  if (!wrap) return;
-  var W = wrap.offsetWidth, H = wrap.offsetHeight;
-  if (!W || !H) { setTimeout(renderTable, 80); return; }
-  // Leave enough room for seat labels and balances around the padded rail.
-  // Wide felt on desktop, traditional vertical table on phones and narrow screens.
-  // Only the visual coordinates change; seat IDs and financial state stay untouched.
-  var wideTable = W >= 850 && H >= 500;
-  var tH = wideTable ? Math.min(H * 0.62, 520) : Math.min(H * (W < 530 ? 0.64 : 0.72), 480);
-  var tW = wideTable ? Math.min(W * 0.72, tH * 1.78, 1050) : Math.min(W * (W < 530 ? 0.48 : 0.46), tH * 0.58);
-  var screen = document.getElementById('gameScreen');
-  if (screen) screen.classList.toggle('pkr-wide-table',wideTable);
-  var cx = W / 2, cy = H / 2;
-  var pad = 14;
-  var outer = document.getElementById('tableOuter');
-  var felt = document.getElementById('tableFelt');
-  if (outer) outer.style.cssText = 'width:' + (tW+pad*2) + 'px;height:' + (tH+pad*2) + 'px;left:' + (cx-(tW+pad*2)/2) + 'px;top:' + (cy-(tH+pad*2)/2) + 'px';
-  if (felt) felt.style.cssText = 'width:' + tW + 'px;height:' + tH + 'px;left:' + (cx-tW/2) + 'px;top:' + (cy-tH/2) + 'px';
-  var tnEl = document.getElementById('tableName');
-  var tsEl = document.getElementById('tableStats');
-  if (tnEl) tnEl.textContent = state.game.name;
-  var players = Object.values(state.players).filter(function(p){ return p && p.name; });
-  var active = players.filter(function(p){ return pBuyin(p) > 0 && !(p.transactions && p.transactions.some(function(t){return t.type==='cashout';})); }).length;
-  if (tsEl) tsEl.textContent = players.length ? (active + ' active · ' + players.length + ' seated') : '';
-  var headerMeta = document.getElementById('topbarGameMeta');
-  if (headerMeta) headerMeta.textContent = active + ' active · ' + players.length + ' seated';
-  var seatRows=seatChipRows();
-  buildSeats(state.game.seats, tW, tH, cx, cy, wideTable, seatRows);
-  updateBank();
-  updateSaveResultsBtn();
+  if(!state.game)return;
+  var area=document.getElementById('tableArea'),wrap=document.getElementById('tableWrap');
+  if(!area||!wrap)return;
+  var W=area.clientWidth,availableHeight=area.clientHeight;
+  if(!W||!availableHeight){setTimeout(renderTable,80);return;}
+  var count=Math.max(2,Math.min(36,Number(state.game.seats)||9));
+  var compact=_pkrSeatLayout==='compact';
+  var hasStacks=!!state.game.hand_tracking;
+  var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2);
+  var wideTable=W>=850&&availableHeight>=380;
+  var cardWidth=wideTable?(compact?76:148):(compact?60:Math.floor(Math.min(132,Math.max(90,W*.285))));
+  var cardHeight=compact?(hasStacks?100:83):(hasStacks?94:72);
+  var minimumHeight=wideTable?450:Math.max(410,(Math.max(leftCount,rightCount)+1)*(cardHeight+9)+28);
+  var H=Math.max(availableHeight,minimumHeight);
+  wrap.style.setProperty('--pkr-canvas-height',H+'px');
+  var summary=document.getElementById('pkrSeatSummary');
+  area.classList.remove('pkr-table-summary-on');
+  if(summary){summary.hidden=true;summary.replaceChildren();}
+  var tH=wideTable?Math.min(H*.54,420):Math.max(180,H-2*(cardHeight+21));
+  var tW=wideTable?Math.min(W*.68,tH*1.9,1000):Math.min(W*.54,tH*.64);
+  var screen=document.getElementById('gameScreen');
+  if(screen)screen.classList.toggle('pkr-wide-table',wideTable);
+  var cx=W/2,cy=H/2,pad=14;
+  var outer=document.getElementById('tableOuter'),felt=document.getElementById('tableFelt');
+  if(outer)outer.style.cssText='width:'+(tW+pad*2)+'px;height:'+(tH+pad*2)+'px;left:'+(cx-(tW+pad*2)/2)+'px;top:'+(cy-(tH+pad*2)/2)+'px';
+  if(felt)felt.style.cssText='width:'+tW+'px;height:'+tH+'px;left:'+(cx-tW/2)+'px;top:'+(cy-tH/2)+'px';
+  var players=Object.values(state.players).filter(function(p){return p&&p.name;});
+  var active=players.filter(function(p){return pBuyin(p)>0&&!(p.transactions||[]).some(function(t){return t.type==='cashout';});}).length;
+  var name=document.getElementById('tableName'),stats=document.getElementById('tableStats'),meta=document.getElementById('topbarGameMeta');
+  if(name)name.textContent=state.game.name;
+  var caption=active+' active · '+players.length+' seated';
+  if(stats)stats.textContent=players.length?caption:'';
+  if(meta)meta.textContent=caption;
+  buildSeats(count,tW,tH,cx,cy,wideTable,seatChipRows(),{
+    width:W,height:H,cardWidth:cardWidth,cardHeight:cardHeight,compact:compact,hasStacks:hasStacks
+  });
+  updateBank();updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
 
 // Full/Compact seat cards replace the old detached scrolling summary.
-function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,compact){
-  var bought=bankIn>0;
-  var status=cashed?'CASHED OUT':bought?'IN PLAY':'SEATED';
+function pkrSeatMoney(n,signed){
+  var text=signed?fmtNet(n):fmt(n);
+  return text.endsWith('.00')?text.slice(0,-3):text;
+}
+function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,compact,stackRow){
+  var bought=bankIn>0,status=cashed?'CASHED OUT':bought?'IN PLAY':'SEATED';
   var statusClass=cashed?'cashed':bought?'inplay':'waiting';
-  var amount=cashed?fmtNet(finalNet):bought?('-'+fmt(bankIn)):fmt(bankIn);
+  var amount=cashed?pkrSeatMoney(finalNet,true):bought?'-'+pkrSeatMoney(bankIn,false):pkrSeatMoney(0,false);
   var amountClass=cashed?nc(finalNet):bought?'neg':'zero';
-  var banks=seatBankLabel(bankIn).replace(/ in$/,'');
-  var avatar='<span class="pkr-game-seat-avatar">'+pkrAvatar(p)+'</span>';
+  var banks=seatBankLabel(bankIn).replace(/ in$/,'').replace('.00','');
+  var avatar='<span class="seat-chip '+(cashed?'cashed':'seated')+' pkr-game-seat-avatar"><span class="seat-inner">'+pkrAvatar(p)+'</span></span>';
   var badge=cashed?'✓':bought?'›':'•';
   var main=compact?
-    '<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'">'+badge+'</span></span>'+
-    '<span class="pkr-game-compact-bank">'+esc(fmt(bankIn))+'</span>'+
+    '<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span>'+
+    '<span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span>'+
     '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>'+
-    (cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+esc(status)+'</span>'):
-    '<span class="pkr-game-seat-main">'+avatar+
-      '<span class="pkr-game-seat-copy"><strong class="pkr-game-seat-name">'+esc(p.name)+'</strong>'+
-        '<small class="pkr-game-seat-bank">'+esc(banks)+'</small>'+
-        '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>'+
-    '<span class="pkr-game-seat-status '+statusClass+'"><span aria-hidden="true">'+badge+'</span> '+esc(status)+'</span>';
-  return '<span class="pkr-game-seat-card '+statusClass+'">'+
-    '<span class="pkr-game-seat-number">'+esc(sid.replace('seat',''))+'</span>'+main+'</span>';
-}
-function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
-  var cont = document.getElementById('seatsContainer');
-  if (!cont) return;
-  cont.innerHTML = '';
-  var chipSize = Math.max(24, Math.min(tW * 0.22, 44, 44 - Math.max(0, count - 9) * 2));
-  var seatGap = chipSize + 6;
-  var sideCount = count - 2;
-  var leftCount = Math.ceil(sideCount / 2);
-  var rightCount = Math.floor(sideCount / 2);
-  var hOff = tW / 2 + seatGap;
-  var vOff = tH / 2 + seatGap;
-  var positions = [];
-  if (wideTable) {
-    // Seat 1 at the top, then continue down the left and back up the right.
-    // Retain the same logical seat numbering and selection handlers.
-    var rx = tW/2 + Math.min(seatGap,38);
-    var ry = tH/2 + Math.min(seatGap,29);
-    var polar = function(angle){ return {x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)}; };
-    positions.push(polar(-Math.PI/2));
-    for (var i=0;i<leftCount;i++) positions.push(polar(-Math.PI/2-Math.PI*(i+1)/(leftCount+1)));
-    positions.push(polar(Math.PI/2));
-    for (var j=0;j<rightCount;j++) positions.push(polar(Math.PI/2-Math.PI*(j+1)/(rightCount+1)));
-  } else {
-    positions.push({ x: cx, y: cy - vOff });
-    // Dense side seats should use the entire playable screen height, not
-    // only the felt height. With 13 seats the original tH/7 spacing caused
-    // the bank and results chips to overlap one another on small iPhones.
-    var denseVertical=count>=10;
-    var verticalTop=denseVertical?Math.max(22,chipSize/2+10):cy-tH/2;
-    var verticalBottom=denseVertical?(document.getElementById('tableWrap').offsetHeight)-Math.max(22,chipSize/2+10):cy+tH/2;
-    for (var i = 0; i < leftCount; i++) {
-      var spacing = (verticalBottom-verticalTop) / (leftCount + 1);
-      positions.push({ x: cx - hOff, y: verticalTop + spacing*(i+1) });
-    }
-    positions.push({ x: cx, y: cy + vOff });
-    for (var j = 0; j < rightCount; j++) {
-      var spacingR = (verticalBottom-verticalTop) / (rightCount + 1);
-      positions.push({ x: cx + hOff, y: verticalTop + spacingR*(j+1) });
-    }
+    (cashed?'':'<span class="pkr-game-compact-status '+statusClass+'">'+status+'</span>'):
+    '<span class="pkr-game-seat-main">'+avatar+'<span class="pkr-game-seat-copy">'+
+    '<strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong>'+
+    '<small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small>'+
+    '<strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>'+
+    '<span class="pkr-game-seat-status '+statusClass+'"><span aria-hidden="true">'+badge+'</span> '+status+'</span>';
+  var chipLabel='';
+  if(state.game.hand_tracking&&stackRow&&!cashed){
+    if(Number.isSafeInteger(stackRow.chips)&&stackRow.chips>=0){
+      chipLabel=Number(stackRow.chips).toLocaleString('en-AU')+' chips';
+      if(!compact&&stackRow.cashValue!==null&&Number.isFinite(stackRow.cashValue))chipLabel+=' · '+pkrSeatMoney(stackRow.cashValue,false);
+    }else if(stackRow.source==='review')chipLabel='Check chips';
   }
-  positions.forEach(function(pos, i) {
-    var sid = 'seat' + (i+1);
-    var p = state.players[sid];
-    var seat = document.createElement('div');
-    seat.className = 'seat';
-    var dense=count>=10&&!wideTable;
-    if(dense){
-      seat.classList.add('pkr-mockup-player-seat',_pkrSeatLayout==='full'?'pkr-layout-full':'pkr-layout-compact');
-      var cardHeight=Math.floor(Math.min(83,Math.max(48,(document.getElementById('tableWrap').offsetHeight-40)/(Math.max(leftCount,rightCount)+1)-7)));
-      var cardWidth=Math.floor(Math.min(116,Math.max(86,document.getElementById('tableWrap').offsetWidth*.29)));
-      seat.style.setProperty('--pkr-card-height',cardHeight+'px');
-      seat.style.setProperty('--pkr-card-width',cardWidth+'px');
+  var chips=chipLabel?'<span class="seat-stack pkr-game-stack-readout '+(stackRow.source||'issued')+'">'+esc(chipLabel)+'</span>':'';
+  return '<span class="pkr-game-seat-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span>'+main+chips+'</span>';
+}
+function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
+  var cont=document.getElementById('seatsContainer');if(!cont)return;
+  cont.replaceChildren();
+  var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2),positions=[];
+  if(wideTable){
+    var rx=Math.min(g.width/2-g.cardWidth/2-12,tW/2+g.cardWidth*.65);
+    var ry=Math.min(g.height/2-g.cardHeight/2-16,tH/2+g.cardHeight*.6);
+    var polar=function(a){return {x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};};
+    positions.push(polar(-Math.PI/2));
+    for(var a=0;a<leftCount;a++)positions.push(polar(-Math.PI/2-Math.PI*(a+1)/(leftCount+1)));
+    positions.push(polar(Math.PI/2));
+    for(var b=0;b<rightCount;b++)positions.push(polar(Math.PI/2-Math.PI*(b+1)/(rightCount+1)));
+  }else{
+    var top=g.cardHeight/2+14,bottom=g.height-g.cardHeight/2-14;
+    var leftX=Math.max(g.cardWidth/2+8,cx-tW/2-g.cardWidth*.32),rightX=g.width-leftX;
+    var first=top+g.cardHeight*.6,last=bottom-g.cardHeight*.6;
+    var spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
+    positions.push({x:cx,y:top});
+    for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});
+    positions.push({x:cx,y:bottom});
+    // Geometry only: seat IDs remain unchanged; right-hand positions run
+    // from bottom to top, as shown in the approved circular seating mockup.
+    for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
+  }
+  positions.forEach(function(pos,i){
+    var sid='seat'+(i+1),p=state.players[sid],seat=document.createElement('div');
+    seat.className='seat pkr-mockup-player-seat '+(g.compact?'pkr-layout-compact':'pkr-layout-full');
+    seat.id=sid;seat.style.left=pos.x+'px';seat.style.top=pos.y+'px';
+    seat.style.setProperty('--pkr-card-width',g.cardWidth+'px');
+    seat.style.setProperty('--pkr-card-height',g.cardHeight+'px');
+    seat.style.setProperty('--pkr-avatar-size',(wideTable?42:g.width<=360?28:34)+'px');
+    seat.style.setProperty('--pkr-name-size',(wideTable?13:g.width<=360?10:11)+'px');
+    seat.style.setProperty('--pkr-bank-size',(wideTable?12:g.width<=360?9:10)+'px');
+    seat.style.setProperty('--pkr-result-size',(wideTable?17:g.width<=360?12:14)+'px');
+    if(i>0&&i<=leftCount)seat.dataset.side='left';
+    else if(i>leftCount+1)seat.dataset.side='right';
+    seat.setAttribute('role','button');seat.tabIndex=0;
+    if(p&&p.name){
+      var bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
+      seat.classList.add(cashed?'pkr-cashed-seat':bi>0?'pkr-inplay-seat':'pkr-waiting-seat');
+      seat.dataset.status=cashed?'cashed':bi>0?'inplay':'waiting';
+      seat.setAttribute('aria-label','Open player '+p.name+': '+(cashed?'Cashed out':bi>0?'In play':'Seated'));
+      seat.title=p.name+' · '+seatBankLabel(bi)+' · '+(cashed?'Cashed out; net '+fmtNet(pNet(p)):'Buy-ins outstanding, not a realised loss');
+      seat.innerHTML=pkrMockupSeatCard(p,sid,bi,pNet(p),cashed,g.compact,(seatRows||{})[sid]);
+    }else{
+      seat.classList.add('pkr-empty-seat');
+      seat.setAttribute('aria-label','Assign player to seat '+(i+1));
+      seat.innerHTML='<span class="seat-chip empty"><span class="seat-inner">+</span></span><span class="seat-label">Seat '+(i+1)+'</span>';
     }
-    // Side seats place the name and balance outside the felt so neighbouring
-    // players do not cover each other's labels on a laptop.
-    if (i > 0 && i <= leftCount) seat.dataset.side = 'left';
-    else if (i > leftCount + 1) seat.dataset.side = 'right';
-    seat.setAttribute('role','button');
-    seat.setAttribute('tabindex','0');
-    seat.setAttribute('aria-label',p && p.name ?
-      'Open player '+p.name+': '+(p.transactions&&p.transactions.some(function(t){return t.type==='cashout';})?'Cashed out':'In play'):
-      'Assign player to seat '+(i+1));
-    seat.id = sid;
-    seat.style.left = pos.x + 'px';
-    seat.style.top = pos.y + 'px';
-    var cs = chipSize + 'px';
-    var initFs = Math.max(8, chipSize * 0.34) + 'px';
-    var emptyFs = Math.max(12, chipSize * 0.52) + 'px';
-    if (p && p.name) {
-      var bi = pBuyin(p), co = pCash(p), net = pNet(p);
-      var isRsvp = p.rsvp && bi === 0;
-      var cls = (co > 0 || (co === 0 && bi > 0 && pCash(p) !== null && p.transactions && p.transactions.some(function(t){return t.type==='cashout';}))) ? 'cashed' : isRsvp ? 'rsvp' : 'seated';
-      var stackRow=(seatRows||{})[sid],stackLabel=seatStackText(stackRow);
-      var moneyHtml=bi>0?'<div class="seat-money">'+esc(seatBankLabel(bi))+'</div>':'';
-      var netHtml = cls==='cashed' ? '<div class="seat-net ' + nc(net) + '">Net ' + fmtBNet(net) + '</div>' :
-        (isRsvp ? '<div class="seat-net" style="color:var(--muted);font-size:0.7rem">RSVP</div>' : '');
-      var chipHtml=stackLabel?'<div class="seat-stack '+(stackRow.source==='verified'?'verified':stackRow.source==='tracked'?'tracked':stackRow.source==='review'?'review':'issued')+'" title="'+esc(stackRow.reason||'Buy-in chips and recorded hand actions')+'">'+esc(stackLabel)+'</div>':'';
-      var cashed=cls==='cashed',tracked=stackRow&&(stackRow.source==='verified'||stackRow.source==='tracked')&&
-        stackRow.cashValue!==null&&Number(stackRow.unsettledChips||0)===0;
-      // The invested bank amount remains red until cash-out, while
-      // the final net result follows its actual profit/loss sign.
-      if(bi>0&&!cashed)seat.classList.add('pkr-inplay-seat');
-      if(cashed)seat.classList.add('pkr-cashed-seat');
-      var amount=cashed?net:tracked?stackRow.cashValue-bi:0;
-      var result=cashed?fmtBNet(net):tracked?fmtNet(amount):'';
-      var smallInfo='<span class="pkr-dense-info"><span class="pkr-dense-name">'+esc(p.name)+'</span><span class="pkr-dense-bank">'+esc(seatBankLabel(bi))+'</span>'+(result?'<span class="pkr-dense-result '+nc(amount)+'">'+esc(result)+'</span>':'')+'</span>';
-      seat.innerHTML = dense?pkrMockupSeatCard(p,sid,bi,net,cashed,_pkrSeatLayout==='compact'):
-        '<div class="seat-chip '+cls+'" style="width:'+cs+';height:'+cs+'"><span class="seat-inner">'+pkrAvatar(p)+'</span></div><div class="seat-label">'+esc(p.name)+'</div>'+moneyHtml+chipHtml+netHtml;
-    } else {
-      seat.innerHTML = '<div class="seat-chip empty" style="width:' + cs + ';height:' + cs + '"><span class="seat-inner" style="font-size:' + emptyFs + '">+</span></div><div class="seat-label" style="opacity:0.3;font-size:0.88rem;font-weight:400">Seat ' + (i+1) + '</div>';
-    }
-    var capturedSid = sid;
-    seat.addEventListener('click', function(){ onSeatClick(capturedSid); });
-    seat.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();onSeatClick(capturedSid);}});
+    seat.addEventListener('click',function(){onSeatClick(sid);});
+    seat.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();onSeatClick(sid);}});
     cont.appendChild(seat);
   });
 }

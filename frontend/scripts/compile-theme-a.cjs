@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),postcss=require('postcss');
 const app=path.resolve(__dirname,'../src/app');
 const baseNames=['globals.css','pkr-app.css','pkr-casino.css','pre-game.css','pkr-reference-polish.css','pkr-approved-banner.css','pkr-secondary-ui.css','pkr-interaction-refresh.css','pkr-standings.css','pkr-landing-premium.css','pkr-marketing-pages.css','pkr-product-gallery.css','pkr-2026-graphite.css'];
-const themeNames=['pkr-theme-a-tokens.css','pkr-theme-a-public.css','pkr-theme-a-app.css','pkr-theme-a-table.css','pkr-theme-a-polish.css','pkr-theme-a-overlays.css','pkr-app-experience.css'];
+const themeNames=['pkr-theme-a-tokens.css','pkr-theme-a-public.css','pkr-theme-a-app.css','pkr-theme-a-table.css','pkr-theme-a-polish.css','pkr-theme-a-overlays.css','pkr-app-experience.css','pkr-gameplay-reference.css'];
 function read(names){
  const root=postcss.root();
  for(const name of names){
