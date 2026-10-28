@@ -245,7 +245,7 @@ export default function PlayPage() {
             onMouseDown={e=>{if(e.target===e.currentTarget)setToolsOpen(false);}}>
           <div className="pkr-table-tools-sheet pkr-mockup-tools-sheet pkr-reference-tools" id="pkr-table-tools">
             <header className="pkr-table-tools-sheet-header">
-              <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools and table view</p></div>
+              <div><span>POKER NIGHT</span><h2>Table controls</h2><p>Game tools</p></div>
               <button className="pkr-tools-close" type="button" aria-label="Close table controls" onClick={()=>setToolsOpen(false)}>×</button>
             </header>
             <div className="pkr-reference-view-select pkr-responsive-view-select" role="group" aria-label="Table view">
@@ -670,18 +670,18 @@ var PHONE_K = 'pokerPhones_'  + (_ctx.eventId || _ctx.gameId);
 var _pkrSeatLayoutKey='pkrSeatLayout_'+_ctx.gameId;
 var _pkrSavedLayout=localStorage.getItem(_pkrSeatLayoutKey);
 if(_pkrSavedLayout==='full')_pkrSavedLayout='balanced';
-var _pkrSeatLayout=['auto','balanced','compact','mobile'].includes(_pkrSavedLayout)?_pkrSavedLayout:'auto';
+var _pkrSeatLayout=_pkrSavedLayout==='compact'?'compact':'auto';
 function pkrResolveSeatLayout(){
-  if(_pkrSeatLayout!=='auto')return _pkrSeatLayout;
+  if(_pkrSeatLayout==='compact')return 'compact';
+  if(_pkrSeatLayout==='balanced')return 'balanced';
   var w=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
   var h=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  if(w<700&&h>=w)return 'mobile';
-  if(w<1024)return 'compact';
+  if(w<350||(w<900&&h<w))return 'compact';
   return 'balanced';
 }
 window.pkrGetResolvedSeatLayout=pkrResolveSeatLayout;
 window.pkrSetSeatLayout=function(mode){
-  if(!['auto','balanced','compact','mobile'].includes(mode))return;
+  if(mode!=='auto'&&mode!=='balanced'&&mode!=='compact')return;
   _pkrSeatLayout=mode;localStorage.setItem(_pkrSeatLayoutKey,mode);renderTable();
 };
 var _pkrViewportTimer=0;
@@ -1837,16 +1837,16 @@ function renderTable() {
   var tightWide=wideTable&&count>=10&&W<1024;
   var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var compactWidth=wideTable?Math.min(tightWide?76:88,Math.max(62,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
-  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
-  var cardHeight=mobileRail?(hasStacks?96:84):compact?(tightWide?(hasStacks?82:70):(hasStacks?98:82)):tightWide?(hasStacks?86:68):(hasStacks?96:76);
+  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?60:Math.floor(Math.min(108,Math.max(92,W*.26))));
+  var cardHeight=mobileRail?(hasStacks?90:80):compact?(tightWide?(hasStacks?78:68):(hasStacks?82:72)):tightWide?(hasStacks?82:66):(hasStacks?82:66);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
   if(summary){summary.hidden=true;summary.replaceChildren();}
-  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):Math.min(H*.69,Math.max(310,H-2*(cardHeight*.72+24)));
-  var tW=wideTable?Math.min(W*.72,1000):Math.min(W*.62,tH*.70);
+  var tW=wideTable?Math.min(W*.72,1000):Math.min(W*.53,250);
+  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):Math.min(H*.62,tW*1.72);
   var screen=document.getElementById('gameScreen');
   if(screen){
     screen.classList.toggle('pkr-wide-table',wideTable);
@@ -1895,9 +1895,9 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     for(var a=0;a<leftCount;a++)positions.push(polar(-Math.PI/2-Math.PI*(a+1)/(leftCount+1)));positions.push(polar(Math.PI/2));
     for(var b=0;b<rightCount;b++)positions.push(polar(Math.PI/2-Math.PI*(b+1)/(rightCount+1)));
   }else{
-    var top=g.cardHeight/2+12,bottom=g.height-g.cardHeight/2-12;
-    var leftX=Math.max(g.cardWidth/2+7,cx-tW/2-g.cardWidth*.36),rightX=g.width-leftX;
-    var first=top+g.cardHeight*.62,last=bottom-g.cardHeight*.62,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
+    var top=Math.max(g.cardHeight/2+8,cy-tH/2-g.cardHeight*.55),bottom=Math.min(g.height-g.cardHeight/2-8,cy+tH/2+g.cardHeight*.55);
+    var leftX=Math.max(g.cardWidth/2+6,cx-tW/2-g.cardWidth*.52),rightX=Math.min(g.width-g.cardWidth/2-6,cx+tW/2+g.cardWidth*.52);
+    var first=top+g.cardHeight*.70,last=bottom-g.cardHeight*.70,spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
     positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
     for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
   }
