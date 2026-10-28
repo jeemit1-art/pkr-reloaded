@@ -1830,17 +1830,17 @@ function renderTable() {
   var wideTable=!mobileRail&&(mode==='balanced'?W>=650:(W>=700||W>availableHeight*1.08));
   var tightWide=wideTable&&count>=10&&W<1024;
   var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
-  var compactWidth=wideTable?Math.min(88,Math.max(64,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
+  var compactWidth=wideTable?Math.min(tightWide?76:88,Math.max(62,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
   var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?62:Math.floor(Math.min(126,Math.max(94,W*.29))));
-  var cardHeight=mobileRail?(hasStacks?96:84):compact?(hasStacks?98:82):tightWide?(hasStacks?86:68):(hasStacks?96:76);
+  var cardHeight=mobileRail?(hasStacks?96:84):compact?(tightWide?(hasStacks?80:68):(hasStacks?98:82)):tightWide?(hasStacks?86:68):(hasStacks?96:76);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
   if(summary){summary.hidden=true;summary.replaceChildren();}
-  var tH=wideTable?Math.min(H*.56,430):mobileRail?Math.max(250,H-2*(cardHeight*.58+24)):Math.max(190,H-2*(cardHeight+22));
-  var tW=wideTable?Math.min(W*.69,tH*1.9,1000):mobileRail?Math.min(W*.67,tH*.46):Math.min(W*.57,tH*.64);
+  var tH=wideTable?(tightWide?Math.min(H*.68,300):Math.min(H*.56,430)):mobileRail?Math.max(250,H-2*(cardHeight*.58+24)):Math.max(190,H-2*(cardHeight+22));
+  var tW=wideTable?Math.min(W*.72,1000):mobileRail?Math.min(W*.67,tH*.46):Math.min(W*.57,tH*.64);
   var screen=document.getElementById('gameScreen');
   if(screen){
     screen.classList.toggle('pkr-wide-table',wideTable);
@@ -1884,7 +1884,7 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
   var cont=document.getElementById('seatsContainer');if(!cont)return;cont.replaceChildren();
   var leftCount=Math.ceil((count-2)/2),rightCount=Math.floor((count-2)/2),positions=[];
   if(wideTable){
-    var rx=Math.min(g.width/2-g.cardWidth/2-12,tW/2+g.cardWidth*.65),ry=Math.min(g.height/2-g.cardHeight/2-16,tH/2+g.cardHeight*.6);
+    var rx=Math.min(g.width/2-g.cardWidth/2-12,tW/2+g.cardWidth*.65),ry=Math.min(g.height/2-g.cardHeight/2-(g.tightWide?8:16),tH/2+g.cardHeight*.6);
     var polar=function(a){return {x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)};};positions.push(polar(-Math.PI/2));
     for(var a=0;a<leftCount;a++)positions.push(polar(-Math.PI/2-Math.PI*(a+1)/(leftCount+1)));positions.push(polar(Math.PI/2));
     for(var b=0;b<rightCount;b++)positions.push(polar(Math.PI/2-Math.PI*(b+1)/(rightCount+1)));
