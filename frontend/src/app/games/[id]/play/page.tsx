@@ -10,18 +10,6 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [seatLayout, setSeatLayout] = useState<'auto'|'balanced'|'compact'|'mobile'>('auto');
-  function selectTableLayout(mode:'auto'|'balanced'|'compact'|'mobile'){
-    (window as any).pkrSetSeatLayout?.(mode);
-    setSeatLayout(mode);
-    setToolsOpen(false);
-  }
-  function savedTableLayout(){
-    const raw=localStorage.getItem('pkrSeatLayout_'+gameId);
-    if(raw==='full') return 'balanced' as const;
-    if(raw==='balanced'||raw==='compact'||raw==='mobile'||raw==='auto') return raw;
-    return 'auto' as const;
-  }
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
