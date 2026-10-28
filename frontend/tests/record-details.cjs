@@ -57,8 +57,10 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  const person=await load({kind:'player',title:'Alex',roomId:'r1',playerId:'a',playerName:'Alex'});
  assert.equal(person.rows.length,2);assert.match(person.summary,/\+\$40\.00/);
  assert.match(person.summary,/2 settled games/);
- assert.deepEqual(person.rows.map(row=>row.href).sort(),
-  ['/games/results/token-g1','/games/results/token-g2']);
+ assert.equal(JSON.stringify(person.rows.map(row=>row.href).sort()),
+  JSON.stringify(['/games/results/token-g1','/games/results/token-g2']));
+ // VM evaluation creates arrays from a separate JavaScript realm; compare
+ // serialised string values rather than realm-specific Array prototypes.
  assert(person.rows.every(row=>row.detail.includes('Buy-ins')&&row.detail.includes('Cash-out')),
   'Each game history entry shows buy-ins and cash-outs');
  assert(person.rows.some(row=>row.detail.includes('3 buy-ins')),
