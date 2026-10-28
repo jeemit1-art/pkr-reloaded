@@ -1808,8 +1808,8 @@ function renderTable() {
   var tightWide=wideTable&&count>=10&&W<1024;
   var balancedWidth=wideTable?Math.min(150,Math.max(96,Math.floor((W-28)/(Math.ceil(count/2)+1)))):0;
   var compactWidth=wideTable?Math.min(tightWide?76:88,Math.max(62,Math.floor((W-24)/(Math.ceil(count/2)+1)))):0;
-  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?60:Math.floor(Math.min(108,Math.max(92,W*.26))));
-  var cardHeight=mobileRail?(hasStacks?90:80):compact?(tightWide?(hasStacks?78:68):(hasStacks?82:72)):tightWide?(hasStacks?82:66):(hasStacks?82:66);
+  var cardWidth=mobileRail?Math.floor(Math.min(76,Math.max(64,W*.19))):wideTable?(compact?compactWidth:balancedWidth):(compact?60:Math.floor(Math.min(102,Math.max(94,W*.245))));
+  var cardHeight=mobileRail?(hasStacks?90:80):compact?(tightWide?(hasStacks?78:68):(hasStacks?82:72)):wideTable?(tightWide?(hasStacks?82:66):(hasStacks?96:76)):(hasStacks?76:60);
   var minimumHeight=wideTable?450:mobileRail?Math.max(560,(maxSide+1)*(cardHeight+6)+28):Math.max(430,(maxSide+1)*(cardHeight+9)+28);
   var H=Math.max(availableHeight,minimumHeight);
   wrap.style.setProperty('--pkr-canvas-height',H+'px');
@@ -1877,7 +1877,7 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     var sid='seat'+(i+1),p=state.players[sid],seat=document.createElement('div');
     seat.className='seat pkr-mockup-player-seat pkr-layout-'+g.mode;seat.id=sid;seat.style.left=pos.x+'px';seat.style.top=pos.y+'px';
     seat.style.setProperty('--pkr-card-width',g.cardWidth+'px');seat.style.setProperty('--pkr-card-height',g.cardHeight+'px');
-    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?28:34)+'px');
+    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?28:32)+'px');
     seat.style.setProperty('--pkr-name-size',(g.mobileRail?(g.width<=360?10:11):g.tightWide?10:wideTable?13:g.width<=360?10:11)+'px');
     seat.style.setProperty('--pkr-bank-size',(g.mobileRail?(g.width<=360?9:10):g.tightWide?9:wideTable?12:g.width<=360?9:10)+'px');
     seat.style.setProperty('--pkr-result-size',(g.mobileRail?(g.width<=360?12:14):g.tightWide?13:wideTable?17:g.width<=360?12:14)+'px');
