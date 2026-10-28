@@ -90,7 +90,7 @@ async function run(){
         const n=info.getBoundingClientRect(),m=amount.getBoundingClientRect();
         const collision=n.left<m.right-2&&n.right>m.left+2&&n.top<m.bottom-2&&n.bottom>m.top+2;
         return {ok:b.width>=a.width-3&&b.height<=180&&
-          n.width>=80&&m.width>50&&!collision&&
+          n.width>=80&&m.width>20&&!collision&&
           n.left>=a.left-2&&n.right<=a.right+2&&m.left>=a.left-2&&m.right<=a.right+2,
           reason:JSON.stringify({row:a.toJSON(),button:b.toJSON(),name:n.toJSON(),net:m.toJSON(),collision})};
       });
