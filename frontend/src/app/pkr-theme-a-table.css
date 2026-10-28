@@ -612,3 +612,12 @@
  #gameScreen.pkr-casino-live-table .pkr-game-seat-bank{font-size:8px}
  #gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-size:10px}
 }
+
+/* Screenshot-reviewed final polish against approved three-phone mockup. */
+#gameScreen.pkr-casino-live-table #tableStats{
+ white-space:nowrap!important;overflow:visible!important;
+ font-size:clamp(9px,2.2vw,11px)!important;letter-spacing:.06em!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:clamp(10px,2.7vw,12px)!important;line-height:1.14!important;
+}
