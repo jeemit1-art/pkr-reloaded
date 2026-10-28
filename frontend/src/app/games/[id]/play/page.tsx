@@ -2855,8 +2855,11 @@ if (ctx && ctx.gameId) {
         if(game[field]!==undefined&&game[field]!==null)state.game[field]=game[field];
       });
       if(Number(game.buy_in)>0){
-        state.game.bank_size=game.buy_in/100;
         state.game.defaultBuyin=game.buy_in/100;
+        // Bank size is a separate display denomination. Never overwrite a
+        // host-selected bank size with the room's default buy-in amount.
+        if(!(Number(state.game.bank_size)>0))
+          state.game.bank_size=Number(game.bank_size)>0?Number(game.bank_size):game.buy_in/100;
       }
       _origSaveState();
     }
