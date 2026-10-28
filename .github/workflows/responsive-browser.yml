@@ -66,7 +66,7 @@ jobs:
       - name: Test records, visible popups and app layouts using synthetic API data
         working-directory: frontend
         run: |
-          # Exercise the newest gameplay surface first for quick feedback.
+          node tests/reference-seat-sizes.cjs
           node tests/seat-table-experience.cjs
           node tests/dense-seat-layout.cjs
           node tests/app-experience.cjs
