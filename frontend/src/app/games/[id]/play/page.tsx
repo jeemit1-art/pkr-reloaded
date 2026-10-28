@@ -1930,7 +1930,7 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
       seat.setAttribute('aria-label','Open player '+p.name+': '+(cashed?'Cashed out':bi>0?'In play':'Seated'));
       seat.title=p.name+' · '+seatBankLabel(bi)+' · '+(cashed?'Cashed out; net '+fmtNet(pNet(p)):'Buy-ins outstanding, not a realised loss');
       seat.innerHTML=pkrMockupSeatCard(p,sid,bi,pNet(p),cashed,g.mode,(seatRows||{})[sid]);
-    }else{seat.classList.add('pkr-empty-seat');seat.setAttribute('aria-label','Assign player to seat '+(i+1));seat.innerHTML='<span class="seat-chip empty"><span class="seat-inner">+</span></span><span class="seat-label">Seat '+(i+1)+'</span>';}
+    }else{seat.classList.add('pkr-empty-seat');seat.dataset.status='empty';seat.setAttribute('aria-label','Assign player to seat '+(i+1));seat.title='Add player to Seat '+(i+1);seat.innerHTML='<span class="pkr-empty-seat-add" aria-hidden="true">+</span><span class="pkr-empty-seat-number">Seat '+(i+1)+'</span>';}
     seat.addEventListener('click',function(){onSeatClick(sid);});seat.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();onSeatClick(sid);}});cont.appendChild(seat);
   });
 }
