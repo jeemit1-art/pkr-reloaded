@@ -294,3 +294,102 @@
   font-size:9px!important;
  }
 }
+
+/* PKR 13+ seat selector — zero change to actual seat positions or game rules. */
+#gameScreen .pkr-seat-photo,#gameScreen .pkr-avatar-fallback{
+ width:100%;height:100%;border-radius:50%;object-fit:cover;align-items:center;justify-content:center;
+}
+#gameScreen .seat-inner:has(.pkr-seat-photo),#gameScreen .seat-inner:has(.pkr-avatar-fallback){
+ display:grid;place-items:center;width:100%;height:100%;overflow:hidden;border-radius:50%;
+}
+#gameScreen .pkr-dense-seat{display:flex;flex-direction:row;gap:4px;align-items:center;min-height:38px;max-width:none;}
+#gameScreen .pkr-dense-seat .pkr-dense-portrait{flex:0 0 auto}
+#gameScreen .pkr-dense-seat .pkr-dense-info{
+ display:flex;flex-direction:column;align-items:flex-start;
+ min-width:0;max-width:95px;padding:4px 5px;
+ border-radius:8px;background:#101b1deD;border:1px solid #385858;
+ box-shadow:0 3px 10px #0006;
+ font:650 10px/1.3 var(--font-num),monospace;
+}
+#gameScreen .pkr-dense-seat[data-side="right"]{flex-direction:row-reverse;}
+#gameScreen .pkr-dense-seat .pkr-dense-name{
+ display:block;overflow:hidden;max-width:100%;white-space:nowrap;text-overflow:ellipsis;
+ font:750 11px/1.25 var(--font-body),Inter,sans-serif;color:#EAF0F2;
+}
+#gameScreen .pkr-dense-seat .pkr-dense-bank{
+ font-size:10px;color:#DCE9E5;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+#gameScreen .pkr-dense-result.pos,#gameScreen .pkr-balance.pos{color:#3DDC97!important}
+#gameScreen .pkr-dense-result.neg,#gameScreen .pkr-balance.neg{color:#FF6876!important}
+#gameScreen .pkr-dense-result.zero,#gameScreen .pkr-balance.zero{color:#C5D3D7!important}
+#gameScreen .pkr-dense-seat.pkr-layout-full .pkr-dense-info{max-width:86px}
+#gameScreen .pkr-dense-seat.pkr-layout-full .pkr-dense-result{display:none}
+#gameScreen .pkr-dense-seat.pkr-layout-compact .pkr-dense-info{max-width:89px}
+#gameScreen .pkr-seat-summary{
+ position:absolute;top:4px;left:0;right:0;z-index:12;
+ display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;
+ padding:3px 10px 9px;scroll-snap-type:x proximity;
+ scrollbar-width:thin;pointer-events:auto;
+}
+#gameScreen .pkr-seat-summary[hidden]{display:none!important}
+#gameScreen .pkr-seat-summary-card{
+ flex:0 0 155px;display:flex;align-items:center;gap:8px;padding:7px 9px;
+ background:#102324;box-shadow:0 4px 15px #0007;
+ border:1px solid #39665F;border-radius:12px;color:#EAF0F2;
+ text-align:left;scroll-snap-align:start;
+}
+#gameScreen .pkr-summary-photo{width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;background:#213E37;border-radius:50%;font-weight:750}
+#gameScreen .pkr-summary-photo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+#gameScreen .pkr-summary-copy{display:grid;min-width:0;gap:2px}
+#gameScreen .pkr-summary-copy>b{font:750 12px/1.2 var(--font-body),sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#gameScreen .pkr-summary-copy>small{font:600 10px/1.2 var(--font-num),monospace;color:#B1C6C2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#gameScreen .pkr-summary-copy>strong{font:800 13px/1.25 var(--font-num),monospace}
+@media(max-width:700px){
+ #gameScreen .pkr-dense-seat .pkr-dense-info{max-width:76px}
+ #gameScreen .pkr-dense-seat .pkr-dense-name{font-size:10px}
+ #gameScreen .pkr-dense-seat .pkr-dense-bank{font-size:9px}
+ #gameScreen .pkr-dense-seat .pkr-dense-result{font-size:10px;font-weight:800}
+}
+
+/* Dense full mode: the balance strip takes its own row above the table.
+   Never overlap seat one, game actions or the felt, even on small iPhones. */
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on{
+ display:flex;flex-direction:column;
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .pkr-seat-summary{
+ position:relative!important;top:auto!important;left:auto!important;right:auto!important;
+ flex:0 0 auto;min-height:0;max-width:100%;z-index:12;
+ padding:5px 9px 10px;overflow-x:auto;overflow-y:hidden;
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .table-wrap{
+ position:relative!important;inset:auto!important;
+ flex:1 1 auto;min-height:0;width:100%;
+}
+#gameScreen.pkr-casino-live-table .pkr-summary-status{
+ color:#A7BAB7;font-size:10px;line-height:1.3;font-weight:650;
+}
+
+/* Extra-dense 13-player phone layout: three concise lines must stay
+   below the gap between the centre-points of adjacent side seats. */
+@media (max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat{
+  min-height:32px!important;
+  gap:3px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-info{
+  box-sizing:border-box;
+  padding:2px 4px!important;
+  gap:0!important;
+  font:650 9px/1.06 var(--font-num),monospace!important;
+  min-height:0!important;
+  max-height:36px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-name{
+  font:750 10px/1.08 var(--font-body),Inter,sans-serif!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-bank,
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-result{
+  font-size:9px!important;
+  line-height:1.06!important;
+ }
+}
