@@ -1862,6 +1862,12 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
   var rightCount = Math.floor(sideCount / 2);
   var hOff = tW / 2 + seatGap;
   var vOff = tH / 2 + seatGap;
+  // At 320px wide, a complete player card is wider than the old bare chip.
+  // Keep the numbered side seats inside the screen in either view, without
+  // changing their order, hit handlers, table felt or the saved game.
+  var fullCardHalf=Math.min(126,W*0.32)/2;
+  var leftX=wideTable?cx-hOff:Math.max(cx-hOff,fullCardHalf+6);
+  var rightX=wideTable?cx+hOff:Math.min(cx+hOff,W-fullCardHalf-6);
   var positions = [];
   if (wideTable) {
     // Seat 1 at the top, then continue down the left and back up the right.
@@ -1877,12 +1883,12 @@ function buildSeats(count, tW, tH, cx, cy, wideTable, seatRows) {
     positions.push({ x: cx, y: cy - vOff });
     for (var i = 0; i < leftCount; i++) {
       var spacing = tH / (leftCount + 1);
-      positions.push({ x: cx - hOff, y: cy + (-tH/2 + spacing*(i+1)) });
+      positions.push({ x: leftX, y: cy + (-tH/2 + spacing*(i+1)) });
     }
     positions.push({ x: cx, y: cy + vOff });
     for (var j = 0; j < rightCount; j++) {
       var spacingR = tH / (rightCount + 1);
-      positions.push({ x: cx + hOff, y: cy + (-tH/2 + spacingR*(j+1)) });
+      positions.push({ x: rightX, y: cy + (-tH/2 + spacingR*(j+1)) });
     }
   }
   positions.forEach(function(pos, i) {
