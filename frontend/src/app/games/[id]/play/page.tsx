@@ -2848,6 +2848,18 @@ if (ctx && ctx.gameId) {
         if (c) { c.isHost = !!isHost; localStorage.setItem('pkrCtx', JSON.stringify(c)); }
       }).catch(function(){});
     }
+    // Refresh display-only game configuration from the server, including
+    // chip value and hand tracking. This is never a financial or seat write.
+    if(state.game){
+      ['chip_value','starting_chips','hand_tracking','small_blind','big_blind'].forEach(function(field){
+        if(game[field]!==undefined&&game[field]!==null)state.game[field]=game[field];
+      });
+      if(Number(game.buy_in)>0){
+        state.game.bank_size=game.buy_in/100;
+        state.game.defaultBuyin=game.buy_in/100;
+      }
+      _origSaveState();
+    }
     // Build state.game if we don't have one
     if (!state.game) {
       state.game = {
@@ -2916,6 +2928,7 @@ if (ctx && ctx.gameId) {
     if (htBtn2)  htBtn2.style.display  = (state.game && state.game.hand_tracking) ? '' : 'none';
     if (trkBtn2) trkBtn2.style.color   = (state.game && state.game.hand_tracking) ? 'var(--gold)' : 'var(--muted)';
     renderTable();
+    if(state.game&&state.game.hand_tracking)window.refreshSeatStacks&&window.refreshSeatStacks();
     updateSaveResultsBtn();
     maybeShowNotifBanner();
     if (restoredBanks) toast('Restored whole-cent bank amounts from PKR. Check reconstructed bank rows before settling.');
@@ -3009,7 +3022,74 @@ var _pollInterval = setInterval(function() {
   }).catch(function(){}).finally(function(){_remoteGameRefreshBusy=false;});
 }, 15000);
 
-window._pkrTableCleanup = function() { clearInterval(_pollInterval); };
+// Read-only hand history and immutable stack audits update the seat display.
+// Never infer a player's real chip count from buy-in dollars when the bank
+// denominations or hand awards cannot be reconciled.
+var _pkrSeatRefreshBusy=false;
+var _pkrSeatRefreshAgain=false;
+window.refreshSeatStacks=function(){
+  var ctx=getPkrCtx();
+  if(!ctx||!ctx.gameId||!state.game||!window.pkrSeatStackLedger)return Promise.resolve();
+  if(!state.game.hand_tracking){
+    _pkrSeatHands=[];_pkrVerifiedHandAudit=null;renderTable();
+    return Promise.resolve();
+  }
+  if(_pkrSeatRefreshBusy){_pkrSeatRefreshAgain=true;return Promise.resolve();}
+  _pkrSeatRefreshBusy=true;
+  return pkrApi('/games/'+ctx.gameId+'/hands').then(function(hands){
+    if(!Array.isArray(hands))throw new Error('Hand history must be an array');
+    var latest=hands.find(function(h){return h&&!h.voided;});
+    var audit=null;
+    // Optional, canonical stack read: the existing API calculates available
+    // chips from physically verified openings, wagers, returns and pot awards.
+    // Older rooms without the integrity flag use the reconciled action ledger.
+    var verify=Promise.resolve();
+    if(latest&&latest.mode==='full'){
+      verify=pkrApi('/games/'+ctx.gameId+'/hands/'+latest.id+'/stack-baseline')
+        .then(function(baseline){
+          if(!baseline||!baseline.enabled||!baseline.confirmed)return;
+          return pkrApi('/games/'+ctx.gameId+'/hands/'+latest.id+'/audit-stacks',{
+            method:'POST',body:JSON.stringify({})
+          }).then(function(data){
+            if(data&&data.ok&&data.persisted_baseline&&data.audit&&
+               Array.isArray(data.audit.stacks)){
+              audit={handId:latest.id,stacks:data.audit.stacks,
+                unsettled:data.audit.unsettled_pot_chips||0};
+            }
+          });
+        }).catch(function(){ /* Leave the read-only ledger visible. */ });
+    }
+    return verify.then(function(){
+      if(!state.game||!state.game.hand_tracking||getPkrCtx()?.gameId!==ctx.gameId)return;
+      _pkrSeatHands=hands;_pkrVerifiedHandAudit=audit;
+      renderTable();
+      if(activePanel&&!document.querySelector('.tx-amt:not([readonly])'))
+        refreshPanelSummary(activePanel);
+    });
+  }).catch(function(error){
+    console.warn('PKR seat stack refresh unavailable:',error&&error.message);
+  }).finally(function(){
+    _pkrSeatRefreshBusy=false;
+    if(_pkrSeatRefreshAgain){
+      _pkrSeatRefreshAgain=false;
+      window.refreshSeatStacks();
+    }
+  });
+};
+function _pkrOnHandStateChanged(event){
+  var ctx=getPkrCtx(),detail=event&&event.detail;
+  if(!ctx||!detail||detail.gameId!==ctx.gameId)return;
+  window.refreshSeatStacks();
+}
+window.addEventListener('pkr:hand-state-changed',_pkrOnHandStateChanged);
+var _pkrSeatStackPoll=setInterval(function(){
+  if(document.visibilityState==='visible'&&state.game&&state.game.hand_tracking)
+    window.refreshSeatStacks();
+},15000);
+window._pkrTableCleanup = function() {
+  clearInterval(_pollInterval);clearInterval(_pkrSeatStackPoll);
+  window.removeEventListener('pkr:hand-state-changed',_pkrOnHandStateChanged);
+};
 
 window.addSeat = function() {
   var ctx=getPkrCtx(); if(!ctx||!ctx.gameId) return;
