@@ -52,7 +52,23 @@ async function check(browser,width,height,count){
   const expectedAuto=(width<350||(width<900&&height<width))?'compact':'balanced';
   assert.equal(await page.evaluate(()=>window.pkrGetResolvedSeatLayout()),expectedAuto);
   assert.equal(await page.locator('#seatsContainer>.pkr-layout-'+expectedAuto).count(),count,
-    'Auto view must match the device.');
+    'Approved responsive view must match the device.');
+  assert.equal(await page.locator('.pkr-table-view-toolbar').count(),0,'Approved game header has no view selector');
+  if(width===390&&height===844&&count===13){
+   const approved=await page.evaluate(()=>{
+    const felt=document.getElementById('tableFelt').getBoundingClientRect();
+    const left=document.getElementById('seat4').getBoundingClientRect();
+    const right=document.getElementById('seat11').getBoundingClientRect();
+    return {felt:{left:felt.left,right:felt.right,width:felt.width,height:felt.height},
+      left:{right:left.right},right:{left:right.left}};
+   });
+   assert(approved.felt.width>=190&&approved.felt.width<=225,'Approved phone felt must stay compact and wide enough: '+JSON.stringify(approved));
+   assert(approved.felt.height>=320&&approved.felt.height<=385,'Approved phone felt must not stretch vertically: '+JSON.stringify(approved));
+   const ratio=approved.felt.height/approved.felt.width;
+   assert(ratio>=1.55&&ratio<=1.85,'Approved felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
+   assert(approved.left.right<=approved.felt.left+22,'Left player cards must sit off the felt: '+JSON.stringify(approved));
+   assert(approved.right.left>=approved.felt.right-22,'Right player cards must sit off the felt: '+JSON.stringify(approved));
+  }
   assert.equal(await page.locator('#bbBankQuick').isVisible(),true);
   assert.equal(await page.locator('#bbIn').isVisible(),true);
   assert.equal(await page.locator('#bbOut').isVisible(),true);
@@ -132,7 +148,7 @@ async function check(browser,width,height,count){
   }
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false);
   assert.deepEqual(failures,[]);assert.deepEqual(browserErrors,[]);
-  console.log('PASS approved table layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, Auto/'+expectedAuto+', Balanced/Compact overrides, bank totals, no financial writes');
+  console.log('PASS approved table layout '+browser.browserType().name()+' '+width+'x'+height+' '+count+' seats, approved default/'+expectedAuto+', full/compact renderers, bank totals, no financial writes');
  }finally{await ctx.close();}
 }
 (async()=>{
