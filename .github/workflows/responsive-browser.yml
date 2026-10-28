@@ -43,6 +43,7 @@ jobs:
           node tests/record-details.cjs
           node tests/tournament-structure.cjs
           node tests/gameplay-safety.cjs
+          node tests/seat-stack-ledger.cjs
       - name: Build and type-check the actual application
         working-directory: frontend
         run: npm run build
@@ -67,6 +68,7 @@ jobs:
         run: |
           node tests/app-experience.cjs
           node tests/viewport-smoke.cjs
+          node tests/seat-table-experience.cjs
       - name: Upload synthetic-data screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
