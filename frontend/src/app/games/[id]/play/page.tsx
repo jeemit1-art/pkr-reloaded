@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
+import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
+import {api,type RoomPlayerProfile,type RoomPlayerProfileInput} from '@/lib/api';
+import './player-quick.css';
 
 export default function PlayPage() {
   const params = useParams();
@@ -10,12 +13,48 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [profileDialog,setProfileDialog]=useState<{
+    roomId:string;key:string;name:string;initial:RoomPlayerProfile|null;
+    canEdit:boolean;canManage:boolean;
+  }|null>(null);
   const [tableView, setTableView] = useState<'auto'|'full'|'compact'>('auto');
   function chooseTableView(next:'auto'|'full'|'compact'){
     localStorage.setItem('pkrTableViewChoice_'+gameId,next);
     setTableView(next);
     (window as any).pkrSetSeatLayout?.(next);
   }
+  // Use the same secured room-profile editor as the member screen.
+  // Player identity and historic game results must never be rewritten here.
+  useEffect(()=>{
+    let cancelled=false;
+    const openProfile=(event:Event)=>{
+      const detail=(event as CustomEvent<{name?:string;profileKey?:string;userId?:string}>).detail;
+      if(!detail?.name||!detail.profileKey)return;
+      let context:{eventId?:string;userId?:string;isHost?:boolean}|null=null;
+      try{context=JSON.parse(localStorage.getItem('pkrCtx')||'null');}catch{}
+      if(!context?.eventId)return;
+      const roomId=context.eventId,key=detail.profileKey,name=detail.name;
+      const canManage=context.isHost===true;
+      const canEdit=canManage||!!(detail.userId&&context.userId===detail.userId);
+      api.events.profiles(roomId).then(result=>{
+        if(cancelled)return;
+        const initial=result.profiles.find(profile=>profile.profile_key===key)||null;
+        setProfileDialog({roomId,key,name,initial,canEdit,canManage});
+      }).catch(()=>{if(!cancelled)window.alert('Player profiles are unavailable. No game records were changed.');});
+    };
+    window.addEventListener('pkr:edit-player-profile',openProfile);
+    return()=>{cancelled=true;window.removeEventListener('pkr:edit-player-profile',openProfile);};
+  },[]);
+
+  async function saveGamePlayerProfile(input:RoomPlayerProfileInput){
+    if(!profileDialog||!profileDialog.canEdit)throw new Error('You cannot edit this player profile.');
+    const response=await api.events.saveProfile(profileDialog.roomId,input);
+    const profiles=((window as any)._eventProfiles||[]) as RoomPlayerProfile[];
+    (window as any)._eventProfiles=[...profiles.filter(p=>p.profile_key!==response.profile.profile_key),response.profile];
+    (window as any).renderTable?.();
+    (window as any).refreshPlayerPanel?.();
+  }
+
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
@@ -296,6 +335,7 @@ export default function PlayPage() {
           <button type="button" id="playerPanelScrim" className="pkr-player-panel-scrim"
             aria-label="Close player details" onClick={() => (window as any).closePanel?.()} />
           <div className="side-panel" id="sidePanel" aria-hidden="true">
+            <span className="pkr-quick-grip" aria-hidden="true"></span>
             <div className="panel-hdr">
               <span className="panel-title" id="panelTitle">Player</span>
               <button className="panel-close" id="panelCloseBtn" aria-label="Close player details"
@@ -448,6 +488,19 @@ export default function PlayPage() {
           <button className="wa-toast-skip" onClick={() => (window as any).hideWaToast?.()}>Skip</button>
         </div>
       </div>
+
+      {/* Shared secure profile editor; the live game remains open behind it. */}
+      {profileDialog&&<AppDialog className="modal-overlay pkr-player-profile-overlay"
+        onDismiss={()=>setProfileDialog(null)}
+        onClick={event=>{if(event.currentTarget===event.target)setProfileDialog(null);}}>
+        <div className="pkr-player-profile-sheet" onClick={event=>event.stopPropagation()}>
+          <RoomPlayerProfileEditor key={profileDialog.key}
+            profileKey={profileDialog.key} canonicalName={profileDialog.name}
+            initial={profileDialog.initial} canEdit={profileDialog.canEdit}
+            canManage={profileDialog.canManage}
+            onSave={saveGamePlayerProfile} onClose={()=>setProfileDialog(null)}/>
+        </div>
+      </AppDialog>}
 
       {/* ── TOAST ── */}
       <div id="toast"></div>
@@ -1968,10 +2021,48 @@ function onSeatClick(sid) {
   else openAssign(sid);
 }
 
-// ── Side Panel ──
+// ── Player quick actions ──
 var activePanel = null;
+var _pkrPlayerPanelView='overview';
+function pkrPanelLocked(){
+  return !!(window._pkrResultsSaved||(state.game&&
+    (state.game.status==='settled'||state.game.status==='ended'||state.game.status==='cancelled')));
+}
+function pkrPanelCanManage(){
+  var ctx=getPkrCtx();
+  return !!(ctx&&ctx.isHost===true)&&!pkrPanelLocked();
+}
+function pkrPanelChangeNote(p,action,previous,next){
+  // Informational local change notes only; D1 continues to hold the
+  // authoritative aggregate money amounts, not immutable line-item audits.
+  p.pkrLocalChangeNotes=p.pkrLocalChangeNotes||[];
+  p.pkrLocalChangeNotes.unshift({
+    action:action,before:previous,after:next,ts:Date.now(),
+    userId:(getPkrCtx()||{}).userId||''
+  });
+  p.pkrLocalChangeNotes=p.pkrLocalChangeNotes.slice(0,40);
+}
+function pkrPlayerProfileKey(p){
+  var profile=pkrSeatProfile(p);
+  if(profile&&profile.profile_key)return profile.profile_key;
+  var id=p.userId||p.user_id||p.linkedUserId;
+  var members=window._eventMembers||[];
+  if(id&&members.some(function(m){return m.id===id;}))return 'member:'+id;
+  var same=members.filter(function(m){return String(m.name||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase();});
+  if(same.length===1)return 'member:'+same[0].id;
+  return 'history:'+String(p.name||'').trim().toLowerCase();
+}
+window.pkrPlayerChooseView=function(view){
+  if(!activePanel||!state.players[activePanel])return;
+  _pkrPlayerPanelView=view;
+  buildPanel(activePanel);
+  var body=document.getElementById('panelBody');
+  if(body)body.scrollTop=0;
+};
+window.refreshPlayerPanel=function(){if(activePanel&&state.players[activePanel])buildPanel(activePanel);};
 
 window.openPanel = function openPanel(sid) {
+  if(activePanel!==sid)_pkrPlayerPanelView='overview';
   activePanel = sid;
   var sp = document.getElementById('sidePanel');
   if (sp) {
@@ -1992,6 +2083,7 @@ window.closePanel = function closePanel() {
   var stage = document.getElementById('pkrGameTableStage');
   if (stage) stage.classList.remove('pkr-player-panel-open');
   activePanel = null;
+  _pkrPlayerPanelView='overview';
   setTimeout(renderTable, 270);
 };
 
@@ -2002,13 +2094,175 @@ function refreshPanelSummary(sid) {
   if (el) { var n = pNet(p); var final=(p.transactions||[]).some(function(tx){return tx.type==='cashout';}); el.className=final?'p-net '+nc(n):'p-net'+(pBuyin(p)>0?' inplay':''); el.textContent=final?fmtBNet(n):fmtB(pBuyin(p))+' in'; }
   var chips=document.getElementById('pkrSeatChipSummary');
   if(chips)chips.textContent=seatStackText(seatChipRows()[sid]);
+  var stack=document.getElementById('pkrQuickChipsValue');
+  if(stack){var row=seatChipRows()[sid];stack.textContent=row&&Number.isSafeInteger(row.chips)?row.chips.toLocaleString('en-AU'):'—';}
+}
+
+
+function pkrAssembleQuickPlayerView(sid,body,p){
+  var original=Array.from(body.children),sections={};
+  var sectionName='';
+  original.forEach(function(el){
+    if(el.classList.contains('p-sum'))return;
+    if(el.classList.contains('psec'))sectionName=el.textContent.trim().toLowerCase();
+    else if(sectionName){(sections[sectionName]||(sections[sectionName]=[])).push(el);}
+  });
+  var summary=body.querySelector('.p-sum'),bi=pBuyin(p),co=pCash(p);
+  var cashed=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
+  var stack=seatChipRows()[sid],bank=getBankSize(),bankCount=bank>0?bi/bank:null;
+  function node(tag,cls,label){var el=document.createElement(tag);if(cls)el.className=cls;if(label!==undefined)el.textContent=label;return el;}
+  function button(label,fn,cls){var el=node('button',cls||'pkr-quick-link',label);el.type='button';el.addEventListener('click',fn);return el;}
+  function go(view){_pkrPlayerPanelView=view;buildPanel(sid);body.scrollTop=0;}
+  function viewSection(name){
+    var container=node('div','pkr-quick-section');
+    (sections[name]||[]).forEach(function(el){container.appendChild(el);});
+    return container;
+  }
+  var root=node('div','pkr-quick-view');
+  if(_pkrPlayerPanelView!=='overview'){
+    root.appendChild(button('‹ Back to player',function(){go('overview');}, 'pkr-quick-back'));
+  }
+  if(_pkrPlayerPanelView==='overview'){
+    if(summary){summary.classList.add('pkr-quick-hero');root.appendChild(summary);}
+    var metrics=node('div','pkr-quick-metrics');
+    function metric(label,value,hint,cls){
+      var c=node('div','pkr-quick-metric '+(cls||''));
+      c.append(node('small','',label),node('strong','',value),node('span','',hint));
+      metrics.appendChild(c);
+    }
+    metric('Banks',bankCount===null?'—':(Math.round(bankCount*10)/10)+'b',fmt(bi)+' invested');
+    metric('Buy-in',fmt(bi),(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';}).length+' transactions','money-in');
+    metric('Chip stack',stack&&Number.isSafeInteger(stack.chips)?stack.chips.toLocaleString('en-AU'):'—',
+      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified');
+    metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
+      cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
+    root.appendChild(metrics);
+    var actions=node('div','pkr-quick-actions');
+    var buy=button('＋ Add Buy-in',function(){go('buyin');},'pkr-quick-primary buyin');
+    var cash=button('▣ Cash Out',function(){go('cashout');},'pkr-quick-primary');
+    buy.disabled=cash.disabled=!pkrPanelCanManage()||cashed;
+    actions.append(buy,cash);root.appendChild(actions);
+    if(!pkrPanelCanManage())root.appendChild(node('p','pkr-quick-hint',
+      pkrPanelLocked()?'This game is finalised. Financial actions are read-only.':'Only the host or co-host can update transactions.'));
+    var heading=node('div','pkr-quick-heading');
+    heading.appendChild(node('strong','','Recent activity'));
+    heading.appendChild(button('View all',function(){go('transactions');},''));
+    root.appendChild(heading);
+    var latest=(p.transactions||[]).slice(-2).reverse();
+    if(!latest.length)root.appendChild(node('div','pkr-quick-empty','No activity recorded yet.'));
+    latest.forEach(function(tx){
+      var item=node('div','pkr-quick-activity');
+      var cashout=tx.type==='cashout';
+      item.append(node('span','pkr-activity-icon '+(cashout?'':'buyin'),cashout?'↗':'↙'));
+      var copy=node('div','pkr-activity-copy');
+      copy.append(node('b','',cashout?'Cash out':'Buy-in'),
+        node('small','',new Date(tx.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
+      item.append(copy,node('span','pkr-activity-value '+(cashout?'cashout':'buyin'),
+        (cashout?'+':'−')+fmt(tx.amount)));
+      root.appendChild(item);
+    });
+    [['☷','Transactions',(p.transactions||[]).length,'transactions'],
+      ['⚙','Player settings',null,'settings'],
+      ['•••','More actions',null,'more']].forEach(function(item){
+      var row=button('',function(){go(item[3]);},'pkr-quick-link');
+      row.append(node('span','pkr-link-icon',item[0]),node('span','pkr-link-label',item[1]));
+      if(item[2]!==null)row.appendChild(node('span','pkr-link-count',String(item[2])));
+      row.appendChild(node('span','pkr-link-arrow','›'));root.appendChild(row);
+    });
+  }else if(_pkrPlayerPanelView==='buyin'||_pkrPlayerPanelView==='cashout'){
+    var isCash=_pkrPlayerPanelView==='cashout',type=isCash?'cashout':'buyin';
+    root.appendChild(node('h3','pkr-quick-page-heading',isCash?'Cash out player':'Add buy-in'));
+    root.appendChild(node('p','pkr-quick-explainer',
+      isCash?'Record the full dollar amount returned to this player. A completed cash-out records their final result.':
+      'Record an additional bank issued to this player. The default amount may be changed before confirming.'));
+    var form=node('form','pkr-quick-form'),label=node('label','','Amount (AUD)');
+    var input=node('input','');input.type='text';input.inputMode='decimal';input.required=true;
+    input.autocomplete='off';input.setAttribute('aria-label','Transaction amount in dollars');
+    if(!isCash)input.value=(state.game&&state.game.defaultBuyin||25).toFixed(2);
+    label.appendChild(input);form.appendChild(label);
+    if(!isCash){
+      var presets=node('div','pkr-quick-preset-grid'),defaultAmount=Number(state.game&&state.game.defaultBuyin)||25;
+      [defaultAmount,defaultAmount*2,defaultAmount*3].forEach(function(amount){
+        var preset=button(fmt(amount),function(){input.value=amount.toFixed(2);Array.from(presets.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===preset));});},'pkr-quick-preset');
+        preset.setAttribute('aria-pressed',String(amount===defaultAmount));presets.appendChild(preset);
+      });form.appendChild(presets);
+    }
+    var review=node('div','pkr-quick-review');
+    function item(label,value,cls){var line=node('div','row');line.append(node('span','',label),node('strong',cls||'',value));review.appendChild(line);}
+    item('Total invested',fmt(bi));item('Already paid out',fmt(co));
+    if(isCash)item('Final result','Calculated on confirmation');
+    form.appendChild(review);
+    var submit=node('button','pkr-quick-primary '+(isCash?'':'buyin'),
+      isCash?'Review cash-out':'Review buy-in');submit.type='submit';
+    submit.disabled=!pkrPanelCanManage()||cashed;form.appendChild(submit);
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      if(!pkrPanelCanManage()||cashed){toast('Financial actions are not available.');return;}
+      var raw=input.value.trim();
+      if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
+      var cents=Math.round(Number(raw)*100);
+      if(!Number.isSafeInteger(cents)||cents<0||(!isCash&&cents===0)){
+        toast('Enter a valid '+(isCash?'cash-out':'buy-in')+' amount.');return;
+      }
+      var value=cents/100,profit=value+co-bi;
+      var message=isCash
+        ?'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.'
+        :'Add '+fmt(value)+' to '+p.name+'’s buy-ins. New invested total: '+fmt(bi+value)+'.';
+      showConfirmModal('Confirm '+(isCash?'cash-out':'buy-in'),message,
+        isCash?'Confirm cash-out':'Confirm buy-in',function(){
+          if(!pkrPanelCanManage()||state.players[sid]!==p||
+            (p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
+            toast('Player data changed. Review before trying again.');return;
+          }
+          addTxFromInput(sid,type,input);
+          _pkrPlayerPanelView='overview';buildPanel(sid);
+        },false);
+    });
+    root.appendChild(form);
+  }else if(_pkrPlayerPanelView==='transactions'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Transactions'));
+    root.appendChild(node('p','pkr-quick-explainer',
+      'Changes require host approval. Reconstructed rows can contain estimates and are not an immutable audit history.'));
+    var section=viewSection('transactions');root.appendChild(section);
+    var notes=p.pkrLocalChangeNotes||[];
+    if(notes.length){
+      var audit=node('div','pkr-quick-audit');
+      audit.textContent='This device’s recent adjustment notes (not a permanent server audit):';
+      notes.slice(0,6).forEach(function(note){audit.appendChild(node('p','',
+        new Date(note.ts).toLocaleString()+' · '+note.action+' · '+(note.before===null?'':fmt(note.before))+
+        (note.after===null?' removed':' → '+fmt(note.after))));});
+      root.appendChild(audit);
+    }
+  }else if(_pkrPlayerPanelView==='settings'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Player settings'));
+    var profileBtn=button('⚙ Edit avatar, screen name and profile',function(){
+      var ctx=getPkrCtx();if(!ctx||!ctx.eventId)return;
+      window.dispatchEvent(new CustomEvent('pkr:edit-player-profile',{detail:{
+        name:p.name,profileKey:pkrPlayerProfileKey(p),userId:p.userId||p.user_id||p.linkedUserId||''
+      }}));
+    },'pkr-quick-link');
+    root.append(profileBtn,node('p','pkr-player-profile-note',
+      'Room profile edits change display details only; they do not change historic games, financial records or original player identities.'));
+    var link=node('h4','pkr-quick-page-heading','Linked account');root.appendChild(link);
+    root.appendChild(viewSection('linked account'));
+    if(!pkrPanelCanManage())root.appendChild(node('p','pkr-quick-hint','Only hosts can change linked accounts.'));
+  }else if(_pkrPlayerPanelView==='more'){
+    root.appendChild(node('h3','pkr-quick-page-heading','More player actions'));
+    root.appendChild(node('h4','pkr-quick-page-heading','Change seat'));
+    root.appendChild(viewSection('change seat'));
+    root.appendChild(node('h4','pkr-quick-page-heading','WhatsApp'));
+    root.appendChild(viewSection('whatsapp'));
+    root.appendChild(node('h4','pkr-quick-page-heading','Remove player'));
+    root.appendChild(viewSection('remove player'));
+  }else{_pkrPlayerPanelView='overview';pkrAssembleQuickPlayerView(sid,body,p);return;}
+  body.replaceChildren(root);
 }
 
 function buildPanel(sid) {
   var p = state.players[sid];
   if (!p) return;
   var titleEl = document.getElementById('panelTitle');
-  if (titleEl) titleEl.textContent = p.name;
+  if (titleEl) titleEl.textContent = 'Player · '+pkrSeatDisplayName(p);
   var body = document.getElementById('panelBody');
   if (!body) return;
   body.innerHTML = '';
@@ -2018,7 +2272,9 @@ function buildPanel(sid) {
   var sum = document.createElement('div'); sum.className = 'p-sum';
   var cashedOut=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
   var row=seatChipRows()[sid],chipSummary=seatStackText(row);
-  sum.innerHTML = '<div class="p-av">' + esc(inits(p.name)) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + '</div><div class="p-meta">Seat ' + sid.replace('seat','') + ' &middot; In: <span class="pkr-panel-buyin '+(!cashedOut&&bi>0?'inplay':'')+'">' + esc(seatBankLabel(bi)) + '</span>' + (cashedOut?' &middot; Out: '+fmt(co):'') + '</div><div class="p-chip-summary" id="pkrSeatChipSummary">'+esc(chipSummary)+'</div></div><div class="p-net ' + (cashedOut?nc(net):(bi>0?'inplay':'')) + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):fmtB(bi)+' in') + '</div>';
+  var status=cashedOut?'CASHED OUT':bi>0?'IN PLAY':'SEATED';
+  var statusClass=cashedOut?'cashed':bi>0?'':'waiting';
+  sum.innerHTML = '<div class="p-av">' + pkrAvatar(p) + '</div><div class="p-info"><div class="p-name">' + esc(pkrSeatDisplayName(p)) + '</div><div class="p-meta">Seat ' + esc(sid.replace('seat','')) + ' &nbsp;·&nbsp; <span class="pkr-player-status '+statusClass+'">'+status+'</span></div><div class="p-chip-summary" id="pkrSeatChipSummary">'+esc(chipSummary||'Chip stack not tracked')+'</div><span class="pkr-panel-buyin '+(!cashedOut&&bi>0?'inplay':'')+'" style="display:none">'+esc(seatBankLabel(bi))+'</span></div><div class="p-net ' + (cashedOut?nc(net):(bi>0?'inplay':'')) + '" id="pNetDisplay">' + (cashedOut?fmtNet(net):fmtB(bi)+' in') + '</div>';
   body.appendChild(sum);
 
   // Transactions
@@ -2069,7 +2325,8 @@ function buildPanel(sid) {
         cancelBtn.style.display=enabled?'':'none';
         if(enabled){amt.focus();amt.select();}
       }
-      editBtn.addEventListener('click',function(){setEditing(true);});
+      editBtn.disabled=!pkrPanelCanManage();
+      editBtn.addEventListener('click',function(){if(!pkrPanelCanManage()){toast('Only a host can edit an active game.');return;}setEditing(true);});
       cancelBtn.addEventListener('click',function(){
         amt.value=(originalCents/100).toFixed(2);setEditing(false);
       });
@@ -2084,10 +2341,19 @@ function buildPanel(sid) {
           buildPanel(sid);return;
         }
         if(cents===originalCents){setEditing(false);return;}
-        tx.amount=cents/100;
-        tx.pkrEstimated=false;tx.pkrReconstructed=false;
-        window.saveState();buildPanel(sid);renderTable();
-        toast('Amount updated. Check the sync status before final settlement.');
+        if(!pkrPanelCanManage()){toast('Only a host can edit an active game.');return;}
+        showConfirmModal('Confirm transaction change',
+          typeLabel+' for '+p.name+': '+fmt(tx.amount)+' to '+fmt(cents/100)+
+          '. The aggregate balance will be recalculated.', 'Save change',function(){
+          var current=state.players[sid];
+          if(!pkrPanelCanManage()||!current||(current.transactions||[])[capturedIdx]!==tx){
+            toast('Transaction changed. Reload and review.');return;
+          }
+          pkrPanelChangeNote(current,'Edited '+typeLabel,tx.amount,cents/100);
+          tx.amount=cents/100;tx.pkrEstimated=false;tx.pkrReconstructed=false;
+          window.saveState();buildPanel(sid);renderTable();
+          toast('Transaction updated. Review game totals before settling.');
+        },false);
       });
       amt.addEventListener('keydown',function(e){
         if(e.key==='Escape'){e.preventDefault();cancelBtn.click();}
@@ -2095,11 +2361,16 @@ function buildPanel(sid) {
       });
       var timeEl = document.createElement('span'); timeEl.className = 'tx-time'; timeEl.textContent = time;
       var del = document.createElement('button'); del.className = 'tx-del'; del.textContent = '✕';
+      del.setAttribute('aria-label','Delete '+typeLabel+' transaction');
+      del.disabled=!pkrPanelCanManage();
       del.addEventListener('click', function() {
+        if(!pkrPanelCanManage()){toast('Only a host can delete an active-game transaction.');return;}
         showConfirmModal('Delete Transaction?', typeLabel + ' of $' + tx.amount.toFixed(2) + ' for ' + p.name, 'Delete', function() {
-          var p2 = state.players[sid]; if (!p2) return;
-          p2.transactions.splice(capturedIdx, 1);
-          window.saveState(); buildPanel(sid); renderTable();
+          var p2 = state.players[sid];
+          if(!pkrPanelCanManage()||!p2||(p2.transactions||[])[capturedIdx]!==tx)return;
+          pkrPanelChangeNote(p2,'Deleted '+typeLabel,tx.amount,null);
+          p2.transactions.splice(capturedIdx,1);
+          window.saveState();buildPanel(sid);renderTable();
         });
       });
       row.append(badge, amt, editBtn, saveBtn, cancelBtn, timeEl, del);
@@ -2137,7 +2408,8 @@ function buildPanel(sid) {
   var phone = getPhone(p.name);
   if (phone) {
     var gameName = state.game ? state.game.name : 'Poker Night';
-    var balMsg = 'Hey ' + p.name + '! Update from ' + gameName + ' - balance: ' + fmtNet(net);
+    var balMsg = 'Hi ' + p.name + '! ' + gameName + ': '+
+      (cashedOut?'Final cash-out result '+fmtNet(net):'Buy-ins so far '+fmt(bi)+' (still in play; no result recorded)')+'.';
     var preview = document.createElement('div');
     preview.style.cssText = 'background:#0a1f0c;border:1px solid rgba(201,168,76,0.15);border-radius:6px;padding:8px 10px;margin-bottom:7px;font-size:0.88rem;color:var(--cream2);line-height:1.5';
     preview.textContent = balMsg;
@@ -2244,45 +2516,8 @@ function buildPanel(sid) {
   }
   body.appendChild(linkWrap);
 
-  // Player QR Code
-  var qrSec = document.createElement('div'); qrSec.className = 'psec'; qrSec.textContent = 'Player QR Code';
-  body.appendChild(qrSec);
-  var qrNote = document.createElement('div');
-  qrNote.style.cssText = 'font-size:0.82rem;color:var(--muted);margin-bottom:8px;line-height:1.5';
-  qrNote.textContent = p.name + ' can scan this to watch their live balance.';
-  body.appendChild(qrNote);
-  var qrWrap = document.createElement('div');
-  qrWrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:6px';
-  var qrCanvas = document.createElement('canvas');
-  qrCanvas.style.cssText = 'border-radius:6px;background:#fff;padding:6px';
-  qrWrap.appendChild(qrCanvas);
-  body.appendChild(qrWrap);
-  var _ctx2 = getPkrCtx();
-  var playerUrl = _ctx2 && _ctx2.gameId ? window.location.origin + '/games/live/' + _ctx2.gameId : window.location.href;
-  var qrUrlEl = document.createElement('div');
-  qrUrlEl.style.cssText = 'font-size:0.78rem;text-align:center;color:var(--muted);word-break:break-all;line-height:1.4;margin-bottom:4px';
-  qrUrlEl.textContent = playerUrl;
-  body.appendChild(qrUrlEl);
-  if (window.QRCode) {
-    requestAnimationFrame(function() {
-      qrCanvas.width = 130; qrCanvas.height = 130;
-      try {
-        var tmp = document.createElement('div');
-        tmp.style.cssText = 'position:absolute;left:-9999px';
-        document.body.appendChild(tmp);
-        new QRCode(tmp, { text: playerUrl, width: 130, height: 130, colorDark: '#000000', colorLight: '#ffffff' });
-        setTimeout(function() {
-          var img = tmp.querySelector('img') || tmp.querySelector('canvas');
-          if (img) {
-            var qrCtx = qrCanvas.getContext('2d');
-            qrCtx.fillStyle = '#fff'; qrCtx.fillRect(0,0,130,130);
-            var draw = function(){ qrCtx.drawImage(img, 0, 0, 130, 130); if (tmp.parentNode) tmp.parentNode.removeChild(tmp); };
-            if (img.tagName === 'CANVAS' || img.complete) draw(); else { img.onload = draw; }
-          }
-        }, 100);
-      } catch(e) {}
-    });
-  }
+  // A shared live-game QR belongs in the game's Share action, not a player
+  // profile. The old QR pointed to a game-wide URL, not a unique player URL.
 
   // Change Seat
   var csSec = document.createElement('div'); csSec.className = 'psec'; csSec.textContent = 'Change Seat';
@@ -2299,12 +2534,19 @@ function buildPanel(sid) {
     btn.textContent = 'Seat ' + si + (occ ? ' (' + inits(state.players[tSid].name) + ')' : ' empty');
     (function(capturedTSid) {
       btn.addEventListener('click', function() {
-        if (state.players[capturedTSid] && state.players[capturedTSid].name) {
-          var tmp = state.players[capturedTSid]; state.players[capturedTSid] = state.players[sid]; state.players[sid] = tmp;
-        } else {
-          state.players[capturedTSid] = state.players[sid]; state.players[sid] = null;
-        }
-        saveState(); renderTable(); window.openPanel(capturedTSid);
+        if(!pkrPanelCanManage()){toast('Only the host can change seats during an active game.');return;}
+        var occupant=state.players[capturedTSid],moving=state.players[sid];
+        if(!moving||!moving.name)return;
+        var label=occupant&&occupant.name
+          ?'Swap '+moving.name+' with '+occupant.name+'?'
+          :'Move '+moving.name+' to empty Seat '+capturedTSid.replace('seat','')+'?';
+        showConfirmModal('Confirm seat change',label,'Confirm move',function(){
+          if(!pkrPanelCanManage()||state.players[sid]!==moving||state.players[capturedTSid]!==occupant){
+            toast('Seats changed. Review the table before moving players.');return;
+          }
+          state.players[capturedTSid]=moving;state.players[sid]=occupant||null;
+          saveState();renderTable();_pkrPlayerPanelView='overview';window.openPanel(capturedTSid);
+        },false);
       });
     })(tSid);
     csGrid.appendChild(btn);
@@ -2314,8 +2556,17 @@ function buildPanel(sid) {
   // Remove Player
   var rmSec = document.createElement('div'); rmSec.className = 'psec'; rmSec.textContent = 'Remove Player';
   body.appendChild(rmSec);
-  var rmBtn = document.createElement('button'); rmBtn.className = 'remove-btn'; rmBtn.textContent = 'Remove from Seat';
+  var rmBtn = document.createElement('button'); rmBtn.className = 'remove-btn pkr-host-danger'; rmBtn.textContent = 'Remove from Seat';
+  var hasFinancialHistory=(p.transactions||[]).length>0||pBuyin(p)>0||pCash(p)>0;
+  rmBtn.disabled=hasFinancialHistory||!pkrPanelCanManage();
+  if(hasFinancialHistory){
+    var rmNote=document.createElement('p');
+    rmNote.className='pkr-player-profile-note';
+    rmNote.textContent='This player has recorded transactions and cannot be removed from the seat. Their money and history must be preserved.';
+    body.appendChild(rmNote);
+  }
   rmBtn.addEventListener('click', function() {
+    if(!pkrPanelCanManage()||(p.transactions||[]).length){toast('Cannot remove a player with financial history.');return;}
     rmBtn.style.display = 'none';
     var confirmRow = document.createElement('div');
     confirmRow.style.cssText = 'display:flex;gap:7px;align-items:center';
@@ -2327,21 +2578,30 @@ function buildPanel(sid) {
     cancelBtn2.style.cssText = 'background:none;border:1px solid var(--border);color:var(--muted);padding:7px 10px;border-radius:6px;font-family:DM Sans,sans-serif;font-size:0.88rem;cursor:pointer';
     cancelBtn2.textContent = 'Cancel';
     yesBtn2.addEventListener('click', function() {
-      state.players[sid] = null; saveState(); window.closePanel(); renderTable(); toast(p.name + ' removed');
+      if(!pkrPanelCanManage()||state.players[sid]!==p||(p.transactions||[]).length){toast('Cannot remove player: game or transactions changed.');return;}
+      state.players[sid]=null;saveState();window.closePanel();renderTable();toast(p.name+' removed from empty-money seat');
     });
     cancelBtn2.addEventListener('click', function() { confirmRow.remove(); rmBtn.style.display = ''; });
     confirmRow.append(confirmMsg, yesBtn2, cancelBtn2);
     body.appendChild(confirmRow);
   });
   body.appendChild(rmBtn);
+  pkrAssembleQuickPlayerView(sid,body,p);
 }
 
 // ── Transactions ──
 function addTxFromInput(sid, type, inp) {
   var p = state.players[sid]; if (!p) return;
-  var amt = parseFloat(inp ? inp.value : 0);
-  if (isNaN(amt) || amt < 0) { toast('Enter a valid amount'); return; }
-  if (amt === 0 && type !== 'cashout') { toast('Buy-in must be greater than 0'); return; }
+  if(!pkrPanelCanManage()){toast('Host permission is required for game transactions.');return;}
+  if((p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
+    toast('Player already cashed out. Review transactions before changing the result.');return;
+  }
+  var raw=String(inp&&inp.value||'').trim();
+  if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid amount with up to two decimal places.');return;}
+  var cents=Math.round(Number(raw)*100);
+  if(!Number.isSafeInteger(cents)||cents<0||cents>100000000000){toast('Enter a valid dollar amount.');return;}
+  var amt=cents/100;
+  if(amt===0&&type!=='cashout'){toast('Buy-in must be greater than 0');return;}
   p.transactions = p.transactions || [];
   p.transactions.push({ type: type, amount: amt, ts: Date.now() });
   saveState();
