@@ -275,8 +275,8 @@ export default function RoomDashboardDual({
               <button className="pkr-dual-activity" type="button"
                 key={game.id+':'+transfer.id} onClick={goPayments}>
                 <span className="pkr-dual-activity-mark">✓</span>
-                <span><strong>{transfer.from_name} · payment confirmed</strong>
-                  <small>{niceDate(transfer.paid_at||game.scheduled_at)} · {money(transfer.amount)}</small></span>
+                <span><strong>{transfer.from_name} · marked paid</strong>
+                  <small>{transfer.paid_at?niceDate(transfer.paid_at):'Paid date not recorded'} · {money(transfer.amount)}</small></span>
               </button>):settlements.length?settlements.slice(0,3).map(g=>
               <button className="pkr-dual-activity" key={g.id} type="button" onClick={()=>router.push('/games/'+g.id)}>
                 <span className="pkr-dual-activity-mark">♠</span>
@@ -362,7 +362,7 @@ export default function RoomDashboardDual({
             <button type="button" key={game.id+':'+transfer.id} onClick={goPayments}>
               <PlayerAvatar name={transfer.from_name} size="small"/>
               <span><strong>{transfer.from_name}</strong><b className="pkr-dual-positive">{money(transfer.amount)} paid</b>
-              <small>{niceDate(transfer.paid_at||game.scheduled_at)}</small></span>
+              <small>{transfer.paid_at?niceDate(transfer.paid_at):'Paid date not recorded'}</small></span>
             </button>)}</div>:<p className="pkr-dual-empty">No confirmed payments recorded in this room.</p>}
         </section>
         <RoomOutstandingCard roomId={room.id}/>
