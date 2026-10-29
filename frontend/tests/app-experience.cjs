@@ -86,6 +86,7 @@ async function run(){
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-ui-test-only'));
    const page=await context.newPage();page.setDefaultTimeout(15000);
    const unexpected=[];
+   page.on('pageerror',error=>unexpected.push('Client runtime error: '+(error.stack||error.message)));
    await page.route('**/*.workers.dev/**',async route=>{
     const req=route.request(),url=new URL(req.url());
     if(url.origin!==API){unexpected.push('Unexpected API origin '+url.origin);return route.abort();}
