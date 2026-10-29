@@ -18,6 +18,7 @@ type Props={
   members?:EventMember[];
   rooms?:Event[];
   viewerIsHost:boolean;
+  viewerCanManageGames?:boolean;
   onRoomSelect?:(id:string)=>void;
   onCreateGame?:()=>void;
   onInvite?:()=>void;
@@ -56,11 +57,12 @@ function PlayerAvatar({name,image,size='normal'}:{name:string;image?:string|null
 }
 
 export default function RoomDashboardDual({
-  room,games,history=[],leaders=[],members=[],rooms=[],viewerIsHost,
+  room,games,history=[],leaders=[],members=[],rooms=[],viewerIsHost,viewerCanManageGames,
   onRoomSelect,onCreateGame,onInvite,onScan,onMembers,onHistory,
   userName,planName,searchValue,onSearchChange,onSignOut,onPlan,
 }:Props){
   const router=useRouter();
+  const canManageGames=viewerCanManageGames??viewerIsHost;
   const [layout,setLayout]=useState<RoomDashboardLayout>('command');
   const [layoutReady,setLayoutReady]=useState(false);
   const [layoutError,setLayoutError]=useState('');
@@ -158,14 +160,14 @@ export default function RoomDashboardDual({
   };
   const goMembers=()=>onMembers?onMembers():router.push('/events/'+encodeURIComponent(room.id)+'?tab=members');
   const goHistory=()=>onHistory?onHistory():router.push('/events/'+encodeURIComponent(room.id)+'?tab=history');
-  const goInvite=()=>onInvite?onInvite():goMembers();
-  const goCreate=()=>viewerIsHost?(onCreateGame?onCreateGame():openRoom()):openRoom();
+  const goInvite=()=>viewerIsHost?(onInvite?onInvite():goMembers()):goMembers();
+  const goCreate=()=>canManageGames?(onCreateGame?onCreateGame():openRoom()):openRoom();
   const goSchedule=()=>router.push('/schedule');
   const goPayments=()=>router.push('/insights?room='+encodeURIComponent(room.id)+'&payments=outstanding#pkr-settlement');
   const goLeaders=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=leaderboard');
   const goRsvp=()=>featured&&router.push('/games/'+encodeURIComponent(featured.id)+'/rsvp');
   const goQuickBuyin=(amount:number)=>{
-    if(!active||!viewerIsHost)return;
+    if(!active||!canManageGames)return;
     router.push('/games/'+encodeURIComponent(active.id)+'/play?quickBuyin='+amount);
   };
   const payments=useMemo(()=>outstandingRoomTransfers(ledger?.records||[]),[ledger]);
@@ -266,7 +268,7 @@ export default function RoomDashboardDual({
             <small>{viewerIsHost?'Host-controlled · saved for all room members':
               'Selected by your room host'}</small></div>
         </div>
-        <div className="pkr-dual-switch-actions" role="group" aria-label="Host dashboard layout">
+        {viewerIsHost&&<div className="pkr-dual-switch-actions" role="group" aria-label="Host dashboard layout">
           <button type="button" aria-pressed={layoutReady&&layout==='command'}
             disabled={!viewerIsHost||!layoutReady||saving}
             onClick={()=>void choose('command')} className={layout==='command'?'active':''}>
@@ -275,7 +277,7 @@ export default function RoomDashboardDual({
             disabled={!viewerIsHost||!layoutReady||saving}
             onClick={()=>void choose('live')} className={layout==='live'?'active':''}>
             ♠ <span>Live Poker</span></button>
-        </div>
+        </div>}
       </div>
       {layoutError&&<p role="alert" className="pkr-dual-error">{layoutError}</p>}
       {!layoutReady?<div role="status" className="pkr-dual-wait">Loading the room's saved layout…</div>:layout==='command'?<>
@@ -290,7 +292,7 @@ export default function RoomDashboardDual({
             <p>♠ Private room · {roomMembers} members · {seatText}</p>
             <div className="pkr-dual-hero-buttons">
               <button type="button" className="pkr-dual-gold-button" onClick={active?openTable:featured?openGame:goCreate}>
-                {active?'Resume Game':featured?'View Next Game':viewerIsHost?'Create a Game':'Open Room'} <span>→</span></button>
+                {active?'Resume Game':featured?'View Next Game':canManageGames?'Create a Game':'Open Room'} <span>→</span></button>
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Room details ↗</button>
             </div>
           </div>
@@ -300,7 +302,7 @@ export default function RoomDashboardDual({
         <section className="pkr-dual-block">
           <div className="pkr-dual-section-title"><h3>Quick Actions</h3><small>Get the game going</small></div>
           <div className="pkr-dual-quick-grid">
-            <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':'Create Game'}</strong><small>Manage a session</small></button>
+            <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':canManageGames?'Create Game':'View Games'}</strong><small>{canManageGames?'Manage a session':'Review game sessions'}</small></button>
             <button type="button" onClick={goInvite}><b><DashIcon name="people"/></b><span>↗</span><strong>{viewerIsHost?'Invite Players':'Members'}</strong><small>{viewerIsHost?'Share your room':'View the room'}</small></button>
             <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Next game night</small></button>
             <button type="button" onClick={onScan||goMembers}><b><DashIcon name="scan"/></b><span>↗</span><strong>{onScan?'Scan Invite':'View Players'}</strong><small>{onScan?'Join a room':'Private roster'}</small></button>
@@ -365,7 +367,7 @@ export default function RoomDashboardDual({
             </div>}
             <div className="pkr-dual-hero-buttons">
               <button type="button" className="pkr-dual-gold-button" onClick={active?openTable:featured?openGame:goCreate}>
-                {active?'Join the Table':featured?'View Game':viewerIsHost?'Schedule Game':'Open Room'} <span>→</span></button>
+                {active?'Join the Table':featured?'View Game':canManageGames?'Schedule Game':'Open Room'} <span>→</span></button>
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Game room ↗</button>
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><span>♠</span></div>
@@ -431,9 +433,9 @@ export default function RoomDashboardDual({
         </section>
         <div className="pkr-dual-data-grid pkr-dual-live-tools">
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>◉ Quick Buy-in</h3><small>Host · player seat required</small></div>
+            <div className="pkr-dual-section-title"><h3>◉ Quick Buy-in</h3><small>Host / co-host · player seat required</small></div>
             <div className="pkr-dual-banks">
-              {[25,50,100].map(amount=><button type="button" key={amount} disabled={!viewerIsHost||!active}
+              {[25,50,100].map(amount=><button type="button" key={amount} disabled={!canManageGames||!active}
                 onClick={()=>goQuickBuyin(amount)} title={'Open the table with $'+amount+' selected, then choose a player'}>
                   {fmt(amount*100)}</button>)}
             </div>

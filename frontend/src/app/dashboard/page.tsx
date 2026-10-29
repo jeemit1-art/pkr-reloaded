@@ -17,6 +17,7 @@ import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
 import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import RoomDashboardDual from '@/components/RoomDashboardDual';
+import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './command-centre.css';
 import {playPkrSound} from '@/lib/sounds';
 import {isCurrentGame,isUnfinishedGame,isLiveGame} from '@/lib/game-status';
@@ -310,6 +311,7 @@ function DashboardInner() {
   const onTrial = user && user.plan === 'trial' && user.trial_active;
   const isPaid = user && user.is_active;
   const activeRooms = events.filter(evt => evt.status !== 'ended');
+  const playerOnly = activeRooms.length>0 && activeRooms.every(evt=>evt.role==='member');
   const totalPending = Object.values(pendingByRoom).reduce((sum,count)=>sum+count,0);
   // Only hosts can read the private approval queue. The backend enforces host access.
   useEffect(()=>{
@@ -421,7 +423,7 @@ function DashboardInner() {
       )}
 
       {/* Trial expiry banner */}
-      {onTrial && user.trial_days_left <= 2 && (
+      {onTrial && !playerOnly && user.trial_days_left <= 2 && (
         <div style={{background:'rgba(255,160,30,0.08)',borderBottom:'1px solid rgba(255,160,30,0.2)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div style={{fontSize:12,color:'rgba(255,170,50,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
@@ -438,7 +440,7 @@ function DashboardInner() {
       )}
 
       {/* Expired trial banner */}
-      {needsUpgrade && (
+      {needsUpgrade && !playerOnly && (
         <div style={{background:'rgba(220,60,60,0.08)',borderBottom:'1px solid rgba(220,60,60,0.2)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div style={{fontSize:12,color:'rgba(220,90,90,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
@@ -469,8 +471,8 @@ function DashboardInner() {
               maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const,display:'block'}}>
               {user?.name?.split(' ')[0]}
             </span>
-            <PlanBadge />
-            {isPaid && (
+            {!playerOnly&&<PlanBadge />}
+            {isPaid && !playerOnly && (
               <button
                 className="btn btn-ghost pkr-plan-manage"
                 style={{fontSize:10,padding:'3px 8px'}}
@@ -480,7 +482,7 @@ function DashboardInner() {
                 {manageLoading ? '…' : 'Plan'}
               </button>
             )}
-            {(onTrial || needsUpgrade) && (
+            {(onTrial || needsUpgrade) && !playerOnly && (
               <button
                 className="btn btn-primary"
                 style={{fontSize:11,padding:'4px 12px',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,120,40,0.85))',color:'#000'}}
@@ -529,10 +531,14 @@ function DashboardInner() {
             </button>
           </section>
         )}
-        {featuredRoom&&<RoomDashboardDual
+        {featuredRoom&&(featuredRoom.role==='member'
+          ?<PlayerRoomDashboard room={featuredRoom} games={featuredGames} history={featuredHistory}
+            leaders={featuredLeaders} memberId={user?.id} memberName={user?.name}/>
+          :<RoomDashboardDual
           room={featuredRoom} rooms={activeRooms} games={featuredGames}
           history={featuredHistory} members={featuredMembers} leaders={featuredLeaders}
           viewerIsHost={featuredRoom.role==='host'}
+          viewerCanManageGames={featuredRoom.role==='host'||featuredRoom.role==='cohost'}
           userName={user?.name}
           planName={user?.plan==='trial'?'TRIAL':user?.plan==='lifetime'?'LIFETIME':(user?.plan||'').toUpperCase()}
           searchValue={search} onSearchChange={setSearch}
@@ -543,11 +549,11 @@ function DashboardInner() {
             setPreferredRoomId(roomId);
             try{localStorage.setItem('pkr_preferred_room',roomId);}catch{}
           }}
-          onCreateGame={openCreate} onScan={startScan}
+          onCreateGame={()=>router.push('/events/'+featuredRoom.id+'?newGame=1')} onScan={startScan}
           onInvite={()=>router.push('/events/'+featuredRoom.id+'?tab=members&view=invite')}
           onMembers={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}
           onHistory={()=>router.push('/events/'+featuredRoom.id+'?tab=history')}
-        />}
+        />)}
         {!featuredRoom&&<section className="pkr-dual-no-room" aria-label="Create your poker room">
           <span className="pkr-eyebrow">WELCOME TO PKR</span>
           <h2>Your poker nights start here.</h2>
@@ -568,7 +574,7 @@ function DashboardInner() {
                 {showArchivedRooms?'Hide archived rooms':`Show archived rooms (${archivedRooms.length})`}
               </button>}
             <button type="button" className="btn btn-ghost" onClick={startScan}>Scan invite</button>
-            <button type="button" className="btn btn-primary" onClick={openCreate}>+ New room</button>
+            {!playerOnly&&<button type="button" className="btn btn-primary" onClick={openCreate}>+ New room</button>}
           </div>
         </section>
 
@@ -598,7 +604,7 @@ function DashboardInner() {
         )}
 
         {/* Create form */}
-        {showCreate && (
+        {showCreate && !playerOnly && (
           <div id="pkr-create-form" className="card-gold animate-up" style={{padding:'28px',marginBottom:24}}>
             <div style={{fontSize:16,color:'var(--white)',marginBottom:20,
               fontFamily:'var(--font-display),serif',fontWeight:500}}>
@@ -694,7 +700,9 @@ function DashboardInner() {
         {id:'home',label:'Home',icon:'home',active:true,onSelect:()=>window.scrollTo({top:0,behavior:'smooth'})},
         {id:'rooms',label:'Rooms',icon:'rooms',onSelect:()=>document.getElementById('pkr-rooms')?.scrollIntoView({behavior:'smooth'})},
         {id:'scan',label:'Scan',icon:'scan',onSelect:startScan},
-        {id:'new',label:'New room',icon:'plus',onSelect:openCreate}
+        ...(playerOnly&&featuredRoom
+          ? [{id:'standings',label:'Standings',icon:'standings' as const,onSelect:()=>router.push('/events/'+featuredRoom.id+'?tab=leaderboard')}]
+          : [{id:'new',label:'New room',icon:'plus' as const,onSelect:openCreate}])
       ]} />
 
       {/* Global upgrade modal — catches all 402s from this page */}

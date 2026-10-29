@@ -6,6 +6,7 @@ import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
 import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
 import {loadRoomTransfers} from '@/lib/room-payment-schedule';
+import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './settlement-filter.css';
 
 type SettlementRow={game:Game;transfer:Transfer};
@@ -14,6 +15,7 @@ type SettlementView='transfers'|'balances'|'status';
 export default function InsightsPage(){
  const router=useRouter();
  const [rooms,setRooms]=useState<Event[]>([]);
+ const [myUserId,setMyUserId]=useState<string|null>(null);
  const [selected,setSelected]=useState('');
  const [loadingRooms,setLoadingRooms]=useState(true);
  const [loadingDetails,setLoadingDetails]=useState(false);
@@ -31,6 +33,7 @@ export default function InsightsPage(){
  const [period,setPeriod]=useState<'all'|'90d'>('all');
  const [paymentFilter,setPaymentFilter]=useState<'all'|'outstanding'|'paid'>('all');
 
+ useEffect(()=>{let live=true;api.auth.me().then(user=>{if(live)setMyUserId(user.id);}).catch(()=>{});return()=>{live=false};},[]);
  useEffect(()=>{
   let live=true;
   api.events.list().then(r=>{if(!live)return;setRooms(r);
@@ -203,6 +206,8 @@ export default function InsightsPage(){
   {loadingRooms?<p className="pkr-insights-loader" role="status">Loading your poker rooms…</p>:rooms.length===0?
    <section className="pkr-vnext-card"><h2>No poker rooms yet</h2><p>Create a room to start recording games and results.</p><button onClick={()=>router.push('/dashboard')}>Go to dashboard →</button></section>:
   <>
+   {room?.role==='member' ? <PlayerRoomDashboard room={room} games={games} history={games}
+      leaders={leaders} memberId={myUserId} showAllPayments/> : <>
    <section className="pkr-vnext-insights-stats pkr-insights-kpis" aria-label="Recorded poker room statistics">
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:selected}}><span className="pkr-insights-kpi-icon">♧</span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></RecordMetric></div>
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
@@ -385,6 +390,7 @@ export default function InsightsPage(){
    {(upcoming.length>0||unfinished.length>0)&&<p className="pkr-insights-upcoming-note">
      {upcoming.length} upcoming/live and {unfinished.length} unfinished game{unfinished.length===1?'':'s'} are excluded from settled results.
     </p>}
+  </>}
   </>}
  </main>;
 }

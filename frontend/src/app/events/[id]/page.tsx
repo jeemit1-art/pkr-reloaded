@@ -10,6 +10,7 @@ import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import RoomDashboardDual from '@/components/RoomDashboardDual';
+import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './room-dashboard-polish.css';
 import InviteQRCode from '@/components/InviteQRCode';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
@@ -111,6 +112,9 @@ export default function EventPage() {
       const me = e.members.find((m:any)=>m.id===u.id);
       setIsHost(me?.role==='host'||me?.role==='cohost');
       setIsGroupOwner(me?.role==='host');
+      if(query.get('newGame')==='1'&&(me?.role==='host'||me?.role==='cohost'))setShowCreate(true);
+      if(query.get('mine')==='profile'&&me)
+        setEditingRoomProfile({key:'member:'+u.id,name:me.name,avatarUrl:me.avatar_url||null});
     }).catch(()=>router.push('/dashboard'));
     api.games.list(id).then(setGames);
     api.events.leaderboard(id).then(setLeaders);
@@ -440,12 +444,17 @@ export default function EventPage() {
           <button type="button" onClick={()=>selectTab('members')}>Review requests →</button>
         </div>}
       <div className="pkr-event-dual-region">
-        <RoomDashboardDual room={event} games={games} history={history} leaders={leaders}
-          members={event.members||[]} viewerIsHost={isGroupOwner}
+        {!isHost ? <PlayerRoomDashboard room={event} games={games} history={history} leaders={leaders}
+          memberId={user?.id} memberName={user?.name}
+          onMyProfile={()=>{const me=event.members?.find((m:any)=>m.id===user?.id);
+            selectTab('members');
+            if(me)setEditingRoomProfile({key:'member:'+me.id,name:me.name,avatarUrl:me.avatar_url||null});
+          }}/> : <RoomDashboardDual room={event} games={games} history={history} leaders={leaders}
+          members={event.members||[]} viewerIsHost={isGroupOwner} viewerCanManageGames={isHost}
           onCreateGame={()=>setShowCreate(true)}
           onInvite={()=>{setMemberSection('invite');selectTab('members');}}
           onMembers={()=>selectTab('members')}
-          onHistory={()=>selectTab('history')}/>
+          onHistory={()=>selectTab('history')}/>}
       </div>
 
       {/* Desktop tabs; phone navigation is fixed at the bottom. */}
@@ -480,7 +489,7 @@ export default function EventPage() {
               </div>
             )}
             {upcoming.map(g=>(
-              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost}
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
                 onClick={()=>router.push(`/games/${g.id}`)}
                 onOpenTable={()=>router.push(`/games/${g.id}/play`)}
                 onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
@@ -492,7 +501,7 @@ export default function EventPage() {
               <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
                 <p>These historical sessions have been preserved. They are not counted as live or upcoming; open a game to review its records.</p>
               </div>
-              {unfinished.map(g=><GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost}
+              {unfinished.map(g=><GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
                 onClick={()=>router.push('/games/'+g.id)}
                 onOpenTable={()=>router.push('/games/'+g.id+'/play')}
                 onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
@@ -779,7 +788,7 @@ export default function EventPage() {
                     {(isHost||user?.id===m.id)&&<button type="button" className="pkr-member-profile-edit" disabled={!!roomProfileError}
                       aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
                       onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
-                    {isHost && m.role !== 'host' && (
+                    {isGroupOwner && m.role !== 'host' && (
                       <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}
                         onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
                         Remove
@@ -1311,7 +1320,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers}:any) {
+function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
@@ -1386,10 +1395,10 @@ function GameCard({game,appUrl,eventName,isHost,onClick,onOpenTable,onWatchLive,
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}>
               Cancel
             </button>
-            <button onClick={(e)=>{e.stopPropagation();onDelete();}}
+            {canDelete&&<button onClick={(e)=>{e.stopPropagation();onDelete();}}
               className="btn btn-danger" style={{fontSize:10,padding:'5px 10px'}}>
               Delete
-            </button>
+            </button>}
           </>)}
           {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
