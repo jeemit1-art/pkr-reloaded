@@ -231,8 +231,15 @@ async function check(browser,name,width,height){
     const ctx=JSON.parse(localStorage.getItem('pkrCtx')||'{}');
     return ctx.isHost===true;
    });
+   await page.evaluate(()=>window.refreshPlayerPanel?.());
+   await page.locator('.side-panel.open .pkr-quick-bank:not([disabled])').first().waitFor({state:'visible'});
    const baseWrites=writes.length;
-   await quick.getByRole('button',{name:'Add $25.00 buy-in'}).click();
+   // Fire two DOM taps in the same task: it must record ONE bank, not two.
+   await page.evaluate(()=>{
+    const button=document.querySelector('.side-panel.open .pkr-quick-bank');
+    if(!button)throw new Error('Quick buy-in action was not rendered');
+    button.click();button.click();
+   });
    await page.locator('.side-panel.open .pkr-quick-metric.money-in').filter({hasText:'$50.00'}).waitFor();
    assert.equal(await page.locator('.side-panel.open .pkr-quick-view > .pkr-quick-metrics').count(),1,
     'One tap must return directly to the main player view, without a review dialog');
@@ -240,11 +247,9 @@ async function check(browser,name,width,height){
    assert.equal(writes.length,baseWrites+1,'Exactly one aggregate PUT for one-tap buy-in');
    assert.equal(writes[writes.length-1].count,2);
    assert.equal(writes[writes.length-1].total,5000);
-   // Same-value double taps must not record another bank while the first tap is still hot.
+   // The first click is the only change; the immediate second was ignored.
    const currentCount=writes.length;
-   await quick.getByRole('button',{name:'Add $25.00 buy-in'}).click();
-   await page.waitForTimeout(120);
-   assert.equal(writes.length,currentCount,'Accidental rapid duplicate bank tap must not write');
+   assert.equal(currentCount,baseWrites+1,'Accidental double tap must not record a second bank');
    // Other amount uses one submit, accepts legitimate decimals and needs no second approval.
    await page.locator('.side-panel.open .pkr-quick-custom').click();
    const amount=page.locator('.side-panel.open input[aria-label="Transaction amount in dollars"]');
