@@ -30,6 +30,10 @@ function fixture(){
   };
   return {call,writes,store,d1Writes:()=>d1Writes};
 }
+async function readLayout(response:Response):Promise<string>{
+  const value=await response.json() as {layout:string};
+  return value.layout;
+}
 describe('host-controlled room dashboard variants',()=>{
   it('defaults to Command Centre for approved members without any writes',async()=>{
     const f=fixture(),r=await f.call('member','room-one');
@@ -45,12 +49,12 @@ describe('host-controlled room dashboard variants',()=>{
     expect(first.layout).toBe('live');
     expect(first.updated_at).toBeGreaterThan(0);
     const secondDevice=await f.call('member','room-one');
-    expect((await secondDevice.json()).layout).toBe('live');
+    expect((await readLayout(secondDevice))).toBe('live');
     const separateRoom=await f.call('member','room-two');
-    expect((await separateRoom.json()).layout).toBe('command');
+    expect((await readLayout(separateRoom))).toBe('command');
     const switchedBack=await f.call('host','room-one','PUT',{layout:'command'});
     expect(switchedBack.status).toBe(200);
-    expect((await (await f.call('cohost','room-one')).json()).layout).toBe('command');
+    expect((await readLayout(await f.call('cohost','room-one')))).toBe('command');
     expect(f.writes).toEqual(['room-dashboard-layout:v1:room-one','room-dashboard-layout:v1:room-one']);
     expect(f.d1Writes()).toBe(0);
   });
@@ -62,7 +66,7 @@ describe('host-controlled room dashboard variants',()=>{
     }
     const unreadable=await f.call('outsider','room-one');
     expect(unreadable.status).toBe(403);
-    expect((await (await f.call('member','room-one')).json()).layout).toBe('command');
+    expect((await readLayout(await f.call('member','room-one')))).toBe('command');
     expect(f.writes).toHaveLength(0);
   });
   it('rejects unexpected values and body fields without changing choice',async()=>{
