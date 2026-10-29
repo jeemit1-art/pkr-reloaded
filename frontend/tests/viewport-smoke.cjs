@@ -25,6 +25,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events')return [room,archivedRoom];
   if(pathname==='/events/'+archivedRoom.id+'/reopen'&&method==='POST')return {ok:true};
   if(pathname==='/events/'+room.id)return {...room,members};
+  if(pathname==='/events/'+room.id+'/profiles')return {profiles:[]};
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [{
