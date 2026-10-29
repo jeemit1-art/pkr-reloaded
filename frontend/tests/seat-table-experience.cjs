@@ -55,7 +55,8 @@ async function check(browser,name,width,height){
  },{inputGame,localPlayers,API});
  const page=await context.newPage();
  page.setDefaultTimeout(16000);
- const errors=[];let winner='Test';
+ const errors=[],writes=[];let winner='Test';
+ const simulatedPlayers=roster.map(p=>({...p}));
  page.on('request',request=>{
   if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))
    errors.push('Production API request attempted: '+request.url());
@@ -64,8 +65,28 @@ async function check(browser,name,width,height){
   const req=route.request(),url=new URL(req.url());
   if(url.origin!==API){errors.push('Unknown API origin: '+url.origin);return route.abort();}
   let result=null;
+  if(req.method()==='OPTIONS'){
+   await route.fulfill({status:204,headers:{
+    'access-control-allow-origin':BASE,'access-control-allow-credentials':'true',
+    'access-control-allow-headers':'Content-Type,Authorization',
+    'access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
+   return;
+  }
   if(req.method()==='GET'&&url.pathname==='/games/'+game.id)
-   result={...game,players:roster};
+   result={...game,players:simulatedPlayers};
+  else if(req.method()==='PUT'&&url.pathname==='/games/'+game.id+'/buyin/member-one'){
+   const payload=JSON.parse(req.postData()||'{}'),player=simulatedPlayers[0];
+   if(payload.expected_count!==player.buy_ins||payload.expected_total!==player.buy_in_total||
+      payload.expected_revision!==player.revision||
+      !Number.isSafeInteger(payload.count)||!Number.isSafeInteger(payload.total)){
+    errors.push('Unsafe synthetic buy-in request: '+JSON.stringify(payload));
+    result={error:'Expected-version mismatch in synthetic test'};
+   }else{
+    writes.push({type:'buyin',...payload});
+    player.buy_ins=payload.count;player.buy_in_total=payload.total;player.revision++;
+    result={ok:true,revision:player.revision};
+   }
+  }
   else if(req.method()==='GET'&&url.pathname==='/events/'+event.id)
    result=event;
   else if(req.method()==='GET'&&url.pathname==='/events/'+event.id+'/profiles')
@@ -200,6 +221,54 @@ async function check(browser,name,width,height){
    assert(beforePanel&&restored,'Table must remain visible after closing the player drawer');
    expectClose(restored.width,beforePanel.width,'Closing player drawer must not resize table');
    assert.equal(await page.locator('#sidePanel').getAttribute('aria-hidden'),'true');
+  }
+  if(width===390){
+   await page.locator('#seat7').click();
+   const quick=page.locator('.side-panel.open .pkr-quick-buyin-presets');
+   await quick.waitFor({state:'visible'});
+   assert.equal(await quick.getByRole('button').count(),3,'One-tap amounts must be available on first player screen');
+   await page.waitForFunction(()=>{
+    const ctx=JSON.parse(localStorage.getItem('pkrCtx')||'{}');
+    return ctx.isHost===true;
+   });
+   const baseWrites=writes.length;
+   await quick.getByRole('button',{name:'Add $25.00 buy-in'}).click();
+   await page.locator('.side-panel.open .pkr-quick-metric.money-in').filter({hasText:'$50.00'}).waitFor();
+   assert.equal(await page.locator('.side-panel.open .pkr-quick-view > .pkr-quick-metrics').count(),1,
+    'One tap must return directly to the main player view, without a review dialog');
+   await page.waitForFunction(()=>!window.pkrHasPendingActions?.(),null,{timeout:10000});
+   assert.equal(writes.length,baseWrites+1,'Exactly one aggregate PUT for one-tap buy-in');
+   assert.equal(writes[writes.length-1].count,2);
+   assert.equal(writes[writes.length-1].total,5000);
+   // Same-value double taps must not record another bank while the first tap is still hot.
+   const currentCount=writes.length;
+   await quick.getByRole('button',{name:'Add $25.00 buy-in'}).click();
+   await page.waitForTimeout(120);
+   assert.equal(writes.length,currentCount,'Accidental rapid duplicate bank tap must not write');
+   // Other amount uses one submit, accepts legitimate decimals and needs no second approval.
+   await page.locator('.side-panel.open .pkr-quick-custom').click();
+   const amount=page.locator('.side-panel.open input[aria-label="Transaction amount in dollars"]');
+   await amount.fill('12.50');
+   await page.locator('.side-panel.open button[type="submit"]').filter({hasText:'Add custom buy-in'}).click();
+   await page.locator('.side-panel.open .pkr-quick-metric.money-in').filter({hasText:'$62.50'}).waitFor();
+   await page.waitForFunction(()=>!window.pkrHasPendingActions?.(),null,{timeout:10000});
+   assert.equal(writes.length,currentCount+1,'Custom amount should record with one submit');
+   assert.equal(writes[writes.length-1].total,6250,'Custom decimal cents must be exact');
+   assert.equal(await page.locator('div[style*="z-index:700"]').count(),0,
+    'Custom buy-in must not open another confirmation modal');
+   // Synthetic touch movement from the sheet header must close the mobile panel.
+   await page.locator('.side-panel.open .panel-hdr').evaluate(el=>{
+    function send(type,y){
+     const event=new Event(type,{bubbles:true,cancelable:true});
+     Object.defineProperty(event,'touches',{value:type==='touchend'?[]:[{clientX:165,clientY:y}]});
+     el.dispatchEvent(event);
+    }
+    send('touchstart',390);send('touchmove',496);send('touchend',496);
+   });
+   await page.locator('.side-panel.open').waitFor({state:'detached'});
+   assert.equal(await page.locator('#sidePanel').getAttribute('aria-hidden'),'true',
+    'Swipe down must dismiss the player sheet');
+   assert.deepEqual(errors,[],'No production or unexpected API writes during quick-action tests');
   }
   assert.deepEqual(errors,[]);
   console.log('PASS synthetic gameplay '+name+'; restored buy-ins, verified stacks, winner changes, table menu, bank bar');
