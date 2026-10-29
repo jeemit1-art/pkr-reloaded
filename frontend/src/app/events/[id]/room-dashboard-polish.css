@@ -153,3 +153,29 @@
     min-height:53px!important;
   }
 }
+
+
+/* Dual-design room overview uses the existing 960px content/navigation alignment. */
+.pkr-event .pkr-event-dual-region{
+ width:min(calc(100% - 32px),960px);margin:14px auto 18px;
+ min-width:0;position:relative;z-index:1;
+}
+.pkr-event .pkr-dual-join-alert{
+ width:min(calc(100% - 32px),960px);margin:14px auto 0;
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:12px 15px;border:1px solid #977b46;border-radius:11px;
+ background:#32281b;color:#f0d4a3;position:relative;z-index:2;
+ font-size:12px;
+}
+.pkr-event .pkr-dual-join-alert button{
+ flex:0 0 auto;min-height:40px;padding:9px 11px;
+ color:#f1dfa5;border:1px solid #917a51;border-radius:9px;
+ background:#47351c;cursor:pointer;font-weight:700;
+}
+@media(max-width:700px){
+ .pkr-event .pkr-event-dual-region,.pkr-event .pkr-dual-join-alert{
+  width:calc(100% - 24px);margin-top:10px;margin-bottom:14px;
+ }
+ .pkr-event .pkr-dual-join-alert{flex-wrap:wrap;line-height:1.45}
+ .pkr-event .pkr-dual-join-alert button{width:100%}
+}
