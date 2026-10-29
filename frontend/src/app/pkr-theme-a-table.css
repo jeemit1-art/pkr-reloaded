@@ -980,7 +980,7 @@
 }
 @media(max-width:360px){
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat{
-  width:68px!important;height:62px!important;gap:3px!important;
+  width:74px!important;height:62px!important;gap:3px!important;
  }
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat .pkr-empty-seat-add{
   flex-basis:34px!important;width:34px!important;height:34px!important;
