@@ -185,7 +185,7 @@ async function check(browser,width,height,count){
    window._eventProfiles=[{profile_key:'member:ref-1',screen_name:'Ace of Spades',avatar_emoji:'🃏',avatar_data:null}];
    window.renderTable();
   });
-  assert.equal(await page.locator('#seat1 .pkr-game-compact-name').textContent(),'Ace of Spades');
+  assert.equal(await page.locator('#seat1 .pkr-game-seat-name, #seat1 .pkr-game-compact-name').first().textContent(),'Ace of Spades');
   assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').textContent(),'🃏');
   assert.equal(await page.locator('#seat1 .pkr-seat-photo').count(),0,'Chosen preset must override inherited photo');
   // Changing view or room nickname may not write or change the transaction ledger.
