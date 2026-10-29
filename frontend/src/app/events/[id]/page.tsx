@@ -9,7 +9,7 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type R
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
-import RoomOutstandingCard from '@/components/RoomOutstandingCard';
+import RoomDashboardDual from '@/components/RoomDashboardDual';
 import './room-dashboard-polish.css';
 import InviteQRCode from '@/components/InviteQRCode';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
@@ -432,33 +432,20 @@ export default function EventPage() {
         </div>
       </div>
 
-      {/* Room overview; all figures come from the existing event record. */}
-      <section className="pkr-event-overview pkr-room-dashboard-v2" aria-label="Poker room overview">
-        <div className="pkr-event-overview-inner">
-          <span className="pkr-eyebrow">ROOM HUB · GAMES & PAYMENTS</span>
-          <h1>{event.name}</h1>
-          <p>Your next game, player activity and settlements at a glance.</p>
-          <div className="pkr-event-metrics">
-            <div className="pkr-event-metric"><RecordMetric request={{kind:'settings',title:"Default room buy-in",roomId:id}}><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></RecordMetric></div>
-            <div className="pkr-event-metric"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:id}}><strong>{event.game_count || 0}</strong><small>Games</small></RecordMetric></div>
-            <div className="pkr-event-metric"><RecordMetric request={{kind:'members',title:"Room members",roomId:id}}><strong>{event.member_count || 1}</strong><small>Members</small></RecordMetric></div>
-            <div className="pkr-event-metric"><RecordMetric request={upcoming[0]?{kind:'game',title:"Next game",gameId:upcoming[0].id}:{kind:'games',title:"Upcoming games",roomId:id,filter:'upcoming'}}><strong>{upcoming[0]?new Date(upcoming[0].scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
-          </div>
-          {isGroupOwner && joinRequests.length > 0 && <button type="button"
-            onClick={() => selectTab('members')}
-            style={{width:'100%',margin:'10px 0',padding:13,borderRadius:9,background:'rgba(201,168,76,.15)',border:'1px solid var(--gold)',color:'var(--gold)',fontWeight:700,cursor:'pointer'}}>
-            🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} waiting for approval — Review in Members
-          </button>}
-          <div className="pkr-event-hero-actions">
-            {upcoming[0]&&<button type="button" onClick={()=>router.push('/games/'+encodeURIComponent(upcoming[0].id))}>▶ View next game</button>}
-            <button type="button" onClick={()=>selectTab('members')}>♟ {isHost?'Invite Players':'View Members'}</button>
-          </div>
-        </div>
-      </section>
-
-      {/* Room-wide settlement priority: visible on Games, Members, History and Standings. */}
-      <div className="pkr-event-payment-priority" data-testid="event-payment-priority">
-        <RoomOutstandingCard roomId={id}/>
+      {/* Host-selected premium room dashboard. The old tabs and management tools
+          remain below it, unchanged; layout switching only affects presentation. */}
+      {isGroupOwner&&joinRequests.length>0&&
+        <div className="pkr-dual-join-alert" role="status">
+          <strong>🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} awaiting room approval</strong>
+          <button type="button" onClick={()=>selectTab('members')}>Review requests →</button>
+        </div>}
+      <div className="pkr-event-dual-region">
+        <RoomDashboardDual room={event} games={games} history={history} leaders={leaders}
+          members={event.members||[]} viewerIsHost={isGroupOwner}
+          onCreateGame={()=>setShowCreate(true)}
+          onInvite={()=>{setMemberSection('invite');selectTab('members');}}
+          onMembers={()=>selectTab('members')}
+          onHistory={()=>selectTab('history')}/>
       </div>
 
       {/* Desktop tabs; phone navigation is fixed at the bottom. */}
