@@ -527,7 +527,7 @@ function DashboardInner() {
           </section>
         )}
         <section className="pkr-pro-home pkr-dashboard-v2" aria-label="Poker room command centre" data-testid="pkr-dashboard-v2">
-          {unfinishedGames.length>0&&<div className="pkr-unfinished-note" role="status">
+          {unfinishedGames.length>0&&<div className="pkr-unfinished-note pkr-command-unfinished" role="status">
             <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
             <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
             <button type="button" onClick={()=>featuredRoom&&router.push('/events/'+featuredRoom.id+'?tab=games')}
@@ -568,21 +568,12 @@ function DashboardInner() {
               </>}
             </section>
           </div>}
-          <div className="pkr-pro-hero">
-            <div className="pkr-pro-hero-content">
-              <span className="pkr-eyebrow">♠ YOUR POKER ROOM</span>
-              <div className="pkr-pro-title"><h1>{featuredRoom?.name||'Your poker club'}</h1><span className="pkr-pro-live">● {featuredRoom?'Active':'Get started'}</span></div>
-              <p>Your group, upcoming games and results — all in one place.</p>
-              <div className="pkr-pro-stats">
-                <div><RecordMetric request={{kind:'games',title:"Games recorded",roomId:featuredRoom?.id}}><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games recorded</small></RecordMetric></div>
-                <div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></RecordMetric></div>
-                <div><RecordMetric request={{kind:'games',title:"Games across rooms"}}><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></RecordMetric></div>
-                <div><RecordMetric request={nextGame?{kind:'game',title:"Next game",gameId:nextGame.id}:{kind:'games',title:"Upcoming games",roomId:featuredRoom?.id,filter:'upcoming'}}><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
-              </div>
-              <div className="pkr-pro-actions"><button className="btn btn-primary" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>▶ {featuredRoom?'Open Room':'Create Room'} →</button><button className="btn btn-ghost" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ Invite Players</button></div>
-            </div>
-            <div className="pkr-pro-art" aria-hidden="true"><CasinoArtwork variant="lounge"/></div>
-          </div>
+          <section className="pkr-pro-stats pkr-command-stat-strip" aria-label="Room statistics">
+            <div><RecordMetric request={{kind:'games',title:"Games recorded",roomId:featuredRoom?.id}}><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games recorded</small></RecordMetric></div>
+            <div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></RecordMetric></div>
+            <div><RecordMetric request={{kind:'games',title:"Games across rooms"}}><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></RecordMetric></div>
+            <div><RecordMetric request={nextGame?{kind:'game',title:"Next game",gameId:nextGame.id}:{kind:'games',title:"Upcoming games",roomId:featuredRoom?.id,filter:'upcoming'}}><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
+          </section>
           <div className="pkr-pro-panels">
             <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>▦ Upcoming Games</h2><button onClick={()=>router.push('/schedule')}>View all →</button></div>
               {nextGame?<div className="pkr-pro-feature-game"><div className="pkr-pro-date"><strong>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'2-digit'})}</strong><small>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{month:'short'})}</small></div><div><strong>{featuredRoom?.name}</strong><p>{fmtDate(nextGame.scheduled_at)} · {nextGame.location||'Location to confirm'}</p><span className="pkr-pro-live">● {nextGame.status==='active'?'In progress':'Upcoming'}</span></div></div>:<p className="pkr-pro-empty">No upcoming games. Open your room to schedule poker night.</p>}
