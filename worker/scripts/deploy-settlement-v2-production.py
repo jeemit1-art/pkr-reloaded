@@ -27,6 +27,9 @@ DATABASE_ID = "e21a4823-ef28-496a-9f49-fa3e04dc73bf"
 WORKER = "pkr-reloaded-worker"
 HOST = "https://pkr-reloaded-worker.jeemit1.workers.dev"
 MIGRATION = "migrations/20261027_settlement_v2.sql"
+PROFILE_MIGRATION = "migrations/20261029_room_player_profiles.sql"
+PROFILE_COLUMNS = {"event_id","profile_key","screen_name","avatar_data","avatar_emoji",
+                   "phone","preferred_contact","private_notes","updated_by","created_at","updated_at"}
 
 
 class Stop(RuntimeError):
@@ -300,10 +303,62 @@ def preflight_backup():
                 actual = tuple(int(x or 0) for x in rows)
                 if actual != expected:
                     raise Stop("Restored D1 financial totals differ from live totals.")
+            # Rehearse this exact additive migration TWICE on the independently
+            # restored production export, not only on synthetic staging rows.
+            rehearse_profile_migration(conn)
+            for table, expected in before.items():
+                actual = tuple(int(x or 0) for x in conn.execute(aggregate_sql(table)).fetchone())
+                if actual != expected:
+                    raise Stop("Profile migration changed a restored financial aggregate.")
+            if conn.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                raise Stop("Rehearsed profile migration damaged SQLite integrity.")
+            if conn.execute("PRAGMA foreign_key_check").fetchall():
+                raise Stop("Rehearsed profile migration introduced foreign key violations.")
         finally:
             conn.close()
     print("Read-only live totals match independently restored export: PASS", flush=True)
     return before
+
+
+def rehearse_profile_migration(conn):
+    """Proof on a throwaway restored SQLite copy. Never writes to live D1."""
+    before = {table: tuple(int(x or 0) for x in conn.execute(aggregate_sql(table)).fetchone())
+              for table in ("settlement_transfers", "game_players")}
+    before_games = int(conn.execute("SELECT COUNT(*) FROM games").fetchone()[0])
+    before_members = int(conn.execute("SELECT COUNT(*) FROM event_members").fetchone()[0])
+    migration = (ROOT / PROFILE_MIGRATION).read_text(encoding="utf-8")
+    if "DROP TABLE" in migration.upper() or "DELETE FROM" in migration.upper():
+        raise Stop("Profile migration contains destructive SQL. STOP.")
+    conn.executescript(migration)
+    conn.executescript(migration)
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(room_player_profiles)")}
+    if not PROFILE_COLUMNS.issubset(columns):
+        raise Stop("Rehearsed profile migration is missing required fields.")
+    for table, expected in before.items():
+        actual = tuple(int(x or 0) for x in conn.execute(aggregate_sql(table)).fetchone())
+        if actual != expected:
+            raise Stop("Profile migration altered a restored financial ledger.")
+    if (int(conn.execute("SELECT COUNT(*) FROM games").fetchone()[0]) != before_games
+            or int(conn.execute("SELECT COUNT(*) FROM event_members").fetchone()[0]) != before_members):
+        raise Stop("Profile migration altered restored game or member rows.")
+    return True
+
+
+def profile_schema_state():
+    """Distinguish absent from partially applied schema before deployment."""
+    rows = remote_query("SELECT name FROM pragma_table_info('room_player_profiles')")
+    columns = {row["name"] for row in rows}
+    if not columns:
+        return False
+    if not PROFILE_COLUMNS.issubset(columns):
+        raise Stop("Partial room-player profile schema; no Worker deployment.")
+    return True
+
+
+def verify_profile_schema():
+    if not profile_schema_state():
+        raise Stop("Room-player profile migration missing after application.")
+    print("Room-scoped player profile D1 schema: PRESENT", flush=True)
 
 
 def verify_schema():
@@ -374,8 +429,20 @@ def main():
     else:
         print("Settlement V2 tables already exist; skipping schema migration.")
     verify_schema()
+    # Profiles are strictly additive and require a real database table BEFORE
+    # the new public frontend and authenticated Worker routes can be released.
     if {t: aggregate(t) for t in before} != before:
-        raise Stop("Financial aggregates changed during migration; halted.")
+        raise Stop("Financial aggregates changed during settlement migration; halted.")
+    already_profiles = profile_schema_state()
+    if not already_profiles:
+        wrangler("d1", "execute", DB, "--config", "wrangler.toml", "--remote",
+                 "--file", PROFILE_MIGRATION)
+        print("Additive room-player profile migration applied.", flush=True)
+    else:
+        print("Room-player profile migration already applied; skipping.", flush=True)
+    verify_profile_schema()
+    if {t: aggregate(t) for t in before} != before:
+        raise Stop("Financial aggregates changed during profile migration; halted.")
     # Deploy only after schema check; preserve vars set in Cloudflare dashboard.
     wrangler("deploy", "--config", "wrangler.toml", "--keep-vars")
     print("Production Worker deployed.", flush=True)
