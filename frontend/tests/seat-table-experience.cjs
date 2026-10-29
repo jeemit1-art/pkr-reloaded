@@ -68,6 +68,8 @@ async function check(browser,name,width,height){
    result={...game,players:roster};
   else if(req.method()==='GET'&&url.pathname==='/events/'+event.id)
    result=event;
+  else if(req.method()==='GET'&&url.pathname==='/events/'+event.id+'/profiles')
+   result={profiles:[]};
   else if(req.method()==='GET'&&url.pathname==='/games/'+game.id+'/hands')
    result=[{id:'hand-one',game_id:game.id,mode:'full',hand_no:1,voided:0,
     pot_chips:10,actions,result:{winner_name:winner,pot_chips:10,
