@@ -65,6 +65,7 @@ export default function EventPage() {
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
   const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
+  const [knownRoomPlayers,setKnownRoomPlayers]=useState<Array<{display_name:string;games_played:number}>>([]);
   const [roomProfileError,setRoomProfileError]=useState('');
   const [editingRoomProfile,setEditingRoomProfile]=useState<{key:string;name:string;avatarUrl:string|null}|null>(null);
   const [memberFilter,setMemberFilter]=useState<'all'|'admins'|'players'>('all');
@@ -125,6 +126,8 @@ export default function EventPage() {
     }).catch(error=>{
       if(active)setRoomProfileError(error instanceof Error?error.message:'Room profiles are unavailable.');
     });
+    // Include people who have been seated but are not yet on the settled-game leaderboard.
+    api.events.players(id).then(rows=>{if(active)setKnownRoomPlayers(rows);}).catch(()=>{});
     return()=>{active=false};
   },[id,tab]);
   useEffect(()=>{
@@ -360,13 +363,21 @@ export default function EventPage() {
     const screen=roomProfiles['member:'+m.id]?.screen_name||'';
     return matchRole&&(!q||[m.name,m.email,screen].some(v=>String(v||'').toLowerCase().includes(q)));
   });
-  const historicalPlayers=leaders.filter((p:any)=>{
-    const name=String(p.display_name||'').trim();
-    const alreadyMember=(event.members||[]).some((m:any)=>String(m.name||'').trim().toLowerCase()===name.toLowerCase());
+  const historicalPeople=new Map<string,{display_name:string;games_played:number;user_id?:string}>();
+  for(const person of [...knownRoomPlayers,...leaders]){
+    const name=String(person.display_name||'').trim(),key=name.toLowerCase();
+    if(!key)continue;
+    const prior=historicalPeople.get(key);
+    if(!prior||person.games_played>=prior.games_played)
+      historicalPeople.set(key,{display_name:name,games_played:person.games_played,user_id:(person as any).user_id||prior?.user_id});
+  }
+  const historicalPlayers=[...historicalPeople.values()].filter(p=>{
+    const name=p.display_name,key=name.toLowerCase();
+    const alreadyMember=(event.members||[]).some((m:any)=>String(m.name||'').trim().toLowerCase()===key);
     const q=memberQuery.trim().toLowerCase();
-    return name&&!alreadyMember&&(memberFilter!=='admins')&&(!q||name.toLowerCase().includes(q)||
-      String(roomProfiles['history:'+name.toLowerCase()]?.screen_name||'').toLowerCase().includes(q));
-  }).slice(0,150);
+    return !alreadyMember&&(memberFilter!=='admins')&&(!q||key.includes(q)||
+      String(roomProfiles['history:'+key]?.screen_name||'').toLowerCase().includes(q));
+  }).sort((a,b)=>b.games_played-a.games_played||a.display_name.localeCompare(b.display_name)).slice(0,150);
   async function saveRoomProfile(input:RoomPlayerProfileInput){
     const saved=await api.events.saveProfile(id,input);
     setRoomProfiles(current=>({...current,[saved.profile.profile_key]:saved.profile}));
