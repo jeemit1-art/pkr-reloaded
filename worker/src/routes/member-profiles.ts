@@ -32,7 +32,7 @@ function photoFrom(value:unknown):string|null{
 function keyType(key:string):'member'|'history'|null{
   if(key.startsWith('member:')&&/^member:[A-Za-z0-9_-]{1,100}$/.test(key))return 'member';
   if(key.startsWith('history:')&&validText(key,130)&&key.length>9&&
-    !/[<>\\/]/.test(key)&&key.slice(8)===key.slice(8).trim().toLocaleLowerCase())return 'history';
+    !key.includes('/')&&!key.includes('\\')&&!key.includes('<')&&!key.includes('>')&&key.slice(8)===key.slice(8).trim().toLocaleLowerCase())return 'history';
   return null;
 }
 async function existingProfile(db:D1Database,eventId:string,key:string){
