@@ -155,7 +155,7 @@ async function check(browser,name,width,height){
    assert(beforePanel&&afterPanel&&beforeFelt&&afterFelt&&playerDrawer,'Table and player drawer must have geometry');
    expectClose(afterPanel.width,beforePanel.width,'Player drawer must not shrink mobile/tablet table width');
    expectClose(afterFelt.width,beforeFelt.width,'Player drawer must not shrink the poker felt');
-   assert(playerDrawer.left>=-2&&playerDrawer.right<=width+2,
+   assert(playerDrawer.x>=-2&&playerDrawer.x+playerDrawer.width<=width+2,
      'Player drawer must fit the phone/tablet: '+JSON.stringify(playerDrawer));
    const stage=await page.locator('#pkrGameTableStage');
    assert(await stage.evaluate(el=>el.classList.contains('pkr-player-panel-open')),
