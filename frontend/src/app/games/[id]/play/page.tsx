@@ -2066,6 +2066,7 @@ window.openPanel = function openPanel(sid) {
   activePanel = sid;
   var sp = document.getElementById('sidePanel');
   if (sp) {
+    pkrBindPlayerSwipe(sp);
     sp.classList.add('open');
     sp.setAttribute('aria-hidden', 'false');
   }
@@ -2098,6 +2099,71 @@ function refreshPanelSummary(sid) {
   if(stack){var row=seatChipRows()[sid];stack.textContent=row&&Number.isSafeInteger(row.chips)?row.chips.toLocaleString('en-AU'):'—';}
 }
 
+
+var _pkrQuickLastBankTap=0;
+function pkrQuickRecordBuyin(sid,p,dollars){
+  if(!pkrPanelCanManage()||state.players[sid]!==p){
+    toast('Only the host can record a buy-in in an active game.');return false;
+  }
+  if((p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
+    toast('This player has cashed out. Review their transactions.');return false;
+  }
+  var cents=Math.round(Number(dollars)*100);
+  if(!Number.isSafeInteger(cents)||cents<=0||cents>100000000000){
+    toast('Enter a valid buy-in amount.');return false;
+  }
+  // A very quick double tap is usually accidental. A deliberate second bank
+  // can be added once the first tap has finished; server writes use absolute PUTs.
+  var now=Date.now();
+  if(now-_pkrQuickLastBankTap<700)return false;
+  _pkrQuickLastBankTap=now;
+  _pkrPlayerPanelView='overview';
+  var success=addTxFromInput(sid,'buyin',{value:(cents/100).toFixed(2)});
+  if(success)toast('Added '+fmt(cents/100)+' buy-in for '+p.name+' (syncing)');
+  return !!success;
+}
+
+function pkrBindPlayerSwipe(sp){
+  if(sp.dataset.pkrSwipeBound==='yes')return;
+  sp.dataset.pkrSwipeBound='yes';
+  var gesture=null;
+  function canStart(e){
+    if(!sp.classList.contains('open')||!window.matchMedia('(max-width:700px)').matches||
+       e.touches.length!==1)return false;
+    var target=e.target;
+    if(!(target instanceof Element)||
+       target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return false;
+    var content=document.getElementById('panelBody');
+    return !(content&&content.contains(target)&&content.scrollTop>1);
+  }
+  sp.addEventListener('touchstart',function(e){
+    gesture=null;
+    if(!canStart(e))return;
+    gesture={x:e.touches[0].clientX,y:e.touches[0].clientY,dy:0,moving:false};
+  },{passive:true});
+  sp.addEventListener('touchmove',function(e){
+    if(!gesture||e.touches.length!==1)return;
+    var dy=e.touches[0].clientY-gesture.y;
+    var dx=Math.abs(e.touches[0].clientX-gesture.x);
+    var content=document.getElementById('panelBody');
+    if((content&&content.scrollTop>1)||dy<0||dx>dy){gesture=null;return;}
+    if(dy<=7)return;
+    if(e.cancelable)e.preventDefault();
+    gesture.moving=true;gesture.dy=dy;
+    sp.style.transition='none';
+    sp.style.transform='translateY('+Math.min(dy,300)+'px)';
+  },{passive:false});
+  function finish(){
+    if(!gesture)return;
+    var moved=gesture.moving,distance=gesture.dy;
+    gesture=null;
+    sp.style.transition='';
+    sp.style.transform='';
+    if(moved&&distance>=75)window.closePanel();
+  }
+  sp.addEventListener('touchend',finish,{passive:true});
+  sp.addEventListener('touchcancel',finish,{passive:true});
+}
 
 function pkrAssembleQuickPlayerView(sid,body,p){
   var original=Array.from(body.children),sections={};
@@ -2199,7 +2265,7 @@ function pkrAssembleQuickPlayerView(sid,body,p){
       e.preventDefault();
       if(!pkrPanelCanManage()||cashed){toast('Financial actions are not available.');return;}
       var raw=input.value.trim();
-      if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
+      if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
       var cents=Math.round(Number(raw)*100);
       if(!Number.isSafeInteger(cents)||cents<0||(!isCash&&cents===0)){
         toast('Enter a valid '+(isCash?'cash-out':'buy-in')+' amount.');return;
@@ -2332,7 +2398,7 @@ function buildPanel(sid) {
       });
       saveBtn.addEventListener('click',function(){
         var raw=amt.value.trim();
-        if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid dollar amount with up to two decimals');return;}
+        if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter a valid dollar amount with up to two decimals');return;}
         var cents=Math.round(Number(raw)*100);
         if(!Number.isSafeInteger(cents)||cents<0){toast('Enter a valid amount');return;}
         var latest=state.players[sid];
@@ -2597,7 +2663,7 @@ function addTxFromInput(sid, type, inp) {
     toast('Player already cashed out. Review transactions before changing the result.');return;
   }
   var raw=String(inp&&inp.value||'').trim();
-  if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid amount with up to two decimal places.');return;}
+  if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter a valid amount with up to two decimal places.');return;}
   var cents=Math.round(Number(raw)*100);
   if(!Number.isSafeInteger(cents)||cents<0||cents>100000000000){toast('Enter a valid dollar amount.');return;}
   var amt=cents/100;
@@ -2622,6 +2688,7 @@ function addTxFromInput(sid, type, inp) {
       : '♠ ' + p.name + ' — cashed out $' + amt.toFixed(2) + ' at ' + gameName + '. Net: ' + fmtNet(pNet(p)) + ' 🃏';
     window.showWaToast(phone, msg);
   }
+  return true;
 }
 
 // ── Assign ──
