@@ -13,6 +13,7 @@ on:
       - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
       - 'worker/migrations/20261026_push_rooms.sql'
       - 'worker/migrations/20261027_settlement_v2.sql'
+      - 'worker/migrations/20261029_room_player_profiles.sql'
       - 'worker/wrangler.toml'
       - '.github/workflows/deploy-cloudflare-production.yml'
   pull_request:
@@ -21,6 +22,8 @@ on:
       - 'worker/scripts/settlement-push-dependencies-ci.py'
       - 'worker/scripts/reconcile-authorised-legacy-ci.py'
       - 'worker/scripts/test-reconcile-authorised-legacy-ci.py'
+      - 'worker/scripts/deploy-settlement-v2-production.py'
+      - 'worker/migrations/20261029_room_player_profiles.sql'
       - '.github/workflows/deploy-cloudflare-production.yml'
   workflow_dispatch:
     inputs:
@@ -51,6 +54,7 @@ jobs:
           python3 worker/scripts/test-d1-export-diagnostic-ci.py
           python3 worker/scripts/test-d1-api-export-fallback-ci.py
           python3 worker/scripts/test-live-route-retry-ci.py
+          python3 worker/scripts/test-room-profiles-migration.py
           python3 -m py_compile worker/scripts/reconcile-authorised-legacy-ci.py
           python3 -m py_compile worker/scripts/deploy-settlement-v2-production.py
           python3 -m py_compile worker/scripts/settlement-push-dependencies-ci.py
@@ -92,13 +96,14 @@ jobs:
           npm test
           python3 scripts/test-settlement-v2-migration.py
           python3 scripts/test-owner-legacy-reconciliation.py
+          python3 scripts/test-room-profiles-migration.py
           python3 scripts/test-reconcile-authorised-legacy-ci.py
       - name: Verify membership dependencies and prepare additive authenticated push schema
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python3 scripts/settlement-push-dependencies-ci.py --prepare
-      - name: Back up, verify, migrate, deploy and smoke-test Settlement V2
+      - name: Back up, rehearse settlement + profiles migrations, deploy and verify Worker
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
