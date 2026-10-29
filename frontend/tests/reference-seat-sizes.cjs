@@ -40,6 +40,7 @@ async function check(browser,width,height,count){
   if(u.pathname==='/games/'+id)body={...game,players:roster};
   else if(u.pathname==='/events/'+room)body={id:room,name:'Reference test',role:'host',members:[
    {id:'host-test',name:'Host',role:'host'},...roster.map(p=>({id:p.user_id,name:p.display_name,role:'member',avatar_url:null}))]};
+  else if(u.pathname==='/events/'+room+'/profiles')body={profiles:[]};
   else if(u.pathname==='/auth/me')body={id:'host-test',name:'Host'};
   else{failures.push(u.pathname);body={error:'unmapped synthetic API'};}
   return route.fulfill({status:body.error?404:200,contentType:'application/json',body:JSON.stringify(body),
