@@ -28,6 +28,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events/'+room.id+'/profiles')return {profiles:[]};
   if(pathname==='/events/'+room.id+'/players')return [];
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
+  if(pathname==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:'command',updated_at:null};
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [{
     ...finished,top_players:[
@@ -220,33 +221,25 @@ async function test(){
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
    });
-   for(const item of [{id:'dashboard',url:'/dashboard',ready:'.pkr-pro-home'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
+   for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
-       await page.locator('[data-testid="dashboard-payment-focus"] .pkr-room-outstanding-total').waitFor({state:'visible'});
-       if(await page.locator('.pkr-mobile-featured').count())
-         errors.push(size.name+' redundant mobile Next Game hero still present');
-       if(!await page.locator('.pkr-command-nextgame').isVisible())
-         errors.push(size.name+' compact next-game action card missing');
+       await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+       await page.locator('.pkr-dual-hero-command').waitFor({state:'visible'});
+       await page.locator('.pkr-dual-root .pkr-room-outstanding-total').waitFor({state:'visible'});
        if(await page.locator('.pkr-pro-hero').count())
-         errors.push(size.name+' old oversized decorative statistics hero still rendered');
-       const stats=await page.locator('.pkr-command-stat-strip').boundingBox();
-       // Two rows of touch-friendly 44px+ metrics need slightly more space
-       // on phones; the previous decorative hero was over 325px tall.
-       const maxStatHeight=size.width<=700?220:200;
-       if(!stats||stats.height>maxStatHeight)
-         errors.push(size.name+' dashboard statistics strip is not compact: '+JSON.stringify(stats));
-       const pastDue=page.locator('.pkr-command-unfinished');
-       if(await pastDue.count()){
-         const notice=await pastDue.boundingBox();
-         if(notice&&notice.height>125)
-           errors.push(size.name+' oversized unfinished-game notice hides the payment summary: '+JSON.stringify(notice));
-       }
-       await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
+         errors.push(size.name+' old dashboard hero still rendered');
+       await page.screenshot({path:path.join(output,size.name+'-dashboard-command.png'),fullPage:false});
+       // Host view: preview both approved variants at every supported viewport.
+       const toggle=page.getByRole('button',{name:/Live Poker/});
+       // This fixture returns the default each fetch. Use local click to
+       // assert the non-optimistic preference flow in the full app test.
+       if(!await toggle.isVisible())
+         errors.push(size.name+' host dashboard layout chooser missing');
      }
 
      if(item.id==='dashboard' && size.width<=700){
@@ -353,7 +346,7 @@ async function test(){
      }
      if(item.id==='room'){
        const rect=await page.evaluate(()=>{
-        const hero=document.querySelector('.pkr-event-overview');const tabs=document.querySelector('.pkr-event-tabs');
+        const hero=document.querySelector('.pkr-event .pkr-dual-root');const tabs=document.querySelector('.pkr-event-tabs');
         if(!hero||!tabs)return null;const h=hero.getBoundingClientRect(),t=tabs.getBoundingClientRect();
         return {heroWidth:h.width,tabsWidth:t.width,heroLeft:h.left,tabsLeft:t.left,heroRight:h.right,tabsRight:t.right};
        });
@@ -409,16 +402,22 @@ async function test(){
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
      if(['dashboard','room','insights'].includes(item.id)){
-       const heroSelector=item.id==='dashboard'
-         ?'.pkr-command-focus>.pkr-room-outstanding'
-         :item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
+       const heroSelector=item.id==='dashboard'||item.id==='room'
+         ?'.pkr-dual-hero':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
-         return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
+         return {width:r.width,height:r.height,background:s.backgroundImage,
+           art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
        });
-       if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
-         errors.push(size.name+' '+item.id+' stale casino photo remains instead of Midnight Felt header: '+JSON.stringify(visual));
-       if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+       if(item.id==='insights'){
+         if(!visual.background.includes('linear-gradient'))
+           errors.push(size.name+' insights missing designed background');
+       }else{
+         if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
+           errors.push(size.name+' '+item.id+' approved poker equipment artwork missing');
+       }
+       if(visual.width<250||visual.height<140)
+         errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(['dashboard','room'].includes(item.id)){
        const prop=page.locator('.pkr-casino-art-asset .pkr-casino-art-props').first();
