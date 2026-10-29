@@ -144,6 +144,7 @@ async function run(){
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
     assert.equal(await page.getByRole('button',{name:/Command Centre/}).getAttribute('aria-pressed'),'true');
     assert.equal(await page.getByRole('button',{name:/Live Poker/}).getAttribute('aria-pressed'),'false');
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
