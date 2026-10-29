@@ -226,7 +226,14 @@ async function test(){
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // Publish dashboard before mutation tests (which reopen an archived room).
-     if(item.id==='dashboard') await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
+     if(item.id==='dashboard'){
+       await page.locator('[data-testid="dashboard-payment-focus"] .pkr-room-outstanding-total').waitFor({state:'visible'});
+       if(await page.locator('.pkr-mobile-featured').count())
+         errors.push(size.name+' redundant mobile Next Game hero still present');
+       if(!await page.locator('.pkr-command-nextgame').isVisible())
+         errors.push(size.name+' compact next-game action card missing');
+       await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
+     }
 
      if(item.id==='dashboard' && size.width<=700){
       // On iPhones, the fixed nav must never cover a confirmation dialog.
@@ -388,8 +395,8 @@ async function test(){
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
      if(['dashboard','room','insights'].includes(item.id)){
-       const heroSelector=item.id==='dashboard'?
-         (size.width<=700&&await page.locator('.pkr-mobile-featured').count()?'.pkr-mobile-featured':'.pkr-pro-hero')
+       const heroSelector=item.id==='dashboard'
+         ?'.pkr-command-focus>.pkr-room-outstanding'
          :item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
@@ -412,7 +419,7 @@ async function test(){
        }
      }
      if(item.id==='dashboard'){
-       const primary=await page.locator('.pkr-pro-actions .btn-primary').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+       const primary=await page.locator('.pkr-command-open').first().evaluate(el=>getComputedStyle(el).backgroundColor);
        if(primary!=='rgb(61, 220, 151)')
          errors.push(size.name+' dashboard primary control is not Theme A lime: '+primary);
      }
