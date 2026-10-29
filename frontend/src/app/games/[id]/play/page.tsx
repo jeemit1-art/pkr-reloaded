@@ -284,7 +284,8 @@ export default function PlayPage() {
         </div>
 
         {/* Table + Side Panel */}
-        <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
+        <div className="pkr-game-table-stage" id="pkrGameTableStage"
+          style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
           <div className="table-area" id="tableArea"><div className="pkr-seat-summary" id="pkrSeatSummary" aria-label="Player balances" hidden></div>
             <div className="table-wrap" id="tableWrap">
               <div id="tableOuter"></div>
@@ -292,10 +293,13 @@ export default function PlayPage() {
               <div id="seatsContainer"></div>
             </div>
           </div>
-          <div className="side-panel" id="sidePanel">
+          <button type="button" id="playerPanelScrim" className="pkr-player-panel-scrim"
+            aria-label="Close player details" onClick={() => (window as any).closePanel?.()} />
+          <div className="side-panel" id="sidePanel" aria-hidden="true">
             <div className="panel-hdr">
               <span className="panel-title" id="panelTitle">Player</span>
-              <button className="panel-close" id="panelCloseBtn" onClick={() => (window as any).closePanel?.()}>✕</button>
+              <button className="panel-close" id="panelCloseBtn" aria-label="Close player details"
+                onClick={() => (window as any).closePanel?.()}>✕</button>
             </div>
             <div className="panel-body" id="panelBody"></div>
           </div>
@@ -1970,13 +1974,23 @@ var activePanel = null;
 window.openPanel = function openPanel(sid) {
   activePanel = sid;
   var sp = document.getElementById('sidePanel');
-  if (sp) sp.classList.add('open');
+  if (sp) {
+    sp.classList.add('open');
+    sp.setAttribute('aria-hidden', 'false');
+  }
+  var stage = document.getElementById('pkrGameTableStage');
+  if (stage) stage.classList.add('pkr-player-panel-open');
   requestAnimationFrame(function(){ buildPanel(sid); });
 };
 
 window.closePanel = function closePanel() {
   var sp = document.getElementById('sidePanel');
-  if (sp) sp.classList.remove('open');
+  if (sp) {
+    sp.classList.remove('open');
+    sp.setAttribute('aria-hidden', 'true');
+  }
+  var stage = document.getElementById('pkrGameTableStage');
+  if (stage) stage.classList.remove('pkr-player-panel-open');
   activePanel = null;
   setTimeout(renderTable, 270);
 };
@@ -3518,5 +3532,56 @@ function getApprovedTableChromeCSS():string {
   #gameScreen.pkr-casino-live-table .pkr-approved-game-dock{min-height:58px}
   #gameScreen.pkr-casino-live-table #pkr-table-tools.pkr-approved-tools{top:52px}
 }
+
+/* Narrow screens: the player editor is a sheet above the table, not a flex
+   sibling that steals table width and forces all seats to be remeasured. */
+#gameScreen.pkr-casino-live-table .pkr-player-panel-scrim{display:none}
+@media(max-width:900px){
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage{
+    position:relative;min-width:0;isolation:isolate;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .table-area{
+    flex:1 1 100%;width:100%;min-width:0;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .pkr-player-panel-scrim{
+    display:block;position:absolute;inset:0;z-index:10;
+    border:0;border-radius:0;background:rgba(4,12,17,.68);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .25s ease,visibility .25s step-end;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage.pkr-player-panel-open .pkr-player-panel-scrim{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transition:opacity .25s ease,visibility 0s;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel{
+    position:absolute;top:0;bottom:0;right:0;left:auto;z-index:11;
+    width:min(420px,calc(100% - 44px));max-width:100%;min-width:0;
+    transform:translateX(102%);visibility:hidden;pointer-events:none;
+    box-shadow:-12px 0 44px rgba(0,0,0,.48);
+    transition:transform .25s ease,visibility .25s step-end;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel.open{
+    width:min(420px,calc(100% - 44px));
+    transform:translateX(0);visibility:visible;pointer-events:auto;
+    transition:transform .25s ease,visibility 0s;
+  }
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel .panel-body{
+    min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  }
+}
+@media(max-width:600px){
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel,
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel.open{
+    width:100%;max-width:100%;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel,
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .side-panel.open,
+  #gameScreen.pkr-casino-live-table .pkr-game-table-stage .pkr-player-panel-scrim{
+    transition:none;
+  }
+}
+
 `;
 }
