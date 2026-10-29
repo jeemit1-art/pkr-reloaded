@@ -929,7 +929,7 @@
  display:flex!important;position:absolute!important;align-items:center!important;
  justify-content:center!important;flex-direction:column!important;flex-wrap:nowrap!important;
  gap:4px!important;
- width:80px!important;height:70px!important;
+ width:100px!important;height:70px!important;
  min-width:0!important;min-height:0!important;
  padding:0!important;margin:0!important;
  border:0!important;border-radius:0!important;
@@ -969,25 +969,25 @@
 }
 #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact{
  flex-direction:row!important;gap:3px!important;
- width:60px!important;height:52px!important;
+ width:76px!important;height:52px!important;
 }
 #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-add{
  flex-basis:27px!important;width:27px!important;height:27px!important;
  min-width:27px!important;min-height:27px!important;font-size:16px!important;
 }
 #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-number{
- width:auto!important;max-width:30px!important;font-size:9px!important;text-align:left!important;
+ width:auto!important;max-width:45px!important;font-size:9px!important;text-align:left!important;
 }
 @media(max-width:360px){
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat{
-  width:74px!important;height:62px!important;gap:3px!important;
+  width:90px!important;height:62px!important;gap:3px!important;
  }
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat .pkr-empty-seat-add{
   flex-basis:34px!important;width:34px!important;height:34px!important;
   min-width:34px!important;min-height:34px!important;font-size:17px!important;
  }
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact{
-  width:57px!important;height:49px!important;flex-direction:row!important;
+  width:70px!important;height:49px!important;flex-direction:row!important;
  }
  #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-add{
   flex-basis:26px!important;width:26px!important;height:26px!important;
