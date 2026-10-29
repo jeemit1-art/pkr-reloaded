@@ -177,7 +177,18 @@ async function check(browser,width,height,count){
   await page.locator('#seat1 .pkr-game-seat-avatar img[hidden]').waitFor({state:'attached'});
   assert.equal(await page.locator('#seat1 .pkr-game-seat-avatar img').isVisible(),false);
   assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').isVisible(),true);
-  // Changing view may not write or change the transaction ledger.
+  // A chosen room nickname and preset must override Google photo on the
+  // gameplay table without changing the financial player's canonical name.
+  await page.evaluate(()=>{
+   const member=window._eventMembers.find(m=>m.id==='ref-1');
+   member.avatar_url='/images/casino/real-poker-chips.webp';
+   window._eventProfiles=[{profile_key:'member:ref-1',screen_name:'Ace of Spades',avatar_emoji:'🃏',avatar_data:null}];
+   window.renderTable();
+  });
+  assert.equal(await page.locator('#seat1 .pkr-game-compact-name').textContent(),'Ace of Spades');
+  assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').textContent(),'🃏');
+  assert.equal(await page.locator('#seat1 .pkr-seat-photo').count(),0,'Chosen preset must override inherited photo');
+  // Changing view or room nickname may not write or change the transaction ledger.
   const actual=await page.evaluate(()=>JSON.parse(JSON.stringify(window.state.players)));
   for(const [sid,p] of Object.entries(players)){
    assert.equal(actual[sid].name,p.name);
