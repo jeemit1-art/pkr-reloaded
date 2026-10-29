@@ -716,6 +716,7 @@ export default function EventPage() {
               </AppDialog>
             )}
             <div id="pkr-members-roster" className="pkr-members-anchor" />
+            {roomProfileError&&<p role="status" className="pkr-member-profile-notice">Player profile editing is currently unavailable: {roomProfileError}. Existing members and game records remain available.</p>}
             <div className="pkr-member-search-tools">
               <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span>⌕</span>
                 <input id="pkr-member-search" type="search" aria-label="Search members" placeholder="Search members…" value={memberQuery} onChange={e=>setMemberQuery(e.target.value)}/>
@@ -739,15 +740,20 @@ export default function EventPage() {
                     <div style={{width:38,height:38,borderRadius:'50%',background:'var(--bg3)',
                       border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
                       justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
-                      {m.avatar_url
-                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                      {roomProfiles['member:'+m.id]?.avatar_data
+                        ? <img src={roomProfiles['member:'+m.id].avatar_data!} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : roomProfiles['member:'+m.id]?.avatar_emoji
+                          ? <span aria-hidden="true">{roomProfiles['member:'+m.id].avatar_emoji}</span>
+                          : m.avatar_url
+                            ? <img src={m.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                            : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <RecordMetric request={{kind:'player',title:m.name+' — game history',roomId:id,playerId:m.id,playerName:m.name}}
                         className="pkr-member-history-link" style={{minHeight:44,alignItems:'flex-start',justifyContent:'center',gap:3}}>
                         <strong style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),sans-serif',fontWeight:600,
-                          overflowWrap:'anywhere',textAlign:'left'}}>{m.name}</strong>
+                          overflowWrap:'anywhere',textAlign:'left'}}>{roomProfiles['member:'+m.id]?.screen_name||m.name}</strong>
+                        {roomProfiles['member:'+m.id]?.screen_name&&<small className="pkr-member-profile-identity">{m.name}</small>}
                         <small style={{fontSize:11,color:'var(--pkr-a-primary)'}}>View game history ›</small>
                       </RecordMetric>
                       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
@@ -774,6 +780,9 @@ export default function EventPage() {
                         </div>
                       )}
                     </div>
+                    {(isHost||user?.id===m.id)&&<button type="button" className="pkr-member-profile-edit" disabled={!!roomProfileError}
+                      aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
+                      onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
                     {isHost && m.role !== 'host' && (
                       <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}
                         onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
@@ -784,6 +793,27 @@ export default function EventPage() {
                 ))}
               </div>
             )}
+            {historicalPlayers.length>0&&<section className="pkr-historical-player-roster">
+              <header><h3>Players from saved games</h3><p>Players recorded in game results who have not joined this room with a PKR account. Their display profile does not modify settled games.</p></header>
+              {historicalPlayers.map((p:any)=>{
+                const playerName=String(p.display_name||'').trim();
+                const key='history:'+playerName.toLowerCase();
+                const profile=roomProfiles[key];
+                return <div key={key} className="pkr-historical-player-row">
+                  <span className="pkr-historical-player-avatar">
+                    {profile?.avatar_data?<img src={profile.avatar_data} alt=""/>:
+                      <span aria-hidden="true">{profile?.avatar_emoji||playerName.charAt(0).toUpperCase()}</span>}
+                  </span>
+                  <span className="pkr-historical-player-name"><strong>{profile?.screen_name||playerName}</strong>
+                    <small>{profile?.screen_name?playerName+' · ':''}{p.games_played||0} recorded games</small></span>
+                  <RecordMetric request={{kind:'player',title:playerName+' — game history',roomId:id,playerId:p.user_id,playerName}}
+                    className="pkr-member-history-mini">History</RecordMetric>
+                  {isHost&&<button type="button" disabled={!!roomProfileError} className="pkr-member-profile-edit"
+                    aria-label={'Edit player profile for '+playerName}
+                    onClick={()=>setEditingRoomProfile({key,name:playerName,avatarUrl:null})}>Profile</button>}
+                </div>;
+              })}
+            </section>}
             {isGroupOwner && (
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');document.getElementById('pkr-mobile-name')?.focus();}}>+ Invite Member by Mobile</button>
@@ -1191,6 +1221,16 @@ export default function EventPage() {
         {id:'members',label:'Members',icon:'members',active:tab==='members',onSelect:()=>selectTab('members')}
       ]} />
 
+      {tab==='members'&&editingRoomProfile&&<AppDialog className="modal-overlay pkr-player-profile-overlay"
+        onClick={event=>{if(event.currentTarget===event.target)setEditingRoomProfile(null);}}>
+        <div className="pkr-player-profile-sheet" onClick={event=>event.stopPropagation()}>
+          <RoomPlayerProfileEditor key={editingRoomProfile.key}
+            profileKey={editingRoomProfile.key} canonicalName={editingRoomProfile.name}
+            avatarFallback={editingRoomProfile.avatarUrl} initial={roomProfiles[editingRoomProfile.key]||null}
+            canEdit={!roomProfileError&&(isHost||editingRoomProfile.key==='member:'+user?.id)}
+            canManage={isHost} onClose={()=>setEditingRoomProfile(null)} onSave={saveRoomProfile}/>
+        </div>
+      </AppDialog>}
       {/* Standings player profile. Both podium and list buttons select this same dialog. */}
       {tab==='leaderboard' && selectedPlayer && (
         <PlayerHistoryDialog
