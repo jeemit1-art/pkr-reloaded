@@ -30,6 +30,7 @@ async function runEngine(engine,browserType,width,height){
     else if(p==='/events/profile-room')value={...room,members:[host,player]};
     else if(p==='/events/profile-room/games'||p==='/events/profile-room/history'||p==='/events/profile-room/leaderboard')value=[];
     else if(p==='/events/profile-room/profiles')value={profiles};
+    else if(p==='/events/profile-room/players')value=[];
     else if(p==='/events/profile-room/join-requests')value={requests:[]};
     else if(p==='/events/profile-room/phone-contacts')value={contacts:[]};
     else if(p==='/events/profile-room/push-registrations')value={members:[],definition:'device registration'};
