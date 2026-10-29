@@ -2066,6 +2066,7 @@ window.openPanel = function openPanel(sid) {
   activePanel = sid;
   var sp = document.getElementById('sidePanel');
   if (sp) {
+    pkrBindPlayerSwipe(sp);
     sp.classList.add('open');
     sp.setAttribute('aria-hidden', 'false');
   }
@@ -2098,6 +2099,72 @@ function refreshPanelSummary(sid) {
   if(stack){var row=seatChipRows()[sid];stack.textContent=row&&Number.isSafeInteger(row.chips)?row.chips.toLocaleString('en-AU'):'—';}
 }
 
+
+var _pkrQuickLastBankTap={sid:'',cents:0,at:0};
+function pkrQuickRecordBuyin(sid,p,dollars){
+  if(!pkrPanelCanManage()||state.players[sid]!==p){
+    toast('Only the host can record a buy-in in an active game.');return false;
+  }
+  if((p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
+    toast('This player has cashed out. Review their transactions.');return false;
+  }
+  var cents=Math.round(Number(dollars)*100);
+  if(!Number.isSafeInteger(cents)||cents<=0||cents>100000000000){
+    toast('Enter a valid buy-in amount.');return false;
+  }
+  // A very quick double tap is usually accidental. A deliberate second bank
+  // can be added once the first tap has finished; server writes use absolute PUTs.
+  var now=Date.now();
+  if(_pkrQuickLastBankTap.sid===sid&&_pkrQuickLastBankTap.cents===cents&&
+     now-_pkrQuickLastBankTap.at<700)return false;
+  _pkrQuickLastBankTap={sid:sid,cents:cents,at:now};
+  _pkrPlayerPanelView='overview';
+  var success=addTxFromInput(sid,'buyin',{value:(cents/100).toFixed(2)});
+  if(success)toast('Added '+fmt(cents/100)+' buy-in for '+p.name+' (syncing)');
+  return !!success;
+}
+
+function pkrBindPlayerSwipe(sp){
+  if(sp.dataset.pkrSwipeBound==='yes')return;
+  sp.dataset.pkrSwipeBound='yes';
+  var gesture=null;
+  function canStart(e){
+    if(!sp.classList.contains('open')||!window.matchMedia('(max-width:700px)').matches||
+       e.touches.length!==1)return false;
+    var target=e.target;
+    if(!(target instanceof Element)||
+       target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return false;
+    var content=document.getElementById('panelBody');
+    return !(content&&content.contains(target)&&content.scrollTop>1);
+  }
+  sp.addEventListener('touchstart',function(e){
+    gesture=null;
+    if(!canStart(e))return;
+    gesture={x:e.touches[0].clientX,y:e.touches[0].clientY,dy:0,moving:false};
+  },{passive:true});
+  sp.addEventListener('touchmove',function(e){
+    if(!gesture||e.touches.length!==1)return;
+    var dy=e.touches[0].clientY-gesture.y;
+    var dx=Math.abs(e.touches[0].clientX-gesture.x);
+    var content=document.getElementById('panelBody');
+    if((content&&content.scrollTop>1)||dy<0||dx>dy){gesture=null;return;}
+    if(dy<=7)return;
+    if(e.cancelable)e.preventDefault();
+    gesture.moving=true;gesture.dy=dy;
+    sp.style.transition='none';
+    sp.style.transform='translateY('+Math.min(dy,300)+'px)';
+  },{passive:false});
+  function finish(){
+    if(!gesture)return;
+    var moved=gesture.moving,distance=gesture.dy;
+    gesture=null;
+    sp.style.transition='';
+    sp.style.transform='';
+    if(moved&&distance>=75)window.closePanel();
+  }
+  sp.addEventListener('touchend',finish,{passive:true});
+  sp.addEventListener('touchcancel',finish,{passive:true});
+}
 
 function pkrAssembleQuickPlayerView(sid,body,p){
   var original=Array.from(body.children),sections={};
@@ -2137,8 +2204,22 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
       cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
     root.appendChild(metrics);
+    var quickLabel=node('div','pkr-quick-heading pkr-buyin-heading');
+    quickLabel.appendChild(node('strong','','Quick buy-in · tap once to add'));
+    root.appendChild(quickLabel);
+    var quickBanks=node('div','pkr-quick-preset-grid pkr-quick-buyin-presets');
+    var standard=Number(state.game&&state.game.defaultBuyin)||25;
+    [standard,standard*2,standard*3].forEach(function(amount){
+      var quickBtn=button('＋ '+fmt(amount),function(){
+        pkrQuickRecordBuyin(sid,p,amount);
+      },'pkr-quick-preset pkr-quick-bank');
+      quickBtn.setAttribute('aria-label','Add '+fmt(amount)+' buy-in');
+      quickBtn.disabled=!pkrPanelCanManage()||cashed;
+      quickBanks.appendChild(quickBtn);
+    });
+    root.appendChild(quickBanks);
     var actions=node('div','pkr-quick-actions');
-    var buy=button('＋ Add Buy-in',function(){go('buyin');},'pkr-quick-primary buyin');
+    var buy=button('＋ Other amount',function(){go('buyin');},'pkr-quick-primary pkr-quick-custom');
     var cash=button('▣ Cash Out',function(){go('cashout');},'pkr-quick-primary');
     buy.disabled=cash.disabled=!pkrPanelCanManage()||cashed;
     actions.append(buy,cash);root.appendChild(actions);
@@ -2174,48 +2255,45 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     root.appendChild(node('h3','pkr-quick-page-heading',isCash?'Cash out player':'Add buy-in'));
     root.appendChild(node('p','pkr-quick-explainer',
       isCash?'Record the full dollar amount returned to this player. A completed cash-out records their final result.':
-      'Record an additional bank issued to this player. The default amount may be changed before confirming.'));
+      'Enter a custom buy-in amount and tap Add once. The bank will be recorded immediately.'));
     var form=node('form','pkr-quick-form'),label=node('label','','Amount (AUD)');
     var input=node('input','');input.type='text';input.inputMode='decimal';input.required=true;
     input.autocomplete='off';input.setAttribute('aria-label','Transaction amount in dollars');
-    if(!isCash)input.value=(state.game&&state.game.defaultBuyin||25).toFixed(2);
+    input.placeholder=isCash?'Cash-out amount':'Custom buy-in amount';
     label.appendChild(input);form.appendChild(label);
-    if(!isCash){
-      var presets=node('div','pkr-quick-preset-grid'),defaultAmount=Number(state.game&&state.game.defaultBuyin)||25;
-      [defaultAmount,defaultAmount*2,defaultAmount*3].forEach(function(amount){
-        var preset=button(fmt(amount),function(){input.value=amount.toFixed(2);Array.from(presets.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===preset));});},'pkr-quick-preset');
-        preset.setAttribute('aria-pressed',String(amount===defaultAmount));presets.appendChild(preset);
-      });form.appendChild(presets);
-    }
     var review=node('div','pkr-quick-review');
     function item(label,value,cls){var line=node('div','row');line.append(node('span','',label),node('strong',cls||'',value));review.appendChild(line);}
     item('Total invested',fmt(bi));item('Already paid out',fmt(co));
     if(isCash)item('Final result','Calculated on confirmation');
     form.appendChild(review);
     var submit=node('button','pkr-quick-primary '+(isCash?'':'buyin'),
-      isCash?'Review cash-out':'Review buy-in');submit.type='submit';
+      isCash?'Review cash-out':'Add custom buy-in');submit.type='submit';
     submit.disabled=!pkrPanelCanManage()||cashed;form.appendChild(submit);
     form.addEventListener('submit',function(e){
       e.preventDefault();
       if(!pkrPanelCanManage()||cashed){toast('Financial actions are not available.');return;}
       var raw=input.value.trim();
-      if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
+      if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
       var cents=Math.round(Number(raw)*100);
       if(!Number.isSafeInteger(cents)||cents<0||(!isCash&&cents===0)){
         toast('Enter a valid '+(isCash?'cash-out':'buy-in')+' amount.');return;
       }
-      var value=cents/100,profit=value+co-bi;
-      var message=isCash
-        ?'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.'
-        :'Add '+fmt(value)+' to '+p.name+'’s buy-ins. New invested total: '+fmt(bi+value)+'.';
-      showConfirmModal('Confirm '+(isCash?'cash-out':'buy-in'),message,
-        isCash?'Confirm cash-out':'Confirm buy-in',function(){
+      var value=cents/100;
+      if(!isCash){
+        // Custom buy-ins, like presets, record with one submit. No extra modal.
+        pkrQuickRecordBuyin(sid,p,value);
+        return;
+      }
+      var profit=value+co-bi;
+      showConfirmModal('Confirm cash-out',
+        'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.',
+        'Confirm cash-out',function(){
           if(!pkrPanelCanManage()||state.players[sid]!==p||
             (p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
             toast('Player data changed. Review before trying again.');return;
           }
+          _pkrPlayerPanelView='overview';
           addTxFromInput(sid,type,input);
-          _pkrPlayerPanelView='overview';buildPanel(sid);
         },false);
     });
     root.appendChild(form);
@@ -2332,7 +2410,7 @@ function buildPanel(sid) {
       });
       saveBtn.addEventListener('click',function(){
         var raw=amt.value.trim();
-        if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid dollar amount with up to two decimals');return;}
+        if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter a valid dollar amount with up to two decimals');return;}
         var cents=Math.round(Number(raw)*100);
         if(!Number.isSafeInteger(cents)||cents<0){toast('Enter a valid amount');return;}
         var latest=state.players[sid];
@@ -2597,7 +2675,7 @@ function addTxFromInput(sid, type, inp) {
     toast('Player already cashed out. Review transactions before changing the result.');return;
   }
   var raw=String(inp&&inp.value||'').trim();
-  if(!/^\\d+(?:\\.\\d{1,2})?$/.test(raw)){toast('Enter a valid amount with up to two decimal places.');return;}
+  if(!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(raw)){toast('Enter a valid amount with up to two decimal places.');return;}
   var cents=Math.round(Number(raw)*100);
   if(!Number.isSafeInteger(cents)||cents<0||cents>100000000000){toast('Enter a valid dollar amount.');return;}
   var amt=cents/100;
@@ -2622,6 +2700,7 @@ function addTxFromInput(sid, type, inp) {
       : '♠ ' + p.name + ' — cashed out $' + amt.toFixed(2) + ' at ' + gameName + '. Net: ' + fmtNet(pNet(p)) + ' 🃏';
     window.showWaToast(phone, msg);
   }
+  return true;
 }
 
 // ── Assign ──
