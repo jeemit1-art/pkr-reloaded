@@ -141,6 +141,14 @@ async function check(browser,name,width,height){
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('#pkrSeatChipSummary').textContent())||'',/95 chips/);
   if(width<=900){
+   // The drawer slides into place over 250ms. Wait for its final on-screen
+   // location before evaluating geometry; never mistake transition frames for overflow.
+   await page.waitForFunction(()=>{
+    const el=document.querySelector('#sidePanel.open');
+    if(!el)return false;
+    const rect=el.getBoundingClientRect();
+    return rect.left>=-2&&rect.right<=innerWidth+2;
+   },null,{timeout:7000});
    const afterPanel=await page.locator('#tableArea').boundingBox();
    const afterFelt=await page.locator('#tableFelt').boundingBox();
    const playerDrawer=await page.locator('.side-panel.open').boundingBox();
