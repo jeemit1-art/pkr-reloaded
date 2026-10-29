@@ -115,6 +115,9 @@ async function run(){
     await page.setViewportSize({width,height:Math.min(height,380)});await page.waitForTimeout(100);
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().waitFor();
+    await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
+    assert.equal(await page.locator('.pkr-pro-bottom .pkr-room-outstanding-row').count(),2,
+      'Main dashboard shows the selected room outstanding transfers, not paid settlements');
     await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().click();await loaded(page);await page.keyboard.press('Escape');await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:financial-update',{detail:{kind:'buyin',gameId:'test-game',at:Date.now()}})));
     await page.locator('.pkr-financial-notice').waitFor();await hitVisible(page.locator('.pkr-financial-notice').getByRole('button',{name:'Dismiss',exact:true}));
@@ -124,6 +127,25 @@ async function run(){
     const upgrade=page.locator('.pkr-native-dialog');await upgrade.waitFor();assert(await upgrade.evaluate(el=>el.matches(':modal')));
     await page.screenshot({path:path.join(output,engine+'-'+name+'-action-dialog.png')});await page.keyboard.press('Escape');await upgrade.waitFor({state:'detached'});
     await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
+    await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
+    assert.equal(await page.locator('.pkr-event .pkr-room-outstanding-row').count(),2,
+      'Event dashboard shows only the actual outstanding transfers');
+    assert.equal(await page.locator('.pkr-event .pkr-room-outstanding-row').filter({hasText:'$125'}).count(),0,
+      'Paid settlements must not be included in the room dashboard');
+    if(height>=700){
+      await page.getByRole('button',{name:/View full payment schedule/}).click();
+      await page.locator('#pkr-insights-room').waitFor();
+      await page.getByTestId('current-outstanding').filter({hasText:'$100'}).waitFor();
+      assert.equal(await page.locator('#pkr-insights-room').inputValue(),'test-room',
+        'Settlement schedule deep link must select the correct event');
+      assert.equal(await page.locator('.pkr-settlement-record-filters button.active').getAttribute('aria-pressed'),'true');
+      assert.match(await page.locator('.pkr-settlement-record-filters button.active').innerText(),/Outstanding/);
+      await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').first().waitFor();
+      assert.equal(await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').count(),2,
+        'Outstanding-only schedule should omit paid history');
+      await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});
+      await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
+    }
     await page.locator('.pkr-event-metric .pkr-metric-trigger').nth(1).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),3);await closeSheet(page);
     await page.getByRole('button',{name:'+ Game',exact:true}).click();await page.locator('.pkr-native-dialog').waitFor();
     assert(await page.locator('.pkr-native-dialog').evaluate(el=>el.matches(':modal')));await page.keyboard.press('Escape');await page.locator('.pkr-native-dialog').waitFor({state:'detached'});
