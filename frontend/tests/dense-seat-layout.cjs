@@ -35,6 +35,7 @@ async function check(browser,width){
     members:[{id:'host-test',name:'Host',role:'host'},
      {id:'member-one',name:'Alex',role:'member',avatar_url:'/images/casino/real-poker-chips.webp'},
      {id:'member-two',name:'Blair',role:'member',avatar_url:null}]};
+  else if(u.pathname==='/events/'+game.event_id+'/profiles')body={profiles:[]};
   else if(u.pathname==='/auth/me')body={id:'host-test',name:'Host'};
   else {unexpected.push(u.pathname);body={error:'not a supported test route'};}
   await route.fulfill({status:body.error?404:200,contentType:'application/json',
