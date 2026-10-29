@@ -142,3 +142,68 @@
 .pkr-app .pkr-room-outstanding-open{
   min-width:0;max-width:100%;overflow-wrap:anywhere;
 }
+
+
+/* PKR iPhone dashboard: never let a wide disclaimer shrink the full-schedule
+   action into a one-character column. Use two stable, full-width footer rows
+   on every viewport rather than browser-dependent flex wrapping. */
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-footer{
+  display:flex!important;flex-direction:column!important;
+  align-items:stretch!important;justify-content:flex-start!important;
+  gap:10px!important;width:100%!important;min-width:0!important;
+  height:auto!important;min-height:0!important;
+  padding-top:12px!important;margin-top:14px!important;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-controls{
+  display:grid!important;grid-template-columns:44px minmax(0,1fr)!important;
+  align-items:stretch!important;justify-content:stretch!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  flex:none!important;gap:9px!important;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-refresh{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  min-width:44px!important;min-height:44px!important;width:44px!important;
+  flex:none!important;grid-column:1;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-open{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:none!important;grid-column:2;gap:8px!important;
+  min-width:0!important;width:100%!important;max-width:100%!important;
+  min-height:44px!important;height:auto!important;
+  padding:10px 12px!important;
+  white-space:normal!important;word-break:normal!important;
+  overflow-wrap:normal!important;line-height:1.35!important;
+  font-size:12px!important;letter-spacing:normal!important;
+  text-align:center!important;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-open>span{
+  flex:none!important;white-space:nowrap!important;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-footer>span{
+  display:block!important;flex:none!important;
+  width:100%!important;min-width:0!important;max-width:none!important;
+  color:#97acb1!important;line-height:1.5!important;
+  font-size:11px!important;margin:0!important;
+}
+.pkr-app .pkr-room-outstanding .pkr-room-outstanding-review-games button{
+  max-width:100%;white-space:normal;overflow-wrap:normal;
+  text-align:left;line-height:1.4;
+}
+@media(max-width:540px){
+  .pkr-app .pkr-room-outstanding .pkr-room-outstanding-heading{
+    display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;gap:10px!important;
+  }
+  .pkr-app .pkr-room-outstanding .pkr-room-outstanding-total{
+    width:100%!important;min-width:0!important;max-width:100%!important;
+    flex:none!important;display:flex!important;flex-direction:row!important;
+    justify-content:space-between!important;align-items:center!important;
+    gap:12px!important;text-align:left!important;
+  }
+  .pkr-app .pkr-room-outstanding .pkr-room-outstanding-total span{
+    text-align:right!important;min-width:0!important;
+  }
+  .pkr-app .pkr-room-outstanding .pkr-room-outstanding-open{
+    font-size:12px!important;min-height:46px!important;
+  }
+}

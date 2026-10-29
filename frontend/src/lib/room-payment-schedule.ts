@@ -17,16 +17,21 @@ function check(signal?:AbortSignal){
 const KNOWN_STATUSES=new Set(['owed','paid','payer_claimed','not_received','legacy']);
 type StoredTransfer=Transfer&{game_id?:string;from_user?:string;to_user?:string};
 function validTransfer(t:StoredTransfer):Transfer|null{
-  if(!t||!Number.isSafeInteger(t.amount)||t.amount<0||
-     typeof t.from_name!=='string'||!t.from_name.trim()||
-     typeof t.to_name!=='string'||!t.to_name.trim()||
+  if(!t||typeof t.id!=='string'||!t.id.trim()||
+     !Number.isSafeInteger(t.amount)||t.amount<0||
      !KNOWN_STATUSES.has(String(t.status||'')))return null;
-  // Older game APIs return D1 column names from_user/to_user. The new
-  // room ledger explicitly aliases these to from/to. Never guess identity.
+  // Older saved records can have NULL/empty display names even when their
+  // immutable payer/recipient IDs, paid status and integer cents are valid.
+  // Do not falsely mark the entire game unverified over missing *labels*.
+  // These placeholders disclose missing names; they never invent identities.
   const from=typeof t.from==='string'&&t.from?t.from:t.from_user;
   const to=typeof t.to==='string'&&t.to?t.to:t.to_user;
-  if(typeof from!=='string'||!from||typeof to!=='string'||!to)return null;
-  return {...t,from,to};
+  if(typeof from!=='string'||!from.trim()||typeof to!=='string'||!to.trim())return null;
+  const from_name=typeof t.from_name==='string'&&t.from_name.trim()
+    ?t.from_name.trim():'Payer name unavailable';
+  const to_name=typeof t.to_name==='string'&&t.to_name.trim()
+    ?t.to_name.trim():'Recipient name unavailable';
+  return {...t,from,to,from_name,to_name};
 }
 function fromRoomLedger(roomId:string,saved:RoomLedgerData,expected?:Game[]):RoomTransferLoad{
   if(!saved||!Array.isArray(saved.games)||!Array.isArray(saved.transfers))
