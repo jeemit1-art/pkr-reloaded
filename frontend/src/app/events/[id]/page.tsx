@@ -9,7 +9,8 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type R
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
-import CasinoArtwork from '@/components/CasinoArtwork';
+import RoomOutstandingCard from '@/components/RoomOutstandingCard';
+import './room-dashboard-polish.css';
 import InviteQRCode from '@/components/InviteQRCode';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import {playPkrSound} from '@/lib/sounds';
@@ -434,10 +435,9 @@ export default function EventPage() {
       {/* Room overview; all figures come from the existing event record. */}
       <section className="pkr-event-overview" aria-label="Poker room overview">
         <div className="pkr-event-overview-inner">
-          <CasinoArtwork variant="room" />
-          <span className="pkr-eyebrow">Your poker room</span>
+          <span className="pkr-eyebrow">Room overview</span>
           <h1>{event.name}</h1>
-          <p>Manage upcoming games, player standings and results from this room.</p>
+          <p>Games, players and settlement records — all in one place.</p>
           <div className="pkr-event-metrics">
             <div className="pkr-event-metric"><RecordMetric request={{kind:'settings',title:"Default room buy-in",roomId:id}}><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></RecordMetric></div>
             <div className="pkr-event-metric"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:id}}><strong>{event.game_count || 0}</strong><small>Games</small></RecordMetric></div>
@@ -474,13 +474,7 @@ export default function EventPage() {
         {/* ── Games tab ── */}
         {tab==='games' && (
           <div>
-            {isGroupOwner&&joinRequests.length>0&&<button className="btn btn-primary" style={{marginBottom:16,width:'100%'}} onClick={()=>setTab('members')}>🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} awaiting approval — Review</button>}
-            {isHost && (
-              <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('cohost');}}>+ Co-host</button>
-                <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>{setTab('members');setPhoneRole('member');}}>+ Member</button>
-              </div>
-            )}
+            <RoomOutstandingCard roomId={id}/>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
                 <div className="empty-state-icon">♠</div>
@@ -490,7 +484,7 @@ export default function EventPage() {
             )}
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
-                <div><span className="pkr-eyebrow">Game nights</span><h2>Upcoming &amp; live</h2></div>
+                <div><span className="pkr-eyebrow">Your schedule</span><h2>Upcoming &amp; live games</h2></div>
                 <span>{upcoming.filter(g=>isLiveGame(g)).length} live</span>
               </div>
             )}
