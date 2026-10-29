@@ -239,6 +239,7 @@ async function test(){
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+       await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
        await page.locator('.pkr-dual-hero-command').waitFor({state:'visible'});
        await page.locator('.pkr-dual-root .pkr-room-outstanding-total').waitFor({state:'visible'});
        if(await page.locator('.pkr-pro-hero').count())
