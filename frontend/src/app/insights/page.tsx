@@ -87,6 +87,10 @@ export default function InsightsPage(){
  const page=Math.min(transferPage,pageCount-1);
  const pageTransfers=visibleTransfers.slice(page*perPage,(page+1)*perPage);
  const totalPending=outstanding.reduce((sum,row)=>sum+row.transfer.amount,0);
+ const unresolvedForPeriod=unavailableGames.filter(game=>period==='all'||
+   game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400);
+ const amountsIncomplete=unresolvedForPeriod.length>0;
+ const pendingTotalText=amountsIncomplete?(outstanding.length?'≥ '+fmt(totalPending):'—'):fmt(totalPending);
  const peopleOwing=new Set(outstanding.map(t=>t.transfer.from)).size;
  const peopleReceiving=new Set(outstanding.map(t=>t.transfer.to)).size;
  const selectionKey=(row:SettlementRow)=>row.game.id+':'+row.transfer.id;
@@ -204,7 +208,7 @@ export default function InsightsPage(){
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'members',title:"Room members",roomId:selected}}><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></RecordMetric></div>
     <div className="pkr-insights-kpi"><RecordMetric request={best?{kind:'player',title:best.display_name+' — game history',roomId:selected,playerId:best.user_id,playerName:best.display_name}:{kind:'leaders',title:"Player results",roomId:selected}}><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></RecordMetric></div>
-    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'transfers',title:"Outstanding payments",roomId:selected,filter:'outstanding',period}}><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Confirmed outstanding</small><strong data-testid="current-outstanding">{fmt(totalPending)}</strong><em>{period==='all'?'All loaded settled games':'Last 90 days'}</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'transfers',title:"Outstanding payments",roomId:selected,filter:'outstanding',period}}><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Recorded outstanding</small><strong data-testid="current-outstanding">{pendingTotalText}</strong><em>{amountsIncomplete?'Total unverified':period==='all'?'All settled games':'Last 90 days'}</em></span></RecordMetric></div>
    </section>
    {loadingDetails&&<p className="pkr-insights-loader" role="status">Updating the recorded results and settlement information…</p>}
    <div className="pkr-insights-overview-grid">
@@ -213,10 +217,10 @@ export default function InsightsPage(){
       <button type="button" onClick={()=>document.getElementById('pkr-settlement')?.scrollIntoView({behavior:'smooth'})}>View details →</button>
      </div>
      <div className="pkr-insights-balance-tiles">
-      <div><RecordMetric request={{kind:'transfers',title:"Players who owe",roomId:selected,filter:'owing',period}}><strong>{peopleOwing}</strong><span>Players owe</span><small>{fmt(totalPending)} outstanding</small></RecordMetric></div>
-      <div><RecordMetric request={{kind:'transfers',title:"Players to receive",roomId:selected,filter:'receiving',period}}><strong>{peopleReceiving}</strong><span>To receive</span><small>{fmt(totalPending)} due</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Players who owe",roomId:selected,filter:'owing',period}}><strong>{peopleOwing}</strong><span>Players owe</span><small>{pendingTotalText} outstanding recorded</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Players to receive",roomId:selected,filter:'receiving',period}}><strong>{peopleReceiving}</strong><span>To receive</span><small>{pendingTotalText} due recorded</small></RecordMetric></div>
       <div><RecordMetric request={{kind:'transfers',title:"Paid transfers",roomId:selected,filter:'paid',period}}><strong>{paid.length}</strong><span>Transfers paid</span><small>Recorded as paid</small></RecordMetric></div>
-      <div><RecordMetric request={{kind:'transfers',title:"Outstanding transfers",roomId:selected,filter:'outstanding',period}}><strong>{outstanding.length}</strong><span>Transfers pending</span><small>{outstanding.length?'To be followed up':'No pending transfers'}</small></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Outstanding transfers",roomId:selected,filter:'outstanding',period}}><strong>{outstanding.length}</strong><span>Transfers pending</span><small>{outstanding.length?'To be followed up':amountsIncomplete?'Incomplete records':'No pending transfers'}</small></RecordMetric></div>
      </div>
     </section>
     <section className="pkr-vnext-card pkr-insights-trend">
@@ -256,23 +260,23 @@ export default function InsightsPage(){
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
      
-     {unavailableGames.length>0&&
+     {unresolvedForPeriod.length>0&&
        <details className="pkr-settlement-incomplete" data-testid="settlement-partial-note">
          <summary>
-           <span aria-hidden="true">⚠</span> {unavailableGames.length} older settled game{unavailableGames.length===1?'':'s'} could not be checked.
+           <span aria-hidden="true">⚠</span> {unresolvedForPeriod.length} older settled game{unresolvedForPeriod.length===1?'':'s'} could not be checked.
            {paymentFilter==='paid'?' The Paid list may be incomplete.':' Payment totals may be incomplete.'}
            <span className="pkr-settlement-review-hint">Review records</span>
          </summary>
          <div className="pkr-settlement-incomplete-detail">
            <p>The saved settlement for these games was unavailable. PKR has not changed any payment status or assumed that a payment is outstanding.</p>
            <div className="pkr-settlement-incomplete-games">
-             {unavailableGames.slice(0,6).map(game=>(
+             {unresolvedForPeriod.slice(0,6).map(game=>(
                <button type="button" key={game.id}
                  onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>
                  Review game · {fmtDate(game.scheduled_at)} →
                </button>
              ))}
-             {unavailableGames.length>6&&<span>+{unavailableGames.length-6} more games</span>}
+             {unresolvedForPeriod.length>6&&<span>+{unresolvedForPeriod.length-6} more games</span>}
            </div>
            <button type="button" className="pkr-settlement-incomplete-retry"
              disabled={loadingDetails} onClick={()=>setRefreshLedger(n=>n+1)}>Retry loading saved records</button>
@@ -341,7 +345,7 @@ export default function InsightsPage(){
      {settlementView==='status'&&<div className="pkr-insights-payment-summary">
       <div><RecordMetric request={{kind:'transfers',title:"Paid transfers",roomId:selected,filter:'paid',period}}><strong>{paid.length}</strong><span>Recorded as paid</span></RecordMetric></div>
       <div><RecordMetric request={{kind:'transfers',title:"Outstanding transfers",roomId:selected,filter:'outstanding',period}}><strong>{outstanding.length}</strong><span>Still outstanding</span></RecordMetric></div>
-      <div><RecordMetric request={{kind:'transfers',title:"Outstanding amount",roomId:selected,filter:'outstanding',period}}><strong>{fmt(totalPending)}</strong><span>Current outstanding</span></RecordMetric></div>
+      <div><RecordMetric request={{kind:'transfers',title:"Outstanding amount",roomId:selected,filter:'outstanding',period}}><strong>{pendingTotalText}</strong><span>Current outstanding{amountsIncomplete?' · incomplete':''}</span></RecordMetric></div>
       
       <p>Payment statuses reflect the room's records. PKR does not send or receive money.</p>
      </div>}
