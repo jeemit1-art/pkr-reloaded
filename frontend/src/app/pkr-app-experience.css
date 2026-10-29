@@ -318,3 +318,26 @@ body:has(#gameScreen):has(.sheet.open,.sheet.show,.overlay.open,.overlay.show) .
  .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{width:28px;height:28px}
  .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{font-size:9px!important}
 }
+
+
+/* Signed result colours — semantic net P/L, not arbitrary unsigned bank transfers. */
+.pkr-record-dialog .pkr-record-row b[data-money-tone="positive"],
+.pkr-record-dialog .pkr-record-heading p[data-money-tone="positive"]{
+ color:#3DDC97!important;
+}
+.pkr-record-dialog .pkr-record-row b[data-money-tone="negative"],
+.pkr-record-dialog .pkr-record-heading p[data-money-tone="negative"]{
+ color:#FF5D72!important;
+}
+.pkr-record-dialog .pkr-record-row b[data-money-tone="neutral"]{color:var(--pkr-a-money)!important}
+.pkr-record-dialog .pkr-record-error button{margin-top:8px;display:block;font-weight:700}
+.pkr-record-dialog .pkr-record-row b{font-variant-numeric:tabular-nums}
+
+
+/* Shared signed net-result palette: records, player profiles and history. */
+.pkr-app .pkr-money-positive,
+.pkr-player-history-dialog .pkr-money-positive{color:#3DDC97!important}
+.pkr-app .pkr-money-negative,
+.pkr-player-history-dialog .pkr-money-negative{color:#FF5D72!important}
+.pkr-app .pkr-money-neutral,
+.pkr-player-history-dialog .pkr-money-neutral{color:#B8C8C5!important}
