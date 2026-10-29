@@ -16,6 +16,7 @@ import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
 import RoomOutstandingCard from '@/components/RoomOutstandingCard';
+import RoomDashboardDual from '@/components/RoomDashboardDual';
 import './command-centre.css';
 import {playPkrSound} from '@/lib/sounds';
 import {isCurrentGame,isUnfinishedGame,isLiveGame} from '@/lib/game-status';
@@ -41,6 +42,7 @@ function DashboardInner() {
   const [preferredRoomId,setPreferredRoomId]=useState('');
   const [featuredHistory,setFeaturedHistory]=useState<Game[]>([]);
   const [featuredMembers,setFeaturedMembers]=useState<EventMember[]>([]);
+  const [featuredLeaders,setFeaturedLeaders]=useState<import('@/lib/api').LeaderboardEntry[]>([]);
   const [search,setSearch]=useState('');
   const [showArchivedRooms,setShowArchivedRooms]=useState(false);
   const [reopeningRoomId,setReopeningRoomId]=useState<string|null>(null);
@@ -335,14 +337,15 @@ function DashboardInner() {
   const featuredRoom = activeRooms.find(room=>room.id===preferredRoomId)||activeRooms[0]||null;
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
   useEffect(()=>{
-    if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);return;}
+    if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);return;}
     let active=true;
-    setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);
-    Promise.allSettled([api.games.list(featuredRoom.id),api.events.history(featuredRoom.id),api.events.get(featuredRoom.id)]).then(items=>{
+    setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);
+    Promise.allSettled([api.games.list(featuredRoom.id),api.events.history(featuredRoom.id),api.events.get(featuredRoom.id),api.events.leaderboard(featuredRoom.id)]).then(items=>{
       if(!active)return;
       if(items[0].status==='fulfilled')setFeaturedGames(items[0].value);
       if(items[1].status==='fulfilled')setFeaturedHistory(items[1].value);
       if(items[2].status==='fulfilled')setFeaturedMembers(items[2].value.members||[]);
+      if(items[3].status==='fulfilled')setFeaturedLeaders(items[3].value);
     });
     return()=>{active=false};
   },[featuredRoom?.id]);
@@ -526,7 +529,20 @@ function DashboardInner() {
             </button>
           </section>
         )}
-        <section className="pkr-pro-home pkr-dashboard-v2" aria-label="Poker room command centre" data-testid="pkr-dashboard-v2">
+        {featuredRoom&&<RoomDashboardDual
+          room={featuredRoom} rooms={activeRooms} games={featuredGames}
+          history={featuredHistory} members={featuredMembers} leaders={featuredLeaders}
+          viewerIsHost={featuredRoom.role==='host'}
+          onRoomSelect={roomId=>{
+            setPreferredRoomId(roomId);
+            try{localStorage.setItem('pkr_preferred_room',roomId);}catch{}
+          }}
+          onCreateGame={openCreate} onScan={startScan}
+          onInvite={()=>router.push('/events/'+featuredRoom.id+'?tab=members&view=invite')}
+          onMembers={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}
+          onHistory={()=>router.push('/events/'+featuredRoom.id+'?tab=history')}
+        />}
+        {!featuredRoom&&<section className="pkr-pro-home pkr-dashboard-v2" aria-label="Poker room command centre" data-testid="pkr-dashboard-v2">
           {unfinishedGames.length>0&&<div className="pkr-unfinished-note pkr-command-unfinished" role="status">
             <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
             <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
@@ -596,7 +612,7 @@ function DashboardInner() {
             <button type="button" onClick={startScan}>⊞ Scan invitation</button>
           </nav>
 
-        </section>
+        </section>}
 
         <section className="pkr-list-head" id="pkr-rooms" aria-label="Your poker rooms">
           <div>
