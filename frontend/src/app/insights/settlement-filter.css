@@ -28,3 +28,34 @@
   min-width:0;min-height:43px;flex-wrap:wrap;gap:3px;padding:8px 4px;font-size:11px;
  }
 }
+
+
+/* A genuine missing historical record is disclosed, not mislabeled unpaid. */
+.pkr-insights-refresh .pkr-settlement-incomplete{
+  margin:12px 0 14px;border-radius:11px;
+  background:rgba(214,161,80,.08);border:1px solid rgba(228,176,89,.35);
+  color:#e6c994;font-size:12px;line-height:1.55;
+}
+.pkr-insights-refresh .pkr-settlement-incomplete summary{
+  display:flex;align-items:center;gap:9px;min-height:43px;
+  padding:11px 13px;cursor:pointer;list-style:none;flex-wrap:wrap;
+}
+.pkr-insights-refresh .pkr-settlement-incomplete summary::-webkit-details-marker{display:none}
+.pkr-insights-refresh .pkr-settlement-review-hint{margin-left:auto;color:#83e8c1;white-space:nowrap;font-weight:750}
+.pkr-insights-refresh .pkr-settlement-incomplete-detail{
+  padding:0 13px 13px;border-top:1px solid rgba(228,176,89,.17);
+}
+.pkr-insights-refresh .pkr-settlement-incomplete-detail p{
+  margin:10px 0;color:#b8c9c9;font-size:12px;line-height:1.6;
+}
+.pkr-insights-refresh .pkr-settlement-incomplete-games{
+  display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px;
+}
+.pkr-insights-refresh .pkr-settlement-incomplete-games button,
+.pkr-insights-refresh .pkr-settlement-incomplete-retry{
+  border:1px solid #44635b;background:#1a302d;border-radius:9px;
+  padding:9px 11px;min-height:40px;cursor:pointer;color:#d7f5e6;font-size:11px;font-weight:720;
+}
+.pkr-insights-refresh .pkr-settlement-incomplete-retry{
+  background:#174736;border-color:#48aa7f;color:#69f1b5;
+}

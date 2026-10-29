@@ -116,6 +116,37 @@ events.get('/:id', authMiddleware, async (c) => {
   return c.json({...clientSafeEvent(event),members:members.results});
 });
 
+// Member-only, read-only room settlement ledger. Historical games may not
+// have a results link, and GET /games/:id also loads RSVP/player tables which
+// are unrelated to payment accuracy. Read the canonical transfer rows directly
+// without changing paid statuses or inferring debts from player winnings.
+events.get('/:id/settlement-ledger', authMiddleware, async (c) => {
+  const eventId = c.req.param('id');
+  if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
+  // D1 batch executes these reads in a consistent transaction. Use the
+  // existing settled-game records, including games with no recorded transfers.
+  const [games,transfers] = await c.env.DB.batch([
+    c.env.DB.prepare(`
+      SELECT id,event_id,scheduled_at,location,notes,seats,status,
+             live_token,results_token,created_at
+      FROM games WHERE event_id=? AND status='settled'
+      ORDER BY scheduled_at DESC,id
+    `).bind(eventId),
+    c.env.DB.prepare(`
+      SELECT t.id,t.game_id,t.from_user AS "from",t.to_user AS "to",
+             t.from_name,t.to_name,t.amount,t.status,t.paid_at
+      FROM settlement_transfers t
+      JOIN games g ON g.id=t.game_id
+      WHERE g.event_id=? AND g.status='settled'
+      ORDER BY g.scheduled_at DESC,t.id
+    `).bind(eventId),
+  ]);
+  return c.json({
+    games:games.results.map(game=>clientSafeGame(game as Record<string,unknown>)),
+    transfers:transfers.results,
+  });
+});
+
 events.put('/:id', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);

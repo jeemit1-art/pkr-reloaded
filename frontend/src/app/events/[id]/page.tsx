@@ -433,11 +433,11 @@ export default function EventPage() {
       </div>
 
       {/* Room overview; all figures come from the existing event record. */}
-      <section className="pkr-event-overview" aria-label="Poker room overview">
+      <section className="pkr-event-overview pkr-room-dashboard-v2" aria-label="Poker room overview">
         <div className="pkr-event-overview-inner">
-          <span className="pkr-eyebrow">Room overview</span>
+          <span className="pkr-eyebrow">ROOM HUB · GAMES & PAYMENTS</span>
           <h1>{event.name}</h1>
-          <p>Games, players and settlement records — all in one place.</p>
+          <p>Your next game, player activity and settlements at a glance.</p>
           <div className="pkr-event-metrics">
             <div className="pkr-event-metric"><RecordMetric request={{kind:'settings',title:"Default room buy-in",roomId:id}}><strong>{event.buy_in > 0 ? fmt(event.buy_in) : '—'}</strong><small>Default buy-in</small></RecordMetric></div>
             <div className="pkr-event-metric"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:id}}><strong>{event.game_count || 0}</strong><small>Games</small></RecordMetric></div>
@@ -455,6 +455,11 @@ export default function EventPage() {
           </div>
         </div>
       </section>
+
+      {/* Room-wide settlement priority: visible on Games, Members, History and Standings. */}
+      <div className="pkr-event-payment-priority" data-testid="event-payment-priority">
+        <RoomOutstandingCard roomId={id}/>
+      </div>
 
       {/* Desktop tabs; phone navigation is fixed at the bottom. */}
       <nav className="pkr-event-tabs" aria-label="Poker room sections">
@@ -474,7 +479,6 @@ export default function EventPage() {
         {/* ── Games tab ── */}
         {tab==='games' && (
           <div>
-            <RoomOutstandingCard roomId={id}/>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
                 <div className="empty-state-icon">♠</div>

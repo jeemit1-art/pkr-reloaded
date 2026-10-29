@@ -1,4 +1,4 @@
-import {api, type Game, type Transfer} from '@/lib/api';
+import {api, type Game, type Transfer, type RoomLedgerData} from '@/lib/api';
 import {isOutstanding} from '@/lib/record-details';
 
 // Shared read-only settlement source for each room dashboard and the Insights
@@ -8,10 +8,57 @@ export type RoomTransferLoad = {
   records:RoomTransferRecord[];
   unavailable:Game[];
   settledGameCount:number;
+  gamesWithoutTransfers:Game[];
+  source:'room-ledger'|'game-details';
 };
 function check(signal?:AbortSignal){
   if(signal?.aborted)throw new DOMException('Payment load cancelled','AbortError');
 }
+const KNOWN_STATUSES=new Set(['owed','paid','payer_claimed','not_received','legacy']);
+type StoredTransfer=Transfer&{game_id?:string;from_user?:string;to_user?:string};
+function validTransfer(t:StoredTransfer):Transfer|null{
+  if(!t||!Number.isSafeInteger(t.amount)||t.amount<0||
+     typeof t.from_name!=='string'||!t.from_name.trim()||
+     typeof t.to_name!=='string'||!t.to_name.trim()||
+     !KNOWN_STATUSES.has(String(t.status||'')))return null;
+  // Older game APIs return D1 column names from_user/to_user. The new
+  // room ledger explicitly aliases these to from/to. Never guess identity.
+  const from=typeof t.from==='string'&&t.from?t.from:t.from_user;
+  const to=typeof t.to==='string'&&t.to?t.to:t.to_user;
+  if(typeof from!=='string'||!from||typeof to!=='string'||!to)return null;
+  return {...t,from,to};
+}
+function fromRoomLedger(roomId:string,saved:RoomLedgerData,expected?:Game[]):RoomTransferLoad{
+  if(!saved||!Array.isArray(saved.games)||!Array.isArray(saved.transfers))
+    throw new Error('Invalid room settlement ledger response');
+  const games=new Map<string,Game>();
+  for(const game of saved.games){
+    if(!game||game.event_id!==roomId||game.status!=='settled'||typeof game.id!=='string'||!game.id||
+       !Number.isSafeInteger(game.scheduled_at)||games.has(game.id))
+      throw new Error('Invalid settled game in room ledger');
+    games.set(game.id,game);
+  }
+  // A stale/partial snapshot must never silently drop an already-listed game.
+  for(const game of expected||[]){
+    if(game.event_id===roomId&&game.status==='settled'&&!games.has(game.id))
+      throw new Error('Room ledger omitted a settled game');
+  }
+  const records:RoomTransferRecord[]=[];
+  const counted=new Set<string>();
+  for(const raw of saved.transfers){
+    const game=games.get(raw?.game_id);
+    const transfer=raw?validTransfer(raw):null;
+    if(!game||!transfer)throw new Error('Room ledger contains incomplete transfer data');
+    records.push({game,transfer});
+    counted.add(game.id);
+  }
+  return {
+    records,unavailable:[],settledGameCount:games.size,
+    gamesWithoutTransfers:[...games.values()].filter(game=>!counted.has(game.id)),
+    source:'room-ledger',
+  };
+}
+
 async function gameTransfers(game:Game):Promise<Transfer[]>{
   if(game.results_token){
     try{
@@ -26,11 +73,24 @@ async function gameTransfers(game:Game):Promise<Transfer[]>{
   return saved.transfers;
 }
 export async function loadRoomTransfers(roomId:string,games?:Game[],signal?:AbortSignal):Promise<RoomTransferLoad>{
+  check(signal);
+  // Prefer one authenticated, read-only D1 snapshot. This bypasses older
+  // per-game result/RSVP dependencies and uses the saved settlement ledger.
+  // Fall back while existing production Workers are being upgraded.
+  try{
+    const ledger=await api.events.settlementLedger(roomId);
+    check(signal);
+    return fromRoomLedger(roomId,ledger,games);
+  }catch(error){
+    check(signal);
+    // This path is read-only. It does not change or invent a paid status.
+  }
   const all=games||await api.games.list(roomId);
   check(signal);
   const settled=all.filter(game=>game.event_id===roomId&&game.status==='settled');
   const records:RoomTransferRecord[]=[];
   const unavailable:Game[]=[];
+  const gamesWithoutTransfers:Game[]=[];
   // Bounded concurrency: no full-room fan-out across 100+ old games.
   for(let offset=0;offset<settled.length;offset+=4){
     check(signal);
@@ -41,16 +101,20 @@ export async function loadRoomTransfers(roomId:string,games?:Game[],signal?:Abor
       const result=batch[i];
       if(result.status==='rejected'){unavailable.push(group[i]);continue;}
       const {game,transfers}=result.value;
-      if(transfers.some(t=>!Number.isSafeInteger(t.amount)||t.amount<0||
-        typeof t.from_name!=='string'||typeof t.to_name!=='string')){
+      if(!Array.isArray(transfers)){unavailable.push(game);continue;}
+      const verified=transfers.map(raw=>validTransfer(raw));
+      if(verified.some(item=>item===null)){
         unavailable.push(game);
         continue;
       }
-      for(const transfer of transfers)records.push({game,transfer});
+      if(!verified.length)gamesWithoutTransfers.push(game);
+      for(const transfer of verified)records.push({game,transfer:transfer!});
     }
   }
-  return {records,unavailable,settledGameCount:settled.length};
+  return {records,unavailable,settledGameCount:settled.length,
+    gamesWithoutTransfers,source:'game-details'};
 }
+
 export function outstandingRoomTransfers(records:RoomTransferRecord[]){
   return records.filter(row=>isOutstanding(row.transfer))
     .sort((a,b)=>b.game.scheduled_at-a.game.scheduled_at||

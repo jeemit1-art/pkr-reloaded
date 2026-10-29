@@ -67,6 +67,22 @@ async function settledGameResults(game:Game):Promise<ResultsData>{
     throw new Error('Saved settled-game details are incomplete.');
   return {game:saved,event:{name:saved.event_name||''},players:saved.players,transfers:saved.transfers};
 }
+// Payment records do not require a complete historic player roster. Some older
+// settled games retained paid settlement transfers but no player details.
+// Do not reject their verified paid transfers when opening the Paid breakdown.
+async function settledPaymentResults(game:Game):Promise<ResultsData>{
+  if(game.results_token){
+    try{
+      const shared=await api.games.results(game.results_token);
+      if(shared.game?.id===game.id&&Array.isArray(shared.transfers))
+        return {...shared,players:Array.isArray(shared.players)?shared.players:[]};
+    }catch{/* Fallback to the authenticated original saved-game transfers. */}
+  }
+  const saved=await api.games.get(game.id);
+  if(saved.id!==game.id||saved.status!=='settled'||!Array.isArray(saved.transfers))
+    throw new Error('Original saved settlement transfers are unavailable.');
+  return {game:saved,event:{name:saved.event_name||''},players:Array.isArray(saved.players)?saved.players:[],transfers:saved.transfers};
+}
 async function settledRecords(request:RecordRequest,signal?:AbortSignal){
   const games=(await api.games.list(roomId(request))).filter(game=>game.status==='settled'&&
     (request.period!=='90d'||game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400));
@@ -78,7 +94,8 @@ async function settledRecords(request:RecordRequest,signal?:AbortSignal){
   for(let i=0;i<games.length;i+=4){
     check(signal);
     const group=games.slice(i,i+4);
-    const batch=await Promise.allSettled(group.map(async game=>({game,data:await settledGameResults(game)})));
+    const batch=await Promise.allSettled(group.map(async game=>({game,data:request.kind==='transfers'
+      ?await settledPaymentResults(game):await settledGameResults(game)})));
     check(signal);
     batch.forEach((result,index)=>{
       if(result.status==='fulfilled')records.push(result.value);

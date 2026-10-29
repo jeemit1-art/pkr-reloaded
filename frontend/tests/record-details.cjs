@@ -11,7 +11,7 @@ const payments=[
  {id:'p4',from:'b',from_name:'Blair',to:'a',to_name:'Alex',amount:400,status:'not_received'},
  {id:'p5',from:'c',from_name:'Casey',to:'a',to_name:'Alex',amount:99999,status:'legacy'},
 ];
-let failResults=false,failSaved=false;let requests=0;
+let failResults=false,failSaved=false,omitHistoricRoster=false;let requests=0;
 const players=[{user_id:'a',display_name:'Alex',buy_ins:1,cashout:12000,net:2000,seat_number:1},
  {user_id:'different',display_name:'Alex',buy_ins:1,cashout:5000,net:-5000,seat_number:2}];
 const api={events:{
@@ -21,7 +21,7 @@ const api={events:{
 },games:{
  list:async id=>{requests++;return id==='r1'?games:[];},
  live:async()=>({players,totalIn:20000,totalOut:17000,bank:3000}),
- get:async id=>{if(failSaved&&id==='g2')throw new Error('Saved record unavailable');return {...game(id),event_name:'Room 1',players,rsvps:[{id:'yes1',display_name:'Alex',status:'yes'},{id:'no1',display_name:'Casey',status:'no'}],transfers:id==='g1'?payments:[]};},
+ get:async id=>{if(failSaved&&id==='g2')throw new Error('Saved record unavailable');return {...game(id),event_name:'Room 1',players:omitHistoricRoster&&id==='g2'?[]:players,rsvps:[{id:'yes1',display_name:'Alex',status:'yes'},{id:'no1',display_name:'Casey',status:'no'}],transfers:id==='g1'?payments:omitHistoricRoster&&id==='g2'?[{id:'historic-paid',from:'a',from_name:'Alex',to:'b',to_name:'Blair',amount:4100,status:'paid'}]:[]};},
  results:async token=>{if(failResults&&token==='token-g2')throw new Error('Temporary outage');return {
   game:games.find(g=>g.results_token===token),
   players:token==='token-g2'?
@@ -88,6 +88,13 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  const historical=await load({kind:'player',title:'Alex',roomId:'r1',playerId:'a',playerName:'Alex'});
  assert.equal(historical.warning,undefined,'Missing historical results_token must use saved game');
  assert.equal(historical.rows.length,2);
+ // A genuine old paid transfer is valid even when the saved player roster was
+ // lost. The Paid breakdown must not warn about an irrelevant empty roster.
+ omitHistoricRoster=true;
+ const paidWithoutRoster=await load({kind:'transfers',title:'Paid',roomId:'r1',filter:'paid'});
+ assert.equal(paidWithoutRoster.rows.length,2,'Keep historic paid transfers with empty player rosters');
+ assert.equal(paidWithoutRoster.warning,undefined,'Do not falsely warn on available saved payment records');
+ omitHistoricRoster=false;
  games[1].results_token=missingToken;
  failSaved=true;const incomplete=await load({kind:'transfers',title:'Outstanding',roomId:'r1',filter:'outstanding'});
  assert.match(incomplete.warning,/incomplete/);assert.equal(incomplete.rows.length,3);

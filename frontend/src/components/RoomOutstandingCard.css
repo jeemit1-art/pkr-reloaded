@@ -110,3 +110,35 @@
  .pkr-app .pkr-room-outstanding-heading{flex-wrap:wrap}
  .pkr-app .pkr-room-outstanding-total{flex:1 1 100%;align-items:flex-start;text-align:left}
 }
+
+
+/* The settlement total is only final when every settled game was checked. */
+.pkr-app .pkr-room-outstanding-warning{
+  margin:12px 0 0;padding:11px 12px;
+  border:1px solid rgba(234,177,82,.38);border-radius:10px;
+  background:rgba(186,124,49,.075);color:#f4d497;line-height:1.5;
+}
+.pkr-app .pkr-room-outstanding-warning strong{font-size:12px}
+.pkr-app .pkr-room-outstanding-warning p{
+  margin:4px 0 7px;color:#c7d2c7;font-size:11px;line-height:1.5;
+}
+.pkr-app .pkr-room-outstanding-review-games{
+  display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+}
+.pkr-app .pkr-room-outstanding-review-games button{
+  min-height:36px;padding:7px 10px;background:#17352e;border:1px solid #476c56;
+  border-radius:8px;color:#b6f1cd;font-size:11px;font-weight:700;cursor:pointer;
+}
+.pkr-app .pkr-room-outstanding-no-transfers{
+  margin-top:10px;color:#a9c2b9;font-size:11px;line-height:1.5;
+}
+.pkr-app .pkr-room-outstanding-no-transfers summary{
+  cursor:pointer;min-height:31px;display:list-item;
+}
+.pkr-app .pkr-room-outstanding-no-transfers p{padding:3px 0 6px;font-size:11px}
+.pkr-app .pkr-room-outstanding-controls{
+  min-width:0;max-width:100%;flex-wrap:wrap;
+}
+.pkr-app .pkr-room-outstanding-open{
+  min-width:0;max-width:100%;overflow-wrap:anywhere;
+}

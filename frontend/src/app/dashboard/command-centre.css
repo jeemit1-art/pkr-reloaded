@@ -1,0 +1,230 @@
+/* PKR dashboard v2 — real game and payment information before decoration.
+   Scoped to the home page to leave table gameplay untouched. */
+.pkr-app.pkr-dashboard .pkr-dashboard-v2{
+  display:flex;flex-direction:column;gap:14px;
+}
+.pkr-app.pkr-dashboard .pkr-command-header{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:3px 1px 0;min-width:0;
+}
+.pkr-app.pkr-dashboard .pkr-command-header>div:first-child{min-width:0}
+.pkr-app.pkr-dashboard .pkr-command-header .pkr-eyebrow{
+  display:block;color:#78e8ae!important;font-size:10px;
+  font-weight:800;letter-spacing:.14em;
+}
+.pkr-app.pkr-dashboard .pkr-command-header h2{
+  margin:5px 0 4px;color:#f1f6f0!important;
+  font:800 clamp(23px,3.4vw,35px)/1.14 var(--font-head),Inter,sans-serif!important;
+  overflow-wrap:anywhere;letter-spacing:-.025em;
+}
+.pkr-app.pkr-dashboard .pkr-command-header p{color:#aabcb9;font-size:12px;line-height:1.5}
+.pkr-app.pkr-dashboard .pkr-command-top-actions{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.pkr-app.pkr-dashboard .pkr-command-top-actions button{
+  min-height:43px;padding:10px 14px;border-radius:11px;cursor:pointer;
+  font:780 12px/1.2 var(--font-body),Inter,sans-serif;
+}
+.pkr-app.pkr-dashboard .pkr-command-top-actions .pkr-command-open{
+  border:1px solid #3ddc97;background:#3ddc97;color:#092c21;
+}
+.pkr-app.pkr-dashboard .pkr-command-top-actions .pkr-command-secondary{
+  background:#142c2c;color:#e3efeb;border:1px solid #365a54;
+}
+.pkr-app.pkr-dashboard .pkr-command-focus{
+  display:grid;grid-template-columns:minmax(0,1.4fr) minmax(245px,.6fr);
+  gap:12px;min-width:0;align-items:stretch;
+}
+.pkr-app.pkr-dashboard .pkr-command-focus>.pkr-room-outstanding{
+  margin:0!important;min-width:0;border:1px solid #56846c;
+  background:linear-gradient(135deg,#183b30,#122a2d 72%,#132329)!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-focus .pkr-room-outstanding-kicker{
+  color:#73f0b4;
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame{
+  display:flex;flex-direction:column;gap:8px;
+  padding:19px 19px 17px;min-width:0;
+  border:1px solid #344c53;border-radius:16px;
+  background:linear-gradient(150deg,#162d34,#0d1d24);
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame .pkr-eyebrow{color:#b9d5c7}
+.pkr-app.pkr-dashboard .pkr-command-nextgame h3{
+  margin:3px 0 1px;font-size:18px!important;font-weight:780!important;color:#f1f6f4;
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame strong{
+  font-size:16px;font-weight:780;color:#eec779;
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame p{
+  font-size:12px;line-height:1.5;color:#aebfc2;
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame button{
+  align-self:flex-start;min-height:41px;
+  background:#1e4b3b;border:1px solid #499574;color:#b2f4d4;
+  border-radius:10px;padding:10px 13px;font-size:12px;font-weight:750;cursor:pointer;
+}
+.pkr-app.pkr-dashboard .pkr-command-next-actions{
+  margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+}
+.pkr-app.pkr-dashboard .pkr-command-nextgame button.pkr-command-next-secondary{
+  background:transparent;border-color:#40595a;color:#c3d8d7;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero{
+  min-height:0!important;max-height:none!important;position:relative;
+  margin:0!important;padding:0!important;
+  border:1px solid #304c46!important;border-radius:13px!important;
+  box-shadow:none!important;
+  background:#112722!important;background-image:none!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content{
+  display:block!important;max-width:100%!important;width:100%!important;
+  padding:12px 14px!important;margin:0!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content>.pkr-eyebrow,
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content>.pkr-pro-title,
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content>p,
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content>.pkr-pro-actions,
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-art{
+  display:none!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-stats{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  max-width:none!important;width:100%!important;
+  margin:0!important;padding:0!important;gap:9px!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-stats>div{
+  min-height:69px!important;min-width:0;
+  border-radius:10px!important;background:#17332e!important;
+  border:1px solid #38564e!important;
+  padding:10px 11px!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-stats strong{
+  font-size:20px!important;color:#f4f6ee!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-panels{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-shortcuts{
+  display:flex;flex-wrap:wrap;gap:8px;padding:5px 0 3px;
+}
+.pkr-app.pkr-dashboard .pkr-command-shortcuts button{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:9px 13px;min-height:42px;border:1px solid #385c56;
+  border-radius:10px;background:#112927;color:#d1e5dc;
+  font:720 12px/1.2 var(--font-body),Inter,sans-serif;cursor:pointer;
+}
+.pkr-app.pkr-dashboard .pkr-command-shortcuts button:hover,
+.pkr-app.pkr-dashboard .pkr-command-top-actions button:hover{
+  filter:brightness(1.15);
+}
+.pkr-app.pkr-dashboard .pkr-command-shortcuts button:focus-visible,
+.pkr-app.pkr-dashboard .pkr-command-top-actions button:focus-visible{
+  outline:3px solid #e9bf75;outline-offset:2px;
+}
+@media(max-width:1050px){
+  .pkr-app.pkr-dashboard .pkr-command-focus{
+    grid-template-columns:minmax(0,1fr) minmax(210px,.62fr);
+  }
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-panels{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:700px){
+  .pkr-app.pkr-dashboard .pkr-command-header{align-items:flex-start;gap:9px}
+  .pkr-app.pkr-dashboard .pkr-command-header h2{font-size:23px!important}
+  .pkr-app.pkr-dashboard .pkr-command-header p{font-size:11px}
+  .pkr-app.pkr-dashboard .pkr-command-top-actions{flex-direction:column;gap:5px}
+  .pkr-app.pkr-dashboard .pkr-command-top-actions button{min-height:38px;padding:8px 9px;font-size:11px;min-width:90px}
+  .pkr-app.pkr-dashboard .pkr-command-focus{grid-template-columns:minmax(0,1fr);gap:10px}
+  .pkr-app.pkr-dashboard .pkr-command-nextgame{display:flex;padding:14px 15px}
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero:has(.pkr-metric-trigger){
+    border:0!important;background:transparent!important;padding:0!important;
+  }
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-hero-content{padding:0!important}
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;
+  }
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2 .pkr-pro-panels{
+    grid-template-columns:minmax(0,1fr)!important;gap:11px!important;
+  }
+  .pkr-app.pkr-dashboard .pkr-command-shortcuts{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .pkr-app.pkr-dashboard .pkr-command-shortcuts button{padding:10px 5px}
+}
+@media(max-width:360px){
+  .pkr-app.pkr-dashboard .pkr-command-header{flex-wrap:wrap}
+  .pkr-app.pkr-dashboard .pkr-command-top-actions{
+    flex-direction:row;width:100%;
+  }
+}
+
+
+
+/* Real statistics strip: no obsolete 360px illustrated hero or invisible area. */
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;width:100%!important;max-width:100%!important;
+  margin:0!important;padding:0!important;min-height:0!important;
+  background:transparent!important;border:0!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div{
+  min-height:82px!important;max-height:none!important;
+  display:block!important;padding:11px 12px!important;
+  border:1px solid #34564c!important;border-radius:11px!important;
+  background:linear-gradient(140deg,#17332d,#102629)!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div>.pkr-metric-trigger{
+  display:grid!important;grid-template-columns:28px minmax(0,1fr)!important;
+  align-items:center!important;justify-content:stretch!important;gap:3px 9px!important;
+  min-height:58px!important;width:100%!important;max-width:100%!important;
+  padding:0!important;margin:0!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div>.pkr-metric-trigger>span{
+  grid-column:1;grid-row:1/3;color:#4ddd9e!important;font-size:18px!important;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div>.pkr-metric-trigger>strong{
+  grid-column:2;grid-row:1;font-size:21px!important;color:#e7f5f0!important;
+  font-variant-numeric:tabular-nums;
+}
+.pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div>.pkr-metric-trigger>small{
+  grid-column:2;grid-row:2;font-size:11px!important;color:#a3c2bb!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-unfinished{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto;gap:2px 15px;align-items:center;
+  min-height:0!important;margin:0!important;padding:12px 15px!important;
+  border-radius:11px!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-unfinished>strong{
+  grid-column:1;grid-row:1;font-size:12px!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-unfinished>p{
+  grid-column:1;grid-row:2;line-height:1.35!important;font-size:11px!important;
+}
+.pkr-app.pkr-dashboard .pkr-command-unfinished>button{
+  grid-column:2;grid-row:1/3;align-self:center;margin:0!important;
+  min-height:38px!important;padding:8px 12px!important;font-size:11px!important;
+}
+@media(max-width:1020px){
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:700px){
+  .pkr-app.pkr-dashboard .pkr-command-unfinished{
+    grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto!important;
+    gap:8px!important;padding:10px 12px!important;
+  }
+  .pkr-app.pkr-dashboard .pkr-command-unfinished>strong{
+    grid-column:1;grid-row:1;font-size:11px!important;line-height:1.4;
+  }
+  .pkr-app.pkr-dashboard .pkr-command-unfinished>p{display:none!important}
+  .pkr-app.pkr-dashboard .pkr-command-unfinished>button{
+    grid-column:2;grid-row:1;min-width:0!important;max-width:125px;
+    padding:7px 9px!important;white-space:normal;text-align:center;
+  }
+  .pkr-app.pkr-dashboard .pkr-dashboard-v2>.pkr-command-stat-strip>div{
+    min-height:72px!important;padding:10px!important;
+  }
+}
