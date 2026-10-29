@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS room_player_profiles (
   screen_name TEXT,
   avatar_data TEXT,
   avatar_emoji TEXT,
-  phone TEXT,
+  phone_cipher TEXT,
   preferred_contact TEXT NOT NULL DEFAULT 'none'
     CHECK(preferred_contact IN ('none','whatsapp','sms','email')),
   private_notes TEXT,
