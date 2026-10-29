@@ -136,7 +136,7 @@ async function check(browser,name,width,height){
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
   await requireColour(page,'.side-panel.open #pNetDisplay','rgb(255, 93, 114)');
   await requireColour(page,'.side-panel.open .pkr-panel-buyin','rgb(255, 93, 114)');
-  assert.equal(await page.locator('.side-panel').getByText('Pending',{exact:true}).count(),0);
+  assert.equal(await page.locator('.side-panel.open .pkr-quick-metric.result.pending').count(),1,'Pending is the correct status until cash-out');
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('#pkrSeatChipSummary').textContent())||'',/95 chips/);
