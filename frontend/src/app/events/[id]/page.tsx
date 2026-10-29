@@ -5,7 +5,8 @@ import AppDialog from '@/components/AppDialog';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
+import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type RoomPlayerProfile, type RoomPlayerProfileInput } from '@/lib/api';
+import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
@@ -63,6 +64,9 @@ export default function EventPage() {
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
+  const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
+  const [roomProfileError,setRoomProfileError]=useState('');
+  const [editingRoomProfile,setEditingRoomProfile]=useState<{key:string;name:string;avatarUrl:string|null}|null>(null);
   const [memberFilter,setMemberFilter]=useState<'all'|'admins'|'players'>('all');
   const [phoneNumber,setPhoneNumber]=useState('');
   const [phoneRole,setPhoneRole]=useState<'member'|'cohost'>('member');
@@ -111,6 +115,18 @@ export default function EventPage() {
     api.events.history(id).then(setHistory);
   },[id]);
 
+  useEffect(()=>{
+    if(tab!=='members')return;
+    let active=true;
+    api.events.profiles(id).then(result=>{
+      if(!active)return;
+      setRoomProfiles(Object.fromEntries(result.profiles.map(p=>[p.profile_key,p])));
+      setRoomProfileError('');
+    }).catch(error=>{
+      if(active)setRoomProfileError(error instanceof Error?error.message:'Room profiles are unavailable.');
+    });
+    return()=>{active=false};
+  },[id,tab]);
   useEffect(()=>{
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
@@ -341,8 +357,20 @@ export default function EventPage() {
     const role=String(m.role||'member');
     const matchRole=memberFilter==='all'||(memberFilter==='admins'?role==='host'||role==='cohost':role==='member');
     const q=memberQuery.trim().toLowerCase();
-    return matchRole&&(!q||String(m.name||'').toLowerCase().includes(q)||String(m.email||'').toLowerCase().includes(q));
+    const screen=roomProfiles['member:'+m.id]?.screen_name||'';
+    return matchRole&&(!q||[m.name,m.email,screen].some(v=>String(v||'').toLowerCase().includes(q)));
   });
+  const historicalPlayers=leaders.filter((p:any)=>{
+    const name=String(p.display_name||'').trim();
+    const alreadyMember=(event.members||[]).some((m:any)=>String(m.name||'').trim().toLowerCase()===name.toLowerCase());
+    const q=memberQuery.trim().toLowerCase();
+    return name&&!alreadyMember&&(memberFilter!=='admins')&&(!q||name.toLowerCase().includes(q)||
+      String(roomProfiles['history:'+name.toLowerCase()]?.screen_name||'').toLowerCase().includes(q));
+  }).slice(0,150);
+  async function saveRoomProfile(input:RoomPlayerProfileInput){
+    const saved=await api.events.saveProfile(id,input);
+    setRoomProfiles(current=>({...current,[saved.profile.profile_key]:saved.profile}));
+  }
   const installLink = appUrl;
 
   const statusColor:any = {
