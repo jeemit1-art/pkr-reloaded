@@ -1418,7 +1418,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
           <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
           {leader && (
             <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
-              {leader.games_played} games · {leader.games_won} profitable games · total net {fmtSign(leader.total_net)}
+              {leader.games_played} games · {leader.games_won} profitable games · total net <strong className={leader.total_net>0?'pkr-money-positive':leader.total_net<0?'pkr-money-negative':'pkr-money-neutral'}>{fmtSign(leader.total_net)}</strong>
             </div>
           )}
         </div>
@@ -1428,7 +1428,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
       {nets.length>0&&<div className="pkr-profile-stats">
         <div><small>Settled games</small><strong>{nets.length}</strong></div>
         <div><small>Profitable</small><strong>{positive} / {nets.length}</strong></div>
-        <div><small>Average net</small><strong>{fmtSign(average)}</strong></div>
+        <div><small>Average net</small><strong className={average>0?'pkr-money-positive':average<0?'pkr-money-negative':'pkr-money-neutral'}>{fmtSign(average)}</strong></div>
       </div>}
       {playerGames.length===0 && (
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>
