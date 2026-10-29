@@ -19,7 +19,15 @@ const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invali
 const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
 const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'synthetic-owner-paid-historical',from:'historical-payer',from_name:'Historical Player A',to:'historical-recipient',to_name:'Historical Player B',amount:7605900,status:'paid'}]};
 const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
-const fixture=(pathname,method)=>{
+let savedPreviewLayout='command',layoutWrites=0;
+const fixture=(pathname,method,body)=>{
+  if(pathname==='/events/test-room/dashboard-layout'&&method==='PUT'){
+    const input=JSON.parse(body||'{}');
+    if(!['command','live'].includes(input.layout)||Object.keys(input).length!==1)
+      return {error:'Invalid saved preview choice'};
+    savedPreviewLayout=input.layout;layoutWrites++;
+    return {event_id:'test-room',layout:savedPreviewLayout,updated_at:future};
+  }
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
   if(pathname==='/events')return [room,archivedRoom];
@@ -28,6 +36,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events/'+room.id+'/profiles')return {profiles:[]};
   if(pathname==='/events/'+room.id+'/players')return [];
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
+  if(pathname==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:savedPreviewLayout,updated_at:null};
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [{
     ...finished,top_players:[
@@ -210,43 +219,56 @@ async function test(){
     finally{await guestContext.close();}
 
     const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
+   savedPreviewLayout='command';layoutWrites=0;
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
    const page=await context.newPage();
+   page.on('pageerror',e=>errors.push(size.name+' runtime exception: '+(e.stack||e.message)));
    page.on('request',request=>{if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))errors.push('PRODUCTION API REQUEST BLOCKED: '+request.url());});
    await page.route('**/*.workers.dev/**',async route=>{
     const url=new URL(route.request().url());
     if(url.origin!==API){errors.push('Unexpected Worker origin: '+url.origin);return route.abort();}
-    const response=fixture(url.pathname,route.request().method());
+    const response=fixture(url.pathname,route.request().method(),route.request().postData());
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
    });
-   for(const item of [{id:'dashboard',url:'/dashboard',ready:'.pkr-pro-home'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
+   for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
-       await page.locator('[data-testid="dashboard-payment-focus"] .pkr-room-outstanding-total').waitFor({state:'visible'});
-       if(await page.locator('.pkr-mobile-featured').count())
-         errors.push(size.name+' redundant mobile Next Game hero still present');
-       if(!await page.locator('.pkr-command-nextgame').isVisible())
-         errors.push(size.name+' compact next-game action card missing');
+       await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+       await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
+       await page.locator('.pkr-dual-hero-command').waitFor({state:'visible'});
+       await page.locator('.pkr-dual-root .pkr-room-outstanding-total').waitFor({state:'visible'});
        if(await page.locator('.pkr-pro-hero').count())
-         errors.push(size.name+' old oversized decorative statistics hero still rendered');
-       const stats=await page.locator('.pkr-command-stat-strip').boundingBox();
-       // Two rows of touch-friendly 44px+ metrics need slightly more space
-       // on phones; the previous decorative hero was over 325px tall.
-       const maxStatHeight=size.width<=700?220:200;
-       if(!stats||stats.height>maxStatHeight)
-         errors.push(size.name+' dashboard statistics strip is not compact: '+JSON.stringify(stats));
-       const pastDue=page.locator('.pkr-command-unfinished');
-       if(await pastDue.count()){
-         const notice=await pastDue.boundingBox();
-         if(notice&&notice.height>125)
-           errors.push(size.name+' oversized unfinished-game notice hides the payment summary: '+JSON.stringify(notice));
+         errors.push(size.name+' old dashboard hero still rendered');
+       await page.screenshot({path:path.join(output,size.name+'-dashboard-command.png'),fullPage:false});
+       // Host switches between BOTH approved variants on every viewport.
+       const toggle=page.getByRole('button',{name:/Live Poker/});
+       if(!await toggle.isVisible())errors.push(size.name+' host layout chooser missing');
+       else {
+         await toggle.click();
+         await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+         if(!await page.locator('.pkr-dual-table-panel').isVisible())
+           errors.push(size.name+' live table preview missing');
+         const geometry=await page.evaluate(()=>({
+           scroll:document.documentElement.scrollWidth,
+           width:document.documentElement.clientWidth,
+           controls:[...document.querySelectorAll('.pkr-dual-switch-actions button')].map(b=>{
+             const r=b.getBoundingClientRect();return {left:r.left,right:r.right,w:r.width}
+           })
+         }));
+         if(geometry.scroll>geometry.width+5)
+           errors.push(size.name+' live dashboard horizontal overflow '+JSON.stringify(geometry));
+         if(geometry.controls.some(q=>q.w<70||q.left<0||q.right>geometry.width+1))
+           errors.push(size.name+' live dashboard switch controls clipped '+JSON.stringify(geometry));
+         await page.screenshot({path:path.join(output,size.name+'-dashboard-live.png'),fullPage:false});
+         await page.getByRole('button',{name:/Command Centre/}).click();
+         await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+         if(layoutWrites!==2)errors.push(size.name+' layout toggle should save exactly two preferences');
        }
-       await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      }
 
      if(item.id==='dashboard' && size.width<=700){
@@ -353,7 +375,7 @@ async function test(){
      }
      if(item.id==='room'){
        const rect=await page.evaluate(()=>{
-        const hero=document.querySelector('.pkr-event-overview');const tabs=document.querySelector('.pkr-event-tabs');
+        const hero=document.querySelector('.pkr-event .pkr-dual-root');const tabs=document.querySelector('.pkr-event-tabs');
         if(!hero||!tabs)return null;const h=hero.getBoundingClientRect(),t=tabs.getBoundingClientRect();
         return {heroWidth:h.width,tabsWidth:t.width,heroLeft:h.left,tabsLeft:t.left,heroRight:h.right,tabsRight:t.right};
        });
@@ -409,16 +431,22 @@ async function test(){
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
      if(['dashboard','room','insights'].includes(item.id)){
-       const heroSelector=item.id==='dashboard'
-         ?'.pkr-command-focus>.pkr-room-outstanding'
-         :item.id==='room'?'.pkr-event-overview':'.pkr-vnext-insights-top';
+       const heroSelector=item.id==='dashboard'||item.id==='room'
+         ?'.pkr-dual-hero':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
-         return {width:r.width,height:r.height,background:s.backgroundImage,border:s.borderTopColor};
+         return {width:r.width,height:r.height,background:s.backgroundImage,
+           art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
        });
-       if(!visual.background.includes('linear-gradient')||visual.background.includes('pkr-approved-hero'))
-         errors.push(size.name+' '+item.id+' stale casino photo remains instead of Midnight Felt header: '+JSON.stringify(visual));
-       if(visual.width<250||visual.height<140)errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
+       if(item.id==='insights'){
+         if(!visual.background.includes('linear-gradient'))
+           errors.push(size.name+' insights missing designed background');
+       }else{
+         if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
+           errors.push(size.name+' '+item.id+' approved poker equipment artwork missing');
+       }
+       if(visual.width<250||visual.height<140)
+         errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(['dashboard','room'].includes(item.id)){
        const prop=page.locator('.pkr-casino-art-asset .pkr-casino-art-props').first();
@@ -433,21 +461,24 @@ async function test(){
        }
      }
      if(item.id==='dashboard'){
-       const primary=await page.locator('.pkr-command-open').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(primary!=='rgb(61, 220, 151)')
-         errors.push(size.name+' dashboard primary control is not Theme A lime: '+primary);
+       const primary=await page.locator('.pkr-dual-hero .pkr-dual-gold-button').first().evaluate(el=>{
+         const style=getComputedStyle(el),rect=el.getBoundingClientRect();
+         return {image:style.backgroundImage,color:style.color,height:rect.height,width:rect.width};
+       });
+       if(!primary.image.includes('linear-gradient')||primary.height<40||primary.width<85)
+         errors.push(size.name+' dual dashboard gold call-to-action is not usable: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
-       const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
-       const fallback=page.locator('.pkr-pro-member').filter({hasText:'Jordan Lee'}).locator('.pkr-pro-member-avatar');
-       if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard not displaying member avatar_url');
+       const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
+       const fallback=page.locator('.pkr-dual-leader').filter({hasText:'Jordan Lee'}).locator('.pkr-dual-avatar');
+       if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard missing room-member avatar_url');
        else {
-         const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit,position:getComputedStyle(img).position}));
-         if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover'||details.position!=='absolute')
-           errors.push(size.name+' dashboard member portrait is not properly displayed: '+JSON.stringify(details));
+         const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit}));
+         if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover')
+           errors.push(size.name+' dashboard member avatar not displayed correctly: '+JSON.stringify(details));
        }
-       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='J'||await fallback.locator('img').count())
-         errors.push(size.name+' dashboard member without a photo did not retain initials');
+       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='JL'||await fallback.locator('img').count())
+         errors.push(size.name+' dashboard member without an avatar lost its initials');
      }
      if(item.id==='dashboard'){
        const archivedToggle=page.getByRole('button',{name:'Show archived rooms (1)'});

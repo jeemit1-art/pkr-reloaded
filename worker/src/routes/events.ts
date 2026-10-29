@@ -120,6 +120,44 @@ events.get('/:id', authMiddleware, async (c) => {
 // have a results link, and GET /games/:id also loads RSVP/player tables which
 // are unrelated to payment accuracy. Read the canonical transfer rows directly
 // without changing paid statuses or inferring debts from player winnings.
+// Persistent room dashboard layout. This is a presentation setting in
+// Cloudflare KV, not a game/finance table migration. Authenticated membership
+// is required to read; only the room host may change it (not cohosts).
+const DASHBOARD_KEY_PREFIX = 'room-dashboard-layout:v1:';
+type DashboardLayoutName = 'command' | 'live';
+events.get('/:id/dashboard-layout', authMiddleware, async (c) => {
+  const id=c.req.param('id');
+  if(!await requireEventRole(c,id,'member'))return c.json({error:'Room membership required'},403);
+  const raw=await c.env.KV.get(DASHBOARD_KEY_PREFIX+id);
+  let value:{layout:DashboardLayoutName;updated_at:number}|null=null;
+  if(raw){
+    try{
+      const stored=JSON.parse(raw);
+      if(stored&&
+        (stored.layout==='command'||stored.layout==='live')&&
+        Number.isSafeInteger(stored.updated_at)){
+        value={layout:stored.layout,updated_at:stored.updated_at};
+      }
+    }catch{/* Invalid historic setting falls back to Command Centre. */}
+  }
+  c.header('Cache-Control','private, no-store');
+  return c.json({event_id:id,layout:value?.layout||'command',
+    updated_at:value?.updated_at||null});
+});
+events.put('/:id/dashboard-layout', authMiddleware, async (c) => {
+  const id=c.req.param('id');
+  if(!await requireEventRole(c,id,'host'))return c.json({error:'Only the room host can change the dashboard'},403);
+  const data=await c.req.json().catch(()=>null) as {layout?:unknown}|null;
+  if(!data||(data.layout!=='command'&&data.layout!=='live')||
+     Object.keys(data).some(k=>k!=='layout'))
+    return c.json({error:'Choose Command Centre or Live Poker'},400);
+  const updated_at=Math.floor(Date.now()/1000);
+  await c.env.KV.put(DASHBOARD_KEY_PREFIX+id,
+    JSON.stringify({layout:data.layout,updated_at}));
+  c.header('Cache-Control','private, no-store');
+  return c.json({event_id:id,layout:data.layout,updated_at});
+});
+
 events.get('/:id/settlement-ledger', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);

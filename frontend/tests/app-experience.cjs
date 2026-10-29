@@ -15,16 +15,26 @@ const players=[{game_id:finished.id,user_id:'test-user',display_name:'Alex Morga
 const leaders=players.map(p=>({...p,games_played:2,games_won:p.net>0?2:0,total_net:p.net*2,biggest_win:Math.max(0,p.net),biggest_loss:Math.min(0,p.net),last_played:now-86400}));
 const transfers=[{id:'pending',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'paid',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:12500,status:'paid'}];
 let simulateMissingSettledGames=false;
-function fixture(url,method){
+let selectedLayout='command',layoutWrites=0,simulateMember=false;
+function fixture(url,method,body){
  if(method==='OPTIONS')return {};
+ if(method==='PUT'&&url.pathname==='/events/test-room/dashboard-layout'){
+  const data=JSON.parse(body||'{}');
+  assert(['command','live'].includes(data.layout));
+  assert.deepEqual(Object.keys(data),['layout']);
+  layoutWrites++;selectedLayout=data.layout;
+  return {event_id:'test-room',layout:selectedLayout,updated_at:now};
+ }
  if(method!=='GET')throw new Error('Unexpected API write: '+method+' '+url.pathname);
  const p=url.pathname;
  if(p==='/auth/me')return user;
- if(p==='/events')return [room];
- if(p==='/events/test-room')return {...room,members};
+ if(p==='/events')return [simulateMember?{...room,role:'member'}:room];
+ if(p==='/events/test-room')return {...room,members:simulateMember
+  ?members.map(m=>m.id===user.id?{...m,role:'member'}:m):members};
  if(p==='/events/test-room/profiles')return {profiles:[]};
  if(p==='/events/test-room/players')return [];
  if(p==='/events/test-room/games')return [upcoming,finished,old];
+ if(p==='/events/test-room/dashboard-layout')return {event_id:'test-room',layout:selectedLayout,updated_at:now};
  if(p==='/events/test-room/settlement-ledger'){
   if(simulateMissingSettledGames)return {error:'Synthetic legacy Worker has no room-ledger route'};
   return {games:[finished,old],transfers:[
@@ -71,14 +81,16 @@ async function run(){
  for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
   const browser=await type.launch({headless:true});
   try{for(const [name,width,height] of engine==='webkit'?sizes.filter(x=>['phone','short-phone','landscape'].includes(x[0])):sizes){
+   selectedLayout='command';layoutWrites=0;simulateMember=false;
    const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-ui-test-only'));
    const page=await context.newPage();page.setDefaultTimeout(15000);
    const unexpected=[];
+   page.on('pageerror',error=>unexpected.push('Client runtime error: '+(error.stack||error.message)));
    await page.route('**/*.workers.dev/**',async route=>{
     const req=route.request(),url=new URL(req.url());
     if(url.origin!==API){unexpected.push('Unexpected API origin '+url.origin);return route.abort();}
-    try{const data=fixture(url,req.method());await route.fulfill({status:data.error?404:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,OPTIONS'},body:JSON.stringify(data)});}
+    try{const data=fixture(url,req.method(),req.postData());await route.fulfill({status:data.error?404:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,OPTIONS'},body:JSON.stringify(data)});}
     catch(error){unexpected.push(error.message);await route.abort();}
    });
    try{
@@ -130,7 +142,11 @@ async function run(){
     await page.locator('.pkr-insights-kpis .pkr-metric-trigger').nth(0).click();await loaded(page);
     await page.setViewportSize({width,height:Math.min(height,380)});await page.waitForTimeout(100);
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
-    await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().waitFor();
+    await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+    await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
+    assert.equal(await page.getByRole('button',{name:/Command Centre/}).getAttribute('aria-pressed'),'true');
+    assert.equal(await page.getByRole('button',{name:/Live Poker/}).getAttribute('aria-pressed'),'false');
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
     if(engine==='chromium'&&name==='phone'){
       // Regression for the real screenshot: when the old Worker and both old
@@ -155,7 +171,7 @@ async function run(){
       await page.reload({waitUntil:'domcontentloaded'});
       await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
     }
-    const footerGeometry=await page.locator('.pkr-command-focus .pkr-room-outstanding').evaluate(card=>{
+    const footerGeometry=await page.locator('.pkr-dual-root .pkr-room-outstanding').evaluate(card=>{
       const footer=card.querySelector('.pkr-room-outstanding-footer');
       const actions=card.querySelector('.pkr-room-outstanding-controls');
       const button=card.querySelector('.pkr-room-outstanding-open');
@@ -174,16 +190,41 @@ async function run(){
       footerGeometry.buttonsInside&&footerGeometry.controls>=footerGeometry.card-42,
       'Payment footer must stay compact and button legible on every viewport: '+JSON.stringify(footerGeometry));
     assert.equal(footerGeometry.wrapStyle,'normal','Do not force per-letter breaking in the payment action');
-    assert.equal(await page.locator('.pkr-command-focus .pkr-room-outstanding-row').count(),2,
-      'The command centre must show actual pending transfers above the general dashboard');
-    assert.equal(await page.getByTestId('pkr-dashboard-v2').count(),1);
-    assert.equal(await page.locator('.pkr-command-nextgame').count(),1);
+    assert.equal(await page.locator('.pkr-dual-root .pkr-room-outstanding-row').count(),2,
+      'Command Centre must show actual pending transfers from the settled ledger');
+    assert.equal(await page.getByTestId('dual-dashboard').count(),1);
+    assert.equal(await page.locator('.pkr-dual-nextgame').count(),1);
     const prioritised=await page.evaluate(()=>{
-      const money=document.querySelector('.pkr-command-focus'),cards=document.querySelector('.pkr-pro-panels');
-      return !!money&&!!cards&&!!(money.compareDocumentPosition(cards)&Node.DOCUMENT_POSITION_FOLLOWING);
+      const money=document.querySelector('.pkr-dual-root .pkr-room-outstanding');
+      const actions=document.querySelector('.pkr-dual-quick-grid');
+      return !!money&&!!actions&&!!(money.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING);
     });
-    assert(prioritised,'Outstanding payments must appear before secondary cards on every viewport');
-    await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().click();await loaded(page);await page.keyboard.press('Escape');await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
+    assert(prioritised,'Outstanding payments must appear before action shortcuts');
+    // Host changes the shared preference through the real app API (synthetic Worker).
+    await page.getByRole('button',{name:/Live Poker/}).click();
+    await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
+    if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
+    assert.equal(layoutWrites,1,'Changing layout must issue one saved preference update');
+    assert.equal(await page.getByTestId('dual-dashboard').getAttribute('data-layout'),'live');
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+    assert.equal(layoutWrites,1,'Reload must reuse the saved server layout, not write again');
+    await page.getByRole('button',{name:/Command Centre/}).click();
+    await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    assert.equal(layoutWrites,2,'Returning to Command Centre must save exactly once');
+    if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-command.png'),fullPage:false});
+    if(engine==='chromium'&&name==='phone'){
+      // A regular member sees the host-selected variant but has no choice controls.
+      simulateMember=true;
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+      assert.equal(await page.getByRole('button',{name:/Live Poker/}).isDisabled(),true);
+      assert.equal(await page.getByRole('button',{name:/Command Centre/}).isDisabled(),true);
+      assert.equal(layoutWrites,2,'Member must not issue layout writes');
+      simulateMember=false;
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    }
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:financial-update',{detail:{kind:'buyin',gameId:'test-game',at:Date.now()}})));
     await page.locator('.pkr-financial-notice').waitFor();await hitVisible(page.locator('.pkr-financial-notice').getByRole('button',{name:'Dismiss',exact:true}));
     if(width<1100){const a=await page.locator('.pkr-financial-notice').boundingBox(),b=await nav.boundingBox();assert(a.y+a.height<=b.y,'Notice is behind the bottom navigation');}
@@ -191,12 +232,12 @@ async function run(){
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:upgrade_required',{detail:{error:'Synthetic upgrade dialog test'}})));
     const upgrade=page.locator('.pkr-native-dialog');await upgrade.waitFor();assert(await upgrade.evaluate(el=>el.matches(':modal')));
     await page.screenshot({path:path.join(output,engine+'-'+name+'-action-dialog.png')});await page.keyboard.press('Escape');await upgrade.waitFor({state:'detached'});
-    await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
+    await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});
+    await page.locator('.pkr-event .pkr-dual-root[data-layout="command"]').waitFor();
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
-    assert.equal(await page.locator('.pkr-event-payment-priority .pkr-room-outstanding-row').count(),2,
-      'Event dashboard payment card must show only actual pending transfers');
-    assert.equal(await page.locator('.pkr-event-payment-priority').count(),1,
-      'The event payment card must be visible outside the Games tab');
+    assert.equal(await page.locator('.pkr-event .pkr-dual-root .pkr-room-outstanding-row').count(),2,
+      'Room dashboard must show actual pending transfers');
+    assert.equal(await page.locator('.pkr-event .pkr-dual-root').count(),1);
     assert.equal(await page.locator('.pkr-event .pkr-room-outstanding-row').filter({hasText:'$125'}).count(),0,
       'Paid settlements must not be included in the room dashboard');
     if(height>=700){
@@ -219,9 +260,11 @@ async function run(){
       if(name==='phone'||name==='desktop'||name==='tablet')
         await page.screenshot({path:path.join(output,engine+'-'+name+'-paid-schedule.png'),fullPage:false});
       await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});
-      await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
+      await page.locator('.pkr-event .pkr-dual-root[data-layout="command"]').waitFor();
     }
-    await page.locator('.pkr-event-metric .pkr-metric-trigger').nth(1).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),3);await closeSheet(page);
+    await page.locator('.pkr-event-tabs').getByRole('button',{name:'Standings'}).click();
+    await page.locator('.pkr-event').getByText('Standings',{exact:true}).first().waitFor();
+    await page.locator('.pkr-event-tabs').getByRole('button',{name:'Games'}).click();
     await page.getByRole('button',{name:'+ Game',exact:true}).click();await page.locator('.pkr-native-dialog').waitFor();
     assert(await page.locator('.pkr-native-dialog').evaluate(el=>el.matches(':modal')));await page.keyboard.press('Escape');await page.locator('.pkr-native-dialog').waitFor({state:'detached'});
     await page.goto(BASE+'/games/test-game',{waitUntil:'domcontentloaded'});await page.locator('.pkr-game-metrics .pkr-metric-trigger').first().waitFor();
