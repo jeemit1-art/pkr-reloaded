@@ -222,6 +222,7 @@ async function test(){
    savedPreviewLayout='command';layoutWrites=0;
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
    const page=await context.newPage();
+   page.on('pageerror',e=>errors.push(size.name+' runtime exception: '+(e.stack||e.message)));
    page.on('request',request=>{if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))errors.push('PRODUCTION API REQUEST BLOCKED: '+request.url());});
    await page.route('**/*.workers.dev/**',async route=>{
     const url=new URL(route.request().url());
