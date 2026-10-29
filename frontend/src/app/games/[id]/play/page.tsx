@@ -249,7 +249,7 @@ export default function PlayPage() {
           <span><strong>{'$'+quickBankHint.toFixed(2)} buy-in selected.</strong> Select a seated player, enter this amount and confirm. Nothing has been recorded.</span>
           <button type="button" onClick={()=>setQuickBankHint(null)}
             style={{border:'1px solid #b79b68',color:'inherit',background:'transparent',borderRadius:8,padding:'7px 10px'}}>Dismiss</button>
-        </div>
+        </div>}
         <div className="topbar pkr-approved-topbar">
           <button className="tb-back" id="backBtn" aria-label="Back to room" onClick={() => {
             try {
