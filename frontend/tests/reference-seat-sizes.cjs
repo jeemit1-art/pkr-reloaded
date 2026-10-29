@@ -40,6 +40,7 @@ async function check(browser,width,height,count){
   if(u.pathname==='/games/'+id)body={...game,players:roster};
   else if(u.pathname==='/events/'+room)body={id:room,name:'Reference test',role:'host',members:[
    {id:'host-test',name:'Host',role:'host'},...roster.map(p=>({id:p.user_id,name:p.display_name,role:'member',avatar_url:null}))]};
+  else if(u.pathname==='/events/'+room+'/profiles')body={profiles:[]};
   else if(u.pathname==='/auth/me')body={id:'host-test',name:'Host'};
   else{failures.push(u.pathname);body={error:'unmapped synthetic API'};}
   return route.fulfill({status:body.error?404:200,contentType:'application/json',body:JSON.stringify(body),
@@ -176,7 +177,18 @@ async function check(browser,width,height,count){
   await page.locator('#seat1 .pkr-game-seat-avatar img[hidden]').waitFor({state:'attached'});
   assert.equal(await page.locator('#seat1 .pkr-game-seat-avatar img').isVisible(),false);
   assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').isVisible(),true);
-  // Changing view may not write or change the transaction ledger.
+  // A chosen room nickname and preset must override Google photo on the
+  // gameplay table without changing the financial player's canonical name.
+  await page.evaluate(()=>{
+   const member=window._eventMembers.find(m=>m.id==='ref-1');
+   member.avatar_url='/images/casino/real-poker-chips.webp';
+   window._eventProfiles=[{profile_key:'member:ref-1',screen_name:'Ace of Spades',avatar_emoji:'🃏',avatar_data:null}];
+   window.renderTable();
+  });
+  assert.equal(await page.locator('#seat1 .pkr-game-seat-name, #seat1 .pkr-game-compact-name').first().textContent(),'Ace of Spades');
+  assert.equal(await page.locator('#seat1 .pkr-avatar-fallback').textContent(),'🃏');
+  assert.equal(await page.locator('#seat1 .pkr-seat-photo').count(),0,'Chosen preset must override inherited photo');
+  // Changing view or room nickname may not write or change the transaction ledger.
   const actual=await page.evaluate(()=>JSON.parse(JSON.stringify(window.state.players)));
   for(const [sid,p] of Object.entries(players)){
    assert.equal(actual[sid].name,p.name);
@@ -230,7 +242,7 @@ async function check(browser,width,height,count){
       assert(m.inside&&m.visible,'Seat number detached or clipped from plus: '+JSON.stringify({width,height,count,selection,m}));
       assert(m.left>=-2&&m.right<=width+2,'Empty seat card outside viewport: '+JSON.stringify({width,height,count,selection,m}));
     }
-    assert(metrics.every(m=>m.direction===(effective==='compact'?'column':'row')),
+    assert(metrics.every(m=>m.direction===(effective==='compact'?'row':'column')),
       'Auto / Full / Compact must have visibly different empty-card presentations: '+JSON.stringify({width,height,count,selection,metrics}));
     modeMetrics[selection]=metrics[0];
     if(count===9||count===13)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-empty-'+selection+'.png')});

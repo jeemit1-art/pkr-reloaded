@@ -11,7 +11,7 @@ const payments=[
  {id:'p4',from:'b',from_name:'Blair',to:'a',to_name:'Alex',amount:400,status:'not_received'},
  {id:'p5',from:'c',from_name:'Casey',to:'a',to_name:'Alex',amount:99999,status:'legacy'},
 ];
-let failResults=false;let requests=0;
+let failResults=false,failSaved=false;let requests=0;
 const players=[{user_id:'a',display_name:'Alex',buy_ins:1,cashout:12000,net:2000,seat_number:1},
  {user_id:'different',display_name:'Alex',buy_ins:1,cashout:5000,net:-5000,seat_number:2}];
 const api={events:{
@@ -21,7 +21,7 @@ const api={events:{
 },games:{
  list:async id=>{requests++;return id==='r1'?games:[];},
  live:async()=>({players,totalIn:20000,totalOut:17000,bank:3000}),
- get:async id=>({...game(id),players,rsvps:[{id:'yes1',display_name:'Alex',status:'yes'},{id:'no1',display_name:'Casey',status:'no'}]}),
+ get:async id=>{if(failSaved&&id==='g2')throw new Error('Saved record unavailable');return {...game(id),event_name:'Room 1',players,rsvps:[{id:'yes1',display_name:'Alex',status:'yes'},{id:'no1',display_name:'Casey',status:'no'}],transfers:id==='g1'?payments:[]};},
  results:async token=>{if(failResults&&token==='token-g2')throw new Error('Temporary outage');return {
   game:games.find(g=>g.results_token===token),
   players:token==='token-g2'?
@@ -50,7 +50,10 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  const paid=await load({kind:'transfers',title:'Paid',roomId:'r1',filter:'paid'});
  assert.equal(paid.rows.length,1);assert.match(paid.summary,/\$10\.00/);
  const owing=await load({kind:'transfers',title:'People owing',roomId:'r1',filter:'owing'});
- const alex=owing.rows.find(row=>row.id==='a');assert.equal(alex.value,'$23.00');
+ const alex=owing.rows.find(row=>row.id==='a');assert.equal(alex.value,'-$23.00');assert.equal(alex.moneyTone,'negative');
+ const receiving=await load({kind:'transfers',title:'Receiving',roomId:'r1',filter:'receiving'});
+ assert.equal(receiving.rows.find(r=>r.id==='b')?.moneyTone,'positive');
+ assert(receiving.rows.some(r=>r.value?.startsWith('+')));
  const outgoing=await load(alex.next);assert.equal(outgoing.rows.length,2);assert.match(outgoing.summary,/\$23\.00/);
  const balance=await load({kind:'transfers',title:'Alex net',roomId:'r1',playerId:'a',filter:'outstanding'});
  assert.equal(balance.rows.length,3);assert.match(balance.summary,/net to pay \$19\.00/);
@@ -73,8 +76,22 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  const bank=await load({kind:'live-money',title:'Bank',publicToken:'synthetic',measure:'bank'});
  assert.equal(bank.rows.length,2);assert.match(bank.summary,/\$30\.00/);
  const live=await load(bank.rows[0].next);assert.match(live.warning,/No amounts have been estimated/);
- failResults=true;const incomplete=await load({kind:'transfers',title:'Outstanding',roomId:'r1',filter:'outstanding'});
+ failResults=true;
+ const recovered=await load({kind:'transfers',title:'Outstanding',roomId:'r1',filter:'outstanding'});
+ assert.equal(recovered.warning,undefined,'Original settled-game record must recover a failed results link');
+ assert.equal(recovered.rows.length,3);
+ assert.equal(person.summaryTone,'positive');
+ assert.equal(person.rows[0].moneyTone,'positive');
+ assert.equal(balance.rows.find(row=>row.value.startsWith('-')).moneyTone,'negative');
+ assert.equal(balance.rows.find(row=>row.value.startsWith('+')).moneyTone,'positive');
+ const missingToken=games[1].results_token;games[1].results_token=null;
+ const historical=await load({kind:'player',title:'Alex',roomId:'r1',playerId:'a',playerName:'Alex'});
+ assert.equal(historical.warning,undefined,'Missing historical results_token must use saved game');
+ assert.equal(historical.rows.length,2);
+ games[1].results_token=missingToken;
+ failSaved=true;const incomplete=await load({kind:'transfers',title:'Outstanding',roomId:'r1',filter:'outstanding'});
  assert.match(incomplete.warning,/incomplete/);assert.equal(incomplete.rows.length,3);
+ assert.match(incomplete.warning,/1970|20\d\d|g2/,'Warning must identify the unavailable game date');
  await assert.rejects(()=>load({kind:'members',title:'No permission',roomId:'r2'}),/Permission denied/);
  const controller=new AbortController();controller.abort();const before=requests;
  await assert.rejects(()=>load({kind:'games',title:'Cancelled',roomId:'r1'},controller.signal),/cancelled/);assert.equal(requests,before);

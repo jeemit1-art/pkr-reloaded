@@ -5,7 +5,8 @@ import AppDialog from '@/components/AppDialog';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign } from '@/lib/api';
+import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type RoomPlayerProfile, type RoomPlayerProfileInput } from '@/lib/api';
+import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
@@ -63,6 +64,10 @@ export default function EventPage() {
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
+  const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
+  const [knownRoomPlayers,setKnownRoomPlayers]=useState<Array<{display_name:string;games_played:number}>>([]);
+  const [roomProfileError,setRoomProfileError]=useState('');
+  const [editingRoomProfile,setEditingRoomProfile]=useState<{key:string;name:string;avatarUrl:string|null}|null>(null);
   const [memberFilter,setMemberFilter]=useState<'all'|'admins'|'players'>('all');
   const [phoneNumber,setPhoneNumber]=useState('');
   const [phoneRole,setPhoneRole]=useState<'member'|'cohost'>('member');
@@ -111,6 +116,20 @@ export default function EventPage() {
     api.events.history(id).then(setHistory);
   },[id]);
 
+  useEffect(()=>{
+    if(tab!=='members')return;
+    let active=true;
+    api.events.profiles(id).then(result=>{
+      if(!active)return;
+      setRoomProfiles(Object.fromEntries(result.profiles.map(p=>[p.profile_key,p])));
+      setRoomProfileError('');
+    }).catch(error=>{
+      if(active)setRoomProfileError(error instanceof Error?error.message:'Room profiles are unavailable.');
+    });
+    // Include people who have been seated but are not yet on the settled-game leaderboard.
+    api.events.players(id).then(rows=>{if(active)setKnownRoomPlayers(rows);}).catch(()=>{});
+    return()=>{active=false};
+  },[id,tab]);
   useEffect(()=>{
     isPushSubscribedToEvent(id).then(setPushEnabled);
   },[id]);
@@ -341,8 +360,28 @@ export default function EventPage() {
     const role=String(m.role||'member');
     const matchRole=memberFilter==='all'||(memberFilter==='admins'?role==='host'||role==='cohost':role==='member');
     const q=memberQuery.trim().toLowerCase();
-    return matchRole&&(!q||String(m.name||'').toLowerCase().includes(q)||String(m.email||'').toLowerCase().includes(q));
+    const screen=roomProfiles['member:'+m.id]?.screen_name||'';
+    return matchRole&&(!q||[m.name,m.email,screen].some(v=>String(v||'').toLowerCase().includes(q)));
   });
+  const historicalPeople=new Map<string,{display_name:string;games_played:number;user_id?:string}>();
+  for(const person of [...knownRoomPlayers,...leaders]){
+    const name=String(person.display_name||'').trim(),key=name.toLowerCase();
+    if(!key)continue;
+    const prior=historicalPeople.get(key);
+    if(!prior||person.games_played>=prior.games_played)
+      historicalPeople.set(key,{display_name:name,games_played:person.games_played,user_id:(person as any).user_id||prior?.user_id});
+  }
+  const historicalPlayers=[...historicalPeople.values()].filter(p=>{
+    const name=p.display_name,key=name.toLowerCase();
+    const alreadyMember=(event.members||[]).some((m:any)=>String(m.name||'').trim().toLowerCase()===key);
+    const q=memberQuery.trim().toLowerCase();
+    return !alreadyMember&&(memberFilter!=='admins')&&(!q||key.includes(q)||
+      String(roomProfiles['history:'+key]?.screen_name||'').toLowerCase().includes(q));
+  }).sort((a,b)=>b.games_played-a.games_played||a.display_name.localeCompare(b.display_name)).slice(0,150);
+  async function saveRoomProfile(input:RoomPlayerProfileInput){
+    const saved=await api.events.saveProfile(id,input);
+    setRoomProfiles(current=>({...current,[saved.profile.profile_key]:saved.profile}));
+  }
   const installLink = appUrl;
 
   const statusColor:any = {
@@ -688,6 +727,7 @@ export default function EventPage() {
               </AppDialog>
             )}
             <div id="pkr-members-roster" className="pkr-members-anchor" />
+            {roomProfileError&&<p role="status" className="pkr-member-profile-notice">Player profile editing is currently unavailable: {roomProfileError}. Existing members and game records remain available.</p>}
             <div className="pkr-member-search-tools">
               <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span>⌕</span>
                 <input id="pkr-member-search" type="search" aria-label="Search members" placeholder="Search members…" value={memberQuery} onChange={e=>setMemberQuery(e.target.value)}/>
@@ -711,15 +751,20 @@ export default function EventPage() {
                     <div style={{width:38,height:38,borderRadius:'50%',background:'var(--bg3)',
                       border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
                       justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
-                      {m.avatar_url
-                        ? <img src={m.avatar_url} alt={m.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                        : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                      {roomProfiles['member:'+m.id]?.avatar_data
+                        ? <img src={roomProfiles['member:'+m.id].avatar_data!} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : roomProfiles['member:'+m.id]?.avatar_emoji
+                          ? <span aria-hidden="true">{roomProfiles['member:'+m.id].avatar_emoji}</span>
+                          : m.avatar_url
+                            ? <img src={m.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                            : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <RecordMetric request={{kind:'player',title:m.name+' — game history',roomId:id,playerId:m.id,playerName:m.name}}
                         className="pkr-member-history-link" style={{minHeight:44,alignItems:'flex-start',justifyContent:'center',gap:3}}>
                         <strong style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),sans-serif',fontWeight:600,
-                          overflowWrap:'anywhere',textAlign:'left'}}>{m.name}</strong>
+                          overflowWrap:'anywhere',textAlign:'left'}}>{roomProfiles['member:'+m.id]?.screen_name||m.name}</strong>
+                        {roomProfiles['member:'+m.id]?.screen_name&&<small className="pkr-member-profile-identity">{m.name}</small>}
                         <small style={{fontSize:11,color:'var(--pkr-a-primary)'}}>View game history ›</small>
                       </RecordMetric>
                       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
@@ -746,6 +791,9 @@ export default function EventPage() {
                         </div>
                       )}
                     </div>
+                    {(isHost||user?.id===m.id)&&<button type="button" className="pkr-member-profile-edit" disabled={!!roomProfileError}
+                      aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
+                      onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
                     {isHost && m.role !== 'host' && (
                       <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}
                         onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
@@ -756,6 +804,27 @@ export default function EventPage() {
                 ))}
               </div>
             )}
+            {historicalPlayers.length>0&&<section className="pkr-historical-player-roster">
+              <header><h3>Players from saved games</h3><p>Players recorded in game results who have not joined this room with a PKR account. Their display profile does not modify settled games.</p></header>
+              {historicalPlayers.map((p:any)=>{
+                const playerName=String(p.display_name||'').trim();
+                const key='history:'+playerName.toLowerCase();
+                const profile=roomProfiles[key];
+                return <div key={key} className="pkr-historical-player-row">
+                  <span className="pkr-historical-player-avatar">
+                    {profile?.avatar_data?<img src={profile.avatar_data} alt=""/>:
+                      <span aria-hidden="true">{profile?.avatar_emoji||playerName.charAt(0).toUpperCase()}</span>}
+                  </span>
+                  <span className="pkr-historical-player-name"><strong>{profile?.screen_name||playerName}</strong>
+                    <small>{profile?.screen_name?playerName+' · ':''}{p.games_played||0} recorded games</small></span>
+                  <RecordMetric request={{kind:'player',title:playerName+' — game history',roomId:id,playerId:p.user_id,playerName}}
+                    className="pkr-member-history-mini">History</RecordMetric>
+                  {isHost&&<button type="button" disabled={!!roomProfileError} className="pkr-member-profile-edit"
+                    aria-label={'Edit player profile for '+playerName}
+                    onClick={()=>setEditingRoomProfile({key,name:playerName,avatarUrl:null})}>Profile</button>}
+                </div>;
+              })}
+            </section>}
             {isGroupOwner && (
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');document.getElementById('pkr-mobile-name')?.focus();}}>+ Invite Member by Mobile</button>
@@ -1163,6 +1232,16 @@ export default function EventPage() {
         {id:'members',label:'Members',icon:'members',active:tab==='members',onSelect:()=>selectTab('members')}
       ]} />
 
+      {tab==='members'&&editingRoomProfile&&<AppDialog className="modal-overlay pkr-player-profile-overlay"
+        onClick={event=>{if(event.currentTarget===event.target)setEditingRoomProfile(null);}}>
+        <div className="pkr-player-profile-sheet" onClick={event=>event.stopPropagation()}>
+          <RoomPlayerProfileEditor key={editingRoomProfile.key}
+            profileKey={editingRoomProfile.key} canonicalName={editingRoomProfile.name}
+            avatarFallback={editingRoomProfile.avatarUrl} initial={roomProfiles[editingRoomProfile.key]||null}
+            canEdit={!roomProfileError&&(isHost||editingRoomProfile.key==='member:'+user?.id)}
+            canManage={isHost} onClose={()=>setEditingRoomProfile(null)} onSave={saveRoomProfile}/>
+        </div>
+      </AppDialog>}
       {/* Standings player profile. Both podium and list buttons select this same dialog. */}
       {tab==='leaderboard' && selectedPlayer && (
         <PlayerHistoryDialog
@@ -1418,7 +1497,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
           <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{player}</div>
           {leader && (
             <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif'}}>
-              {leader.games_played} games · {leader.games_won} profitable games · total net {fmtSign(leader.total_net)}
+              {leader.games_played} games · {leader.games_won} profitable games · total net <strong className={leader.total_net>0?'pkr-money-positive':leader.total_net<0?'pkr-money-negative':'pkr-money-neutral'}>{fmtSign(leader.total_net)}</strong>
             </div>
           )}
         </div>
@@ -1428,7 +1507,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
       {nets.length>0&&<div className="pkr-profile-stats">
         <div><small>Settled games</small><strong>{nets.length}</strong></div>
         <div><small>Profitable</small><strong>{positive} / {nets.length}</strong></div>
-        <div><small>Average net</small><strong>{fmtSign(average)}</strong></div>
+        <div><small>Average net</small><strong className={average>0?'pkr-money-positive':average<0?'pkr-money-negative':'pkr-money-neutral'}>{fmtSign(average)}</strong></div>
       </div>}
       {playerGames.length===0 && (
         <div style={{padding:'16px',fontSize:12,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif'}}>No settled game history for this player yet.</div>

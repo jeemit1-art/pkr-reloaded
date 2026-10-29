@@ -116,6 +116,9 @@ export const api = {
     history:        (id:string)      => req<Game[]>(`/events/${id}/history`),
     deleteGame:     (gameId:string)  => req<{ok:boolean}>(`/games/${gameId}`,{method:'DELETE'}),
     players:        (id:string)      => req<EventPlayer[]>(`/events/${id}/players`),
+    profiles:       (id:string)      => req<{profiles:RoomPlayerProfile[]}>(`/events/${id}/profiles`),
+    saveProfile:    (id:string,profile:RoomPlayerProfileInput) =>
+      req<{ok:boolean;profile:RoomPlayerProfile}>(`/events/${id}/profiles`,{method:'PUT',body:JSON.stringify(profile)}),
     verifyPassword: (id:string,password:string) =>
       req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
     mergePlayers: (id:string, from_name:string, to_name:string) =>
@@ -206,7 +209,19 @@ export interface Event {
   host_id:string; created_at:number; role?:string; member_count?:number; game_count?:number;
   status?: string;
 }
-export interface EventMember { id:string; name:string; avatar_url:string|null; email:string; role:string; joined_at:number; }
+export interface EventMember { id:string; name:string; avatar_url:string|null; email?:string; role:string; joined_at:number; }
+export interface RoomPlayerProfile {
+  profile_key:string;
+  screen_name:string|null;
+  avatar_data:string|null;
+  avatar_emoji:string|null;
+  phone:string|null;
+  preferred_contact:'none'|'whatsapp'|'sms'|'email';
+  private_notes:string|null;
+  updated_at?:number;
+}
+export type RoomPlayerProfileInput = Omit<RoomPlayerProfile,'updated_at'>;
+
 export interface EventDetail extends Event { members:EventMember[]; }
 export interface EventPlayer { id:string; event_id:string; display_name:string; whatsapp:string|null; games_played:number; }
 export interface Game {
@@ -219,7 +234,7 @@ export interface GamePlayer {
   game_id:string; user_id:string; display_name:string; whatsapp:string|null;
   seat_number:number|null; buy_ins:number; cashout:number|null; net:number|null; settled_at:number|null;
 }
-export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; }
+export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; transfers:Transfer[]; event_name?:string; }
 export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsvp[]; players:GamePlayer[]; }
 export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }

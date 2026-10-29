@@ -21,6 +21,8 @@ function fixture(url,method){
  if(p==='/auth/me')return user;
  if(p==='/events')return [room];
  if(p==='/events/test-room')return {...room,members};
+ if(p==='/events/test-room/profiles')return {profiles:[]};
+ if(p==='/events/test-room/players')return [];
  if(p==='/events/test-room/games')return [upcoming,finished,old];
  if(p==='/events/test-room/history')return [finished,old];
  if(p==='/events/test-room/leaderboard')return leaders;

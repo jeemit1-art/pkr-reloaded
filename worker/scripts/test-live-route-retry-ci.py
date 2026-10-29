@@ -20,6 +20,18 @@ try:
     release.command=delayed
     release.check_api_route(attempts=3,delay_seconds=0)
 
+    profile_responses=iter(["404","401"])
+    release.command=lambda *args,**kwargs:next(profile_responses)
+    release.check_profile_route(attempts=2,delay_seconds=0)
+
+    release.command=lambda *args,**kwargs:"404"
+    try:
+        release.check_profile_route(attempts=2,delay_seconds=0)
+    except release.Stop as exc:
+        assert "HTTP 404" in str(exc)
+    else:
+        raise AssertionError("Missing profile route was incorrectly accepted")
+
     release.command=lambda *args,**kwargs:"404"
     try:
         release.check_api_route(attempts=2,delay_seconds=0)

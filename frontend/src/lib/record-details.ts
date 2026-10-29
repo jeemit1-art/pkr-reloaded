@@ -15,9 +15,11 @@ export type RecordRequest = {
   publicToken?:string;
   measure?:'buyins'|'cashouts'|'bank';
 };
-export type RecordRow = {id:string;label:string;detail?:string;value?:string;href?:string;next?:RecordRequest};
-export type RecordDetail = {rows:RecordRow[];summary?:string;warning?:string};
+export type MoneyTone = 'positive'|'negative'|'neutral';
+export type RecordRow = {id:string;label:string;detail?:string;value?:string;moneyTone?:MoneyTone;href?:string;next?:RecordRequest};
+export type RecordDetail = {rows:RecordRow[];summary?:string;summaryTone?:MoneyTone;warning?:string};
 type Payment = {game:Game;transfer:Transfer};
+function netTone(n:number|null|undefined):MoneyTone{return typeof n==='number'&&Number.isFinite(n)?n>0?'positive':n<0?'negative':'neutral':'neutral';}
 
 function check(signal?:AbortSignal){if(signal?.aborted)throw new DOMException('Request cancelled','AbortError');}
 function roomId(request:RecordRequest){if(!request.roomId)throw new Error('Open a poker room first.');return request.roomId;}
@@ -38,35 +40,62 @@ export function gameRows(games:Game[],roomName?:string):RecordRow[]{
     value:typeof game.player_count==='number'?game.player_count+' players':undefined,href:gameUrl(game),
   }));
 }
-export function transferRows(payments:Payment[]):RecordRow[]{
-  return payments.map(({game,transfer},i)=>({
-    id:game.id+':'+(transfer.id||i),label:transfer.from_name+' to '+transfer.to_name,
-    detail:fmtDate(game.scheduled_at)+' - '+paymentLabel(transfer),value:fmt(transfer.amount),href:gameUrl(game),
-  }));
+export function transferRows(payments:Payment[],viewerId?:string):RecordRow[]{
+  return payments.map(({game,transfer},i)=>{
+    const owing=!!viewerId&&transfer.from===viewerId;
+    const receiving=!!viewerId&&transfer.to===viewerId;
+    return {id:game.id+':'+(transfer.id||i),label:transfer.from_name+' to '+transfer.to_name,
+      detail:fmtDate(game.scheduled_at)+' - '+paymentLabel(transfer),
+      value:(owing?'-':receiving?'+':'')+fmt(transfer.amount),
+      moneyTone:owing?'negative':receiving?'positive':'neutral',href:gameUrl(game)};
+  });
+}
+async function settledGameResults(game:Game):Promise<ResultsData>{
+  // Historical settled games can have no results_token. The authenticated
+  // saved-game endpoint already returns the real players and transfers.
+  // Never synthesise results or use the leaderboard as a financial ledger.
+  if(game.results_token){
+    try{
+      const shared=await api.games.results(game.results_token);
+      if(shared.game?.id===game.id&&Array.isArray(shared.players)&&Array.isArray(shared.transfers))
+        return shared;
+    }catch{/* Fall through to the authenticated original game record. */}
+  }
+  const saved=await api.games.get(game.id);
+  if(saved.id!==game.id||saved.status!=='settled'||
+    !Array.isArray(saved.players)||saved.players.length===0||!Array.isArray(saved.transfers))
+    throw new Error('Saved settled-game details are incomplete.');
+  return {game:saved,event:{name:saved.event_name||''},players:saved.players,transfers:saved.transfers};
 }
 async function settledRecords(request:RecordRequest,signal?:AbortSignal){
   const games=(await api.games.list(roomId(request))).filter(game=>game.status==='settled'&&
     (request.period!=='90d'||game.scheduled_at>=Math.floor(Date.now()/1000)-90*86400));
   check(signal);
   const records:Array<{game:Game;data:ResultsData}>=[];
-  let missing=0;
-  // Bound requests; never turn a failed financial request into a zero balance.
+  const unavailable:Game[]=[];
+  // Prefer the permanent saved game when a public results link is missing.
+  // Keep explicit warnings for genuine missing/unauthorised records.
   for(let i=0;i<games.length;i+=4){
     check(signal);
-    const batch=await Promise.allSettled(games.slice(i,i+4).map(async game=>{
-      if(!game.results_token)throw new Error('Results unavailable');
-      return {game,data:await api.games.results(game.results_token)};
-    }));
+    const group=games.slice(i,i+4);
+    const batch=await Promise.allSettled(group.map(async game=>({game,data:await settledGameResults(game)})));
     check(signal);
-    batch.forEach(result=>{if(result.status==='fulfilled')records.push(result.value);else missing++;});
+    batch.forEach((result,index)=>{
+      if(result.status==='fulfilled')records.push(result.value);
+      else unavailable.push(group[index]);
+    });
   }
-  return {records,warning:missing?missing+' game result(s) could not be loaded. This breakdown is incomplete; retry before relying on its totals.':undefined};
+  const dates=unavailable.slice(0,3).map(game=>fmtDate(game.scheduled_at)).join(', ');
+  const warning=unavailable.length?
+    unavailable.length+' settled game result(s) remain unavailable'+(dates?' ('+dates+(unavailable.length>3?', …':'')+')':'')+
+    '. These records have been excluded; this breakdown is incomplete. Retry or ask the host to review the original game.':undefined;
+  return {records,warning};
 }
 function playerRow(player:GamePlayer,game:Game):RecordRow{
   return {id:game.id+':'+player.user_id,label:player.display_name,
     detail:(player.seat_number!=null?'Seat '+player.seat_number+' - ':'')+player.buy_ins+' buy-in(s)'+
       (player.cashout!=null?' - Cash-out '+fmt(player.cashout):''),
-    value:player.net!=null?fmtSign(player.net):undefined,href:gameUrl(game)};
+    value:player.net!=null?fmtSign(player.net):undefined,moneyTone:netTone(player.net),href:gameUrl(game)};
 }
 export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal):Promise<RecordDetail>{
   check(signal);
@@ -130,6 +159,7 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
       rows:[...leaders].sort((a,b)=>b.total_net-a.total_net).map(player=>({
         id:player.user_id,label:player.display_name,detail:player.games_played+' games - '+player.games_won+' profitable',
         value:request.kind==='sessions'?player.games_played+' sessions':fmtSign(player.total_net),
+        moneyTone:request.kind==='sessions'?'neutral':netTone(player.total_net),
         next:{kind:'player',title:player.display_name+' - game results',roomId:request.roomId,playerId:player.user_id,playerName:player.display_name},
       }))};
   }
@@ -169,14 +199,14 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
         ].filter(Boolean).join(' · ');
         rows.push({id:game.id+':'+player.user_id,
           label:fmtDate(game.scheduled_at),detail:details,
-          value:playerNet!==null?fmtSign(playerNet):'Not recorded',
+          value:playerNet!==null?fmtSign(playerNet):'Not recorded',moneyTone:netTone(playerNet),
           href:game.results_token?'/games/results/'+encodeURIComponent(game.results_token):gameUrl(game)});
       }
       const incomplete=[warning,ambiguous?
         ambiguous+' game(s) have multiple players sharing this name without a matching ID. They were excluded to avoid mixing people’s results.':
         undefined].filter(Boolean).join(' ')||undefined;
       return {rows,summary:rows.length+' settled game'+(rows.length===1?'':'s')+
-        ' · '+profitable+' profitable · net '+fmtSign(net),warning:incomplete};
+        ' · '+profitable+' profitable · net '+fmtSign(net),summaryTone:netTone(net),warning:incomplete};
     }
     let payments:Payment[]=records.flatMap(({game,data})=>(data.transfers||[]).map(transfer=>({game,transfer})));
     if(request.filter==='paid')payments=payments.filter(row=>row.transfer.status==='paid');
@@ -191,7 +221,8 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
         const row=people.get(id)||{name,amount:0,count:0};row.amount+=transfer.amount;row.count++;people.set(id,row);
       }
       return {rows:[...people].map(([id,person])=>({id,label:person.name,
-        detail:person.count+' outstanding transfer(s)',value:fmt(person.amount),
+        detail:person.count+' outstanding transfer(s)',value:(outgoing?'-':'+')+fmt(person.amount),
+        moneyTone:outgoing?'negative':'positive',
         next:{...request,filter:'outstanding',playerId:id,direction:outgoing?'from':'to',title:person.name+' - outstanding transfers'}})),
         summary:people.size+' players - '+fmt(payments.reduce((sum,row)=>sum+row.transfer.amount,0)),warning};
     }
@@ -199,10 +230,10 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
       const outgoing=payments.filter(row=>row.transfer.from===request.playerId).reduce((sum,row)=>sum+row.transfer.amount,0);
       const incoming=payments.filter(row=>row.transfer.to===request.playerId).reduce((sum,row)=>sum+row.transfer.amount,0);
       const net=incoming-outgoing;
-      return {rows:transferRows(payments),warning,summary:'Outgoing '+fmt(outgoing)+' - incoming '+fmt(incoming)+
+      return {rows:transferRows(payments,request.playerId),warning,summary:'Outgoing '+fmt(outgoing)+' - incoming '+fmt(incoming)+
         ' - '+(net<0?'net to pay ':net>0?'net to receive ':'net ')+fmt(Math.abs(net))};
     }
-    return {rows:transferRows(payments),summary:payments.length+' transfers - '+fmt(payments.reduce((sum,row)=>sum+row.transfer.amount,0))+
+    return {rows:transferRows(payments,request.playerId),summary:payments.length+' transfers - '+fmt(payments.reduce((sum,row)=>sum+row.transfer.amount,0))+
       (request.period==='90d'?' - last 90 days':' - all time'),warning};
   }
   const game=await api.games.get(gameId(request));check(signal);

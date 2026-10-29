@@ -76,21 +76,21 @@ function RecordSheet({request,canGoBack,onClose,onBack,onNext}:{request:RecordRe
     }}>
     <header className="pkr-record-heading">
       <div><span>UNDERLYING RECORDS</span><h2 id="pkr-record-title" ref={heading} tabIndex={-1}>{request.title}</h2>
-        {detail?.summary&&<p>{detail.summary}</p>}</div>
+        {detail?.summary&&<p data-money-tone={detail.summaryTone||'neutral'}>{detail.summary}</p>}</div>
       <button type="button" onClick={onClose} aria-label="Close record details">Close</button>
     </header>
     <div className="pkr-record-body" aria-busy={!detail&&!error}>
       {!detail&&!error&&<p role="status" className="pkr-record-empty">Loading saved records...</p>}
       {error&&<div role="alert" className="pkr-record-error"><p>{error}</p><button type="button" onClick={()=>setRetry(n=>n+1)}>Try again</button></div>}
       {detail&&<>
-        {detail.warning&&<p role="alert" className="pkr-record-error">{detail.warning}</p>}
+        {detail.warning&&<div role="alert" className="pkr-record-error"><p>{detail.warning}</p><button type="button" onClick={()=>setRetry(n=>n+1)}>Retry unavailable results</button></div>}
         {detail.rows.length>5&&<label className="pkr-record-search">Find a record
           <input type="search" value={query} placeholder="Search names, games or amounts"
             onChange={event=>{setQuery(event.target.value);setPage(0);}}/></label>}
         <div className="pkr-record-list">
           {rows.slice(currentPage*pageSize,(currentPage+1)*pageSize).map(row=>{
             const content=<><span><strong>{row.label}</strong>{row.detail&&<small>{row.detail}</small>}</span>
-              {row.value&&<b>{row.value}</b>}{(row.href||row.next)&&<span aria-hidden="true">&rsaquo;</span>}</>;
+              {row.value&&<b data-money-tone={row.moneyTone||'neutral'}>{row.value}</b>}{(row.href||row.next)&&<span aria-hidden="true">&rsaquo;</span>}</>;
             return row.href||row.next?<button type="button" className="pkr-record-row" key={row.id}
               onClick={()=>{if(row.next)onNext(row.next);else if(row.href){onClose();router.push(row.href);}}}>{content}</button>
               :<div className="pkr-record-row" key={row.id}>{content}</div>;
