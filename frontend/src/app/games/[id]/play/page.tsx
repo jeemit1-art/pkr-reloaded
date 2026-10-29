@@ -712,7 +712,7 @@ function pkrAvatar(p){
   var profile=pkrSeatProfile(p),emoji=profile&&profile.avatar_emoji;
   var url=profile&&profile.avatar_data?profile.avatar_data:member&&member.avatar_url;
   if(typeof url!=='string')url='';
-  var safePhoto=/^data:image\\/(?:jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(url)&&url.length<=48000;
+  var safePhoto=(url.startsWith('data:image/jpeg;base64,')||url.startsWith('data:image/webp;base64,'))&&url.length<=48000&&/^[A-Za-z0-9+=/]+$/.test(url.split(',')[1]||'');
   if(url&&!safePhoto&&!(url.startsWith('/')&&!url.startsWith('//'))){try{var parsed=new URL(url);if(parsed.protocol!=='https:')url='';}catch(e){url='';}}
   var fallback=emoji||inits(pkrSeatDisplayName(p));
   return url?'<img class="pkr-seat-photo" src="'+esc(url).replace(/"/g,'&quot;').replace(/'/g,'&#39;')+'" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.removeAttribute(String.fromCharCode(115,116,121,108,101))"><span class="pkr-avatar-fallback" style="display:none">'+esc(fallback)+'</span>':
