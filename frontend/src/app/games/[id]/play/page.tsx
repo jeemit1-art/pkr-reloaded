@@ -13,6 +13,12 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [quickBankHint,setQuickBankHint]=useState<number|null>(null);
+  useEffect(()=>{
+    const value=new URLSearchParams(window.location.search).get('quickBuyin');
+    const amount=value===null?NaN:Number(value);
+    if(Number.isSafeInteger(amount)&&amount>0&&amount<=1000)setQuickBankHint(amount);
+  },[gameId]);
   const [profileDialog,setProfileDialog]=useState<{
     roomId:string;key:string;name:string;initial:RoomPlayerProfile|null;
     canEdit:boolean;canManage:boolean;
@@ -237,6 +243,13 @@ export default function PlayPage() {
 
       {/* ── GAME SCREEN ── */}
       <div id="gameScreen" className="screen pkr-casino-live-table">
+        {quickBankHint!==null&&<div className="pkr-quick-buyin-hint" role="status"
+          style={{padding:'12px 16px',margin:'9px 12px',border:'1px solid #8e7136',borderRadius:12,
+            background:'#302819',color:'#f4db9b',display:'flex',gap:10,alignItems:'center',justifyContent:'space-between'}}>
+          <span><strong>{'$'+quickBankHint.toFixed(2)} buy-in selected.</strong> Select a seated player, enter this amount and confirm. Nothing has been recorded.</span>
+          <button type="button" onClick={()=>setQuickBankHint(null)}
+            style={{border:'1px solid #b79b68',color:'inherit',background:'transparent',borderRadius:8,padding:'7px 10px'}}>Dismiss</button>
+        </div>
         <div className="topbar pkr-approved-topbar">
           <button className="tb-back" id="backBtn" aria-label="Back to room" onClick={() => {
             try {

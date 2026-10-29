@@ -25,6 +25,9 @@ export default function RoomOutstandingCard({roomId}:Props){
   const outstanding=useMemo(()=>outstandingRoomTransfers(snapshot?.records||[]),[snapshot]);
   const amount=totalTransferCents(outstanding);
   const incomplete=!!snapshot?.unavailable.length;
+  const notReceived=outstanding.filter(({transfer})=>transfer.status==='not_received').length;
+  const awaiting=outstanding.filter(({transfer})=>transfer.status==='payer_claimed').length;
+  const owed=outstanding.filter(({transfer})=>transfer.status==='owed').length;
   const reportedAmount=loading||error?'—':incomplete?(outstanding.length?'≥ '+fmt(amount):'—'):fmt(amount);
   const fullUrl='/insights?room='+encodeURIComponent(roomId)+'&payments=outstanding#pkr-settlement';
   return (
@@ -42,6 +45,12 @@ export default function RoomOutstandingCard({roomId}:Props){
             :outstanding.length+' transfer'+(outstanding.length===1?'':'s')+' pending'}</span>
         </div>
       </header>
+      {!loading&&!error&&outstanding.length>0&&
+        <div className="pkr-room-outstanding-statuses" aria-label="Payment statuses">
+          {notReceived>0&&<span className="is-alert">{notReceived} not received</span>}
+          {awaiting>0&&<span className="is-warning">{awaiting} awaiting receipt</span>}
+          {owed>0&&<span className="is-pending">{owed} pending</span>}
+        </div>}
       {error?
         <p role="alert" className="pkr-room-outstanding-notice">Could not load the payment schedule. Open the Settlement Centre to review the saved records.</p>:
       loading?

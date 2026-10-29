@@ -533,6 +533,12 @@ function DashboardInner() {
           room={featuredRoom} rooms={activeRooms} games={featuredGames}
           history={featuredHistory} members={featuredMembers} leaders={featuredLeaders}
           viewerIsHost={featuredRoom.role==='host'}
+          userName={user?.name}
+          planName={user?.plan==='trial'?'TRIAL':user?.plan==='lifetime'?'LIFETIME':(user?.plan||'').toUpperCase()}
+          searchValue={search} onSearchChange={setSearch}
+          onPlan={()=>{if(isPaid){void openBillingPortal();}else{
+            window.dispatchEvent(new CustomEvent('pkr:upgrade_required',{detail:{error:'Select a host plan.'}}));}}}
+          onSignOut={()=>{clearToken();void api.auth.logout().finally(()=>router.push('/'));}}
           onRoomSelect={roomId=>{
             setPreferredRoomId(roomId);
             try{localStorage.setItem('pkr_preferred_room',roomId);}catch{}

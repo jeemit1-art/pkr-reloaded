@@ -8,6 +8,7 @@ import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import './RoomDashboardDual.css';
+import './RoomDashboardRefit.css';
 
 type Props={
   room:Event;
@@ -23,11 +24,32 @@ type Props={
   onScan?:()=>void;
   onMembers?:()=>void;
   onHistory?:()=>void;
+  userName?:string;
+  planName?:string;
+  searchValue?:string;
+  onSearchChange?:(text:string)=>void;
+  onSignOut?:()=>void;
+  onPlan?:()=>void;
 };
 const money=(cents:number|null|undefined)=>Number.isSafeInteger(cents)?fmt(cents as number):'—';
 const shortName=(name:string)=>name.split(/\s+/).filter(Boolean).map(s=>s[0]).slice(0,2).join('').toUpperCase();
 function niceDate(ts:number){return new Date(ts*1000).toLocaleString('en-AU',{weekday:'long',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'});}
 function isCurrent(ts:number){return ts>Math.floor(Date.now()/1000)-86400;}
+type DashboardIconName='spade'|'people'|'calendar'|'scan'|'wallet'|'trophy'|'chip'|'table';
+function DashIcon({name}:{name:DashboardIconName}){
+  const paths:Record<DashboardIconName,string>={
+    spade:'M12 2C9 7 3 9 3 14a5 5 0 0 0 8 4l-1 3h4l-1-3a5 5 0 0 0 8-4c0-5-6-7-9-12Z',
+    people:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-3a7 7 0 0 1 14 0v3H2Zm15-15a3 3 0 0 1 0 6m1 2a6 6 0 0 1 4 6v1h-4',
+    calendar:'M4 5h16a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm4-3v6m8-6v6M2 11h20m-14 4h3m3 0h3m-9 4h3',
+    scan:'M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5m5-6h6v6H9z',
+    wallet:'M4 6h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm-2 5h20m-6 5h3',
+    trophy:'M7 3h10v7a5 5 0 0 1-10 0V3Zm0 2H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 3v4m-4 2h8',
+    chip:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0ZM12 3v4m0 10v4M3 12h4m10 0h4',
+    table:'M3 6h18v12H3V6Zm3 6h12m-6-6v12',
+  };
+  return <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;
+}
 function PlayerAvatar({name,image,size='normal'}:{name:string;image?:string|null;size?:'normal'|'small'}){
   return <span className={'pkr-dual-avatar'+(size==='small'?' small':'')}>
     {image?<img src={image} alt="" loading="lazy"/>:shortName(name)}</span>;
@@ -36,6 +58,7 @@ function PlayerAvatar({name,image,size='normal'}:{name:string;image?:string|null
 export default function RoomDashboardDual({
   room,games,history=[],leaders=[],members=[],rooms=[],viewerIsHost,
   onRoomSelect,onCreateGame,onInvite,onScan,onMembers,onHistory,
+  userName,planName,searchValue,onSearchChange,onSignOut,onPlan,
 }:Props){
   const router=useRouter();
   const [layout,setLayout]=useState<RoomDashboardLayout>('command');
@@ -48,6 +71,9 @@ export default function RoomDashboardDual({
   const [ledgerError,setLedgerError]=useState(false);
   const [profiles,setProfiles]=useState<RoomPlayerProfile[]>([]);
   const [roomMenu,setRoomMenu]=useState(false);
+  const [accountMenu,setAccountMenu]=useState(false);
+  const [clock,setClock]=useState(()=>Date.now());
+  useEffect(()=>{const timer=window.setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[]);
   const current=useMemo(()=>games.filter(isCurrentGame).sort((a,b)=>{
     if(isLiveGame(a)!==isLiveGame(b))return isLiveGame(a)?-1:1;
     return a.scheduled_at-b.scheduled_at;
@@ -138,6 +164,10 @@ export default function RoomDashboardDual({
   const goPayments=()=>router.push('/insights?room='+encodeURIComponent(room.id)+'&payments=outstanding#pkr-settlement');
   const goLeaders=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=leaderboard');
   const goRsvp=()=>featured&&router.push('/games/'+encodeURIComponent(featured.id)+'/rsvp');
+  const goQuickBuyin=(amount:number)=>{
+    if(!active||!viewerIsHost)return;
+    router.push('/games/'+encodeURIComponent(active.id)+'/play?quickBuyin='+amount);
+  };
   const payments=useMemo(()=>outstandingRoomTransfers(ledger?.records||[]),[ledger]);
   const pendingCents=totalTransferCents(payments);
   const incomplete=!!ledgerError||!!ledger?.unavailable.length;
@@ -169,6 +199,22 @@ export default function RoomDashboardDual({
     ?livePlayers.reduce((sum,p)=>sum+Number((p as any).buy_in_total),0):null;
   const liveLabel=active?'LIVE NOW':featured?'UP NEXT':'NO GAME SCHEDULED';
   const seatText=featured?(gameDetail?seated.length+' / '+featured.seats+' seated':'Seats loading'): 'No scheduled game';
+  // Present only real recorded buy-ins, never infer a live pot or hand-adjusted chip stack.
+  const seatCount=Math.min(Math.max(featured?.seats||8,2),13);
+  const displaySeats=Array.from({length:seatCount},(_,i)=>{
+    const seat=i+1,angle=-Math.PI/2+2*Math.PI*i/seatCount;
+    return {seat,player:seated.find(p=>Number(p.seat_number)===seat),
+      left:Math.min(86,Math.max(14,50+43*Math.cos(angle))).toFixed(3)+'%',
+      top:(50+39*Math.sin(angle)).toFixed(3)+'%'};
+  });
+  const nameAvatar=(name:string)=>{
+    const member=members.find(m=>m.name.trim().toLowerCase()===name.trim().toLowerCase());
+    const profile=profiles.find(p=>p.profile_key==='history:'+name.trim().toLowerCase());
+    return profile?.avatar_data||member?.avatar_url||null;
+  };
+  const secondsToStart=featured?Math.max(0,Math.floor((featured.scheduled_at*1000-clock)/1000)):0;
+  const countDownText=[Math.floor(secondsToStart/3600),Math.floor(secondsToStart/60)%60,secondsToStart%60]
+    .map(n=>String(n).padStart(2,'0')).join(' : ');
 
   return <section className={'pkr-dual-root pkr-dual-'+layout} data-testid="dual-dashboard"
     data-layout={layout} data-room-id={room.id} aria-label="Poker room dashboard">
@@ -176,9 +222,13 @@ export default function RoomDashboardDual({
       <header className="pkr-dual-toolbar">
         <div className="pkr-dual-toolbar-lead">
           <span className="pkr-dual-suit" aria-hidden="true">♠</span>
-          <div><span className="pkr-dual-kicker">PKR · PRIVATE POKER CLUB</span>
-            <strong>Your poker room</strong></div>
+          <div className="pkr-dual-brand-copy"><strong>PKR</strong><small>PRIVATE POKER CLUB</small></div>
+          {planName&&<span className="pkr-dual-plan-pill">{planName}</span>}
         </div>
+        {onSearchChange&&<label className="pkr-dual-search"><span aria-hidden="true">⌕</span>
+          <input aria-label="Search poker rooms" value={searchValue||''}
+            onChange={event=>onSearchChange(event.target.value)} placeholder="Search poker rooms…"/>
+        </label>}
         {rooms.length>1&&onRoomSelect?
           <div className="pkr-dual-room-selector">
             <button type="button" aria-expanded={roomMenu} aria-haspopup="listbox"
@@ -191,6 +241,22 @@ export default function RoomDashboardDual({
           </div>:
           <button className="pkr-dual-room-label" type="button" onClick={openRoom}>
             {room.name} <span>↗</span></button>}
+        {onSignOut&&<div className="pkr-dual-account">
+          <button className="pkr-dual-account-trigger" type="button" aria-label="Open account menu"
+            aria-expanded={accountMenu} onClick={()=>setAccountMenu(v=>!v)}>
+            {(userName||'P').trim().slice(0,1).toUpperCase()}
+          </button>
+          {accountMenu&&<div className="pkr-dual-account-popover">
+            <strong>{userName||'PKR member'}</strong>
+            {onSearchChange&&<label className="pkr-dual-account-search">
+              <span>Search rooms</span>
+              <input aria-label="Search poker rooms in account menu" value={searchValue||''}
+                onChange={event=>onSearchChange(event.target.value)} placeholder="Room name…"/>
+            </label>}
+            {onPlan&&<button type="button" onClick={()=>{setAccountMenu(false);onPlan();}}>Manage plan</button>}
+            <button type="button" onClick={()=>{setAccountMenu(false);onSignOut();}}>Sign out</button>
+          </div>}
+        </div>}
       </header>
 
       <div className="pkr-dual-switcher" aria-label="Dashboard presentation">
@@ -234,10 +300,10 @@ export default function RoomDashboardDual({
         <section className="pkr-dual-block">
           <div className="pkr-dual-section-title"><h3>Quick Actions</h3><small>Get the game going</small></div>
           <div className="pkr-dual-quick-grid">
-            <button type="button" onClick={featured?openGame:goCreate}><b>♠</b><span>↗</span><strong>{featured?'Open Game':'Create Game'}</strong><small>Manage a session</small></button>
-            <button type="button" onClick={goInvite}><b>♟</b><span>↗</span><strong>{viewerIsHost?'Invite Players':'Members'}</strong><small>{viewerIsHost?'Share your room':'View the room'}</small></button>
-            <button type="button" onClick={goSchedule}><b>▦</b><span>↗</span><strong>Schedule</strong><small>Next game night</small></button>
-            <button type="button" onClick={onScan||goMembers}><b>⊞</b><span>↗</span><strong>{onScan?'Scan Invite':'View Players'}</strong><small>{onScan?'Join a room':'Private roster'}</small></button>
+            <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':'Create Game'}</strong><small>Manage a session</small></button>
+            <button type="button" onClick={goInvite}><b><DashIcon name="people"/></b><span>↗</span><strong>{viewerIsHost?'Invite Players':'Members'}</strong><small>{viewerIsHost?'Share your room':'View the room'}</small></button>
+            <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Next game night</small></button>
+            <button type="button" onClick={onScan||goMembers}><b><DashIcon name="scan"/></b><span>↗</span><strong>{onScan?'Scan Invite':'View Players'}</strong><small>{onScan?'Join a room':'Private roster'}</small></button>
           </div>
         </section>
         <section className="pkr-dual-nextgame">
@@ -294,6 +360,9 @@ export default function RoomDashboardDual({
             <p>{featured?niceDate(featured.scheduled_at):'No game has been scheduled'}</p>
             <p className="pkr-dual-seatline">♟ {seatText}
               {countAvailable!==null&&<small> · {countAvailable} available</small>}</p>
+            {featured&&!active&&secondsToStart>0&&<div className="pkr-dual-countdown">
+              <span>GAME STARTS IN</span><strong aria-live="off">{countDownText}</strong>
+            </div>}
             <div className="pkr-dual-hero-buttons">
               <button type="button" className="pkr-dual-gold-button" onClick={active?openTable:featured?openGame:goCreate}>
                 {active?'Join the Table':featured?'View Game':viewerIsHost?'Schedule Game':'Open Room'} <span>→</span></button>
@@ -302,31 +371,51 @@ export default function RoomDashboardDual({
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><span>♠</span></div>
         </section>
         <div className="pkr-dual-highlights">
-          <button type="button" onClick={goPayments}><span>▣</span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
-          <button type="button" onClick={goRsvp} disabled={!featured}><span>▦</span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></button>
-          <button type="button" onClick={openGame} disabled={!featured}><span>▱</span><strong>{countAvailable===null?'—':countAvailable}</strong><small>Seats available</small></button>
-          <button type="button" onClick={goPayments}><span>⇄</span><strong>{ledger?ledger.unavailable.length:'—'}</strong><small>Games to verify</small></button>
+          <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
+          <button type="button" onClick={goRsvp} disabled={!featured}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></button>
+          <button type="button" onClick={openGame} disabled={!featured}><span><DashIcon name="table"/></span><strong>{countAvailable===null?'—':countAvailable}</strong><small>Seats available</small></button>
+          <button type="button" onClick={goPayments}><span><DashIcon name="chip"/></span><strong>{ledger?ledger.unavailable.length:'—'}</strong><small>Games to verify</small></button>
         </div>
         <section className="pkr-dual-table-panel">
           <div className="pkr-dual-section-title"><h3><i className="pkr-dual-live-dot"/> Live Table Snapshot</h3>
-            <button type="button" onClick={active?openTable:openGame} disabled={!featured}>View table ↗</button></div>
-          <div className="pkr-dual-felt-stage">
+            <div className="pkr-dual-panel-actions"><span className="pkr-dual-table-count">{seated.length} / {featured?.seats||0} PLAYERS</span>
+              <button type="button" onClick={active?openTable:openGame} disabled={!featured}>View table ↗</button></div></div>
+          <div className={'pkr-dual-felt-stage'+(seatCount>9?' pkr-dual-dense':'')} aria-label="Read-only seating preview">
             <div className="pkr-dual-felt">
               <span>♠ ♥ ♣ ♦</span>
-              <small>{active?'ACTIVE GAME':'TABLE PREVIEW'}</small>
-              <strong>{featured?seatText:'No game yet'}</strong>
+              <small>{active?'RECORDED BUY-INS':'NEXT GAME SEATING'}</small>
+              <strong>{active?(totalBuyins===null?'—':fmt(totalBuyins)):seatText}</strong>
               <b>♠ PKR ♠</b>
             </div>
+            {featured&&displaySeats.map((item)=>item.player?
+              <button type="button" key={item.seat}
+                className={'pkr-dual-table-seat'+(item.player.cashout!==null?' cashed':'')}
+                style={{left:item.left,top:item.top}} onClick={active?openTable:openGame}
+                title={'Seat '+item.seat+' · '+item.player.display_name}>
+                <PlayerAvatar name={nameFor(item.player.user_id,item.player.display_name)}
+                  image={avatarFor(item.player.user_id,item.player.display_name)} size="small"/>
+                <span className="pkr-dual-table-player"><b>{nameFor(item.player.user_id,item.player.display_name)}</b>
+                  <small className={item.player.cashout!==null&&Number.isSafeInteger(item.player.net)?
+                      (Number(item.player.net)>=0?'pkr-dual-positive':'pkr-dual-negative'):''}>
+                    {item.player.cashout!==null?(Number.isSafeInteger(item.player.net)?fmtSign(item.player.net as number):'Cashed out'):
+                      (Number.isSafeInteger((item.player as typeof item.player & {buy_in_total?:number}).buy_in_total)?
+                        money((item.player as typeof item.player & {buy_in_total?:number}).buy_in_total):'Seat '+item.seat)}
+                  </small></span>
+              </button>:
+              <button type="button" key={item.seat} className="pkr-dual-table-seat empty"
+                style={{left:item.left,top:item.top}} onClick={active?openTable:openGame} title={'Open seat '+item.seat}>
+                <span>+</span><small>{item.seat}</small>
+              </button>)}
           </div>
+          <p className="pkr-dual-stage-note">{active?'Displays recorded buy-ins, not a current hand pot or live chip stack.':'Read-only seating preview for the next game.'}</p>
           {gameError&&<p className="pkr-dual-empty">Seat information is temporarily unavailable. Open the game for the latest details.</p>}
-          {seated.length?<div className="pkr-dual-seat-grid">{seated.map(p=>
-            <button type="button" key={p.user_id||p.seat_number} onClick={active?openTable:openGame}
-              title={'Seat '+p.seat_number+' · '+p.display_name}>
-              <PlayerAvatar name={nameFor(p.user_id,p.display_name)}
-                image={avatarFor(p.user_id,p.display_name)} size="small"/>
-              <span><strong>{nameFor(p.user_id,p.display_name)}</strong><small>Seat {p.seat_number}</small></span>
-            </button>)}</div>:<p className="pkr-dual-empty">
-            {featured?(gameError?'Unable to load seated players':'No players seated yet.'):'Your next live table will appear here.'}</p>}
+          {seated.length>0&&<div className="pkr-dual-seat-grid">{seated.map(p=>
+            <button type="button" key={p.user_id||p.seat_number} onClick={active?openTable:openGame}>
+              <PlayerAvatar name={nameFor(p.user_id,p.display_name)} image={avatarFor(p.user_id,p.display_name)} size="small"/>
+              <span><strong>{nameFor(p.user_id,p.display_name)}</strong>
+                <small>Seat {p.seat_number}{Number.isSafeInteger((p as typeof p & {buy_in_total?:number}).buy_in_total)?
+                  ' · '+money((p as typeof p & {buy_in_total?:number}).buy_in_total):''}</small></span>
+            </button>)}</div>}
         </section>
         <section className="pkr-dual-coming">
           <div className="pkr-dual-section-title"><h3>Who's Coming?</h3><button type="button" onClick={goRsvp} disabled={!featured}>See all RSVPs ↗</button></div>
@@ -334,7 +423,7 @@ export default function RoomDashboardDual({
           <div className="pkr-dual-coming-grid">
             {rsvps.length?rsvps.slice(0,16).map(r=>
               <button type="button" key={r.id} onClick={goRsvp}>
-                <PlayerAvatar name={r.display_name} size="small"/>
+                <PlayerAvatar name={r.display_name} image={nameAvatar(r.display_name)} size="small"/>
                 <strong>{r.display_name}</strong>
                 <small className={'pkr-dual-rsvp-'+r.status}>{r.status==='yes'?'Going':r.status==='maybe'?'Maybe':'Not coming'}</small>
               </button>):<p className="pkr-dual-empty">RSVPs appear when players respond.</p>}
@@ -345,15 +434,15 @@ export default function RoomDashboardDual({
             <div className="pkr-dual-section-title"><h3>◉ Quick Buy-in</h3><small>Host · player seat required</small></div>
             <div className="pkr-dual-banks">
               {[25,50,100].map(amount=><button type="button" key={amount} disabled={!viewerIsHost||!active}
-                onClick={openTable} title={'Open the table and select a player for a $'+amount+' buy-in'}>
+                onClick={()=>goQuickBuyin(amount)} title={'Open the table with $'+amount+' selected, then choose a player'}>
                   {fmt(amount*100)}</button>)}
             </div>
-            <p className="pkr-dual-help">Opens the existing table. Select a player to record the bank; this dashboard never charges a player.</p>
+            <p className="pkr-dual-help">Select an amount, then select a player at the table to confirm. No buy-in is recorded here.</p>
           </section>
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>♟ Invite via WhatsApp</h3><small>Private room</small></div>
-            <p className="pkr-dual-help">Invite approved members through your room's secure invitation tools.</p>
-            <button type="button" className="pkr-dual-wide-link" onClick={goInvite}>{viewerIsHost?'Invite players':'View room members'} →</button>
+            <div className="pkr-dual-section-title"><h3>♟ WhatsApp Invitations</h3><small>Private room</small></div>
+            <p className="pkr-dual-help">Create a personal WhatsApp invitation for each player. The room host must approve joining.</p>
+            <button type="button" className="pkr-dual-wide-link" onClick={goInvite}>{viewerIsHost?'Create personal WhatsApp invite':'View room members'} →</button>
           </section>
         </div>
         <section className="pkr-dual-data-card pkr-dual-settlements">

@@ -245,12 +245,38 @@ async function test(){
        if(await page.locator('.pkr-pro-hero').count())
          errors.push(size.name+' old dashboard hero still rendered');
        await page.screenshot({path:path.join(output,size.name+'-dashboard-command.png'),fullPage:false});
+       // Approval contract: visual hierarchy matches the supplied dual-dashboard prototype.
+       // These are computed-style assertions, not just existence/overflow checks.
+       const visualContract=await page.evaluate(()=>{
+         const payment=document.querySelector('.pkr-dual-command .pkr-room-outstanding');
+         const hero=document.querySelector('.pkr-dual-hero-command');
+         const oldTopbar=document.querySelector('.pkr-app.pkr-dashboard > .pkr-topbar');
+         const brand=document.querySelector('.pkr-dual-brand-copy strong');
+         return {
+           brandVisible:brand instanceof HTMLElement&&brand.getBoundingClientRect().width>20,
+           oldTopbarHidden:!oldTopbar||getComputedStyle(oldTopbar).display==='none',
+           paymentBackground:payment?getComputedStyle(payment).backgroundImage:'',
+           heroArtwork:hero?getComputedStyle(hero,'::before').backgroundImage:'',
+           accountVisible:!!document.querySelector('.pkr-dual-account-trigger'),
+         };
+       });
+       if(!visualContract.brandVisible||!visualContract.oldTopbarHidden||!visualContract.accountVisible)
+         errors.push(size.name+' mockup header/branding contract failed '+JSON.stringify(visualContract));
+       if(!visualContract.paymentBackground.includes('rgb(56, 29, 32)'))
+         errors.push(size.name+' approved red-black payment card not applied');
+       if(!visualContract.heroArtwork.includes('pkr-approved-hero-desktop.webp'))
+         errors.push(size.name+' approved photographic hero not applied');
+
        // Host switches between BOTH approved variants on every viewport.
        const toggle=page.getByRole('button',{name:/Live Poker/});
        if(!await toggle.isVisible())errors.push(size.name+' host layout chooser missing');
        else {
          await toggle.click();
          await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+         const liveSeatCount=await page.locator('.pkr-dual-felt-stage .pkr-dual-table-seat').count();
+         if(liveSeatCount!==8) errors.push(size.name+' approved perimeter seating count '+liveSeatCount+' !== 8');
+         if(!await page.locator('.pkr-dual-stage-note').isVisible())
+           errors.push(size.name+' missing read-only pot/chip-stack disclaimer');
          if(!await page.locator('.pkr-dual-table-panel').isVisible())
            errors.push(size.name+' live table preview missing');
          const geometry=await page.evaluate(()=>({
