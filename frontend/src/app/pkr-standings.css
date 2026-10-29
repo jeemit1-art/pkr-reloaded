@@ -267,3 +267,69 @@
  .pkr-player-profile-header h2{font-size:19px!important;overflow-wrap:anywhere!important}
  .pkr-player-profile-picture{gap:10px!important}
 }
+
+
+/* Historical players: keep identity readable and actions anchored to the right. */
+.pkr-historical-player-roster .pkr-historical-player-row{
+  display:grid!important;
+  grid-template-columns:38px minmax(0,1fr) max-content max-content;
+  align-items:center;
+  column-gap:12px;
+  min-height:64px;
+  padding:10px 4px;
+}
+.pkr-historical-player-roster .pkr-historical-player-name{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  min-width:0;
+  width:100%;
+  line-height:1.4;
+}
+.pkr-historical-player-roster .pkr-historical-player-name strong{
+  display:block;
+  width:100%;
+  font-size:14px;
+  overflow-wrap:break-word;
+  word-break:normal;
+}
+.pkr-historical-player-roster .pkr-historical-player-name small{
+  display:block;
+  font-size:12px;
+  line-height:1.4;
+  white-space:normal;
+}
+.pkr-historical-player-roster .pkr-historical-player-row .pkr-member-history-mini,
+.pkr-historical-player-roster .pkr-historical-player-row .pkr-member-profile-edit{
+  width:auto!important;
+  min-width:72px;
+  max-width:none;
+  margin:0!important;
+  justify-self:end;
+  align-self:center;
+  text-align:center;
+}
+@media(max-width:560px){
+  .pkr-historical-player-roster .pkr-historical-player-row{
+    grid-template-columns:32px minmax(0,1fr) auto;
+    column-gap:9px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-row .pkr-member-history-mini{
+    grid-column:3;
+    grid-row:1;
+    min-width:60px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-row .pkr-member-profile-edit{
+    grid-column:3;
+    grid-row:2;
+    min-width:60px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-name{
+    grid-column:2;
+    grid-row:1 / span 2;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-avatar{
+    grid-column:1;
+    grid-row:1 / span 2;
+  }
+}
