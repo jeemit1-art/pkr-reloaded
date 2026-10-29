@@ -2203,8 +2203,22 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
       cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
     root.appendChild(metrics);
+    var quickLabel=node('div','pkr-quick-heading pkr-buyin-heading');
+    quickLabel.appendChild(node('strong','','Quick buy-in · tap once to add'));
+    root.appendChild(quickLabel);
+    var quickBanks=node('div','pkr-quick-preset-grid pkr-quick-buyin-presets');
+    var standard=Number(state.game&&state.game.defaultBuyin)||25;
+    [standard,standard*2,standard*3].forEach(function(amount){
+      var quickBtn=button('＋ '+fmt(amount),function(){
+        pkrQuickRecordBuyin(sid,p,amount);
+      },'pkr-quick-preset pkr-quick-bank');
+      quickBtn.setAttribute('aria-label','Add '+fmt(amount)+' buy-in');
+      quickBtn.disabled=!pkrPanelCanManage()||cashed;
+      quickBanks.appendChild(quickBtn);
+    });
+    root.appendChild(quickBanks);
     var actions=node('div','pkr-quick-actions');
-    var buy=button('＋ Add Buy-in',function(){go('buyin');},'pkr-quick-primary buyin');
+    var buy=button('＋ Other amount',function(){go('buyin');},'pkr-quick-primary pkr-quick-custom');
     var cash=button('▣ Cash Out',function(){go('cashout');},'pkr-quick-primary');
     buy.disabled=cash.disabled=!pkrPanelCanManage()||cashed;
     actions.append(buy,cash);root.appendChild(actions);
@@ -2240,26 +2254,19 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     root.appendChild(node('h3','pkr-quick-page-heading',isCash?'Cash out player':'Add buy-in'));
     root.appendChild(node('p','pkr-quick-explainer',
       isCash?'Record the full dollar amount returned to this player. A completed cash-out records their final result.':
-      'Record an additional bank issued to this player. The default amount may be changed before confirming.'));
+      'Enter a custom buy-in amount and tap Add once. The bank will be recorded immediately.'));
     var form=node('form','pkr-quick-form'),label=node('label','','Amount (AUD)');
     var input=node('input','');input.type='text';input.inputMode='decimal';input.required=true;
     input.autocomplete='off';input.setAttribute('aria-label','Transaction amount in dollars');
-    if(!isCash)input.value=(state.game&&state.game.defaultBuyin||25).toFixed(2);
+    input.placeholder=isCash?'Cash-out amount':'Custom buy-in amount';
     label.appendChild(input);form.appendChild(label);
-    if(!isCash){
-      var presets=node('div','pkr-quick-preset-grid'),defaultAmount=Number(state.game&&state.game.defaultBuyin)||25;
-      [defaultAmount,defaultAmount*2,defaultAmount*3].forEach(function(amount){
-        var preset=button(fmt(amount),function(){input.value=amount.toFixed(2);Array.from(presets.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===preset));});},'pkr-quick-preset');
-        preset.setAttribute('aria-pressed',String(amount===defaultAmount));presets.appendChild(preset);
-      });form.appendChild(presets);
-    }
     var review=node('div','pkr-quick-review');
     function item(label,value,cls){var line=node('div','row');line.append(node('span','',label),node('strong',cls||'',value));review.appendChild(line);}
     item('Total invested',fmt(bi));item('Already paid out',fmt(co));
     if(isCash)item('Final result','Calculated on confirmation');
     form.appendChild(review);
     var submit=node('button','pkr-quick-primary '+(isCash?'':'buyin'),
-      isCash?'Review cash-out':'Review buy-in');submit.type='submit';
+      isCash?'Review cash-out':'Add custom buy-in');submit.type='submit';
     submit.disabled=!pkrPanelCanManage()||cashed;form.appendChild(submit);
     form.addEventListener('submit',function(e){
       e.preventDefault();
@@ -2270,18 +2277,22 @@ function pkrAssembleQuickPlayerView(sid,body,p){
       if(!Number.isSafeInteger(cents)||cents<0||(!isCash&&cents===0)){
         toast('Enter a valid '+(isCash?'cash-out':'buy-in')+' amount.');return;
       }
-      var value=cents/100,profit=value+co-bi;
-      var message=isCash
-        ?'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.'
-        :'Add '+fmt(value)+' to '+p.name+'’s buy-ins. New invested total: '+fmt(bi+value)+'.';
-      showConfirmModal('Confirm '+(isCash?'cash-out':'buy-in'),message,
-        isCash?'Confirm cash-out':'Confirm buy-in',function(){
+      var value=cents/100;
+      if(!isCash){
+        // Custom buy-ins, like presets, record with one submit. No extra modal.
+        pkrQuickRecordBuyin(sid,p,value);
+        return;
+      }
+      var profit=value+co-bi;
+      showConfirmModal('Confirm cash-out',
+        'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.',
+        'Confirm cash-out',function(){
           if(!pkrPanelCanManage()||state.players[sid]!==p||
             (p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
             toast('Player data changed. Review before trying again.');return;
           }
+          _pkrPlayerPanelView='overview';
           addTxFromInput(sid,type,input);
-          _pkrPlayerPanelView='overview';buildPanel(sid);
         },false);
     });
     root.appendChild(form);
