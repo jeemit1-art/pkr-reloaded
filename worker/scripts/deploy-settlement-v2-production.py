@@ -29,7 +29,7 @@ HOST = "https://pkr-reloaded-worker.jeemit1.workers.dev"
 MIGRATION = "migrations/20261027_settlement_v2.sql"
 PROFILE_MIGRATION = "migrations/20261029_room_player_profiles.sql"
 PROFILE_COLUMNS = {"event_id","profile_key","screen_name","avatar_data","avatar_emoji",
-                   "phone","preferred_contact","private_notes","updated_by","created_at","updated_at"}
+                   "phone_cipher","preferred_contact","private_notes","updated_by","created_at","updated_at"}
 
 
 class Stop(RuntimeError):
