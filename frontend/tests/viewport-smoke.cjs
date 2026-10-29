@@ -235,7 +235,10 @@ async function test(){
        if(await page.locator('.pkr-pro-hero').count())
          errors.push(size.name+' old oversized decorative statistics hero still rendered');
        const stats=await page.locator('.pkr-command-stat-strip').boundingBox();
-       if(!stats||stats.height>200)
+       // Two rows of touch-friendly 44px+ metrics need slightly more space
+       // on phones; the previous decorative hero was over 325px tall.
+       const maxStatHeight=size.width<=700?220:200;
+       if(!stats||stats.height>maxStatHeight)
          errors.push(size.name+' dashboard statistics strip is not compact: '+JSON.stringify(stats));
        const pastDue=page.locator('.pkr-command-unfinished');
        if(await pastDue.count()){
