@@ -158,6 +158,8 @@ async function run(){
         'Paid must show only the saved confirmed payment');
       assert.equal(await page.locator('#pkr-settlement [data-testid="settlement-partial-note"]').count(),0,
         'No missing-payment warning on completely available saved data');
+      if(name==='phone'||name==='desktop'||name==='tablet')
+        await page.screenshot({path:path.join(output,engine+'-'+name+'-paid-schedule.png'),fullPage:false});
       await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
     }
