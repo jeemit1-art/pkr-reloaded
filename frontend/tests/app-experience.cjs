@@ -14,6 +14,7 @@ const old={...finished,id:'test-old',scheduled_at:now-120*86400,results_token:'s
 const players=[{game_id:finished.id,user_id:'test-user',display_name:'Alex Morgan',buy_ins:1,buy_in_total:5000,cashout:12500,net:7500,seat_number:1,settled_at:now-86400,whatsapp:null},{game_id:finished.id,user_id:'member-2',display_name:'Jordan Lee',buy_ins:2,buy_in_total:10000,cashout:2500,net:-7500,seat_number:2,settled_at:now-86400,whatsapp:null}];
 const leaders=players.map(p=>({...p,games_played:2,games_won:p.net>0?2:0,total_net:p.net*2,biggest_win:Math.max(0,p.net),biggest_loss:Math.min(0,p.net),last_played:now-86400}));
 const transfers=[{id:'pending',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'paid',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:12500,status:'paid'}];
+let simulateMissingSettledGames=false;
 function fixture(url,method){
  if(method==='OPTIONS')return {};
  if(method!=='GET')throw new Error('Unexpected API write: '+method+' '+url.pathname);
@@ -24,16 +25,31 @@ function fixture(url,method){
  if(p==='/events/test-room/profiles')return {profiles:[]};
  if(p==='/events/test-room/players')return [];
  if(p==='/events/test-room/games')return [upcoming,finished,old];
+ if(p==='/events/test-room/settlement-ledger'){
+  if(simulateMissingSettledGames)return {error:'Synthetic legacy Worker has no room-ledger route'};
+  return {games:[finished,old],transfers:[
+    {...transfers[0],game_id:finished.id},
+    {...transfers[1],game_id:finished.id},
+    {...transfers[0],id:'old-pending',amount:2500,game_id:old.id},
+  ]};
+ }
  if(p==='/events/test-room/history')return [finished,old];
  if(p==='/events/test-room/leaderboard')return leaders;
  if(p==='/events/test-room/join-requests')return {requests:[]};
  if(p==='/events/test-room/push-registrations')return {members:[],definition:'registered_devices_not_delivery_confirmation'};
  if(p==='/events/test-room/phone-contacts')return {contacts:[]};
- if(p==='/games/results/synthetic-results')return {game:finished,event:room,players,transfers};
- if(p==='/games/results/synthetic-old-results')return {game:old,event:room,players,transfers:[{...transfers[0],id:'old-pending',amount:2500}]};
+ if(p==='/games/results/synthetic-results'){
+  if(simulateMissingSettledGames)return {error:'Synthetic historical results link inaccessible'};
+  return {game:finished,event:room,players,transfers};
+ }
+ if(p==='/games/results/synthetic-old-results'){
+  if(simulateMissingSettledGames)return {error:'Synthetic older results inaccessible'};
+  return {game:old,event:room,players,transfers:[{...transfers[0],id:'old-pending',amount:2500}]};
+ }
  if(p==='/games/live/synthetic-live')return {game:upcoming,event:room,players,totalIn:15000,totalOut:15000,bank:0};
  if(p==='/games/test-game')return {...upcoming,players,rsvps:[{id:'r1',game_id:upcoming.id,display_name:'Jordan Lee',status:'yes',created_at:now}]};
- if(p==='/games/test-finished')return {...finished,players,rsvps:[]};
+ if(p==='/games/test-finished')return simulateMissingSettledGames?{error:'Synthetic details unavailable'}:{...finished,players,rsvps:[],transfers};
+ if(p==='/games/test-old')return {error:'Synthetic old game details unavailable'};
  if(p==='/games/test-game/rsvp-board')return {game:upcoming,event:room,players:[],guests:[],options:['19:00','20:00']};
  if(p==='/push/vapid-key')return {key:'synthetic-not-a-real-key'};
  return {error:'No synthetic fixture for '+p};
@@ -116,6 +132,20 @@ async function run(){
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().waitFor();
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
+    if(engine==='chromium'&&name==='phone'){
+      // Regression for the real screenshot: when the old Worker and both old
+      // game detail endpoints fail, $0 must not be presented as final.
+      simulateMissingSettledGames=true;
+      try{
+        await page.reload({waitUntil:'domcontentloaded'});
+        await page.getByTestId('room-payment-unverified').waitFor();
+        assert.equal(await page.getByTestId('room-outstanding-amount').innerText(),'—',
+          'Two unverified settled games must NEVER show a final $0 total');
+        assert.match(await page.getByTestId('room-payment-unverified').innerText(),/2 settled games/i);
+      }finally{simulateMissingSettledGames=false;}
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
+    }
     assert.equal(await page.locator('.pkr-command-focus .pkr-room-outstanding-row').count(),2,
       'The command centre must show actual pending transfers above the general dashboard');
     assert.equal(await page.getByTestId('pkr-dashboard-v2').count(),1);
