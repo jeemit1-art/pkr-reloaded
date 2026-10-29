@@ -133,7 +133,7 @@ export default function RoomDashboardDual({
   const goMembers=()=>onMembers?onMembers():router.push('/events/'+encodeURIComponent(room.id)+'?tab=members');
   const goHistory=()=>onHistory?onHistory():router.push('/events/'+encodeURIComponent(room.id)+'?tab=history');
   const goInvite=()=>onInvite?onInvite():goMembers();
-  const goCreate=()=>onCreateGame?onCreateGame():openRoom();
+  const goCreate=()=>viewerIsHost?(onCreateGame?onCreateGame():openRoom()):openRoom();
   const goSchedule=()=>router.push('/schedule');
   const goPayments=()=>router.push('/insights?room='+encodeURIComponent(room.id)+'&payments=outstanding#pkr-settlement');
   const goLeaders=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=leaderboard');
@@ -296,7 +296,7 @@ export default function RoomDashboardDual({
               {countAvailable!==null&&<small> · {countAvailable} available</small>}</p>
             <div className="pkr-dual-hero-buttons">
               <button type="button" className="pkr-dual-gold-button" onClick={active?openTable:featured?openGame:goCreate}>
-                {active?'Join the Table':featured?'View Game':'Schedule Game'} <span>→</span></button>
+                {active?'Join the Table':featured?'View Game':viewerIsHost?'Schedule Game':'Open Room'} <span>→</span></button>
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Game room ↗</button>
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><span>♠</span></div>
