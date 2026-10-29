@@ -157,7 +157,7 @@
 
 /* Dual-design room overview uses the existing 960px content/navigation alignment. */
 .pkr-event .pkr-event-dual-region{
- width:min(calc(100% - 32px),960px);margin:14px auto 18px;
+ width:calc(100% - 32px);max-width:1250px;margin:14px auto 18px;
  min-width:0;position:relative;z-index:1;
 }
 .pkr-event .pkr-dual-join-alert{
