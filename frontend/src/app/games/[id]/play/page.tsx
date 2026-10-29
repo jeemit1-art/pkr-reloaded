@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
+import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
+import {api,type RoomPlayerProfile,type RoomPlayerProfileInput} from '@/lib/api';
+import './player-quick.css';
 
 export default function PlayPage() {
   const params = useParams();
@@ -10,12 +13,48 @@ export default function PlayPage() {
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [profileDialog,setProfileDialog]=useState<{
+    roomId:string;key:string;name:string;initial:RoomPlayerProfile|null;
+    canEdit:boolean;canManage:boolean;
+  }|null>(null);
   const [tableView, setTableView] = useState<'auto'|'full'|'compact'>('auto');
   function chooseTableView(next:'auto'|'full'|'compact'){
     localStorage.setItem('pkrTableViewChoice_'+gameId,next);
     setTableView(next);
     (window as any).pkrSetSeatLayout?.(next);
   }
+  // Use the same secured room-profile editor as the member screen.
+  // Player identity and historic game results must never be rewritten here.
+  useEffect(()=>{
+    let cancelled=false;
+    const openProfile=(event:Event)=>{
+      const detail=(event as CustomEvent<{name?:string;profileKey?:string;userId?:string}>).detail;
+      if(!detail?.name||!detail.profileKey)return;
+      let context:{eventId?:string;userId?:string;isHost?:boolean}|null=null;
+      try{context=JSON.parse(localStorage.getItem('pkrCtx')||'null');}catch{}
+      if(!context?.eventId)return;
+      const roomId=context.eventId,key=detail.profileKey,name=detail.name;
+      const canManage=context.isHost===true;
+      const canEdit=canManage||!!(detail.userId&&context.userId===detail.userId);
+      api.events.profiles(roomId).then(result=>{
+        if(cancelled)return;
+        const initial=result.profiles.find(profile=>profile.profile_key===key)||null;
+        setProfileDialog({roomId,key,name,initial,canEdit,canManage});
+      }).catch(()=>{if(!cancelled)window.alert('Player profiles are unavailable. No game records were changed.');});
+    };
+    window.addEventListener('pkr:edit-player-profile',openProfile);
+    return()=>{cancelled=true;window.removeEventListener('pkr:edit-player-profile',openProfile);};
+  },[]);
+
+  async function saveGamePlayerProfile(input:RoomPlayerProfileInput){
+    if(!profileDialog||!profileDialog.canEdit)throw new Error('You cannot edit this player profile.');
+    const response=await api.events.saveProfile(profileDialog.roomId,input);
+    const profiles=((window as any)._eventProfiles||[]) as RoomPlayerProfile[];
+    (window as any)._eventProfiles=[...profiles.filter(p=>p.profile_key!==response.profile.profile_key),response.profile];
+    (window as any).renderTable?.();
+    (window as any).refreshPlayerPanel?.();
+  }
+
   // Tournament controls load separately from the live poker engine.
   // A toolbar click must not silently fail while the script is loading.
   function openTournamentReliably(){
@@ -296,6 +335,7 @@ export default function PlayPage() {
           <button type="button" id="playerPanelScrim" className="pkr-player-panel-scrim"
             aria-label="Close player details" onClick={() => (window as any).closePanel?.()} />
           <div className="side-panel" id="sidePanel" aria-hidden="true">
+            <span className="pkr-quick-grip" aria-hidden="true"></span>
             <div className="panel-hdr">
               <span className="panel-title" id="panelTitle">Player</span>
               <button className="panel-close" id="panelCloseBtn" aria-label="Close player details"
@@ -448,6 +488,19 @@ export default function PlayPage() {
           <button className="wa-toast-skip" onClick={() => (window as any).hideWaToast?.()}>Skip</button>
         </div>
       </div>
+
+      {/* Shared secure profile editor; the live game remains open behind it. */}
+      {profileDialog&&<AppDialog className="modal-overlay pkr-player-profile-overlay"
+        onDismiss={()=>setProfileDialog(null)}
+        onClick={event=>{if(event.currentTarget===event.target)setProfileDialog(null);}}>
+        <div className="pkr-player-profile-sheet" onClick={event=>event.stopPropagation()}>
+          <RoomPlayerProfileEditor key={profileDialog.key}
+            profileKey={profileDialog.key} canonicalName={profileDialog.name}
+            initial={profileDialog.initial} canEdit={profileDialog.canEdit}
+            canManage={profileDialog.canManage}
+            onSave={saveGamePlayerProfile} onClose={()=>setProfileDialog(null)}/>
+        </div>
+      </AppDialog>}
 
       {/* ── TOAST ── */}
       <div id="toast"></div>
