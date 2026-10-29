@@ -376,3 +376,25 @@
 @media(prefers-reduced-motion:reduce){
  .pkr-dual-root button{transition:none!important}
 }
+
+
+/* Polished first-run state for users without a room. */
+.pkr-app.pkr-dashboard .pkr-dual-no-room{
+ padding:clamp(23px,5vw,46px);margin:10px 0 20px;
+ min-height:250px;border:1px solid #43735a;border-radius:19px;
+ background:linear-gradient(110deg,#123c2c,#0b241d 65%,#081a16);
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:12px;
+}
+.pkr-app.pkr-dashboard .pkr-dual-no-room h2{
+ color:#f6f0df;font:800 clamp(25px,3vw,38px)/1.15 var(--font-head),Georgia,serif;
+ margin:0;
+}
+.pkr-app.pkr-dashboard .pkr-dual-no-room p{
+ color:#adbdad;font-size:13px;line-height:1.6;max-width:520px;margin:0;
+}
+.pkr-app.pkr-dashboard .pkr-dual-no-room>div{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.pkr-app.pkr-dashboard .pkr-dual-no-room button{min-height:44px;border-radius:11px;padding:10px 16px}
+@media(max-width:420px){
+ .pkr-app.pkr-dashboard .pkr-dual-no-room>div{width:100%}
+ .pkr-app.pkr-dashboard .pkr-dual-no-room button{flex:1 1 100%}
+}
