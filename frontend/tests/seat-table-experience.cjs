@@ -126,6 +126,10 @@ async function check(browser,name,width,height){
    {detail:{gameId:'seat-test-game',path:'/games/seat-test-game/hands/hand-one/result'}})));
   await page.locator('#seat7 .seat-stack.verified').filter({hasText:'95 chips'}).waitFor();
   await page.locator('#seat3 .seat-stack.verified').filter({hasText:'105 chips'}).waitFor();
+  // The phone/tablet player details must overlay the canvas rather than
+  // shrinking the table and causing seated players to overlap.
+  const beforePanel=await page.locator('#tableArea').boundingBox();
+  const beforeFelt=await page.locator('#tableFelt').boundingBox();
   await page.locator('#seat7').click();
   await page.locator('.side-panel.open #pNetDisplay')
    .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
@@ -136,6 +140,21 @@ async function check(browser,name,width,height){
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('#pkrSeatChipSummary').textContent())||'',/95 chips/);
+  if(width<=900){
+   const afterPanel=await page.locator('#tableArea').boundingBox();
+   const afterFelt=await page.locator('#tableFelt').boundingBox();
+   const playerDrawer=await page.locator('.side-panel.open').boundingBox();
+   assert(beforePanel&&afterPanel&&beforeFelt&&afterFelt&&playerDrawer,'Table and player drawer must have geometry');
+   expectClose(afterPanel.width,beforePanel.width,'Player drawer must not shrink mobile/tablet table width');
+   expectClose(afterFelt.width,beforeFelt.width,'Player drawer must not shrink the poker felt');
+   assert(playerDrawer.left>=-2&&playerDrawer.right<=width+2,
+     'Player drawer must fit the phone/tablet: '+JSON.stringify(playerDrawer));
+   const stage=await page.locator('#pkrGameTableStage');
+   assert(await stage.evaluate(el=>el.classList.contains('pkr-player-panel-open')),
+     'Backdrop should be shown with mobile/tablet player drawer');
+   assert.equal(await page.locator('.side-panel.open').getAttribute('aria-hidden'),'false');
+   assert.equal(await page.locator('.side-panel.open .panel-body').evaluate(el=>getComputedStyle(el).overflowY),'auto');
+  }
   if(width<=700){
    const geometry=await page.locator('#gameScreen .topbar').evaluate(el=>{
     const r=el.getBoundingClientRect();
@@ -146,6 +165,18 @@ async function check(browser,name,width,height){
   const fit=await page.evaluate(()=>({w:document.documentElement.scrollWidth,viewport:innerWidth}));
   expectClose(fit.w,fit.viewport,'No page-width overflow');
   await page.screenshot({path:path.join(output,name+'-player.png')});
+  if(width<=900){
+   if(width>600){
+    await page.locator('#playerPanelScrim').click({position:{x:18,y:18}});
+   } else {
+    await page.locator('#panelCloseBtn').click();
+   }
+   await page.locator('.side-panel.open').waitFor({state:'detached'});
+   const restored=await page.locator('#tableArea').boundingBox();
+   assert(beforePanel&&restored,'Table must remain visible after closing the player drawer');
+   expectClose(restored.width,beforePanel.width,'Closing player drawer must not resize table');
+   assert.equal(await page.locator('#sidePanel').getAttribute('aria-hidden'),'true');
+  }
   assert.deepEqual(errors,[]);
   console.log('PASS synthetic gameplay '+name+'; restored buy-ins, verified stacks, winner changes, table menu, bank bar');
  }finally{await context.close();}
