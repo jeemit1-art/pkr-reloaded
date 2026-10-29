@@ -41,6 +41,7 @@ jobs:
         working-directory: frontend
         run: |
           node tests/record-details.cjs
+          node tests/room-payment-schedule.cjs
           node tests/tournament-structure.cjs
           node tests/gameplay-safety.cjs
           node tests/seat-stack-ledger.cjs
