@@ -2208,8 +2208,8 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     quickLabel.appendChild(node('strong','','Quick buy-in · tap once to add'));
     root.appendChild(quickLabel);
     var quickBanks=node('div','pkr-quick-preset-grid pkr-quick-buyin-presets');
-    var standard=Number(state.game&&state.game.defaultBuyin)||25;
-    [standard,standard*2,standard*3].forEach(function(amount){
+    // These are fixed quick-buy choices, independent of the room's default bank.
+    [25,50,100].forEach(function(amount){
       var quickBtn=button('＋ '+fmt(amount),function(){
         pkrQuickRecordBuyin(sid,p,amount);
       },'pkr-quick-preset pkr-quick-bank');

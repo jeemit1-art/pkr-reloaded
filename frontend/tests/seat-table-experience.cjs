@@ -227,6 +227,9 @@ async function check(browser,name,width,height){
    const quick=page.locator('.side-panel.open .pkr-quick-buyin-presets');
    await quick.waitFor({state:'visible'});
    assert.equal(await quick.getByRole('button').count(),3,'One-tap amounts must be available on first player screen');
+   assert.deepEqual(await quick.getByRole('button').allTextContents(),
+    ['＋ $25.00','＋ $50.00','＋ $100.00'],
+    'Quick buy-ins must be fixed $25 / $50 / $100, not 1x / 2x / 3x');
    await page.waitForFunction(()=>{
     const ctx=JSON.parse(localStorage.getItem('pkrCtx')||'{}');
     return ctx.isHost===true;
@@ -261,6 +264,14 @@ async function check(browser,name,width,height){
    assert.equal(writes[writes.length-1].total,6250,'Custom decimal cents must be exact');
    assert.equal(await page.locator('div[style*="z-index:700"]').count(),0,
     'Custom buy-in must not open another confirmation modal');
+   // The largest preset is exactly $100 (not the previous $75) and must
+   // perform one guarded write without changing any other player's money.
+   await quick.getByRole('button',{name:'Add $100.00 buy-in'}).click();
+   await page.locator('.side-panel.open .pkr-quick-metric.money-in').filter({hasText:'$162.50'}).waitFor();
+   await page.waitForFunction(()=>!window.pkrHasPendingActions?.(),null,{timeout:10000});
+   assert.equal(writes.length,currentCount+2,'$100 preset must record one additional buy-in');
+   assert.equal(writes[writes.length-1].total,16250,'$100 preset must add exactly 10000 cents');
+   assert.equal(writes[writes.length-1].count,4,'$100 preset must increment bank count only once');
    // Synthetic touch movement from the sheet header must close the mobile panel.
    await page.locator('.side-panel.open .panel-hdr').evaluate(el=>{
     function send(type,y){
