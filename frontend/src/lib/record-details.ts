@@ -221,7 +221,8 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
         const row=people.get(id)||{name,amount:0,count:0};row.amount+=transfer.amount;row.count++;people.set(id,row);
       }
       return {rows:[...people].map(([id,person])=>({id,label:person.name,
-        detail:person.count+' outstanding transfer(s)',value:fmt(person.amount),
+        detail:person.count+' outstanding transfer(s)',value:(outgoing?'-':'+')+fmt(person.amount),
+        moneyTone:outgoing?'negative':'positive',
         next:{...request,filter:'outstanding',playerId:id,direction:outgoing?'from':'to',title:person.name+' - outstanding transfers'}})),
         summary:people.size+' players - '+fmt(payments.reduce((sum,row)=>sum+row.transfer.amount,0)),warning};
     }
