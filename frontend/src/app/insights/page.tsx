@@ -6,6 +6,7 @@ import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
 import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
 import {loadRoomTransfers} from '@/lib/room-payment-schedule';
+import './settlement-filter.css';
 
 type SettlementRow={game:Game;transfer:Transfer};
 type SettlementView='transfers'|'balances'|'status';
