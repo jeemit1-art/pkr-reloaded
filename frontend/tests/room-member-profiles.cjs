@@ -78,6 +78,17 @@ async function runEngine(engine,browserType,width,height){
   await dialog.getByRole('button',{name:'Choose 🃏 avatar'}).click();
   await dialog.getByRole('textbox',{name:/Mobile number/i}).fill('+61 412 999 123');
   await dialog.getByRole('textbox',{name:/Host notes/i}).fill('Private updated note');
+  const view=await page.evaluate(()=>{
+    const root=document.querySelector('.pkr-player-profile-sheet');
+    const form=document.querySelector('.pkr-player-profile-editor');
+    const inputs=[...document.querySelectorAll('.pkr-player-profile-presets button,.pkr-player-profile-field input,.pkr-player-profile-field textarea')];
+    const rect=root.getBoundingClientRect(),formRect=form.getBoundingClientRect();
+    return {width:innerWidth,root:[rect.left,rect.right],form:[formRect.left,formRect.right],
+      outOfBounds:inputs.filter(el=>{const b=el.getBoundingClientRect();return b.left< -1||b.right>innerWidth+1;}).map(el=>el.outerHTML.slice(0,100))};
+  });
+  assert(view.root[0]>=-1&&view.root[1]<=view.width+1&&view.form[0]>=-1&&view.form[1]<=view.width+1,
+    'Profile editor must fit the phone width: '+JSON.stringify(view));
+  assert.deepEqual(view.outOfBounds,[],'Profile editor fields/avatars overflow horizontally: '+JSON.stringify(view));
   await page.screenshot({path:path.join(out,engine+'-'+width+'-editor.png')});
   await dialog.getByRole('button',{name:'Save profile'}).click();
   await dialog.waitFor({state:'detached'});
