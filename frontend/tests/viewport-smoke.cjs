@@ -461,21 +461,24 @@ async function test(){
        }
      }
      if(item.id==='dashboard'){
-       const primary=await page.locator('.pkr-command-open').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(primary!=='rgb(61, 220, 151)')
-         errors.push(size.name+' dashboard primary control is not Theme A lime: '+primary);
+       const primary=await page.locator('.pkr-dual-hero .pkr-dual-gold-button').first().evaluate(el=>{
+         const style=getComputedStyle(el),rect=el.getBoundingClientRect();
+         return {image:style.backgroundImage,color:style.color,height:rect.height,width:rect.width};
+       });
+       if(!primary.image.includes('linear-gradient')||primary.height<40||primary.width<85)
+         errors.push(size.name+' dual dashboard gold call-to-action is not usable: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
-       const hostPhoto=page.locator('.pkr-pro-member').filter({hasText:'Alex Morgan'}).locator('.pkr-pro-member-avatar img');
-       const fallback=page.locator('.pkr-pro-member').filter({hasText:'Jordan Lee'}).locator('.pkr-pro-member-avatar');
-       if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard not displaying member avatar_url');
+       const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
+       const fallback=page.locator('.pkr-dual-leader').filter({hasText:'Jordan Lee'}).locator('.pkr-dual-avatar');
+       if(await hostPhoto.count()!==1)errors.push(size.name+' dashboard missing room-member avatar_url');
        else {
-         const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit,position:getComputedStyle(img).position}));
-         if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover'||details.position!=='absolute')
-           errors.push(size.name+' dashboard member portrait is not properly displayed: '+JSON.stringify(details));
+         const details=await hostPhoto.evaluate(img=>({src:img.getAttribute('src'),fit:getComputedStyle(img).objectFit}));
+         if(!details.src?.startsWith('data:image/svg+xml')||details.fit!=='cover')
+           errors.push(size.name+' dashboard member avatar not displayed correctly: '+JSON.stringify(details));
        }
-       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='J'||await fallback.locator('img').count())
-         errors.push(size.name+' dashboard member without a photo did not retain initials');
+       if(await fallback.count()!==1 || (await fallback.textContent())?.trim()!=='JL'||await fallback.locator('img').count())
+         errors.push(size.name+' dashboard member without an avatar lost its initials');
      }
      if(item.id==='dashboard'){
        const archivedToggle=page.getByRole('button',{name:'Show archived rooms (1)'});
