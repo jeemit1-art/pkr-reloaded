@@ -685,15 +685,38 @@ function _pkrHandleViewportChange(){
 }
 window.addEventListener('resize',_pkrHandleViewportChange);
 window.addEventListener('orientationchange',_pkrHandleViewportChange);
+function pkrSeatProfile(p){
+  var profiles=window._eventProfiles||[],members=window._eventMembers||[];
+  var id=p.userId||p.user_id;
+  if(id){
+    var exact=profiles.find(function(profile){return profile.profile_key==='member:'+id;});
+    if(exact)return exact;
+  }
+  var name=String(p.name||'').trim().toLowerCase();
+  if(!name)return null;
+  var same=members.filter(function(m){return String(m.name||'').trim().toLowerCase()===name;});
+  if(same.length===1){
+    var linked=profiles.find(function(profile){return profile.profile_key==='member:'+same[0].id;});
+    if(linked)return linked;
+  }
+  return profiles.find(function(profile){return profile.profile_key==='history:'+name;})||null;
+}
+function pkrSeatDisplayName(p){
+  var profile=pkrSeatProfile(p);
+  return profile&&profile.screen_name?profile.screen_name:p.name;
+}
 function pkrAvatar(p){
   var members=window._eventMembers||[],id=p.userId||p.user_id;
   var member=id?members.find(function(m){return m.id===id;}):null;
   if(!member&&p.name){var same=members.filter(function(m){return String(m.name||'').toLowerCase()===String(p.name).toLowerCase();});if(same.length===1)member=same[0];}
-  var url=member&&member.avatar_url;
+  var profile=pkrSeatProfile(p),emoji=profile&&profile.avatar_emoji;
+  var url=profile&&profile.avatar_data?profile.avatar_data:member&&member.avatar_url;
   if(typeof url!=='string')url='';
-  if(url&&!(url.startsWith('/')&&!url.startsWith('//'))){try{var parsed=new URL(url);if(parsed.protocol!=='https:')url='';}catch(e){url='';}}
-  return url?'<img class="pkr-seat-photo" src="'+esc(url).replace(/\"/g,'&quot;').replace(/'/g,'&#39;')+'" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.removeAttribute(String.fromCharCode(115,116,121,108,101))"><span class="pkr-avatar-fallback" style="display:none">'+esc(inits(p.name))+'</span>':
-    '<span class="pkr-avatar-fallback">'+esc(inits(p.name))+'</span>';
+  var safePhoto=/^data:image\\/(?:jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(url)&&url.length<=48000;
+  if(url&&!safePhoto&&!(url.startsWith('/')&&!url.startsWith('//'))){try{var parsed=new URL(url);if(parsed.protocol!=='https:')url='';}catch(e){url='';}}
+  var fallback=emoji||inits(pkrSeatDisplayName(p));
+  return url?'<img class="pkr-seat-photo" src="'+esc(url).replace(/"/g,'&quot;').replace(/'/g,'&#39;')+'" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.removeAttribute(String.fromCharCode(115,116,121,108,101))"><span class="pkr-avatar-fallback" style="display:none">'+esc(fallback)+'</span>':
+    '<span class="pkr-avatar-fallback">'+esc(fallback)+'</span>';
 }
 
 // ── Rebuild display-only transaction rows from authoritative integer cents ──
@@ -1889,9 +1912,9 @@ function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,mode,stackRow){
     else if(stackRow.source==='review')chipLabel='Check chips';
   }
   var chips=chipLabel?'<span class="seat-stack pkr-game-stack-readout '+(stackRow.source||'issued')+'">'+esc(chipLabel)+'</span>':'';
-  if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
+  if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
   var fullAvatar='<span class="pkr-game-full-avatar">'+avatar+(cashed?'<span class="pkr-game-status-dot cashed" aria-label="Cashed out">✓</span>':'')+'</span>';
-  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="pkr-game-compact-name" title="'+esc(p.name)+'">'+esc(p.name)+'</strong><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>':'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(p.name)+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>';
+  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="pkr-game-compact-name" title="'+esc(pkrSeatDisplayName(p))+'">'+esc(pkrSeatDisplayName(p))+'</strong><span class="seat-money pkr-game-compact-bank">'+esc(pkrSeatMoney(bankIn,false))+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>':'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>';
   return '<span class="pkr-game-seat-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span>'+main+chips+'</span>';
 }
 function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
@@ -2907,6 +2930,12 @@ if (ctx && ctx.gameId) {
       pkrApi('/events/' + game.event_id).then(function(ev) {
         if (!ev) return;
         window._eventMembers = ev.members || [];renderTable();
+        // Profile aliases/photos are display-only. Never rewrite p.name or
+        // any saved player identity or financial transaction.
+        pkrApi('/events/'+game.event_id+'/profiles').then(function(result){
+          window._eventProfiles=Array.isArray(result.profiles)?result.profiles:[];
+          renderTable();
+        }).catch(function(){window._eventProfiles=[];});
         // Determine if current user is host/cohost
         var me = ctx.userId;
         var myRole = (ev.members||[]).find(function(m){ return m.id === me; });
