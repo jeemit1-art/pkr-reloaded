@@ -26,7 +26,7 @@
   font:780 12px/1.2 var(--font-body),Inter,sans-serif;
 }
 .pkr-app.pkr-dashboard .pkr-command-top-actions .pkr-command-open{
-  border:1px solid #4fcb94;background:#20583e;color:#afffd1;
+  border:1px solid #3ddc97;background:#3ddc97;color:#092c21;
 }
 .pkr-app.pkr-dashboard .pkr-command-top-actions .pkr-command-secondary{
   background:#142c2c;color:#e3efeb;border:1px solid #365a54;
