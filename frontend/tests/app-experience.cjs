@@ -142,10 +142,38 @@ async function run(){
         assert.equal(await page.getByTestId('room-outstanding-amount').innerText(),'—',
           'Two unverified settled games must NEVER show a final $0 total');
         assert.match(await page.getByTestId('room-payment-unverified').innerText(),/2 settled games/i);
+        const missing=await page.locator('.pkr-room-outstanding-footer').evaluate(footer=>{
+          const b=footer.querySelector('.pkr-room-outstanding-open').getBoundingClientRect();
+          const f=footer.getBoundingClientRect();
+          return {w:b.width,h:b.height,footer:f.height};
+        });
+        assert(missing.w>145&&missing.h<80&&missing.footer<160,
+          'An unverified settlement warning must never make the payment link vertical: '+JSON.stringify(missing));
+        assert.match(await page.getByTestId('room-payment-unverified').innerText(),/Game settled/i,
+          'Game settlement status and payment verification must be clearly distinguished');
       }finally{simulateMissingSettledGames=false;}
       await page.reload({waitUntil:'domcontentloaded'});
       await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
     }
+    const footerGeometry=await page.locator('.pkr-command-focus .pkr-room-outstanding').evaluate(card=>{
+      const footer=card.querySelector('.pkr-room-outstanding-footer');
+      const actions=card.querySelector('.pkr-room-outstanding-controls');
+      const button=card.querySelector('.pkr-room-outstanding-open');
+      const refresh=card.querySelector('.pkr-room-outstanding-refresh');
+      if(!footer||!actions||!button||!refresh)return null;
+      const area=card.getBoundingClientRect(),f=footer.getBoundingClientRect();
+      const a=actions.getBoundingClientRect(),b=button.getBoundingClientRect();
+      const r=refresh.getBoundingClientRect(),style=getComputedStyle(button);
+      return {card:area.width,footer:f.height,controls:a.width,
+        button:b.width,buttonHeight:b.height,refresh:r.width,
+        oneCharacterColumn:b.width<110,buttonsInside:b.left>=area.left-2&&b.right<=area.right+2,
+        wrapStyle:style.wordBreak};
+    });
+    assert(footerGeometry&&footerGeometry.footer<160&&
+      !footerGeometry.oneCharacterColumn&&footerGeometry.buttonHeight<80&&
+      footerGeometry.buttonsInside&&footerGeometry.controls>=footerGeometry.card-42,
+      'Payment footer must stay compact and button legible on every viewport: '+JSON.stringify(footerGeometry));
+    assert.equal(footerGeometry.wrapStyle,'normal','Do not force per-letter breaking in the payment action');
     assert.equal(await page.locator('.pkr-command-focus .pkr-room-outstanding-row').count(),2,
       'The command centre must show actual pending transfers above the general dashboard');
     assert.equal(await page.getByTestId('pkr-dashboard-v2').count(),1);
