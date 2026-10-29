@@ -64,3 +64,74 @@
   .pkr-event .pkr-event-hero-actions{gap:8px!important}
   .pkr-event .pkr-content{padding:12px 12px 24px!important}
 }
+
+
+
+/* Room dashboard v2. Specific selectors prevent the historic multi-theme
+   hero min-heights and photo backgrounds from hiding the new financial focus. */
+.pkr-app.pkr-event.pkr-casino .pkr-event-overview.pkr-room-dashboard-v2{
+  width:min(calc(100% - 32px),1120px)!important;
+  min-height:0!important;margin:14px auto 12px!important;
+  border:1px solid #426359!important;border-radius:16px!important;
+  box-shadow:0 10px 30px #0003!important;
+  background:linear-gradient(115deg,#0d3328,#11252b 77%,#102029)!important;
+  background-image:linear-gradient(115deg,#0d3328,#11252b 77%,#102029)!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2>.pkr-event-overview-inner{
+  width:100%!important;max-width:100%!important;min-height:0!important;
+  padding:20px 25px 19px!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 h1{
+  font-size:clamp(23px,2.5vw,30px)!important;line-height:1.16!important;
+  text-shadow:none!important;margin:5px 0 5px!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-metrics{
+  margin-top:14px!important;gap:10px!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-metric{
+  min-height:65px!important;padding:11px 13px!important;
+  background:#0f302c!important;border:1px solid #315b50!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-metric strong{
+  font-size:clamp(18px,2vw,24px)!important;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-hero-actions{margin-top:12px!important}
+.pkr-app.pkr-event.pkr-casino .pkr-event-payment-priority{
+  width:min(calc(100% - 32px),1120px);max-width:1120px;
+  margin:0 auto 13px;position:relative;z-index:1;
+}
+.pkr-app.pkr-event.pkr-casino .pkr-event-payment-priority>.pkr-room-outstanding{
+  margin:0;padding:17px 21px;border:1px solid #537a62;
+  background:linear-gradient(118deg,#173d31,#10292f 68%,#10232a);
+}
+.pkr-app.pkr-event.pkr-casino .pkr-event-payment-priority .pkr-room-outstanding-total strong{
+  color:#f5c879;
+}
+@media(max-width:700px){
+  .pkr-app.pkr-event.pkr-casino .pkr-event-overview.pkr-room-dashboard-v2{
+    width:calc(100% - 24px)!important;margin:10px auto!important;
+    background-image:linear-gradient(115deg,#0c3226,#10232a)!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2>.pkr-event-overview-inner{
+    min-height:0!important;padding:14px 15px!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 h1{
+    font-size:21px!important;margin:4px 0!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;margin-top:11px!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-metric{
+    min-height:58px!important;padding:8px 10px!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-room-dashboard-v2 .pkr-event-hero-actions button{
+    min-height:43px!important;padding:9px!important;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-event-payment-priority{
+    width:calc(100% - 24px);margin:0 auto 12px;
+  }
+  .pkr-app.pkr-event.pkr-casino .pkr-event-payment-priority>.pkr-room-outstanding{
+    padding:14px 13px!important;
+  }
+}
