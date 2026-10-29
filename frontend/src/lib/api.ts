@@ -92,6 +92,10 @@ export const api = {
     list:           ()               => req<Event[]>('/events'),
     get:            (id:string)      => req<EventDetail>(`/events/${id}`),
     settlementLedger:(id:string)=>req<RoomLedgerData>(`/events/${encodeURIComponent(id)}/settlement-ledger`),
+    dashboardLayout:(id:string)=>req<RoomDashboardLayoutRecord>(`/events/${encodeURIComponent(id)}/dashboard-layout`),
+    saveDashboardLayout:(id:string,layout:RoomDashboardLayout)=>req<RoomDashboardLayoutRecord>(
+      `/events/${encodeURIComponent(id)}/dashboard-layout`,
+      {method:'PUT',body:JSON.stringify({layout})}),
     create:         (d:any)          => req<Event>('/events',{method:'POST',body:JSON.stringify(d)}),
     update:         (id:string,d:any)=> req(`/events/${id}`,{method:'PUT',body:JSON.stringify(d)}),
     end:            (id:string)      => req<{ok:boolean}>(`/events/${id}/end`,{method:'POST'}),
@@ -244,6 +248,8 @@ export interface Transfer { from:string; from_name:string; to:string; to_name:st
   id?:string; status?:'owed'|'paid'|'not_received'|'payer_claimed'|'legacy'; paid_at?:number|null; last_reminded_at?:number|null; reminder_count?:number; }
 export interface SettlementResult { settlement_id:string; game_id:string; results:any[]; transfers:Transfer[]; settled_at:number; results_token:string; cached?:boolean; }
 export interface RoomLedgerData { games:Game[]; transfers:Array<Transfer & {game_id:string;from_user?:string;to_user?:string}>; }
+export type RoomDashboardLayout='command'|'live';
+export interface RoomDashboardLayoutRecord {event_id:string;layout:RoomDashboardLayout;updated_at:number|null;}
 
 export function fmt(cents:number):string {
   const abs=Math.abs(cents), s=`$${(abs/100).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')}`;
