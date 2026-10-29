@@ -242,7 +242,7 @@ async function check(browser,width,height,count){
       assert(m.inside&&m.visible,'Seat number detached or clipped from plus: '+JSON.stringify({width,height,count,selection,m}));
       assert(m.left>=-2&&m.right<=width+2,'Empty seat card outside viewport: '+JSON.stringify({width,height,count,selection,m}));
     }
-    assert(metrics.every(m=>m.direction===(effective==='compact'?'column':'row')),
+    assert(metrics.every(m=>m.direction===(effective==='compact'?'row':'column')),
       'Auto / Full / Compact must have visibly different empty-card presentations: '+JSON.stringify({width,height,count,selection,metrics}));
     modeMetrics[selection]=metrics[0];
     if(count===9||count===13)await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-empty-'+selection+'.png')});
