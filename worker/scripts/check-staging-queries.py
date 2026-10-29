@@ -58,6 +58,9 @@ def main():
     # Optional multi-room push schema is compiled on an in-memory upgrade only.
     push_migration = ROOT / "migrations/20261026_push_rooms.sql"
     connection.executescript(push_migration.read_text(encoding="utf-8"))
+    # Validate profile queries against an IN-MEMORY upgraded schema only.
+    profile_migration = ROOT / "migrations/20261029_room_player_profiles.sql"
+    connection.executescript(profile_migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []
