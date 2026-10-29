@@ -23,14 +23,14 @@ db.execute("INSERT INTO games(id,event_id,scheduled_at,status) VALUES(?,?,?,?)",
 db.execute("INSERT INTO game_players(game_id,user_id,display_name,buy_ins,buy_in_total,cashout,net) "
            "VALUES(?,?,?,?,?,?,?)",("game","host","Test Host",2,5000,11000,6000))
 before = db.execute("SELECT buy_ins,buy_in_total,cashout,net FROM game_players WHERE game_id='game'").fetchone()
-db.execute("INSERT INTO room_player_profiles(event_id,profile_key,screen_name,avatar_emoji,phone,preferred_contact,private_notes,updated_by) "
-           "VALUES(?,?,?,?,?,?,?,?)",("r1","member:host","Ace","♠️","+61412345678","whatsapp","Private note","host"))
+db.execute("INSERT INTO room_player_profiles(event_id,profile_key,screen_name,avatar_emoji,phone_cipher,preferred_contact,private_notes,updated_by) "
+           "VALUES(?,?,?,?,?,?,?,?)",("r1","member:host","Ace","♠️","synthetic-encrypted-mobile-data","whatsapp","Private note","host"))
 db.execute("INSERT INTO room_player_profiles(event_id,profile_key,screen_name,updated_by) "
            "VALUES(?,?,?,?)",("r2","member:host","Different room alias","host"))
 db.execute("INSERT INTO room_player_profiles(event_id,profile_key,screen_name,updated_by) "
            "VALUES(?,?,?,?) ON CONFLICT(event_id,profile_key) DO UPDATE SET screen_name=excluded.screen_name",
            ("r1","member:host","Updated Ace","host"))
-assert db.execute("SELECT screen_name,phone FROM room_player_profiles WHERE event_id='r1' AND profile_key='member:host'").fetchone()==("Updated Ace","+61412345678")
+assert db.execute("SELECT screen_name,phone_cipher FROM room_player_profiles WHERE event_id='r1' AND profile_key='member:host'").fetchone()==("Updated Ace","synthetic-encrypted-mobile-data")
 assert db.execute("SELECT screen_name FROM room_player_profiles WHERE event_id='r2' AND profile_key='member:host'").fetchone()==("Different room alias",)
 assert db.execute("SELECT buy_ins,buy_in_total,cashout,net FROM game_players WHERE game_id='game'").fetchone()==before, "Profile change modified financial record"
 db.execute("DELETE FROM events WHERE id='r2'")
