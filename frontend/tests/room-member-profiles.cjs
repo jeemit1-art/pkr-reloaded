@@ -51,7 +51,17 @@ async function runEngine(engine,browserType,width,height){
   const btn=page.getByRole('button',{name:'Edit player profile for Dhronal Shah'});
   await btn.waitFor({state:'visible'});
   const roomName=page.locator('.pkr-member-roster').getByText('Pocket Rocket',{exact:true});
-  await roomName.waitFor({state:'visible'});
+  try{await roomName.waitFor({state:'visible',timeout:6000});}
+  catch(error){
+    const debug=await page.evaluate(()=>({
+      title:document.title,room:document.querySelector('.pkr-member-roster')?.textContent||'',
+      notices:[...document.querySelectorAll('.pkr-member-profile-notice')].map(x=>x.textContent),
+      preview:document.body.innerText.slice(0,1800),
+    }));
+    console.error('PROFILE RENDER DEBUG',JSON.stringify(debug),'unexpected',JSON.stringify(unexpected));
+    await page.screenshot({path:path.join(out,engine+'-'+width+'-profile-debug.png')});
+    throw error;
+  }
   assert.equal(await page.locator('.pkr-member-roster').getByText('Dhronal Shah',{exact:true}).count()>0,true);
   assert.equal((await page.locator('.pkr-member-roster').innerText()).includes('+61412345678'),false,
    'Phone must never appear in public member roster');
