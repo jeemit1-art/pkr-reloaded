@@ -527,20 +527,6 @@ function DashboardInner() {
           </section>
         )}
         <section className="pkr-pro-home pkr-dashboard-v2" aria-label="Poker room command centre" data-testid="pkr-dashboard-v2">
-          {nextGame&&<section className="pkr-mobile-featured" aria-label="Next game">
-            <span className="pkr-eyebrow">♠ NEXT GAME</span>
-            <h2>{featuredRoom?.name||'Poker night'}</h2>
-            <span className="pkr-mobile-featured-status">● {nextGame.status==='active'?'Live game':'Upcoming game'}</span>
-            <div className="pkr-mobile-featured-meta">
-              <span>▦ {fmtDate(nextGame.scheduled_at)}</span>
-              <span>⌖ {nextGame.location||'Location to confirm'}</span>
-              <span>♟ {(nextGame as any).player_count||0} players</span>
-            </div>
-            <div className="pkr-mobile-featured-actions">
-              <button type="button" onClick={()=>router.push('/games/'+nextGame.id+(nextGame.status==='active'?'/play':'/rsvp'))}>▶ {nextGame.status==='active'?'Open Live Table':'RSVP for Game'}</button>
-              <button type="button" onClick={()=>router.push('/games/'+nextGame.id)}>View Details →</button>
-            </div>
-          </section>}
           {unfinishedGames.length>0&&<div className="pkr-unfinished-note" role="status">
             <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
             <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
@@ -568,10 +554,14 @@ function DashboardInner() {
               {nextGame?<>
                 <strong>{fmtDate(nextGame.scheduled_at)}</strong>
                 <p>{nextGame.location||'Location to confirm'} · {(nextGame as any).player_count||0} players</p>
-                <button type="button" onClick={()=>router.push('/games/'+nextGame.id+
-                    (nextGame.status==='active'?'/play':''))}>
-                  {nextGame.status==='active'?'Open live table':'View game details'} →
-                </button>
+                <div className="pkr-command-next-actions">
+                  <button type="button" onClick={()=>router.push('/games/'+nextGame.id+
+                    (nextGame.status==='active'?'/play':'/rsvp'))}>
+                    {nextGame.status==='active'?'Open live table':'RSVP for game'} →
+                  </button>
+                  <button type="button" className="pkr-command-next-secondary"
+                    onClick={()=>router.push('/games/'+nextGame.id)}>View details</button>
+                </div>
               </>:<>
                 <p>Ready for the next session? Open the room to set a date.</p>
                 <button type="button" onClick={()=>router.push('/events/'+featuredRoom.id)}>Plan next game →</button>
