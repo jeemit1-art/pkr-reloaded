@@ -36,4 +36,24 @@ assert db.execute("SELECT buy_ins,buy_in_total,cashout,net FROM game_players WHE
 db.execute("DELETE FROM events WHERE id='r2'")
 assert db.execute("SELECT COUNT(*) FROM room_player_profiles WHERE event_id='r2'").fetchone()[0]==0, "Room profile not removed on room deletion"
 assert db.execute("SELECT COUNT(*) FROM room_player_profiles WHERE event_id='r1'").fetchone()[0]==1, "Profile leaked between rooms"
+# Exercise the SAME migration rehearsal and schema guard used by production CI.
+import importlib.util
+spec = importlib.util.spec_from_file_location("pkr_release", root / "scripts/deploy-settlement-v2-production.py")
+release = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(release)
+assert release.rehearse_profile_migration(db) is True
+original_query = release.remote_query
+try:
+    release.remote_query = lambda sql: []
+    assert release.profile_schema_state() is False
+    release.remote_query = lambda sql: [{"name": "profile_key"}]
+    try:
+        release.profile_schema_state()
+        raise AssertionError("Partial production schema was not rejected")
+    except release.Stop:
+        pass
+    release.remote_query = lambda sql: [{"name": name} for name in sorted(release.PROFILE_COLUMNS)]
+    assert release.profile_schema_state() is True
+finally:
+    release.remote_query = original_query
 print("PASS: additive profiles migration, idempotence, room isolation and unchanged financial ledger (in-memory)")
