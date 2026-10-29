@@ -1,0 +1,66 @@
+/* Dashboard decluttering: preserve all game and finance functions,
+   reduce decorative spacing and put actionable information first. */
+.pkr-event .pkr-event-overview{
+  min-height:0!important;
+  margin:13px auto 10px!important;
+  background:linear-gradient(115deg,#102c25,#11272f 85%)!important;
+  border:1px solid #34584f!important;
+  border-radius:15px!important;
+  box-shadow:none!important;
+}
+.pkr-event .pkr-event-overview-inner{
+  width:100%!important;max-width:100%!important;min-height:0!important;
+  padding:19px 22px 17px!important;
+}
+.pkr-event .pkr-event-overview-inner h1{
+  font-size:clamp(21px,3vw,29px)!important;line-height:1.16;
+  font-family:var(--font-head),var(--font-body),Inter,sans-serif;
+  margin:6px 0 5px!important;
+}
+.pkr-event .pkr-event-overview-inner>p{
+  color:#b3c8c9!important;font-size:12px!important;line-height:1.4;
+}
+.pkr-event .pkr-event-metrics{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:9px!important;margin-top:15px!important;
+}
+.pkr-event .pkr-event-metric{
+  padding:10px 12px!important;border-radius:10px!important;min-width:0;
+}
+.pkr-event .pkr-event-metric strong{
+  font-size:clamp(17px,2.2vw,22px)!important;line-height:1.13;
+}
+.pkr-event .pkr-event-metric small{font-size:10px!important;letter-spacing:0!important}
+.pkr-event .pkr-event-hero-actions{margin-top:12px!important}
+.pkr-event .pkr-event-hero-actions button{min-height:40px!important}
+.pkr-event .pkr-event-tabs{margin-top:8px!important}
+.pkr-event .pkr-content{padding-top:15px!important}
+.pkr-event .pkr-games-heading{margin-top:8px!important}
+.pkr-dashboard .pkr-pro-bottom>.pkr-room-outstanding{
+  height:100%;margin:0;
+}
+.pkr-dashboard .pkr-pro-bottom>.pkr-room-outstanding .pkr-room-outstanding-heading{
+  flex-wrap:wrap;
+}
+.pkr-dashboard .pkr-pro-bottom>.pkr-room-outstanding .pkr-room-outstanding-total{
+  align-items:flex-start;text-align:left;
+}
+@media(max-width:700px){
+  .pkr-event .pkr-event-overview{
+    min-height:0!important;width:calc(100% - 24px)!important;
+    margin:10px auto 8px!important;
+  }
+  .pkr-event .pkr-event-overview-inner{
+    min-height:0!important;padding:16px!important;
+  }
+  .pkr-event .pkr-event-overview-inner h1{font-size:23px!important}
+  .pkr-event .pkr-event-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;
+    margin-top:11px!important;
+  }
+  .pkr-event .pkr-event-metric{
+    padding:9px 11px!important;
+  }
+  .pkr-event .pkr-event-hero-actions{gap:8px!important}
+  .pkr-event .pkr-content{padding:12px 12px 24px!important}
+}

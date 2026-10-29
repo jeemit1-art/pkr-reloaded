@@ -15,6 +15,7 @@ import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, 
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
+import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import {playPkrSound} from '@/lib/sounds';
 import {isCurrentGame,isUnfinishedGame,isLiveGame} from '@/lib/game-status';
 
@@ -585,12 +586,7 @@ function DashboardInner() {
               <button onClick={()=>router.push('/schedule')}><span>▦</span><strong>Schedule</strong><small>Next game night</small></button>
               <button onClick={startScan}><span>⊞</span><strong>Scan Invite</strong><small>Join a group</small></button>
             </div></section>
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>ϟ Recent Activity</h2><button onClick={()=>router.push('/schedule')}>All games →</button></div>
-              {recentResults.length||upcomingGames.length?<div className="pkr-pro-activity-list">
-                {upcomingGames.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>▦</span><span><strong>Game {isLiveGame(g)?'in progress':'scheduled'}</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
-                {recentResults.slice(0,2).map(g=><button key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>♛</span><span><strong>Game settled</strong><small>{fmtDate(g.scheduled_at)}</small></span></button>)}
-              </div>:<p className="pkr-pro-empty">Game activity will appear here as your club plays.</p>}
-            </section>
+            {featuredRoom&&<RoomOutstandingCard roomId={featuredRoom.id}/>}
           </div>
         </section>
 

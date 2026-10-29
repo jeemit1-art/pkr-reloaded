@@ -1,0 +1,30 @@
+/* Outstanding payments entry point: selected room and saved status are visible. */
+.pkr-insights-refresh .pkr-settlement-record-filters{
+ display:flex;flex-wrap:wrap;gap:7px;margin:13px 0 10px;
+}
+.pkr-insights-refresh .pkr-settlement-record-filters button{
+ display:inline-flex;align-items:center;gap:8px;justify-content:center;
+ min-height:40px;padding:9px 13px;cursor:pointer;
+ font:740 12px/1.2 var(--font-body),Inter,sans-serif;
+ color:#c5d7da;background:#142a2b;border:1px solid #35514f;
+ border-radius:10px;
+}
+.pkr-insights-refresh .pkr-settlement-record-filters button.active{
+ color:#57e5a9;background:#123f33;border-color:#44bd8e;
+}
+.pkr-insights-refresh .pkr-settlement-record-filters button:focus-visible{
+ outline:3px solid #e7ba77;outline-offset:2px;
+}
+.pkr-insights-refresh .pkr-settlement-record-filters button span{
+ border-radius:20px;background:rgba(0,0,0,.22);color:#ebf2ee;
+ min-width:23px;padding:2px 6px;font-size:11px;font-variant-numeric:tabular-nums;
+}
+#pkr-settlement{scroll-margin-top:96px}
+@media(max-width:450px){
+ .pkr-insights-refresh .pkr-settlement-record-filters{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+ }
+ .pkr-insights-refresh .pkr-settlement-record-filters button{
+  min-width:0;min-height:43px;flex-wrap:wrap;gap:3px;padding:8px 4px;font-size:11px;
+ }
+}

@@ -5,6 +5,8 @@ import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
 import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
+import {loadRoomTransfers} from '@/lib/room-payment-schedule';
+import './settlement-filter.css';
 
 type SettlementRow={game:Game;transfer:Transfer};
 type SettlementView='transfers'|'balances'|'status';
@@ -26,12 +28,18 @@ export default function InsightsPage(){
  const [paymentNotice,setPaymentNotice]=useState('');
  const [transferPage,setTransferPage]=useState(0);
  const [period,setPeriod]=useState<'all'|'90d'>('all');
+ const [paymentFilter,setPaymentFilter]=useState<'all'|'outstanding'|'paid'>('all');
 
  useEffect(()=>{
   let live=true;
   api.events.list().then(r=>{if(!live)return;setRooms(r);
     let last='';try{last=localStorage.getItem('pkr_preferred_room')||''}catch{}
-    setSelected(r.find(x=>x.id===last)?.id||r.find(x=>x.status!=='ended')?.id||r[0]?.id||'');
+    const params=new URLSearchParams(window.location.search);
+    const requestedRoom=params.get('room')||'';
+    const requestedPayments=params.get('payments')||'all';
+    setPaymentFilter(requestedPayments==='outstanding'||requestedPayments==='paid'?requestedPayments:'all');
+    setSelected(r.find(x=>x.id===requestedRoom)?.id||
+      r.find(x=>x.id===last)?.id||r.find(x=>x.status!=='ended')?.id||r[0]?.id||'');
   })
    .catch(e=>{if(live)setError(e.message||'Could not load rooms')})
    .finally(()=>{if(live)setLoadingRooms(false)});
@@ -46,25 +54,12 @@ export default function InsightsPage(){
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
    setGames(g);setLeaders(l);
-   const settled=g.filter(x=>x.status==='settled'&&x.results_token).sort((a,b)=>b.scheduled_at-a.scheduled_at);
-   // Read every settled game, in small batches to protect the Worker and D1.
-   // Never mutate settlement records when preparing insights.
-   const rows:SettlementRow[]=[];
-   let partial=false;
-   for(let offset=0;offset<settled.length;offset+=6){
-     const results=await Promise.allSettled(settled.slice(offset,offset+6).map(
-       async game=>({game,results:await api.games.results(game.results_token!)})));
-     if(!live)return;
-     for(const item of results){
-       if(item.status==='rejected'){partial=true;continue;}
-       for(const transfer of item.value.results.transfers||[]){
-         rows.push({game:item.value.game,transfer});
-       }
-     }
-   }
+   // Same recorded transfers as the event dashboard; historic games without
+   // a public results link are read through their saved authenticated record.
+   const ledger=await loadRoomTransfers(selected,g);
    if(!live)return;
-   setTransfers(rows);
-   setTransfersPartial(partial);
+   setTransfers(ledger.records);
+   setTransfersPartial(ledger.unavailable.length>0);
   }).catch(e=>{if(live)setError(e.message||'Could not load room insights')})
    .finally(()=>{if(live)setLoadingDetails(false)});
   return()=>{live=false};
@@ -84,10 +79,12 @@ export default function InsightsPage(){
  // Unreviewed statuses are still blocked from financial edits by the API.
  const outstanding=filteredTransfers.filter(t=>t.transfer.status!=='paid'&&t.transfer.status!=='legacy');
  const paid=filteredTransfers.filter(t=>t.transfer.status==='paid');
+ const visibleTransfers=paymentFilter==='outstanding'
+   ?outstanding:paymentFilter==='paid'?paid:filteredTransfers;
  const perPage=20;
- const pageCount=Math.max(1,Math.ceil(filteredTransfers.length/perPage));
+ const pageCount=Math.max(1,Math.ceil(visibleTransfers.length/perPage));
  const page=Math.min(transferPage,pageCount-1);
- const pageTransfers=filteredTransfers.slice(page*perPage,(page+1)*perPage);
+ const pageTransfers=visibleTransfers.slice(page*perPage,(page+1)*perPage);
  const totalPending=outstanding.reduce((sum,row)=>sum+row.transfer.amount,0);
  const peopleOwing=new Set(outstanding.map(t=>t.transfer.from)).size;
  const peopleReceiving=new Set(outstanding.map(t=>t.transfer.to)).size;
@@ -152,12 +149,12 @@ export default function InsightsPage(){
  const maxMonth=Math.max(1,...months.map(x=>x.count));
  const roomUrl=(tab:string)=>'/events/'+encodeURIComponent(selected)+'?tab='+tab;
  useEffect(()=>{
-   if(loadingRooms||!rooms.length)return;
+   if(loadingRooms||loadingDetails||!rooms.length)return;
    if(window.location.hash==='#pkr-settlement'){
-     const id=window.setTimeout(()=>document.getElementById('pkr-settlement')?.scrollIntoView({block:'start'}),80);
-     return()=>window.clearTimeout(id);
+     const timeout=window.setTimeout(()=>document.getElementById('pkr-settlement')?.scrollIntoView({block:'start'}),100);
+     return()=>window.clearTimeout(timeout);
    }
- },[loadingRooms,rooms.length]);
+ },[loadingRooms,loadingDetails,rooms.length,selected]);
  async function setPaymentStatus(row:SettlementRow,status:'owed'|'paid'|'not_received'){
    if(!canManagePayments||!row.transfer.id||row.game.status!=='settled'||row.transfer.status==='legacy')return;
    const current=row.transfer.status==='paid'?'paid':row.transfer.status==='not_received'?'not_received':'owed';
@@ -188,7 +185,11 @@ export default function InsightsPage(){
     <p>Track your room's results, review balances and settle up after game night.</p>
    </div>
    <div className="pkr-insights-selector"><label htmlFor="pkr-insights-room">Poker room</label>
-    <select id="pkr-insights-room" value={selected} onChange={e=>setSelected(e.target.value)} disabled={loadingRooms||!rooms.length}>
+    <select id="pkr-insights-room" value={selected} onChange={e=>{
+      const next=e.target.value;setSelected(next);
+      const url=new URL(window.location.href);url.searchParams.set('room',next);
+      window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+    }} disabled={loadingRooms||!rooms.length}>
      {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
     </select>
    </div>
@@ -233,6 +234,22 @@ export default function InsightsPage(){
           <option value="all">All time</option><option value="90d">Last 90 days</option>
         </select></label>
       </div>
+     <div className="pkr-settlement-record-filters" role="group" aria-label="Filter settlement payment schedule">
+       {([
+         ['outstanding','Outstanding',outstanding.length],
+         ['all','All payments',filteredTransfers.length],
+         ['paid','Paid',paid.length],
+       ] as const).map(([value,label,count])=>(
+         <button type="button" key={value}
+           aria-pressed={paymentFilter===value}
+           className={paymentFilter===value?'active':''}
+           onClick={()=>{
+             setPaymentFilter(value);setTransferPage(0);setSelectedTransfers([]);
+             const url=new URL(window.location.href);url.searchParams.set('payments',value);
+             window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+           }}>{label} <span>{count}</span></button>
+       ))}
+     </div>
      <div className="pkr-insights-settle-tabs" role="tablist" aria-label="Settlement views">
       {([['transfers','Who Pays Who'],['balances','Player Balances'],['status','Payment Status']] as const).map(([key,label])=>
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
@@ -241,7 +258,7 @@ export default function InsightsPage(){
      {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
-     {settlementView==='transfers'&&canManagePayments&&filteredTransfers.length>0&&
+     {settlementView==='transfers'&&canManagePayments&&visibleTransfers.length>0&&
        <div className="pkr-insights-bulk-actions" style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',margin:'12px 0'}}>
          <span style={{fontSize:12}}>{selectedTransfers.length} selected</span>
          <button type="button" className="btn btn-primary" disabled={paymentBusy!==null||!selectedTransfers.length}
@@ -252,7 +269,7 @@ export default function InsightsPage(){
            onClick={()=>setSelectedTransfers([])}>Clear selection</button>
        </div>}
      {settlementView==='transfers'&&
-      (filteredTransfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr>
+      (visibleTransfers.length?<div className="pkr-vnext-table-scroll"><table className="pkr-vnext-data-table"><thead><tr>
        {canManagePayments&&<th><input type="checkbox" aria-label="Select all visible settlement transfers"
           disabled={paymentBusy!==null||!selectable.length} checked={!!selectable.length&&selectedHere.length===selectable.length}
           onChange={e=>{
@@ -288,10 +305,12 @@ export default function InsightsPage(){
       </tbody></table>
        {pageCount>1&&<div className="pkr-insights-pagination">
          <button type="button" disabled={page===0} onClick={()=>setTransferPage(n=>Math.max(0,n-1))}>Previous</button>
-         <span>Page {page+1} of {pageCount} · {filteredTransfers.length} transfers</span>
+         <span>Page {page+1} of {pageCount} · {visibleTransfers.length} transfers</span>
          <button type="button" disabled={page===pageCount-1} onClick={()=>setTransferPage(n=>Math.min(pageCount-1,n+1))}>Next</button>
        </div>}
-       </div>:<p className="pkr-vnext-empty">No transfers recorded for this period.</p>)}
+       </div>:<p className="pkr-vnext-empty">{paymentFilter==='outstanding'
+         ?'No outstanding payments recorded for this room.':paymentFilter==='paid'
+           ?'No paid transfers recorded for this period.':'No transfers recorded for this period.'}</p>)}
      {settlementView==='balances'&&
       (balances.length?<div className="pkr-insights-balance-list">{balances.map(p=><RecordMetric className="pkr-insights-balance-row" key={p.id} bare request={{kind:'transfers',title:p.name+' - outstanding transfers',roomId:selected,filter:'outstanding',playerId:p.id,period}}>
        <span className="pkr-insights-avatar">{p.name.slice(0,1).toUpperCase()}</span><strong>{p.name}</strong><small>{p.net<0?'To pay':'To receive'}</small>
