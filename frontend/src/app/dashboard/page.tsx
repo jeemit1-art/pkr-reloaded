@@ -542,76 +542,12 @@ function DashboardInner() {
           onMembers={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}
           onHistory={()=>router.push('/events/'+featuredRoom.id+'?tab=history')}
         />}
-        {!featuredRoom&&<section className="pkr-pro-home pkr-dashboard-v2" aria-label="Poker room command centre" data-testid="pkr-dashboard-v2">
-          {unfinishedGames.length>0&&<div className="pkr-unfinished-note pkr-command-unfinished" role="status">
-            <strong>{unfinishedGames.length} unfinished or past-due session{unfinishedGames.length===1?'':'s'} in {featuredRoom?.name}</strong>
-            <p>These older games are preserved, not live. Open your poker room's Games tab to review them.</p>
-            <button type="button" onClick={()=>featuredRoom&&router.push('/events/'+featuredRoom.id+'?tab=games')}
-              style={{marginTop:8,padding:'8px 12px',color:'#f8db9e',border:'1px solid #b9965f',borderRadius:8,background:'#153324'}}>Review unfinished games</button>
-          </div>}
-          <header className="pkr-command-header">
-            <div>
-              <span className="pkr-eyebrow">PKR · COMMAND CENTRE</span>
-              <h2>{featuredRoom?.name||'Your poker rooms'}</h2>
-              <p>Everything important for game night, with payments up front.</p>
-            </div>
-            <div className="pkr-command-top-actions">
-              <button type="button" className="pkr-command-open" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>
-                {featuredRoom?'Open room':'Create room'} <span aria-hidden="true">→</span>
-              </button>
-              <button type="button" className="pkr-command-secondary" onClick={()=>router.push('/schedule')}>Schedule</button>
-            </div>
-          </header>
-          {featuredRoom&&<div className="pkr-command-focus" data-testid="dashboard-payment-focus">
-            <RoomOutstandingCard roomId={featuredRoom.id}/>
-            <section className="pkr-command-nextgame" aria-label="Next game">
-              <span className="pkr-eyebrow">{nextGame?.status==='active'?'LIVE TABLE':'UP NEXT'}</span>
-              <h3>{nextGame?(nextGame.status==='active'?'Game in progress':'Next poker night'):'No game scheduled'}</h3>
-              {nextGame?<>
-                <strong>{fmtDate(nextGame.scheduled_at)}</strong>
-                <p>{nextGame.location||'Location to confirm'} · {(nextGame as any).player_count||0} players</p>
-                <div className="pkr-command-next-actions">
-                  <button type="button" onClick={()=>router.push('/games/'+nextGame.id+
-                    (nextGame.status==='active'?'/play':'/rsvp'))}>
-                    {nextGame.status==='active'?'Open live table':'RSVP for game'} →
-                  </button>
-                  <button type="button" className="pkr-command-next-secondary"
-                    onClick={()=>router.push('/games/'+nextGame.id)}>View details</button>
-                </div>
-              </>:<>
-                <p>Ready for the next session? Open the room to set a date.</p>
-                <button type="button" onClick={()=>router.push('/events/'+featuredRoom.id)}>Plan next game →</button>
-              </>}
-            </section>
-          </div>}
-          <section className="pkr-pro-stats pkr-command-stat-strip" aria-label="Room statistics">
-            <div><RecordMetric request={{kind:'games',title:"Games recorded",roomId:featuredRoom?.id}}><span>♧</span><strong>{featuredRoom?.game_count||0}</strong><small>Games recorded</small></RecordMetric></div>
-            <div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><span>♟</span><strong>{featuredRoom?.member_count||0}</strong><small>Room members</small></RecordMetric></div>
-            <div><RecordMetric request={{kind:'games',title:"Games across rooms"}}><span>♛</span><strong>{totalGames}</strong><small>Games across rooms</small></RecordMetric></div>
-            <div><RecordMetric request={nextGame?{kind:'game',title:"Next game",gameId:nextGame.id}:{kind:'games',title:"Upcoming games",roomId:featuredRoom?.id,filter:'upcoming'}}><span>▦</span><strong className="pkr-pro-next-date">{nextGame?new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</strong><small>Next game</small></RecordMetric></div>
-          </section>
-          <div className="pkr-pro-panels">
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>▦ Upcoming Games</h2><button onClick={()=>router.push('/schedule')}>View all →</button></div>
-              {nextGame?<div className="pkr-pro-feature-game"><div className="pkr-pro-date"><strong>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{day:'2-digit'})}</strong><small>{new Date(nextGame.scheduled_at*1000).toLocaleDateString('en-AU',{month:'short'})}</small></div><div><strong>{featuredRoom?.name}</strong><p>{fmtDate(nextGame.scheduled_at)} · {nextGame.location||'Location to confirm'}</p><span className="pkr-pro-live">● {nextGame.status==='active'?'In progress':'Upcoming'}</span></div></div>:<p className="pkr-pro-empty">No upcoming games. Open your room to schedule poker night.</p>}
-              <div className="pkr-pro-panel-ctas"><button className="pkr-pro-wide-button" onClick={()=>nextGame?router.push('/games/'+nextGame.id):featuredRoom?router.push('/events/'+featuredRoom.id):openCreate()}>{nextGame?'View Game →':'Open Room →'}</button>{nextGame&&<button className="pkr-pro-wide-button" onClick={()=>router.push('/games/'+nextGame.id+'/rsvp')}>Manage RSVP</button>}</div>
-            </section>
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♟ Members</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>View all →</button></div>
-              <div className="pkr-pro-member-stats"><div><RecordMetric request={{kind:'members',title:"Room members",roomId:featuredRoom?.id}}><strong>{featuredRoom?.member_count||0}</strong><small>Total members</small></RecordMetric></div><div><RecordMetric request={{kind:'rooms',title:"Active rooms"}}><strong>{activeRooms.length}</strong><small>Active rooms</small></RecordMetric></div></div>
-              <div className="pkr-pro-member-list">{featuredMembers.slice(0,4).map(m=><div key={m.id} className="pkr-pro-member"><span className="pkr-pro-member-avatar" aria-hidden="true">{m.name?.trim().charAt(0)?.toUpperCase()||'♠'}{m.avatar_url&&<img key={m.avatar_url} src={m.avatar_url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e=>{e.currentTarget.style.display='none';}}/>}</span><strong>{m.name}</strong><small>{m.role}</small></div>)}{!featuredMembers.length&&<p className="pkr-pro-empty">Members appear after joining a room.</p>}</div>
-              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>Manage Members →</button>
-            </section>
-            <section className="pkr-pro-panel"><div className="pkr-pro-panel-head"><h2>♛ Recent Results</h2><button onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=history'):openCreate()}>View all →</button></div>
-              {recentResults.length?recentResults.map(g=><button className="pkr-pro-result-row" key={g.id} onClick={()=>router.push('/games/'+g.id)}><span>♛</span><span><strong>{fmtDate(g.scheduled_at)}</strong><small>{(g as any).player_count||0} players · Settled</small></span><span>→</span></button>):<p className="pkr-pro-empty">No settled games yet. Results appear here after settlement.</p>}
-              <button className="pkr-pro-wide-button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=history'):openCreate()}>Review Results →</button>
-            </section>
-          </div>
-          <nav className="pkr-command-shortcuts" aria-label="Room shortcuts">
-            <button type="button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=members'):openCreate()}>♟ Members & invitations</button>
-            <button type="button" onClick={()=>featuredRoom?router.push('/events/'+featuredRoom.id+'?tab=history'):openCreate()}>♛ Game history</button>
-            <button type="button" onClick={()=>router.push('/schedule')}>▦ Schedule</button>
-            <button type="button" onClick={startScan}>⊞ Scan invitation</button>
-          </nav>
-
+        {!featuredRoom&&<section className="pkr-dual-no-room" aria-label="Create your poker room">
+          <span className="pkr-eyebrow">WELCOME TO PKR</span>
+          <h2>Your poker nights start here.</h2>
+          <p>Create or join a private room to see your games, players and preferred dashboard.</p>
+          <div><button type="button" className="btn btn-primary" onClick={openCreate}>+ Create a poker room</button>
+            <button type="button" className="btn btn-ghost" onClick={startScan}>Scan an invitation</button></div>
         </section>}
 
         <section className="pkr-list-head" id="pkr-rooms" aria-label="Your poker rooms">
