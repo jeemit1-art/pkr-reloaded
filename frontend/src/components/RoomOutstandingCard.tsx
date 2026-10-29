@@ -54,7 +54,7 @@ export default function RoomOutstandingCard({roomId}:Props){
             <div className="pkr-room-outstanding-review-games">
               {snapshot.unavailable.slice(0,4).map(game=><button type="button" key={game.id}
                 onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>
-                  Review {fmtDate(game.scheduled_at)} →
+                  Game settled · {fmtDate(game.scheduled_at)} · Review payments →
                 </button>)}
               {snapshot.unavailable.length>4&&<span>+{snapshot.unavailable.length-4} more</span>}
             </div>
@@ -86,7 +86,6 @@ export default function RoomOutstandingCard({roomId}:Props){
             :'No outstanding payment transfers recorded for this room.'}</p>}
       </>}
       <footer className="pkr-room-outstanding-footer">
-        <span>Payment records only · PKR does not transfer money.</span>
         <div className="pkr-room-outstanding-controls">
           <button type="button" className="pkr-room-outstanding-refresh" aria-label="Refresh outstanding payments"
             title="Refresh outstanding payments" disabled={loading}
@@ -95,6 +94,7 @@ export default function RoomOutstandingCard({roomId}:Props){
             View full payment schedule <span aria-hidden="true">→</span>
           </button>
         </div>
+        <span>Payment records only · PKR does not transfer money.</span>
       </footer>
     </section>
   );
