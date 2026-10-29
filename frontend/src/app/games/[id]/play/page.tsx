@@ -2098,6 +2098,166 @@ function refreshPanelSummary(sid) {
   if(stack){var row=seatChipRows()[sid];stack.textContent=row&&Number.isSafeInteger(row.chips)?row.chips.toLocaleString('en-AU'):'—';}
 }
 
+
+function pkrAssembleQuickPlayerView(sid,body,p){
+  var original=Array.from(body.children),sections={};
+  var sectionName='';
+  original.forEach(function(el){
+    if(el.classList.contains('p-sum'))return;
+    if(el.classList.contains('psec'))sectionName=el.textContent.trim().toLowerCase();
+    else if(sectionName){(sections[sectionName]||(sections[sectionName]=[])).push(el);}
+  });
+  var summary=body.querySelector('.p-sum'),bi=pBuyin(p),co=pCash(p);
+  var cashed=(p.transactions||[]).some(function(tx){return tx.type==='cashout';});
+  var stack=seatChipRows()[sid],bank=getBankSize(),bankCount=bank>0?bi/bank:null;
+  function node(tag,cls,label){var el=document.createElement(tag);if(cls)el.className=cls;if(label!==undefined)el.textContent=label;return el;}
+  function button(label,fn,cls){var el=node('button',cls||'pkr-quick-link',label);el.type='button';el.addEventListener('click',fn);return el;}
+  function go(view){_pkrPlayerPanelView=view;buildPanel(sid);body.scrollTop=0;}
+  function viewSection(name){
+    var container=node('div','pkr-quick-section');
+    (sections[name]||[]).forEach(function(el){container.appendChild(el);});
+    return container;
+  }
+  var root=node('div','pkr-quick-view');
+  if(_pkrPlayerPanelView!=='overview'){
+    root.appendChild(button('‹ Back to player',function(){go('overview');}, 'pkr-quick-back'));
+  }
+  if(_pkrPlayerPanelView==='overview'){
+    if(summary){summary.classList.add('pkr-quick-hero');root.appendChild(summary);}
+    var metrics=node('div','pkr-quick-metrics');
+    function metric(label,value,hint,cls){
+      var c=node('div','pkr-quick-metric '+(cls||''));
+      c.append(node('small','',label),node('strong','',value),node('span','',hint));
+      metrics.appendChild(c);
+    }
+    metric('Banks',bankCount===null?'—':(Math.round(bankCount*10)/10)+'b',fmt(bi)+' invested');
+    metric('Buy-in',fmt(bi),(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';}).length+' transactions','money-in');
+    metric('Chip stack',stack&&Number.isSafeInteger(stack.chips)?stack.chips.toLocaleString('en-AU'):'—',
+      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified');
+    metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
+      cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
+    root.appendChild(metrics);
+    var actions=node('div','pkr-quick-actions');
+    var buy=button('＋ Add Buy-in',function(){go('buyin');},'pkr-quick-primary buyin');
+    var cash=button('▣ Cash Out',function(){go('cashout');},'pkr-quick-primary');
+    buy.disabled=cash.disabled=!pkrPanelCanManage()||cashed;
+    actions.append(buy,cash);root.appendChild(actions);
+    if(!pkrPanelCanManage())root.appendChild(node('p','pkr-quick-hint',
+      pkrPanelLocked()?'This game is finalised. Financial actions are read-only.':'Only the host or co-host can update transactions.'));
+    var heading=node('div','pkr-quick-heading');
+    heading.appendChild(node('strong','','Recent activity'));
+    heading.appendChild(button('View all',function(){go('transactions');},''));
+    root.appendChild(heading);
+    var latest=(p.transactions||[]).slice(-2).reverse();
+    if(!latest.length)root.appendChild(node('div','pkr-quick-empty','No activity recorded yet.'));
+    latest.forEach(function(tx){
+      var item=node('div','pkr-quick-activity');
+      var cashout=tx.type==='cashout';
+      item.append(node('span','pkr-activity-icon '+(cashout?'':'buyin'),cashout?'↗':'↙'));
+      var copy=node('div','pkr-activity-copy');
+      copy.append(node('b','',cashout?'Cash out':'Buy-in'),
+        node('small','',new Date(tx.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
+      item.append(copy,node('span','pkr-activity-value '+(cashout?'cashout':'buyin'),
+        (cashout?'+':'−')+fmt(tx.amount)));
+      root.appendChild(item);
+    });
+    [['☷','Transactions',(p.transactions||[]).length,'transactions'],
+      ['⚙','Player settings',null,'settings'],
+      ['•••','More actions',null,'more']].forEach(function(item){
+      var row=button('',function(){go(item[3]);},'pkr-quick-link');
+      row.append(node('span','pkr-link-icon',item[0]),node('span','pkr-link-label',item[1]));
+      if(item[2]!==null)row.appendChild(node('span','pkr-link-count',String(item[2])));
+      row.appendChild(node('span','pkr-link-arrow','›'));root.appendChild(row);
+    });
+  }else if(_pkrPlayerPanelView==='buyin'||_pkrPlayerPanelView==='cashout'){
+    var isCash=_pkrPlayerPanelView==='cashout',type=isCash?'cashout':'buyin';
+    root.appendChild(node('h3','pkr-quick-page-heading',isCash?'Cash out player':'Add buy-in'));
+    root.appendChild(node('p','pkr-quick-explainer',
+      isCash?'Record the full dollar amount returned to this player. A completed cash-out records their final result.':
+      'Record an additional bank issued to this player. The default amount may be changed before confirming.'));
+    var form=node('form','pkr-quick-form'),label=node('label','','Amount (AUD)');
+    var input=node('input','');input.type='text';input.inputMode='decimal';input.required=true;
+    input.autocomplete='off';input.setAttribute('aria-label','Transaction amount in dollars');
+    if(!isCash)input.value=(state.game&&state.game.defaultBuyin||25).toFixed(2);
+    label.appendChild(input);form.appendChild(label);
+    if(!isCash){
+      var presets=node('div','pkr-quick-preset-grid'),defaultAmount=Number(state.game&&state.game.defaultBuyin)||25;
+      [defaultAmount,defaultAmount*2,defaultAmount*3].forEach(function(amount){
+        var preset=button(fmt(amount),function(){input.value=amount.toFixed(2);Array.from(presets.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===preset));});},'pkr-quick-preset');
+        preset.setAttribute('aria-pressed',String(amount===defaultAmount));presets.appendChild(preset);
+      });form.appendChild(presets);
+    }
+    var review=node('div','pkr-quick-review');
+    function item(label,value,cls){var line=node('div','row');line.append(node('span','',label),node('strong',cls||'',value));review.appendChild(line);}
+    item('Total invested',fmt(bi));item('Already paid out',fmt(co));
+    if(isCash)item('Final result','Calculated on confirmation');
+    form.appendChild(review);
+    var submit=node('button','pkr-quick-primary '+(isCash?'':'buyin'),
+      isCash?'Review cash-out':'Review buy-in');submit.type='submit';
+    submit.disabled=!pkrPanelCanManage()||cashed;form.appendChild(submit);
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      if(!pkrPanelCanManage()||cashed){toast('Financial actions are not available.');return;}
+      var raw=input.value.trim();
+      if(!/^\d+(?:\.\d{1,2})?$/.test(raw)){toast('Enter dollars and up to two decimal places.');return;}
+      var cents=Math.round(Number(raw)*100);
+      if(!Number.isSafeInteger(cents)||cents<0||(!isCash&&cents===0)){
+        toast('Enter a valid '+(isCash?'cash-out':'buy-in')+' amount.');return;
+      }
+      var value=cents/100,profit=value+co-bi;
+      var message=isCash
+        ?'Cash out '+p.name+' for '+fmt(value)+'. Final result: '+fmtNet(profit)+'.'
+        :'Add '+fmt(value)+' to '+p.name+'’s buy-ins. New invested total: '+fmt(bi+value)+'.';
+      showConfirmModal('Confirm '+(isCash?'cash-out':'buy-in'),message,
+        isCash?'Confirm cash-out':'Confirm buy-in',function(){
+          if(!pkrPanelCanManage()||state.players[sid]!==p||
+            (p.transactions||[]).some(function(tx){return tx.type==='cashout';})){
+            toast('Player data changed. Review before trying again.');return;
+          }
+          addTxFromInput(sid,type,input);
+          _pkrPlayerPanelView='overview';buildPanel(sid);
+        },false);
+    });
+    root.appendChild(form);
+  }else if(_pkrPlayerPanelView==='transactions'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Transactions'));
+    root.appendChild(node('p','pkr-quick-explainer',
+      'Changes require host approval. Reconstructed rows can contain estimates and are not an immutable audit history.'));
+    var section=viewSection('transactions');root.appendChild(section);
+    var notes=p.pkrLocalChangeNotes||[];
+    if(notes.length){
+      var audit=node('div','pkr-quick-audit');
+      audit.textContent='This device’s recent adjustment notes (not a permanent server audit):';
+      notes.slice(0,6).forEach(function(note){audit.appendChild(node('p','',
+        new Date(note.ts).toLocaleString()+' · '+note.action+' · '+(note.before===null?'':fmt(note.before))+
+        (note.after===null?' removed':' → '+fmt(note.after))));});
+      root.appendChild(audit);
+    }
+  }else if(_pkrPlayerPanelView==='settings'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Player settings'));
+    var profileBtn=button('⚙ Edit avatar, screen name and profile',function(){
+      var ctx=getPkrCtx();if(!ctx||!ctx.eventId)return;
+      window.dispatchEvent(new CustomEvent('pkr:edit-player-profile',{detail:{
+        name:p.name,profileKey:pkrPlayerProfileKey(p),userId:p.userId||p.user_id||p.linkedUserId||''
+      }}));
+    },'pkr-quick-link');
+    root.append(profileBtn,node('p','pkr-player-profile-note',
+      'Room profile edits change display details only; they do not change historic games, financial records or original player identities.'));
+    var link=node('h4','pkr-quick-page-heading','Linked account');root.appendChild(link);
+    root.appendChild(viewSection('linked account'));
+    if(!pkrPanelCanManage())root.appendChild(node('p','pkr-quick-hint','Only hosts can change linked accounts.'));
+  }else if(_pkrPlayerPanelView==='more'){
+    root.appendChild(node('h3','pkr-quick-page-heading','More player actions'));
+    root.appendChild(node('h4','pkr-quick-page-heading','Change seat'));
+    root.appendChild(viewSection('change seat'));
+    root.appendChild(node('h4','pkr-quick-page-heading','WhatsApp'));
+    root.appendChild(viewSection('whatsapp'));
+    root.appendChild(node('h4','pkr-quick-page-heading','Remove player'));
+    root.appendChild(viewSection('remove player'));
+  }else{_pkrPlayerPanelView='overview';pkrAssembleQuickPlayerView(sid,body,p);return;}
+  body.replaceChildren(root);
+}
+
 function buildPanel(sid) {
   var p = state.players[sid];
   if (!p) return;
