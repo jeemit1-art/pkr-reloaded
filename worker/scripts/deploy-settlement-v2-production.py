@@ -414,6 +414,22 @@ def check_api_route(*, attempts=24, delay_seconds=5):
                "last route HTTP " + status + ". Later feature and payment steps halted.")
 
 
+def check_profile_route(*, attempts=12, delay_seconds=5):
+    """Auth-only smoke test. No personal data or D1 row is accessed."""
+    status = "unknown"
+    for attempt in range(attempts):
+        status = command("curl", "-sS", "--max-time", "20",
+                         "-o", "/dev/null", "-w", "%{http_code}",
+                         "-H", "Cache-Control: no-cache",
+                         HOST + "/events/pkr-release-probe-only/profiles").strip()
+        if status == "401":
+            print("Authenticated room profile route: PRESENT (401 without token)", flush=True)
+            return
+        if attempt + 1 < attempts:
+            time.sleep(delay_seconds)
+    raise Stop("Production profile route did not activate; last HTTP " + status)
+
+
 def main():
     verify_target()
     preflight_secrets()
@@ -451,6 +467,7 @@ def main():
              "--config", "wrangler.toml", stdin="1\n")
     print("Settlement V2 secret configured.", flush=True)
     check_api_route()
+    check_profile_route()
     if {t: aggregate(t) for t in before} != before:
         raise Stop("Financial totals changed during deployment; investigate.")
     print("PRODUCTION SETTLEMENT V2 ROLLOUT: PASS.", flush=True)
