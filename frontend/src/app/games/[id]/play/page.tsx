@@ -710,7 +710,7 @@ function pkrAvatar(p){
   var member=id?members.find(function(m){return m.id===id;}):null;
   if(!member&&p.name){var same=members.filter(function(m){return String(m.name||'').toLowerCase()===String(p.name).toLowerCase();});if(same.length===1)member=same[0];}
   var profile=pkrSeatProfile(p),emoji=profile&&profile.avatar_emoji;
-  var url=profile&&profile.avatar_data?profile.avatar_data:member&&member.avatar_url;
+  var url=profile&&profile.avatar_data?profile.avatar_data:(emoji?'':member&&member.avatar_url);
   if(typeof url!=='string')url='';
   var safePhoto=(url.startsWith('data:image/jpeg;base64,')||url.startsWith('data:image/webp;base64,'))&&url.length<=48000&&/^[A-Za-z0-9+=/]+$/.test(url.split(',')[1]||'');
   if(url&&!safePhoto&&!(url.startsWith('/')&&!url.startsWith('//'))){try{var parsed=new URL(url);if(parsed.protocol!=='https:')url='';}catch(e){url='';}}
