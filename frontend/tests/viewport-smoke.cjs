@@ -19,7 +19,15 @@ const members=[{id:'test-user',name:'Alex Morgan',role:'host',email:'test@invali
 const leaders=[{user_id:'test-user',display_name:'Alex Morgan',games_played:1,games_won:1,total_net:7500,biggest_win:7500,biggest_loss:0,last_played:past},{user_id:'member-2',display_name:'Jordan Lee',games_played:1,games_won:0,total_net:-7500,biggest_win:0,biggest_loss:-7500,last_played:past},...Array.from({length:12},(_,i)=>({user_id:'synthetic-'+(i+3),display_name:['Sam Patel','Taylor Reed','Chris Martin','Riley Chen','Casey Brooks','Morgan Price','Jamie Wilson','Drew Foster','Avery James','Blake Smith','Harper Quinn','Cameron Scott'][i],games_played:2,games_won:0,total_net:-9000-i*500,biggest_win:0,biggest_loss:-9000-i*500,last_played:past}))];
 const results={game:finished,event:{name:room.name},players:[],transfers:[{id:'synthetic-transfer',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'synthetic-owner-paid-historical',from:'historical-payer',from_name:'Historical Player A',to:'historical-recipient',to_name:'Historical Player B',amount:7605900,status:'paid'}]};
 const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
-const fixture=(pathname,method)=>{
+let savedPreviewLayout='command',layoutWrites=0;
+const fixture=(pathname,method,body)=>{
+  if(pathname==='/events/test-room/dashboard-layout'&&method==='PUT'){
+    const input=JSON.parse(body||'{}');
+    if(!['command','live'].includes(input.layout)||Object.keys(input).length!==1)
+      return {error:'Invalid saved preview choice'};
+    savedPreviewLayout=input.layout;layoutWrites++;
+    return {event_id:'test-room',layout:savedPreviewLayout,updated_at:future};
+  }
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
   if(pathname==='/events')return [room,archivedRoom];
@@ -28,7 +36,7 @@ const fixture=(pathname,method)=>{
   if(pathname==='/events/'+room.id+'/profiles')return {profiles:[]};
   if(pathname==='/events/'+room.id+'/players')return [];
   if(pathname==='/events/'+room.id+'/games')return [upcoming,finished,oldUnfinished];
-  if(pathname==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:'command',updated_at:null};
+  if(pathname==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:savedPreviewLayout,updated_at:null};
   if(pathname==='/events/'+room.id+'/leaderboard')return leaders;
   if(pathname==='/events/'+room.id+'/history')return [{
     ...finished,top_players:[
@@ -211,13 +219,14 @@ async function test(){
     finally{await guestContext.close();}
 
     const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
+   savedPreviewLayout='command';layoutWrites=0;
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
    const page=await context.newPage();
    page.on('request',request=>{if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))errors.push('PRODUCTION API REQUEST BLOCKED: '+request.url());});
    await page.route('**/*.workers.dev/**',async route=>{
     const url=new URL(route.request().url());
     if(url.origin!==API){errors.push('Unexpected Worker origin: '+url.origin);return route.abort();}
-    const response=fixture(url.pathname,route.request().method());
+    const response=fixture(url.pathname,route.request().method(),route.request().postData());
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
    });
@@ -234,12 +243,30 @@ async function test(){
        if(await page.locator('.pkr-pro-hero').count())
          errors.push(size.name+' old dashboard hero still rendered');
        await page.screenshot({path:path.join(output,size.name+'-dashboard-command.png'),fullPage:false});
-       // Host view: preview both approved variants at every supported viewport.
+       // Host switches between BOTH approved variants on every viewport.
        const toggle=page.getByRole('button',{name:/Live Poker/});
-       // This fixture returns the default each fetch. Use local click to
-       // assert the non-optimistic preference flow in the full app test.
-       if(!await toggle.isVisible())
-         errors.push(size.name+' host dashboard layout chooser missing');
+       if(!await toggle.isVisible())errors.push(size.name+' host layout chooser missing');
+       else {
+         await toggle.click();
+         await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+         if(!await page.locator('.pkr-dual-table-panel').isVisible())
+           errors.push(size.name+' live table preview missing');
+         const geometry=await page.evaluate(()=>({
+           scroll:document.documentElement.scrollWidth,
+           width:document.documentElement.clientWidth,
+           controls:[...document.querySelectorAll('.pkr-dual-switch-actions button')].map(b=>{
+             const r=b.getBoundingClientRect();return {left:r.left,right:r.right,w:r.width}
+           })
+         }));
+         if(geometry.scroll>geometry.width+5)
+           errors.push(size.name+' live dashboard horizontal overflow '+JSON.stringify(geometry));
+         if(geometry.controls.some(q=>q.w<70||q.left<0||q.right>geometry.width+1))
+           errors.push(size.name+' live dashboard switch controls clipped '+JSON.stringify(geometry));
+         await page.screenshot({path:path.join(output,size.name+'-dashboard-live.png'),fullPage:false});
+         await page.getByRole('button',{name:/Command Centre/}).click();
+         await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+         if(layoutWrites!==2)errors.push(size.name+' layout toggle should save exactly two preferences');
+       }
      }
 
      if(item.id==='dashboard' && size.width<=700){
