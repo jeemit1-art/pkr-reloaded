@@ -140,6 +140,22 @@ async function check(browser,name,width,height){
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('#pkrSeatChipSummary').textContent())||'',/95 chips/);
+  // New player management retains the original financial and chip records.
+  await page.locator('.side-panel.open .pkr-quick-metrics').waitFor({state:'visible'});
+  assert.equal(await page.locator('.pkr-quick-metric.result.pending').count(),1,
+    'Uncashed buy-in must not be misrepresented as a final profit or loss');
+  assert.match(await page.locator('.pkr-quick-metric.money-in').innerText(),/\$25/);
+  const playerLinks=page.locator('.side-panel.open .pkr-quick-link');
+  await playerLinks.filter({hasText:'Transactions'}).click();
+  await page.locator('.side-panel.open .pkr-quick-section .tx-row').first().waitFor();
+  assert.equal(await page.locator('.side-panel.open .pkr-quick-section .tx-row').count(),1);
+  await page.locator('.side-panel.open .pkr-quick-back').click();
+  await page.locator('.side-panel.open .pkr-quick-link').filter({hasText:'More actions'}).click();
+  await page.locator('.side-panel.open .pkr-host-danger').waitFor();
+  assert.equal(await page.locator('.side-panel.open .pkr-host-danger').isDisabled(),true,
+    'Players with buy-ins cannot be removed from their financial record');
+  await page.locator('.side-panel.open .pkr-quick-back').click();
+
   if(width<=900){
    // The drawer slides into place over 250ms. Wait for its final on-screen
    // location before evaluating geometry; never mistake transition frames for overflow.
