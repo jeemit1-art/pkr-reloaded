@@ -219,7 +219,7 @@ export interface GamePlayer {
   game_id:string; user_id:string; display_name:string; whatsapp:string|null;
   seat_number:number|null; buy_ins:number; cashout:number|null; net:number|null; settled_at:number|null;
 }
-export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; }
+export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; transfers:Transfer[]; event_name?:string; }
 export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsvp[]; players:GamePlayer[]; }
 export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
