@@ -143,10 +143,10 @@ export default function RoomDashboardDual({
   const incomplete=!!ledgerError||!!ledger?.unavailable.length;
   const paymentLabel=ledgerError||!ledger?'—':incomplete?(payments.length?'≥ '+fmt(pendingCents):'—'):fmt(pendingCents);
   const paymentHint=ledgerError?'Payments unavailable':incomplete?'Total unverified':payments.length+' pending transfer'+(payments.length===1?'':'s');
-  const livePlayers=(gameDetail?.id===featured?.id?gameDetail.players:[])||[];
+  const livePlayers=gameDetail&&featured&&gameDetail.id===featured.id?gameDetail.players:[];
   const seated=livePlayers.filter(p=>Number.isInteger(p.seat_number)&&Number(p.seat_number)>0)
     .sort((a,b)=>Number(a.seat_number)-Number(b.seat_number));
-  const rsvps=(gameDetail?.id===featured?.id?gameDetail.rsvps:[])||[];
+  const rsvps=gameDetail&&featured&&gameDetail.id===featured.id?gameDetail.rsvps:[];
   const going=rsvps.filter(r=>r.status==='yes');
   const maybe=rsvps.filter(r=>r.status==='maybe');
   const otherRooms=rooms.filter(r=>r.id!==room.id&&r.status!=='ended');
