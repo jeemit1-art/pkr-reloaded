@@ -11,7 +11,23 @@ const games=[mk('g1','token-g1'),mk('g2',null),mk('g3','token-g3'),mk('g4','bad-
 const transfer=(id,amount,status='owed')=>({
  id,from:'payer',to:'receiver',from_name:'Payer',to_name:'Receiver',amount,status
 });
-const api={games:{
+let useLedger=false,invalidLedger=false,missingGame=false;
+let detailCalls=0;
+const api={events:{
+ settlementLedger:async room=>{
+  if(!useLedger)throw new Error('Worker not yet upgraded');
+  assert.equal(room,'room-a');
+  return {games:games.filter(g=>g.event_id==='room-a'&&g.status==='settled')
+    .filter(g=>!missingGame||g.id!=='g4'),
+   transfers:[
+    {...transfer('owed',7500),game_id:'g1',from:'',to:'',from_user:'payer',to_user:'receiver'},
+    {...transfer('paid',7523500,'paid'),game_id:'g1'},
+    {...transfer('legacy',90000,'legacy'),game_id:'g1'},
+    {...transfer('claim',2500,'payer_claimed'),game_id:'g2'},
+    {...transfer('no-receipt',1200,'not_received'),game_id:'g3',amount:invalidLedger?NaN:1200},
+   ]};
+ }
+},games:{
  list:async room=>{assert.equal(room,'room-a');return games;},
  results:async token=>{
   if(token==='token-g1')return {game:games[0],transfers:[
@@ -20,6 +36,7 @@ const api={games:{
   throw new Error('Synthetic link unavailable');
  },
  get:async id=>{
+  detailCalls++;
   if(id==='g2')return {...games[1],transfers:[transfer('claim',2500,'payer_claimed')]};
   if(id==='g3')return {...games[2],transfers:[transfer('no-receipt',1200,'not_received')]};
   if(id==='g4')throw new Error('Synthetic saved game unavailable');
@@ -40,6 +57,7 @@ const {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents}=moduleObje
  assert.equal(history.records.length,5,'Paid/legacy rows should be available for full schedule');
  assert.equal(history.unavailable.length,1,'Unrecoverable historical game must be flagged');
  assert.equal(history.unavailable[0].id,'g4');
+ assert.equal(history.source,'game-details','Older Worker must use validated fallback');
  const outstanding=outstandingRoomTransfers(history.records);
  assert.equal(outstanding.length,3,'Only owed, claimed and not-received transfers are outstanding');
  assert.equal(totalTransferCents(outstanding),11200,'Outstanding total is $112 and excludes paid legacy history');
@@ -47,6 +65,30 @@ const {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents}=moduleObje
  assert(outstanding.some(row=>row.transfer.status==='payer_claimed'),'Awaiting receipt stays outstanding');
  const completed=history.records.filter(row=>row.transfer.status==='paid');
  assert.equal(totalTransferCents(completed),7523500,'Old paid items never become outstanding');
+ // New read-only room ledger includes historical payments even if
+ // /games/:id fails and there is no historic results link.
+ useLedger=true;
+ const callsBefore=detailCalls;
+ const direct=await loadRoomTransfers('room-a',games);
+ assert.equal(direct.source,'room-ledger');
+ assert.equal(direct.unavailable.length,0);
+ assert.equal(direct.records.length,5);
+ assert.equal(direct.gamesWithoutTransfers.length,1);
+ assert.equal(direct.gamesWithoutTransfers[0].id,'g4');
+ assert.equal(detailCalls,callsBefore,'Fast ledger must not use the brittle per-game details API');
+ const directPaid=direct.records.filter(row=>row.transfer.status==='paid');
+ assert.equal(totalTransferCents(directPaid),7523500,'Preserve actual historical paid records');
+ assert.equal(direct.records[0].transfer.from,'payer','D1 from_user must be normalised');
+ assert.equal(totalTransferCents(outstandingRoomTransfers(direct.records)),11200);
+ invalidLedger=true;
+ const rejectBad=await loadRoomTransfers('room-a',games);
+ assert.equal(rejectBad.source,'game-details','Bad financial data must not be silently trusted');
+ assert.equal(rejectBad.unavailable.length,1);
+ invalidLedger=false;missingGame=true;
+ const rejectOmitted=await loadRoomTransfers('room-a',games);
+ assert.equal(rejectOmitted.source,'game-details','Missing settled game must fall back');
+ assert.equal(rejectOmitted.unavailable.length,1);
+ missingGame=false;useLedger=false;
  const controller=new AbortController();controller.abort();
  await assert.rejects(()=>loadRoomTransfers('room-a',games,controller.signal),/cancelled/);
  // A malformed transfer amount invalidates that game, never turns into a fake zero.
