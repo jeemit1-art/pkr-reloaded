@@ -305,7 +305,7 @@ export default function RoomDashboardDual({
           <button type="button" onClick={goPayments}><span>▣</span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
           <button type="button" onClick={goRsvp} disabled={!featured}><span>▦</span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></button>
           <button type="button" onClick={openGame} disabled={!featured}><span>▱</span><strong>{countAvailable===null?'—':countAvailable}</strong><small>Seats available</small></button>
-          <button type="button" onClick={goPayments}><span>⇄</span><strong>{ledger?.unavailable.length||0}</strong><small>Games to verify</small></button>
+          <button type="button" onClick={goPayments}><span>⇄</span><strong>{ledger?ledger.unavailable.length:'—'}</strong><small>Games to verify</small></button>
         </div>
         <section className="pkr-dual-table-panel">
           <div className="pkr-dual-section-title"><h3><i className="pkr-dual-live-dot"/> Live Table Snapshot</h3>
