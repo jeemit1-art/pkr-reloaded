@@ -142,7 +142,7 @@ events.get('/:id/settlement-ledger', authMiddleware, async (c) => {
     `).bind(eventId),
   ]);
   return c.json({
-    games:games.results.map(clientSafeGame),
+    games:games.results.map(game=>clientSafeGame(game as Record<string,unknown>)),
     transfers:transfers.results,
   });
 });
