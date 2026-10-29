@@ -21,7 +21,8 @@ export default function InsightsPage(){
  const [games,setGames]=useState<Game[]>([]);
  const [leaders,setLeaders]=useState<LeaderboardEntry[]>([]);
  const [transfers,setTransfers]=useState<SettlementRow[]>([]);
- const [transfersPartial,setTransfersPartial]=useState(false);
+ const [unavailableGames,setUnavailableGames]=useState<Game[]>([]);
+ const [refreshLedger,setRefreshLedger]=useState(0);
  const [settlementView,setSettlementView]=useState<SettlementView>('transfers');
  const [paymentBusy,setPaymentBusy]=useState<string|null>(null);
  const [selectedTransfers,setSelectedTransfers]=useState<string[]>([]);
@@ -50,7 +51,7 @@ export default function InsightsPage(){
   if(!selected)return;
   let live=true;
   setPaymentNotice('');setPaymentBusy(null);setTransferPage(0);setPeriod('all');setSelectedTransfers([]);
-  setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setTransfersPartial(false);setSettlementView('transfers');
+  setLoadingDetails(true);setError('');setGames([]);setLeaders([]);setTransfers([]);setUnavailableGames([]);setSettlementView('transfers');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(async ([g,l])=>{
    if(!live)return;
    setGames(g);setLeaders(l);
@@ -59,11 +60,11 @@ export default function InsightsPage(){
    const ledger=await loadRoomTransfers(selected,g);
    if(!live)return;
    setTransfers(ledger.records);
-   setTransfersPartial(ledger.unavailable.length>0);
+   setUnavailableGames(ledger.unavailable);
   }).catch(e=>{if(live)setError(e.message||'Could not load room insights')})
    .finally(()=>{if(live)setLoadingDetails(false)});
   return()=>{live=false};
- },[selected]);
+ },[selected,refreshLedger]);
 
  const room=rooms.find(x=>x.id===selected);
  const canManagePayments=room?.role==='host'||room?.role==='cohost';
@@ -255,7 +256,28 @@ export default function InsightsPage(){
        <button type="button" key={key} role="tab" aria-selected={settlementView===key} className={settlementView===key?'active':''} onClick={()=>setSettlementView(key)}>{label}</button>)}
      </div>
      
-     {transfersPartial&&<p className="pkr-vnext-warning" role="status">Some settlement records could not be loaded. Balances may be incomplete.</p>}
+     {unavailableGames.length>0&&
+       <details className="pkr-settlement-incomplete" data-testid="settlement-partial-note">
+         <summary>
+           <span aria-hidden="true">⚠</span> {unavailableGames.length} older settled game{unavailableGames.length===1?'':'s'} could not be checked.
+           {paymentFilter==='paid'?' The Paid list may be incomplete.':' Payment totals may be incomplete.'}
+           <span className="pkr-settlement-review-hint">Review records</span>
+         </summary>
+         <div className="pkr-settlement-incomplete-detail">
+           <p>The saved settlement for these games was unavailable. PKR has not changed any payment status or assumed that a payment is outstanding.</p>
+           <div className="pkr-settlement-incomplete-games">
+             {unavailableGames.slice(0,6).map(game=>(
+               <button type="button" key={game.id}
+                 onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>
+                 Review game · {fmtDate(game.scheduled_at)} →
+               </button>
+             ))}
+             {unavailableGames.length>6&&<span>+{unavailableGames.length-6} more games</span>}
+           </div>
+           <button type="button" className="pkr-settlement-incomplete-retry"
+             disabled={loadingDetails} onClick={()=>setRefreshLedger(n=>n+1)}>Retry loading saved records</button>
+         </div>
+       </details>}
      {paymentNotice&&<p className="pkr-insights-payment-notice" role="status">{paymentNotice}</p>}
      <p className="pkr-insights-payment-help">{canManagePayments?'Host / co-host: select a payment status below after checking the transfer.':'Payment status is read-only for members; ask the host or co-host to confirm receipt.'} PKR does not send or receive money.</p>
      {settlementView==='transfers'&&canManagePayments&&visibleTransfers.length>0&&
