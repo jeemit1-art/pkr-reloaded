@@ -70,6 +70,7 @@ jobs:
           node tests/seat-table-experience.cjs
           node tests/dense-seat-layout.cjs
           node tests/app-experience.cjs
+          node tests/room-member-profiles.cjs
           node tests/viewport-smoke.cjs
       - name: Upload synthetic-data screenshots
         if: always()
