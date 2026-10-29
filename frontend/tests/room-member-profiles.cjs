@@ -13,6 +13,10 @@ const player={id:'guest-2',name:'Dhronal Shah',email:null,role:'member',avatar_u
 const profiles=[{profile_key:'member:guest-2',screen_name:'Pocket Rocket',avatar_data:null,avatar_emoji:'♠️',
  phone:'+61412345678',preferred_contact:'whatsapp',private_notes:'Only host can see this',updated_at:now}];
 async function runEngine(engine,browserType,width,height){
+ // Each browser/device needs an isolated synthetic fixture. A saved alias
+ // from the previous test must not leak into the next test's initial state.
+ profiles.splice(0,profiles.length,{profile_key:'member:guest-2',screen_name:'Pocket Rocket',avatar_data:null,avatar_emoji:'♠️',
+  phone:'+61412345678',preferred_contact:'whatsapp',private_notes:'Only host can see this',updated_at:now});
  const browser=await browserType.launch({headless:true});
  try{
   const ctx=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
