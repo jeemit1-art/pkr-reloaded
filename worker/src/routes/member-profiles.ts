@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole } from '../middleware';
+import {normalizeMobile,encryptPhone,decryptPhone} from '../phone-security';
 
 // These profiles belong to one room only. Names/avatars never rewrite a
 // recorded game, leaderboard identity or settlement amount.
@@ -8,7 +9,7 @@ const profiles = new Hono<{Bindings:Env}>();
 const PRESETS=['♠️','♥️','♣️','♦️','🃏','😎','👑','🎲','🐯','🦊','🐻','🦁','🐼','🔥','⭐','🎯'];
 type SavedProfile={
   profile_key:string;screen_name:string|null;avatar_data:string|null;
-  avatar_emoji:string|null;phone:string|null;preferred_contact:string;
+  avatar_emoji:string|null;phone_cipher:string|null;preferred_contact:string;
   private_notes:string|null;updated_at:number;
 };
 const safeString=(value:unknown)=>typeof value==='string'?value.trim():'';
@@ -17,10 +18,10 @@ const validText=(value:string,max:number)=>value.length<=max&&!/[\x00-\x1F\x7F]/
 function normalisePhone(value:unknown):string|null{
   const input=safeString(value);
   if(!input)return null;
-  if(!/^\+?[0-9 ()-]{8,24}$/.test(input))throw new Error('Enter a valid mobile number, including area/country code where required.');
-  const digits=input.replace(/[^0-9]/g,'');
-  if(digits.length<8||digits.length>15)throw new Error('Mobile numbers must contain 8 to 15 digits.');
-  return (input.startsWith('+')?'+':'')+digits;
+  // Reuse PKR's E.164 and Australian-mobile validation for invitations.
+  const phone=normalizeMobile(input);
+  if(!phone)throw new Error('Enter a valid mobile number (e.g. 0412 345 678 or +61412345678).');
+  return phone;
 }
 function photoFrom(value:unknown):string|null{
   if(value==null||value==='')return null;
@@ -47,15 +48,19 @@ profiles.get('/:id/profiles',authMiddleware,async c=>{
   const userId=c.get('userId');
   try{
     const result=await c.env.DB.prepare(
-      'SELECT profile_key,screen_name,avatar_data,avatar_emoji,phone,preferred_contact,private_notes,updated_at FROM room_player_profiles WHERE event_id=?'
+      'SELECT profile_key,screen_name,avatar_data,avatar_emoji,phone_cipher,preferred_contact,private_notes,updated_at FROM room_player_profiles WHERE event_id=?'
     ).bind(eventId).all<SavedProfile>();
-    return c.json({profiles:result.results.map(p=>({
-      profile_key:p.profile_key,
-      screen_name:p.screen_name,avatar_data:p.avatar_data,avatar_emoji:p.avatar_emoji,
-      preferred_contact:manager||p.profile_key==='member:'+userId?p.preferred_contact:'none',
-      phone:manager||p.profile_key==='member:'+userId?p.phone:null,
-      private_notes:manager?p.private_notes:null,updated_at:p.updated_at,
-    }))});
+    const visible=await Promise.all(result.results.map(async p=>{
+      const allowed=manager||p.profile_key==='member:'+userId;
+      return {
+        profile_key:p.profile_key,
+        screen_name:p.screen_name,avatar_data:p.avatar_data,avatar_emoji:p.avatar_emoji,
+        preferred_contact:allowed?p.preferred_contact:'none',
+        phone:allowed&&p.phone_cipher?await decryptPhone(c.env,p.phone_cipher):null,
+        private_notes:manager?p.private_notes:null,updated_at:p.updated_at,
+      };
+    }));
+    return c.json({profiles:visible});
   }catch{
     return c.json({error:'Room player profiles are not enabled yet. The database migration must be applied first.'},503);
   }
@@ -98,15 +103,18 @@ profiles.put('/:id/profiles',authMiddleware,async c=>{
   try{
     const existing=await existingProfile(c.env.DB,eventId,key);
     const finalNotes=manager?notes||null:existing?.private_notes||null;
+    // Encrypt under the existing dedicated PKR_CONTACT_KEY before storage.
+    // Never persist, index or log a raw mobile number in profile metadata.
+    const phoneCipher=phone?await encryptPhone(c.env,phone):null;
     await c.env.DB.prepare(
-      `INSERT INTO room_player_profiles(event_id,profile_key,screen_name,avatar_data,avatar_emoji,phone,preferred_contact,private_notes,updated_by)
+      `INSERT INTO room_player_profiles(event_id,profile_key,screen_name,avatar_data,avatar_emoji,phone_cipher,preferred_contact,private_notes,updated_by)
        VALUES(?,?,?,?,?,?,?,?,?)
        ON CONFLICT(event_id,profile_key) DO UPDATE SET
         screen_name=excluded.screen_name,avatar_data=excluded.avatar_data,
-        avatar_emoji=excluded.avatar_emoji,phone=excluded.phone,
+        avatar_emoji=excluded.avatar_emoji,phone_cipher=excluded.phone_cipher,
         preferred_contact=excluded.preferred_contact,private_notes=excluded.private_notes,
         updated_by=excluded.updated_by,updated_at=unixepoch()`
-    ).bind(eventId,key,screenName||null,avatar,emoji||null,phone,contact,finalNotes,userId).run();
+    ).bind(eventId,key,screenName||null,avatar,emoji||null,phoneCipher,contact,finalNotes,userId).run();
     return c.json({ok:true,profile:{
       profile_key:key,screen_name:screenName||null,avatar_data:avatar,avatar_emoji:emoji||null,
       phone,preferred_contact:contact,private_notes:manager?finalNotes:null,updated_at:Math.floor(Date.now()/1000),
