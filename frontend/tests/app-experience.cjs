@@ -116,8 +116,15 @@ async function run(){
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().waitFor();
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
-    assert.equal(await page.locator('.pkr-pro-bottom .pkr-room-outstanding-row').count(),2,
-      'Main dashboard shows the selected room outstanding transfers, not paid settlements');
+    assert.equal(await page.locator('.pkr-command-focus .pkr-room-outstanding-row').count(),2,
+      'The command centre must show actual pending transfers above the general dashboard');
+    assert.equal(await page.getByTestId('pkr-dashboard-v2').count(),1);
+    assert.equal(await page.locator('.pkr-command-nextgame').count(),1);
+    const prioritised=await page.evaluate(()=>{
+      const money=document.querySelector('.pkr-command-focus'),cards=document.querySelector('.pkr-pro-panels');
+      return !!money&&!!cards&&!!(money.compareDocumentPosition(cards)&Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    assert(prioritised,'Outstanding payments must appear before secondary cards on every viewport');
     await page.locator('.pkr-pro-stats .pkr-metric-trigger').first().click();await loaded(page);await page.keyboard.press('Escape');await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:financial-update',{detail:{kind:'buyin',gameId:'test-game',at:Date.now()}})));
     await page.locator('.pkr-financial-notice').waitFor();await hitVisible(page.locator('.pkr-financial-notice').getByRole('button',{name:'Dismiss',exact:true}));
@@ -128,8 +135,10 @@ async function run(){
     await page.screenshot({path:path.join(output,engine+'-'+name+'-action-dialog.png')});await page.keyboard.press('Escape');await upgrade.waitFor({state:'detached'});
     await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
     await page.getByTestId('room-outstanding-amount').filter({hasText:'$100'}).waitFor();
-    assert.equal(await page.locator('.pkr-event .pkr-room-outstanding-row').count(),2,
-      'Event dashboard shows only the actual outstanding transfers');
+    assert.equal(await page.locator('.pkr-event-payment-priority .pkr-room-outstanding-row').count(),2,
+      'Event dashboard payment card must show only actual pending transfers');
+    assert.equal(await page.locator('.pkr-event-payment-priority').count(),1,
+      'The event payment card must be visible outside the Games tab');
     assert.equal(await page.locator('.pkr-event .pkr-room-outstanding-row').filter({hasText:'$125'}).count(),0,
       'Paid settlements must not be included in the room dashboard');
     if(height>=700){
@@ -143,6 +152,12 @@ async function run(){
       await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').first().waitFor();
       assert.equal(await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').count(),2,
         'Outstanding-only schedule should omit paid history');
+      await page.locator('.pkr-settlement-record-filters button').filter({hasText:'Paid'}).click();
+      await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').first().waitFor();
+      assert.equal(await page.locator('#pkr-settlement .pkr-vnext-data-table tbody tr').count(),1,
+        'Paid must show only the saved confirmed payment');
+      assert.equal(await page.locator('#pkr-settlement [data-testid="settlement-partial-note"]').count(),0,
+        'No missing-payment warning on completely available saved data');
       await page.goto(BASE+'/events/test-room',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-event-metric .pkr-metric-trigger').first().waitFor();
     }
