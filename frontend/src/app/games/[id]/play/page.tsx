@@ -2100,7 +2100,7 @@ function refreshPanelSummary(sid) {
 }
 
 
-var _pkrQuickLastBankTap=0;
+var _pkrQuickLastBankTap={sid:'',cents:0,at:0};
 function pkrQuickRecordBuyin(sid,p,dollars){
   if(!pkrPanelCanManage()||state.players[sid]!==p){
     toast('Only the host can record a buy-in in an active game.');return false;
@@ -2115,8 +2115,9 @@ function pkrQuickRecordBuyin(sid,p,dollars){
   // A very quick double tap is usually accidental. A deliberate second bank
   // can be added once the first tap has finished; server writes use absolute PUTs.
   var now=Date.now();
-  if(now-_pkrQuickLastBankTap<700)return false;
-  _pkrQuickLastBankTap=now;
+  if(_pkrQuickLastBankTap.sid===sid&&_pkrQuickLastBankTap.cents===cents&&
+     now-_pkrQuickLastBankTap.at<700)return false;
+  _pkrQuickLastBankTap={sid:sid,cents:cents,at:now};
   _pkrPlayerPanelView='overview';
   var success=addTxFromInput(sid,'buyin',{value:(cents/100).toFixed(2)});
   if(success)toast('Added '+fmt(cents/100)+' buy-in for '+p.name+' (syncing)');
