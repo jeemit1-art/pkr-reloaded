@@ -232,6 +232,17 @@ async function test(){
          errors.push(size.name+' redundant mobile Next Game hero still present');
        if(!await page.locator('.pkr-command-nextgame').isVisible())
          errors.push(size.name+' compact next-game action card missing');
+       if(await page.locator('.pkr-pro-hero').count())
+         errors.push(size.name+' old oversized decorative statistics hero still rendered');
+       const stats=await page.locator('.pkr-command-stat-strip').boundingBox();
+       if(!stats||stats.height>200)
+         errors.push(size.name+' dashboard statistics strip is not compact: '+JSON.stringify(stats));
+       const pastDue=page.locator('.pkr-command-unfinished');
+       if(await pastDue.count()){
+         const notice=await pastDue.boundingBox();
+         if(notice&&notice.height>125)
+           errors.push(size.name+' oversized unfinished-game notice hides the payment summary: '+JSON.stringify(notice));
+       }
        await page.screenshot({path:path.join(output,size.name+'-dashboard.png'),fullPage:false});
      }
 
