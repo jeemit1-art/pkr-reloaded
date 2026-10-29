@@ -15,7 +15,7 @@ const players=[{game_id:finished.id,user_id:'test-user',display_name:'Alex Morga
 const leaders=players.map(p=>({...p,games_played:2,games_won:p.net>0?2:0,total_net:p.net*2,biggest_win:Math.max(0,p.net),biggest_loss:Math.min(0,p.net),last_played:now-86400}));
 const transfers=[{id:'pending',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:7500,status:'owed'},{id:'paid',from:'member-2',from_name:'Jordan Lee',to:'test-user',to_name:'Alex Morgan',amount:12500,status:'paid'}];
 let simulateMissingSettledGames=false;
-let selectedLayout='command',layoutWrites=0;
+let selectedLayout='command',layoutWrites=0,simulateMember=false;
 function fixture(url,method,body){
  if(method==='OPTIONS')return {};
  if(method==='PUT'&&url.pathname==='/events/test-room/dashboard-layout'){
@@ -28,8 +28,9 @@ function fixture(url,method,body){
  if(method!=='GET')throw new Error('Unexpected API write: '+method+' '+url.pathname);
  const p=url.pathname;
  if(p==='/auth/me')return user;
- if(p==='/events')return [room];
- if(p==='/events/test-room')return {...room,members};
+ if(p==='/events')return [simulateMember?{...room,role:'member'}:room];
+ if(p==='/events/test-room')return {...room,members:simulateMember
+  ?members.map(m=>m.id===user.id?{...m,role:'member'}:m):members};
  if(p==='/events/test-room/profiles')return {profiles:[]};
  if(p==='/events/test-room/players')return [];
  if(p==='/events/test-room/games')return [upcoming,finished,old];
@@ -80,7 +81,7 @@ async function run(){
  for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
   const browser=await type.launch({headless:true});
   try{for(const [name,width,height] of engine==='webkit'?sizes.filter(x=>['phone','short-phone','landscape'].includes(x[0])):sizes){
-   selectedLayout='command';layoutWrites=0;
+   selectedLayout='command';layoutWrites=0;simulateMember=false;
    const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-ui-test-only'));
    const page=await context.newPage();page.setDefaultTimeout(15000);
@@ -200,6 +201,7 @@ async function run(){
     // Host changes the shared preference through the real app API (synthetic Worker).
     await page.getByRole('button',{name:/Live Poker/}).click();
     await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
+    if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
     assert.equal(layoutWrites,1,'Changing layout must issue one saved preference update');
     assert.equal(await page.getByTestId('dual-dashboard').getAttribute('data-layout'),'live');
     await page.reload({waitUntil:'domcontentloaded'});
@@ -208,6 +210,19 @@ async function run(){
     await page.getByRole('button',{name:/Command Centre/}).click();
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
     assert.equal(layoutWrites,2,'Returning to Command Centre must save exactly once');
+    if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-command.png'),fullPage:false});
+    if(engine==='chromium'&&name==='phone'){
+      // A regular member sees the host-selected variant but has no choice controls.
+      simulateMember=true;
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+      assert.equal(await page.getByRole('button',{name:/Live Poker/}).isDisabled(),true);
+      assert.equal(await page.getByRole('button',{name:/Command Centre/}).isDisabled(),true);
+      assert.equal(layoutWrites,2,'Member must not issue layout writes');
+      simulateMember=false;
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    }
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('pkr:financial-update',{detail:{kind:'buyin',gameId:'test-game',at:Date.now()}})));
     await page.locator('.pkr-financial-notice').waitFor();await hitVisible(page.locator('.pkr-financial-notice').getByRole('button',{name:'Dismiss',exact:true}));
     if(width<1100){const a=await page.locator('.pkr-financial-notice').boundingBox(),b=await nav.boundingBox();assert(a.y+a.height<=b.y,'Notice is behind the bottom navigation');}
