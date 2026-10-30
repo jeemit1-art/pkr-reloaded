@@ -16,6 +16,7 @@ import analysis   from './routes/analysis';
 import payments   from './routes/payments';
 import { sendPaymentReminders,sendGameReminders } from './reminders';
 import { advanceExpiredTournamentLevels } from './tournament-clock';
+import {archiveAccidentalHistoricalPlayersOnce,TEST_HISTORY_ARCHIVE_DONE} from './maintenance/archive-test-players';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -56,7 +57,11 @@ app.route('/',        analysis);
 
 // Only public capability booleans: never credentials or player information.
 // These report configuration, not proof of end-to-end device delivery.
-app.get('/health', (c) => c.json({
+app.get('/health', async (c) => {
+  const historicalArchiveComplete=c.env.PKR_ENV==='production'&&!!c.env.KV
+    ?await c.env.KV.get(TEST_HISTORY_ARCHIVE_DONE).then(value=>value==='done').catch(()=>false)
+    :false;
+  return c.json({
   ok:true, service:'pkr-reloaded-worker',
   environment:c.env.PKR_ENV === 'staging' ? 'staging' : 'production',
   release:'settlement-v2-github-20261028',
@@ -66,7 +71,9 @@ app.get('/health', (c) => c.json({
     phone_members_v1:c.env.PKR_PHONE_MEMBERS_V1==='1',
   },
   ts:Date.now(),
-}));
+  maintenance:{historical_roster_cleanup_complete:historicalArchiveComplete},
+  });
+});
 app.get('/vapid-public-key',(c) => c.json({ key: c.env.VAPID_PUBLIC_KEY }));
 app.notFound(               (c) => c.json({ error:'Not found' }, 404));
 
@@ -76,9 +83,14 @@ export default {
     if(env.PKR_ENV==='staging')return;
     // Split the frequencies: hourly reminders must not run every minute.
     if(event.cron==='* * * * *'){
-      ctx.waitUntil(advanceExpiredTournamentLevels(env.DB).then((r)=>{
-        if(r.advanced||r.conflicts)console.log('PKR tournament clock',r);
-      }));
+      ctx.waitUntil(Promise.allSettled([
+        advanceExpiredTournamentLevels(env.DB).then(r=>{
+          if(r.advanced||r.conflicts)console.log('PKR tournament clock',r);
+        }),
+        archiveAccidentalHistoricalPlayersOnce(env).then(status=>{
+          if(status==='archived')console.log('PKR one-off historical roster cleanup completed.');
+        }),
+      ]).then(()=>{}));
       return;
     }
     if(event.cron==='0 * * * *'){
