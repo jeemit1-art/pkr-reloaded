@@ -9,8 +9,6 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type R
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
-import RoomDashboardDual from '@/components/RoomDashboardDual';
-import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './room-dashboard-polish.css';
 import InviteQRCode from '@/components/InviteQRCode';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
@@ -35,7 +33,7 @@ export default function EventPage() {
       const next=(e as CustomEvent<string>).detail;
       if(next==='games'||next==='leaderboard'||next==='history'||next==='members'){
         setTab(next);
-        window.scrollTo({top:0,behavior:'smooth'});
+        window.scrollTo(0,0);
       }
     };
     window.addEventListener('pkr:select-room-tab',open);
@@ -48,6 +46,11 @@ export default function EventPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<string|null>(null); // Open Standings player profile
   const [showInvite, setShowInvite] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  useEffect(()=>{
+    const open=()=>setShowInstall(true);
+    window.addEventListener('pkr:share-room',open);
+    return()=>window.removeEventListener('pkr:share-room',open);
+  },[]);
   const [showQuickSeat, setShowQuickSeat] = useState(false);
   const [quickSeatGameId, setQuickSeatGameId] = useState('');
   const [showMerge, setShowMerge] = useState(false);
@@ -117,6 +120,7 @@ export default function EventPage() {
       setIsHost(me?.role==='host'||me?.role==='cohost');
       setIsGroupOwner(me?.role==='host');
       if(query.get('newGame')==='1'&&(me?.role==='host'||me?.role==='cohost'))setShowCreate(true);
+      if(query.get('share')==='1'&&(me?.role==='host'||me?.role==='cohost'))setShowInstall(true);
       if(query.get('mine')==='profile'&&me)
         setEditingRoomProfile({key:'member:'+u.id,name:me.name,avatarUrl:me.avatar_url||null});
     }).catch(()=>router.push('/dashboard'));
@@ -414,16 +418,13 @@ export default function EventPage() {
     settled:'var(--muted)', cancelled:'var(--red)',
   };
 
-  const TABS: Tab[] = ['games', 'leaderboard', 'history', 'members'];
-
-  const TABS_NAV = ['games','leaderboard','history','members'];
   const selectTab = (next: Tab) => {
     setTab(next);
     const url=new URL(window.location.href);
     url.searchParams.set('tab',next);
     window.history.replaceState(window.history.state,'',url.pathname+url.search);
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0,0);
   };
   return (
     <div className="pkr-app pkr-event pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
@@ -448,7 +449,7 @@ export default function EventPage() {
             </button>
           )}
           {isHost && (
-            <div style={{display:'flex',gap:6}}>
+            <div className="pkr-header-game-actions" style={{display:'flex',gap:6}}>
               <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
               <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
             </div>
@@ -456,45 +457,25 @@ export default function EventPage() {
         </div>
       </div>
 
-      {/* Host-selected premium room dashboard. The old tabs and management tools
-          remain below it, unchanged; layout switching only affects presentation. */}
-      {isGroupOwner&&joinRequests.length>0&&
-        <div className="pkr-dual-join-alert" role="status">
-          <strong>🔔 {joinRequests.length} player{joinRequests.length===1?'':'s'} awaiting room approval</strong>
-          <button type="button" onClick={()=>selectTab('members')}>Review requests →</button>
-        </div>}
-      <div className="pkr-event-dual-region">
-        {!isHost ? <PlayerRoomDashboard room={event} games={games} history={history} leaders={leaders}
-          memberId={user?.id} memberName={user?.name}
-          onMyProfile={()=>{const me=event.members?.find((m:any)=>m.id===user?.id);
-            selectTab('members');
-            if(me)setEditingRoomProfile({key:'member:'+me.id,name:me.name,avatarUrl:me.avatar_url||null});
-          }}/> : <RoomDashboardDual room={event} games={games} history={history} leaders={leaders}
-          members={event.members||[]} viewerIsHost={isGroupOwner} viewerCanManageGames={isHost}
-          onCreateGame={()=>setShowCreate(true)}
-          onInvite={()=>{setMemberSection('invite');selectTab('members');}}
-          onMembers={()=>selectTab('members')}
-          onHistory={()=>selectTab('history')}/>}
-      </div>
-
-      {/* Desktop tabs; phone navigation is fixed at the bottom. */}
-      <nav className="pkr-event-tabs" aria-label="Poker room sections">
-        <div className="pkr-event-tabs-inner">
-          {TABS.map(t => (
-            <button type="button" key={t} onClick={() => selectTab(t)}
-              aria-pressed={tab === t} className={'tab ' + (tab === t ? 'active' : '')}>
-              {t === 'leaderboard' ? 'Standings' : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
+      {/* Home alone contains the full dashboard and live snapshot.
+           Games, Members, Standings and History open directly to their section. */}
+            <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
         {pushError&&<div role="alert" className="pkr-unfinished-note" style={{marginBottom:12}}>{pushError}</div>}
 
-        {/* ── Games tab ── */}
+        {/* Games, schedules and completed sessions */}
         {tab==='games' && (
           <div>
+            <div className="pkr-room-games-intro">
+              <div>
+                <span className="pkr-eyebrow">GAME NIGHT</span>
+                <h1>Games</h1>
+                <p>{event.name} · Upcoming sessions, results and game history.</p>
+              </div>
+              <div className="pkr-room-games-links">
+                {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
+                <button type="button" className="btn btn-outline" onClick={()=>selectTab('history')}>Game history →</button>
+              </div>
+            </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
                 <div className="empty-state-icon">♠</div>
@@ -515,7 +496,7 @@ export default function EventPage() {
                 onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
                 onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
                 onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);setTab('members');}}/>
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members');}}/>
             ))}
             {unfinished.length>0&&<section aria-label="Unfinished game sessions" style={{margin:'20px 0'}}>
               <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
@@ -527,7 +508,7 @@ export default function EventPage() {
                 onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
                 onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true)}}
                 onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);setTab('members')}}/>)}
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members')}}/>)}
             </section>}
             {settled.length>0 && (
               <>

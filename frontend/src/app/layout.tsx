@@ -3,6 +3,7 @@ import AppExperience from '@/components/AppExperience';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './pkr-theme-a.css';
 import './pkr-player-shell.css';
+import './pkr-navigation-stability.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

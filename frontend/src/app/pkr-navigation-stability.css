@@ -1,0 +1,112 @@
+/* Navigation hierarchy and iOS PWA scroll stability.
+   Separate gameplay/navigation surfaces without modifying the game engine. */
+.pkr-room-games-intro{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;
+  gap:14px;margin:2px 0 19px;padding:18px 20px;border-radius:13px;
+  border:1px solid #355b48;background:linear-gradient(110deg,#0c2d22,#102019);
+}
+.pkr-room-games-intro h1{
+  font:650 clamp(23px,4vw,30px)/1.15 var(--font-display),Georgia,serif;
+  margin:4px 0 5px;color:#eef1e9;
+}
+.pkr-room-games-intro p{
+  font-size:12px;color:#b3c6bb;line-height:1.55;
+  margin:0;overflow-wrap:break-word;
+}
+.pkr-room-games-links{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.pkr-room-games-links button{min-height:42px}
+.pkr-navigation-more-panel{border:1px solid #3d5f4d}
+.pkr-more-club-switch{
+  padding:13px;background:#10291f;border:1px solid #335843;
+  border-radius:10px;margin-bottom:13px;
+}
+.pkr-more-club-switch label{display:block;font-size:12px;color:#ead19b;margin-bottom:7px;font-weight:700}
+.pkr-more-club-switch select{
+  display:block;width:100%;min-width:0;min-height:46px;
+  border:1px solid #4d7260;border-radius:9px;padding:10px 12px;
+  background:#0a1d18;color:#f4f2e9;font-size:16px;
+}
+.pkr-more-club-switch p{font-size:11px;line-height:1.45;color:#b0c5b7;margin:7px 0 0}
+.pkr-more-club-home{
+  display:flex;gap:10px;align-items:center;justify-content:center;
+  margin-top:11px;width:100%;min-height:46px;
+  border-radius:9px;border:1px solid #526f60;background:#1b352a;
+  color:#e5eecf;font-weight:700;
+}
+.pkr-navigation-more-panel button:focus-visible,.pkr-navigation-more-panel select:focus-visible{
+  outline:3px solid #e8cf8f;outline-offset:2px;
+}
+/* A single anchored top header; event content no longer repeats Home's
+   full dashboard or the extra sticky room tabs. */
+.pkr-app.pkr-event>.pkr-topbar,
+.pkr-app.pkr-dashboard>.nav.pkr-topbar{
+  position:sticky!important;
+  inset:auto!important;
+  top:0!important;
+  z-index:170!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  transform:none!important;
+  transition:none!important;
+  contain:none!important;
+}
+.pkr-app.pkr-event .pkr-event-tabs{display:none!important}
+@media(max-width:1099px){
+  .pkr-universal-bottom-nav{
+    position:fixed!important;
+    top:auto!important;
+    bottom:0!important;
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    max-width:100vw!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    transform:none!important;
+    translate:none!important;
+    transition:none!important;
+    z-index:350!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    background:#101a1d!important;
+    padding-top:8px!important;
+    padding-bottom:calc(9px + env(safe-area-inset-bottom))!important;
+    box-shadow:0 -6px 22px #0007!important;
+  }
+  .pkr-universal-bottom-nav button{
+    min-height:49px!important;
+    font-size:12px;touch-action:manipulation;
+  }
+  .pkr-universal-bottom-nav button small{font-size:10px!important}
+  .pkr-app.pkr-dashboard>.nav.pkr-topbar,
+  .pkr-app.pkr-event>.pkr-topbar{
+    background:#101a1d!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  /* Reserve the navigation space once on the outer app shell. */
+  :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-vnext-insights,.pkr-schedule-page,.pkr-install-vnext){
+    padding-bottom:calc(var(--pkr-navigation-height,85px) + 30px)!important;
+    scroll-padding-bottom:calc(var(--pkr-navigation-height,85px) + 18px);
+  }
+  .pkr-app.pkr-event>.pkr-content{padding-bottom:24px!important}
+  .pkr-navigation-more-panel{padding-bottom:calc(16px + env(safe-area-inset-bottom))!important}
+  html:has(.pkr-universal-bottom-nav){scroll-padding-bottom:calc(var(--pkr-navigation-height,85px) + 18px)}
+}
+@media(max-width:420px){
+ .pkr-room-games-intro{padding:15px}
+ .pkr-room-games-links{width:100%}
+ .pkr-room-games-links button{flex:1;min-width:0;font-size:12px;padding:9px 10px}
+}
+@media(min-width:1100px){
+ /* Player desktop gets its own limited sidebar with no host actions. */
+ .pkr-app.pkr-dashboard.pkr-player-mode{padding-left:218px!important;margin-left:0!important}
+}
+@media(max-width:600px){
+  /* Schedule Game lives on Games; Share lives in More. */
+  .pkr-app.pkr-event .pkr-header-game-actions{display:none!important}
+  .pkr-app.pkr-event>.pkr-topbar>div{padding-inline:12px!important;gap:8px!important}
+}

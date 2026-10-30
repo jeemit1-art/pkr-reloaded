@@ -10,27 +10,51 @@ import PkrGlyph from '@/components/PkrGlyph';
    This is navigation only: it never changes game data or financial records. */
 const mobileNavigation=[
  {name:'Home',icon:'home',href:'/dashboard'},
- {name:'Rooms',icon:'games',href:'room'},
+ {name:'Games',icon:'games',href:'room'},
  {name:'Members',icon:'members',href:'members'},
  {name:'Insights',icon:'insights',href:'/insights'},
+ {name:'More',icon:'install',href:'#more'},
+] as const;
+const playerNavigation=[
+ {name:'Home',icon:'home',href:'/dashboard'},
+ {name:'Games',icon:'games',href:'room'},
+ {name:'Standings',icon:'players',href:'leaderboard'},
  {name:'More',icon:'install',href:'#more'},
 ] as const;
 
 const navigation=[
  {name:'Home',icon:'home',href:'/dashboard',group:'OVERVIEW'},
- {name:'Rooms & games',icon:'games',href:'room',group:'POKER NIGHT'},
- {name:'Standings',icon:'players',href:'leaderboard',group:'POKER NIGHT'},
- {name:'Schedule',icon:'schedule',href:'/schedule',group:'POKER NIGHT'},
- {name:'Members',icon:'members',href:'members',group:'CLUB MANAGEMENT'},
- {name:'Insights',icon:'insights',href:'/insights',group:'CLUB MANAGEMENT'},
- {name:'Settlements',icon:'settle',href:'/insights#pkr-settlement',group:'CLUB MANAGEMENT'},
+ {name:'Games',icon:'games',href:'room',group:'GAME NIGHT'},
+ {name:'Game history',icon:'games',href:'history',group:'GAME NIGHT'},
+ {name:'Standings',icon:'players',href:'leaderboard',group:'GAME NIGHT'},
+ {name:'Schedule',icon:'schedule',href:'/schedule',group:'GAME NIGHT'},
+ {name:'Members',icon:'members',href:'members',group:'CLUB & PEOPLE'},
+ {name:'Insights',icon:'insights',href:'/insights',group:'FINANCES & RESULTS'},
+ {name:'Settlements',icon:'settle',href:'/insights#pkr-settlement',group:'FINANCES & RESULTS'},
+ {name:'Install PKR',icon:'install',href:'/install',group:'YOUR ACCOUNT'},
+] as const;
+const playerDesktopNavigation=[
+ {name:'Home',icon:'home',href:'/dashboard',group:'PLAYER HOME'},
+ {name:'Games',icon:'games',href:'room',group:'YOUR ROOM'},
+ {name:'Standings',icon:'players',href:'leaderboard',group:'YOUR ROOM'},
+ {name:'Members',icon:'members',href:'members',group:'YOUR ROOM'},
+ {name:'My payments',icon:'settle',href:'payments',group:'YOUR RECORDS'},
  {name:'Install PKR',icon:'install',href:'/install',group:'YOUR ACCOUNT'},
 ] as const;
 
 const moreNavigation=[
+ {name:'Game history',icon:'games',href:'history'},
  {name:'Standings',icon:'players',href:'leaderboard'},
  {name:'Schedule',icon:'schedule',href:'/schedule'},
  {name:'Settlements',icon:'settle',href:'/insights#pkr-settlement'},
+ {name:'Share room',icon:'members',href:'share'},
+ {name:'Install PKR',icon:'install',href:'/install'},
+] as const;
+const playerMoreNavigation=[
+ {name:'My payments',icon:'settle',href:'payments'},
+ {name:'Room members',icon:'members',href:'members'},
+ {name:'Game history',icon:'games',href:'history'},
+ {name:'Scan invitation',icon:'games',href:'scan'},
  {name:'Install PKR',icon:'install',href:'/install'},
 ] as const;
 
@@ -120,14 +144,15 @@ export default function PersistentNavigation(){
   switch(name){
    case 'Home':return pathname==='/dashboard';
    case 'Games':case 'Rooms':case 'Rooms & games':
-    return inGame||(inRoom&&(roomTab==='games'||roomTab==='history'));
+    return inGame||(inRoom&&roomTab==='games');
+   case 'Game history':return inRoom&&roomTab==='history';
    case 'Standings':case 'Players':return inRoom&&roomTab==='leaderboard';
    case 'Members':return inRoom&&roomTab==='members';
    case 'Insights':return pathname==='/insights'&&!isSettlement;
    case 'Settlements':case 'Settle':return isSettlement;
    case 'Schedule':return pathname==='/schedule';
    case 'Install':case 'Install PKR':return pathname==='/install';
-   case 'More':return pathname==='/schedule'||pathname==='/install'||isSettlement||(inRoom&&roomTab==='leaderboard');
+   case 'More':return moreOpen||pathname==='/schedule'||pathname==='/install'||isSettlement||(inRoom&&roomTab==='history');
    default:return false;
   }
  }
@@ -138,14 +163,27 @@ export default function PersistentNavigation(){
    else router.push('/dashboard?scanInvite=1');
    return;
   }
-  if(destination==='room'||destination==='members'||destination==='leaderboard'){
+  if(destination==='share'){
+   if(!eventId){router.push('/dashboard');return;}
+   if(pathname==='/events/'+eventId)window.dispatchEvent(new CustomEvent('pkr:share-room'));
+   else router.push(roomPath+'?share=1');
+   return;
+  }
+  if(destination==='payments'){
+   router.push('/insights?room='+encodeURIComponent(eventId||'')+'&payments=all#pkr-my-payments');
+   return;
+  }
+  if(destination==='room'||destination==='members'||destination==='leaderboard'||destination==='history'){
    if(!eventId){router.push('/dashboard');return}
+   const next=destination==='room'?'games':destination;
    if(pathname==='/events/'+eventId){
-    const next=destination==='room'?'games':destination;
     setRoomTab(next);
+    const url=new URL(window.location.href);
+    url.searchParams.set('tab',next);
+    window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
    }else{
-    router.push(roomPath+(destination==='room'?'':'?tab='+encodeURIComponent(destination)));
+    router.push(roomPath+'?tab='+encodeURIComponent(next));
    }
   }else if(destination==='/install'&&eventId){
    router.push('/install?group='+encodeURIComponent(eventId));
@@ -163,7 +201,7 @@ export default function PersistentNavigation(){
  }
 
  return <>
-  {!isMemberView&&<aside className="pkr-persistent-nav" aria-label="PKR navigation">
+  <aside className="pkr-persistent-nav" aria-label={isMemberView?'Player navigation':'Host navigation'}>
    <div className="pkr-persistent-brand"><span aria-hidden="true">♠</span> PKR</div>
    <div className="pkr-persistent-room">
     <span>YOUR POKER CLUB</span>
@@ -177,8 +215,8 @@ export default function PersistentNavigation(){
     </>}
    </div>
    <nav>
-    {navigation.map((item,index)=><Fragment key={item.name}>
-     {(index===0||navigation[index-1].group!==item.group)&&<p className="pkr-nav-group-label">{item.group}</p>}
+    {(isMemberView?playerDesktopNavigation:navigation).map((item,index,all)=><Fragment key={item.name}>
+     {(index===0||all[index-1].group!==item.group)&&<p className="pkr-nav-group-label">{item.group}</p>}
      <button type="button" onClick={()=>visit(item.href)} aria-current={selected(item.name)?'page':undefined}
       className={selected(item.name)?'active':''}>
       <PkrGlyph name={item.icon}/>{item.name}
@@ -186,39 +224,43 @@ export default function PersistentNavigation(){
     </Fragment>)}
    </nav>
    <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
-  </aside>}
-  {isMemberView?<nav className="pkr-universal-bottom-nav pkr-player-universal-nav" aria-label="Player mobile navigation">
-    {([
-      {name:'Home',href:'/dashboard',icon:'home'},
-      {name:'Rooms',href:'room',icon:'games'},
-      {name:'Scan',href:'scan',icon:'scan'},
-      {name:'Standings',href:'leaderboard',icon:'players'},
-    ] as const).map(item=><button key={item.name} type="button"
-      className={selected(item.name,true)?'active':''}
-      aria-current={selected(item.name,true)?'page':undefined}
-      onClick={()=>visit(item.href)}>
-      {item.icon==='scan'?<span className="pkr-player-scan-glyph" aria-hidden="true">▣</span>:<PkrGlyph name={item.icon}/>}
-      <small>{item.name}</small>
-    </button>)}
-  </nav>:<nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">
-   {mobileNavigation.map(item=><button key={item.name} type="button"
+  </aside>
+  <nav className={'pkr-universal-bottom-nav'+(isMemberView?' pkr-player-universal-nav':'')}
+    aria-label={isMemberView?'Player navigation':'Main navigation'}>
+   {(isMemberView?playerNavigation:mobileNavigation).map(item=><button key={item.name} type="button"
     className={selected(item.name,true)||item.name==='More'&&moreOpen?'active':''}
-    aria-current={selected(item.name,true)?'page':undefined}
+    aria-current={selected(item.name,true)&&item.name!=='More'?'page':undefined}
     aria-expanded={item.name==='More'?moreOpen:undefined}
     onClick={()=>item.name==='More'?setMoreOpen(v=>!v):visit(item.href)}>
     {item.name==='More'?<span aria-hidden="true" className="pkr-more-icon">•••</span>:<PkrGlyph name={item.icon}/>}
     <small>{item.name}</small>
    </button>)}
-  </nav>}
-  {!isMemberView&&moreOpen&&<>
-
-   <AppDialog aria-label="More PKR navigation" onDismiss={()=>setMoreOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setMoreOpen(false);}}><div className="pkr-mobile-more-panel"   >
-    <div className="pkr-mobile-more-title"><strong>More from PKR</strong><button type="button" aria-label="Close menu" onClick={()=>setMoreOpen(false)}>×</button></div>
-    <div className="pkr-mobile-more-grid">
-     {moreNavigation.map(item=><button key={item.name} type="button" aria-current={selected(item.name)?'page':undefined}
-      onClick={()=>visit(item.href)}><PkrGlyph name={item.icon}/>{item.name}</button>)}
+  </nav>
+  {moreOpen&&<AppDialog aria-label="More PKR navigation" onDismiss={()=>setMoreOpen(false)}
+   onClick={event=>{if(event.target===event.currentTarget)setMoreOpen(false);}}>
+    <div className="pkr-mobile-more-panel pkr-navigation-more-panel">
+     <div className="pkr-mobile-more-title">
+      <strong>More from PKR</strong>
+      <button type="button" aria-label="Close menu" onClick={()=>setMoreOpen(false)}>×</button>
+     </div>
+     {roomChoices.length>0&&<div className="pkr-more-club-switch">
+      <label htmlFor="pkr-mobile-club-switch">Current poker club</label>
+      <select id="pkr-mobile-club-switch" value={roomChoices.some(r=>r.id===eventId)?eventId:roomChoices[0].id}
+       onChange={e=>switchRoom(e.target.value)}>
+       {roomChoices.map(room=><option key={room.id} value={room.id}>{room.name}</option>)}
+      </select>
+      <p>Switch clubs here. Games and members below belong to the selected club.</p>
+     </div>}
+     <div className="pkr-mobile-more-grid">
+      {(isMemberView?playerMoreNavigation:moreNavigation).map(item=><button key={item.name} type="button"
+       aria-current={selected(item.name)?'page':undefined} onClick={()=>visit(item.href)}>
+       <PkrGlyph name={item.icon}/>{item.name}
+      </button>)}
+     </div>
+     <button className="pkr-more-club-home" type="button" onClick={()=>visit('/dashboard')}>
+      <PkrGlyph name="home"/> Club overview and room selection
+     </button>
     </div>
-   </div></AppDialog>
-  </>}
+   </AppDialog>}
  </>;
 }
