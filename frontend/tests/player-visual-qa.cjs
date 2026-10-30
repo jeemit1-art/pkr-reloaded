@@ -117,7 +117,7 @@ async function main(){
     });
    }
    await check('room role visibility',async()=>{
-    await visit('/events/qa-room','[data-testid="player-dashboard"]');
+    await visit('/events/qa-room','.pkr-room-games-intro');
     assert.equal(await page.locator('[data-testid="dual-dashboard"]').count(),0);
     assert.equal(await page.getByText('Quick Buy-in').count(),0);
     await noOverflow('room');
@@ -187,7 +187,7 @@ async function main(){
     assert.equal(await page.locator('.pkr-dual-switch-actions').count(),role==='host'?1:0);
     results.push('PASS '+role+' management dashboard preserved');
     await page.goto(BASE+'/events/qa-room?tab=members',{waitUntil:'domcontentloaded',timeout:40000});
-    await page.locator('.pkr-event-tabs').waitFor({state:'visible',timeout:16000});
+    await page.locator('.pkr-member-summary').waitFor({state:'visible',timeout:16000});
     await page.waitForTimeout(450);
     const removes=await page.getByRole('button',{name:'Remove',exact:true}).count();
     assert.equal(role==='host'?removes>0:removes===0,true);

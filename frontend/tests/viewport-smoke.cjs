@@ -231,7 +231,7 @@ async function test(){
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
    });
-   for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-event-tabs'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
+   for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-room-games-intro'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
@@ -400,18 +400,20 @@ async function test(){
          errors.push(size.name+' '+item.id+' content clipped/overlaps fixed sidebar: '+JSON.stringify(geometry));
      }
      if(item.id==='room'){
-       const rect=await page.evaluate(()=>{
-        const hero=document.querySelector('.pkr-event .pkr-dual-root');const tabs=document.querySelector('.pkr-event-tabs');
-        if(!hero||!tabs)return null;const h=hero.getBoundingClientRect(),t=tabs.getBoundingClientRect();
-        return {heroWidth:h.width,tabsWidth:t.width,heroLeft:h.left,tabsLeft:t.left,heroRight:h.right,tabsRight:t.right};
-       });
-       if(!rect)errors.push(size.name+' room missing hero/tabs geometry');
-       else if(Math.abs(rect.heroLeft-rect.tabsLeft)>18||Math.abs(rect.heroRight-rect.tabsRight)>18) errors.push(size.name+' room banner and tabs misaligned: '+JSON.stringify(rect));
+       const state=await page.evaluate(()=>({
+         hasGames:!!document.querySelector('.pkr-room-games-intro'),
+         hasDuplicateDashboard:!!document.querySelector('.pkr-event .pkr-dual-root'),
+         hasDuplicateTabs:!!document.querySelector('.pkr-event-tabs'),
+         width:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth
+       }));
+       if(!state.hasGames||state.hasDuplicateDashboard||state.hasDuplicateTabs)
+         errors.push(size.name+' room navigation repeats Home: '+JSON.stringify(state));
+       if(state.scrollWidth>state.width+6)errors.push(size.name+' room overflow: '+JSON.stringify(state));
      }
      if(item.id==='room'){
        // The redesigned game scheduler must expose the essentials immediately,
        // keep optional controls accessible, and never create a game just by opening.
-       const openScheduler=page.getByRole('button',{name:'+ Game',exact:true});
+       const openScheduler=page.getByRole('button',{name:'+ Schedule game',exact:true});
        if(!await openScheduler.isVisible())errors.push(size.name+' room create-game action unavailable');
        else{
          await openScheduler.click();
@@ -685,7 +687,8 @@ async function test(){
        await page.getByLabel('Filter by game status').selectOption('all');
      }
      if(item.id==='room'&&size.width<=700){
-      if(!await page.locator('.pkr-event-tabs').isVisible())errors.push(size.name+' room tabs hidden');
+      if(await page.locator('.pkr-event-tabs').count())
+        errors.push(size.name+' old sticky room tabs are still rendered');
      }
      if(item.id==='room'&&size.width<1100){
       const moreButton=page.locator('.pkr-universal-bottom-nav button').filter({hasText:'More'}).first();
@@ -706,10 +709,8 @@ async function test(){
       if(await memberNav.count() && await memberNav.isVisible()){
        await memberNav.click();
        await page.waitForTimeout(300);
-       const selected=await page.locator('.pkr-event-tabs .tab.active').first().textContent().catch(()=>null);
-       if(!selected||!selected.toLowerCase().includes('members'))errors.push(size.name+' global Members navigation did not open room Members tab');
-       const contrast=await page.locator('.pkr-event-tabs .tab.active').evaluate(node=>getComputedStyle(node).color);
-       if(contrast==='rgb(252, 209, 130)')errors.push(size.name+' selected room tab has low-contrast gold text');
+       const selected=new URL(page.url()).searchParams.get('tab');
+       if(selected!=='members')errors.push(size.name+' global Members navigation did not open Members directly');
        if(!await page.locator('.pkr-member-summary').isVisible())errors.push(size.name+' members summary missing after navigation');
        if(size.width>=1100){
          const nav=page.locator('.pkr-persistent-nav button');
@@ -721,11 +722,11 @@ async function test(){
          const playersActive=page.locator('.pkr-persistent-nav button.active');
          if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Standings'))
            errors.push(size.name+' Rooms and Standings highlighted at once');
-         await nav.filter({hasText:'Rooms & games'}).first().click();
+         await nav.filter({hasText:'Games'}).first().click();
          await page.waitForTimeout(130);
          const gamesActive=page.locator('.pkr-persistent-nav button.active');
-         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Rooms & games'))
-           errors.push(size.name+' Rooms & games is not the sole active menu after return');
+         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Games'))
+           errors.push(size.name+' Games is not the sole active menu after return');
          await nav.filter({hasText:'Members'}).first().click();
          await page.waitForTimeout(130);
        }
@@ -748,7 +749,7 @@ async function test(){
          await search.fill('');
        }
       }
-      await page.locator('.pkr-event-tabs .tab').filter({hasText:'Standings'}).click();
+      await page.goto(BASE+'/events/test-room?tab=leaderboard',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
       if(await page.locator('.pkr-standings-row').count()!==leaders.length)
         errors.push(size.name+' Standings did not show every synthetic player');

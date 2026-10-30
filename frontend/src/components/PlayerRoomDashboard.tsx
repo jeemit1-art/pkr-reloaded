@@ -28,6 +28,12 @@ export default function PlayerRoomDashboard({
   const [ledger,setLedger]=useState<RoomTransferLoad|null>(null);
   const [ledgerError,setLedgerError]=useState(false);
   useEffect(()=>{
+    if(window.location.hash!=='#pkr-my-payments')return;
+    // Payment panel is rendered after the selected player's room loads.
+    const target=document.getElementById('pkr-my-payments');
+    target?.scrollIntoView({block:'start'});
+  },[room.id]);
+  useEffect(()=>{
     const controller=new AbortController();
     setLedger(null);setLedgerError(false);
     if(memberId){

@@ -170,7 +170,12 @@ export default function PersistentNavigation(){
    return;
   }
   if(destination==='payments'){
-   router.push('/insights?room='+encodeURIComponent(eventId||'')+'&payments=all#pkr-my-payments');
+   // Players only see their own ledger on Home, never the host Insights page.
+   if(eventId){
+    setPreferredRoomId(eventId);
+    try{localStorage.setItem('pkr_preferred_room',eventId)}catch{}
+   }
+   router.push('/dashboard#pkr-my-payments');
    return;
   }
   if(destination==='room'||destination==='members'||destination==='leaderboard'||destination==='history'){
