@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { clientSafeEvent, clientSafeGame } from '../public-data';
+import { computeRoomLeaderboard } from '../player-leaderboard';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -322,8 +323,11 @@ events.post('/:id/unsubscribe', optionalAuth, async (c) => {
 events.get('/:id/leaderboard', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
-  const rows = await c.env.DB.prepare('SELECT * FROM leaderboard WHERE event_id=? ORDER BY total_net DESC').bind(eventId).all();
-  return c.json(rows.results);
+  // Calculate directly from immutable settled-game rows. The older cached
+  // leaderboard grouped by name; a renamed player could appear twice while
+  // their history selected overlapping rows by ID.
+  const {leaders}=await computeRoomLeaderboard(c.env.DB,eventId);
+  return c.json(leaders);
 });
 
 // Game history with top 3 player results per game

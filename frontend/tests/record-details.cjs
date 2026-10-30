@@ -11,13 +11,17 @@ const payments=[
  {id:'p4',from:'b',from_name:'Blair',to:'a',to_name:'Alex',amount:400,status:'not_received'},
  {id:'p5',from:'c',from_name:'Casey',to:'a',to_name:'Alex',amount:99999,status:'legacy'},
 ];
-let failResults=false,failSaved=false,omitHistoricRoster=false;let requests=0;
+let failResults=false,failSaved=false,omitHistoricRoster=false,canonicalRefs=false,aliasName=false;let requests=0;
 const players=[{user_id:'a',display_name:'Alex',buy_ins:1,cashout:12000,net:2000,seat_number:1},
  {user_id:'different',display_name:'Alex',buy_ins:1,cashout:5000,net:-5000,seat_number:2}];
 const api={events:{
  list:async()=>[{id:'r1',name:'Room 1',member_count:2,status:'active'},{id:'r2',name:'Archived room',status:'ended'}],
  get:async id=>{if(id!=='r1')throw new Error('Permission denied');return {id,name:'Room 1',buy_in:10000,members:[{id:'a',name:'Alex',role:'member',joined_at:now}]};},
- leaderboard:async()=>[{user_id:'a',display_name:'Alex',games_played:2,games_won:2,total_net:4000}],
+ leaderboard:async()=>canonicalRefs?
+  [{user_id:'a',display_name:'Alex',games_played:2,games_won:2,total_net:4000,
+    source_game_players:[{game_id:'g1',user_id:'a'},{game_id:'g2',user_id:'historic-alex-id'}],
+    aliases:['Alex','Alexander']}]:
+  [{user_id:'a',display_name:'Alex',games_played:2,games_won:2,total_net:4000}],
 },games:{
  list:async id=>{requests++;return id==='r1'?games:[];},
  live:async()=>({players,totalIn:20000,totalOut:17000,bank:3000}),
@@ -25,7 +29,7 @@ const api={events:{
  results:async token=>{if(failResults&&token==='token-g2')throw new Error('Temporary outage');return {
   game:games.find(g=>g.results_token===token),
   players:token==='token-g2'?
-    [{...players[0],user_id:'historic-alex-id',display_name:' Alex ',buy_ins:3,buy_in_total:10000},
+    [{...players[0],user_id:'historic-alex-id',display_name:aliasName?'Alexander':' Alex ',buy_ins:3,buy_in_total:10000},
      {...players[1],user_id:'old-other-id',display_name:'Casey'}]:players,
   transfers:token==='token-g1'?payments:[]};},
 }};
@@ -59,6 +63,13 @@ const {loadRecordDetail:load,isOutstanding,paymentLabel}=moduleObject.exports;
  assert.equal(balance.rows.length,3);assert.match(balance.summary,/net to pay \$19\.00/);
  const person=await load({kind:'player',title:'Alex',roomId:'r1',playerId:'a',playerName:'Alex'});
  assert.equal(person.rows.length,2);assert.match(person.summary,/\+\$40\.00/);
+ canonicalRefs=true;aliasName=true;
+ const unified=await load({kind:'player',title:'Alex merged aliases',roomId:'r1',playerId:'a',playerName:'Alex'});
+ assert.equal(unified.rows.length,2,'Use exact saved-game references to include renamed historical accounts');
+ assert.match(unified.summary,/2 settled games.*net \+\$40\.00/);
+ assert.equal(unified.warning,undefined,'Canonical history must reconcile to its matching leaderboard');
+ assert(unified.rows.some(row=>row.detail.includes('3 buy-ins')),'Include old alias game exactly once');
+ canonicalRefs=false;aliasName=false;
  assert.match(person.summary,/2 settled games/);
  assert.equal(JSON.stringify(person.rows.map(row=>row.href).sort()),
   JSON.stringify(['/games/results/token-g1','/games/results/token-g2']));

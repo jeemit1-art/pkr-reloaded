@@ -246,7 +246,15 @@ export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; t
 export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsvp[]; players:GamePlayer[]; }
 export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
-export interface LeaderboardEntry { user_id:string; display_name:string; games_played:number; games_won:number; total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null; }
+export interface LeaderboardEntry {
+  user_id:string; display_name:string; games_played:number; games_won:number;
+  total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null;
+  // Room-scoped, saved-game references from the same resolver used for totals.
+  // Never rely on names or one representative ID when showing detailed results.
+  source_game_players?:Array<{game_id:string;user_id:string}>;
+  aliases?:string[];
+  identity_review_required?:boolean;
+}
 export interface Transfer { from:string; from_name:string; to:string; to_name:string; amount:number;
   id?:string; status?:'owed'|'paid'|'not_received'|'payer_claimed'|'legacy'; paid_at?:number|null; last_reminded_at?:number|null; reminder_count?:number; }
 export interface SettlementResult { settlement_id:string; game_id:string; results:any[]; transfers:Transfer[]; settled_at:number; results_token:string; cached?:boolean; }

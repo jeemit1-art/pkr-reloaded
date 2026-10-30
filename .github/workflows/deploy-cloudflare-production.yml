@@ -55,6 +55,7 @@ jobs:
           python3 worker/scripts/test-d1-api-export-fallback-ci.py
           python3 worker/scripts/test-live-route-retry-ci.py
           python3 worker/scripts/test-room-profiles-migration.py
+          python3 worker/scripts/test-read-only-player-ledger-audit.py
           python3 -m py_compile worker/scripts/reconcile-authorised-legacy-ci.py
           python3 -m py_compile worker/scripts/deploy-settlement-v2-production.py
           python3 -m py_compile worker/scripts/settlement-push-dependencies-ci.py
@@ -113,6 +114,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python3 scripts/settlement-push-dependencies-ci.py --activate
+      - name: Independently audit all settled player identities and amounts (read only)
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 scripts/read-only-player-ledger-audit.py
       - name: Back up again and reconcile only the owner-authorised historical batch
         if: github.event_name == 'workflow_dispatch' && inputs.reconcile_authorised_legacy
         working-directory: worker

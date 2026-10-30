@@ -185,20 +185,41 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
     if(request.kind==='player'){
       const rows:RecordRow[]=[];
       let net=0,profitable=0,ambiguous=0;
-      // The room leaderboard groups historic results by lower-case player
-      // name, but stores the user_id of only one earlier game. Prefer the
-      // exact ID in each game, then fall back to ONE matching room-scoped name.
-      const wantedName=(request.playerName||'').trim().toLocaleLowerCase();
+      const normalise=(value:string)=>value.trim().replace(/\s+/g,' ').toLocaleLowerCase('en');
+      const wantedName=normalise(request.playerName||'');
+      // The API's leaderboard now resolves name changes and guest identities
+      // from all settled-game rows. The drill-down must use its EXACT source
+      // references: merely matching a representative ID can mix two aliases.
+      let canonical:Awaited<ReturnType<typeof api.events.leaderboard>>[number]|undefined;
+      let identityLookupFailed=false;
+      try{
+        const leaders=await api.events.leaderboard(roomId(request));check(signal);
+        canonical=leaders.find(p=>p.user_id===request.playerId&&
+          (!wantedName||normalise(p.display_name)===wantedName))||
+          leaders.find(p=>p.user_id===request.playerId)||
+          leaders.find(p=>wantedName&&normalise(p.display_name)===wantedName);
+      }catch{identityLookupFailed=true;}
+      const hasRefs=!!canonical&&Array.isArray(canonical.source_game_players);
+      const refsByGame=new Map<string,Set<string>>();
+      if(hasRefs)for(const ref of canonical!.source_game_players!){
+        if(!ref||typeof ref.game_id!=='string'||typeof ref.user_id!=='string')continue;
+        const ids=refsByGame.get(ref.game_id)||new Set<string>();
+        ids.add(ref.user_id);refsByGame.set(ref.game_id,ids);
+      }
       for(const {game,data} of [...records].sort((a,b)=>b.game.scheduled_at-a.game.scheduled_at)){
         const candidates=data.players||[];
-        const exact=request.playerId?candidates.find(p=>p.user_id===request.playerId):undefined;
-        const sameName=wantedName?candidates.filter(p=>
-          p.display_name.trim().toLocaleLowerCase()===wantedName):[];
-        const player=exact||(sameName.length===1?sameName[0]:undefined);
-        if(!player){
-          if(!exact&&sameName.length>1)ambiguous++;
-          continue;
-        }
+        const known=refsByGame.get(game.id);
+        const sameName=wantedName?candidates.filter(p=>normalise(p.display_name)===wantedName):[];
+        const matches=hasRefs?(known?candidates.filter(p=>known.has(p.user_id)):[]):
+          // On a stale leaderboard, a same-name result is eligible, but if
+          // two distinct seats share that name require the selected player ID.
+          // Never pick a different name solely because its ID was reused.
+          wantedName?(sameName.length>1&&request.playerId?
+            sameName.filter(p=>p.user_id===request.playerId):sameName):
+          candidates.filter(p=>p.user_id===request.playerId);
+        if(matches.length>1){ambiguous++;continue;}
+        const player=matches[0];
+        if(!player)continue;
         const playerNet=typeof player.net==='number'&&Number.isFinite(player.net)?player.net:null;
         if(request.filter==='profitable'&&!(playerNet!==null&&playerNet>0))continue;
         if(playerNet!==null){net+=playerNet;if(playerNet>0)profitable++;}
@@ -219,9 +240,16 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
           value:playerNet!==null?fmtSign(playerNet):'Not recorded',moneyTone:netTone(playerNet),
           href:game.results_token?'/games/results/'+encodeURIComponent(game.results_token):gameUrl(game)});
       }
+      const disagree=hasRefs&&request.filter!=='profitable'&&canonical&&
+        (rows.length!==canonical.games_played||net!==canonical.total_net||
+          profitable!==canonical.games_won);
       const incomplete=[warning,ambiguous?
-        ambiguous+' game(s) have multiple players sharing this name without a matching ID. They were excluded to avoid mixing people’s results.':
-        undefined].filter(Boolean).join(' ')||undefined;
+        ambiguous+' game(s) have ambiguous identity matches; their records were not combined.':
+        undefined,canonical?.identity_review_required?
+        'A repeated player name needs host identity review; no ambiguous accounts were merged.':undefined,
+        disagree?'Some saved results do not reconcile to the leaderboard. The totals shown here are incomplete; review the saved games.':undefined,
+        identityLookupFailed?'Player identity could not be verified against the latest standings. Retry the breakdown.':undefined,
+      ].filter(Boolean).join(' ')||undefined;
       return {rows,summary:rows.length+' settled game'+(rows.length===1?'':'s')+
         ' · '+profitable+' profitable · net '+fmtSign(net),summaryTone:netTone(net),warning:incomplete};
     }

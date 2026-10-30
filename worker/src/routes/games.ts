@@ -5,6 +5,7 @@ import { sendPushToEvent, sendPushToPlayer } from '../push';
 import { minimumTransfers, prepareSettlementPositions, SettlementValidationError } from '../settle';
 import { clientSafeGame } from '../public-data';
 import {planStartSeating, type ExistingGameSeat, type ConfirmedRsvp} from '../game-start-seating';
+import {computeRoomLeaderboard} from '../player-leaderboard';
 
 const games = new Hono<{ Bindings: Env }>();
 
@@ -1061,48 +1062,15 @@ games.post('/games/:id/unsettle', authMiddleware, async (c) => {
 ═══════════════════════════════════════════ */
 
 async function rebuildLeaderboard(db: D1Database, eventId: string) {
-  const settled = await db.prepare(`
-    SELECT gp.user_id, gp.display_name, gp.buy_ins, gp.cashout, gp.net, gp.settled_at
-    FROM game_players gp
-    JOIN games g ON g.id=gp.game_id
-    WHERE g.event_id=? AND g.status='settled' AND gp.net IS NOT NULL
-    ORDER BY gp.user_id
-  `).bind(eventId).all<any>();
-
-  if (!settled.results.length) {
-    await db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId).run();
-    return;
-  }
-
-  const players: Record<string, {
-    user_id:string; display_name:string; games_played:number; games_won:number;
-    total_net:number; biggest_win:number; biggest_loss:number; last_played:number;
-  }> = {};
-
-  for (const row of settled.results) {
-    const key = row.display_name.trim().toLowerCase();
-    if (!players[key]) {
-      players[key] = {
-        user_id:row.user_id, display_name:row.display_name,
-        games_played:0, games_won:0, total_net:0,
-        biggest_win:0, biggest_loss:0, last_played:0,
-      };
-    }
-    const p = players[key];
-    p.games_played++;
-    p.total_net += row.net;
-    if (row.net > 0) { p.games_won++; p.biggest_win = Math.max(p.biggest_win, row.net); }
-    if (row.net < 0) { p.biggest_loss = Math.max(p.biggest_loss, -row.net); }
-    p.last_played = Math.max(p.last_played, row.settled_at||0);
-  }
-
+  // The cached table and the read-only API share the same canonical identity
+  // resolver. Existing settled-game results are never modified.
+  const {leaders}=await computeRoomLeaderboard(db,eventId);
   await db.batch([
     db.prepare('DELETE FROM leaderboard WHERE event_id=?').bind(eventId),
-    ...Object.values(players).map(p =>
-      db.prepare(`INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played)
-        VALUES(?,?,?,?,?,?,?,?,?)`)
-        .bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)
-    ),
+    ...leaders.map(p=>db.prepare(
+      'INSERT INTO leaderboard(event_id,user_id,display_name,games_played,games_won,total_net,biggest_win,biggest_loss,last_played) '+
+      'VALUES(?,?,?,?,?,?,?,?,?)'
+    ).bind(eventId,p.user_id,p.display_name,p.games_played,p.games_won,p.total_net,p.biggest_win,p.biggest_loss,p.last_played)),
   ]);
 }
 
