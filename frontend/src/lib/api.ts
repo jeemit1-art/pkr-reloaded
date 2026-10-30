@@ -124,6 +124,10 @@ export const api = {
     history:        (id:string)      => req<Game[]>(`/events/${id}/history`),
     deleteGame:     (gameId:string)  => req<{ok:boolean}>(`/games/${gameId}`,{method:'DELETE'}),
     players:        (id:string)      => req<EventPlayer[]>(`/events/${id}/players`),
+    historicalVisibility:(id:string)=>req<{hidden_names:string[]}>('/events/'+encodeURIComponent(id)+'/historical-player-visibility'),
+    setHistoricalVisibility:(id:string,name:string,hidden:boolean)=>
+      req<{hidden_names:string[]}>('/events/'+encodeURIComponent(id)+'/historical-player-visibility',
+        {method:'PUT',body:JSON.stringify({name,hidden})}),
     profiles:       (id:string)      => req<{profiles:RoomPlayerProfile[]}>(`/events/${id}/profiles`),
     saveProfile:    (id:string,profile:RoomPlayerProfileInput) =>
       req<{ok:boolean;profile:RoomPlayerProfile}>(`/events/${id}/profiles`,{method:'PUT',body:JSON.stringify(profile)}),

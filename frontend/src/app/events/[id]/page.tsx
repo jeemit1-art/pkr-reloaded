@@ -76,6 +76,10 @@ export default function EventPage() {
   const [memberQuery,setMemberQuery]=useState('');
   const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
   const [knownRoomPlayers,setKnownRoomPlayers]=useState<Array<{display_name:string;games_played:number}>>([]);
+  const [hiddenHistoricalNames,setHiddenHistoricalNames]=useState<string[]>([]);
+  const [historicalVisibilityLoaded,setHistoricalVisibilityLoaded]=useState(false);
+  const [historicalVisibilityError,setHistoricalVisibilityError]=useState('');
+  const [archivePending,setArchivePending]=useState<string|null>(null);
   const [roomProfileError,setRoomProfileError]=useState('');
   const [editingRoomProfile,setEditingRoomProfile]=useState<{key:string;name:string;avatarUrl:string|null}|null>(null);
   const [memberFilter,setMemberFilter]=useState<'all'|'admins'|'players'>('all');
@@ -142,6 +146,14 @@ export default function EventPage() {
     });
     // Include people who have been seated but are not yet on the settled-game leaderboard.
     api.events.players(id).then(rows=>{if(active)setKnownRoomPlayers(rows);}).catch(()=>{});
+    setHistoricalVisibilityLoaded(false);
+    api.events.historicalVisibility(id).then(result=>{
+      if(!active)return;
+      setHiddenHistoricalNames(result.hidden_names);
+      setHistoricalVisibilityError('');
+    }).catch(error=>{
+      if(active)setHistoricalVisibilityError(error?.message||'Unable to load archived historical players.');
+    }).finally(()=>{if(active)setHistoricalVisibilityLoaded(true);});
     return()=>{active=false};
   },[id,tab]);
   useEffect(()=>{
@@ -405,9 +417,20 @@ export default function EventPage() {
     const name=p.display_name,key=name.toLowerCase();
     const alreadyMember=(event.members||[]).some((m:any)=>String(m.name||'').trim().toLowerCase()===key);
     const q=memberQuery.trim().toLowerCase();
-    return !alreadyMember&&(memberFilter!=='admins')&&(!q||key.includes(q)||
+    return !alreadyMember&&!hiddenHistoricalNames.includes(key)&&(memberFilter!=='admins')&&(!q||key.includes(q)||
       String(roomProfiles['history:'+key]?.screen_name||'').toLowerCase().includes(q));
   }).sort((a,b)=>b.games_played-a.games_played||a.display_name.localeCompare(b.display_name)).slice(0,150);
+  async function setHistoricalArchive(name:string,hidden:boolean){
+    if(hidden&&!window.confirm('Remove '+name+' from the Members list? Saved game results and payments will not be changed. You can restore this player from Archived historical players.'))return;
+    setArchivePending(name);
+    setHistoricalVisibilityError('');
+    try{
+      const result=await api.events.setHistoricalVisibility(id,name,hidden);
+      setHiddenHistoricalNames(result.hidden_names);
+    }catch(error:any){
+      setHistoricalVisibilityError(error?.message||'Unable to update this historical player.');
+    }finally{setArchivePending(null);}
+  }
   async function saveRoomProfile(input:RoomPlayerProfileInput){
     const saved=await api.events.saveProfile(id,input);
     setRoomProfiles(current=>({...current,[saved.profile.profile_key]:saved.profile}));
@@ -847,7 +870,9 @@ export default function EventPage() {
                 ))}
               </div>
             )}
-            {historicalPlayers.length>0&&<section className="pkr-historical-player-roster">
+            {historicalVisibilityError&&<p role="alert" className="pkr-insights-alert">{historicalVisibilityError}</p>}
+            {!historicalVisibilityLoaded&&<p role="status">Loading historical player directory…</p>}
+            {historicalVisibilityLoaded&&historicalPlayers.length>0&&<section className="pkr-historical-player-roster">
               <header><h3>Players from saved games</h3><p>Players recorded in game results who have not joined this room with a PKR account. Their display profile does not modify settled games.</p></header>
               {historicalPlayers.map((p:any)=>{
                 const playerName=String(p.display_name||'').trim();
@@ -865,9 +890,26 @@ export default function EventPage() {
                   {isHost&&<button type="button" disabled={!!roomProfileError} className="pkr-member-profile-edit"
                     aria-label={'Edit player profile for '+playerName}
                     onClick={()=>setEditingRoomProfile({key,name:playerName,avatarUrl:null})}>Profile</button>}
+                  {isGroupOwner&&<button type="button" className="pkr-member-profile-edit pkr-historical-archive-action"
+                    disabled={archivePending!==null} aria-label={'Remove '+playerName+' from Members'}
+                    onClick={()=>void setHistoricalArchive(playerName,true)}>
+                    {archivePending===playerName?'Removing…':'Remove'}
+                  </button>}
                 </div>;
               })}
             </section>}
+            {isGroupOwner&&historicalVisibilityLoaded&&hiddenHistoricalNames.length>0&&
+              <details className="pkr-historical-player-archived" style={{marginTop:14}}>
+                <summary>Archived historical players ({hiddenHistoricalNames.length})</summary>
+                <p>Hidden from Members only. Original game results and payments remain unchanged.</p>
+                {hiddenHistoricalNames.map(name=><div key={name} className="pkr-historical-player-row">
+                  <strong>{name}</strong>
+                  <button type="button" className="pkr-member-profile-edit"
+                    disabled={archivePending!==null} onClick={()=>void setHistoricalArchive(name,false)}>
+                    {archivePending===name?'Restoring…':'Restore'}
+                  </button>
+                </div>)}
+              </details>}
             {isGroupOwner && (
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');document.getElementById('pkr-mobile-name')?.focus();}}>+ Invite Member by Mobile</button>

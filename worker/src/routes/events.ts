@@ -3,6 +3,7 @@ import { Env } from '../types';
 import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { clientSafeEvent, clientSafeGame } from '../public-data';
 import { computeRoomLeaderboard } from '../player-leaderboard';
+import {archivedHistoricalNames,normaliseHistoricalName} from './historical-visibility';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -368,8 +369,13 @@ events.get('/:id/players', authMiddleware, async (c) => {
     GROUP BY gp.display_name
     ORDER BY games_played DESC
     LIMIT 50
-  `).bind(eventId, eventId).all();
-  return c.json(rows.results);
+  `).bind(eventId, eventId).all<{display_name:string}>();
+  // Archived historical identities must not be suggested for new game seats.
+  // Their saved game and settlement history remains untouched.
+  try{
+    const archived=new Set(await archivedHistoricalNames(c.env.KV,eventId));
+    return c.json(rows.results.filter(p=>!archived.has(normaliseHistoricalName(p.display_name))));
+  }catch{return c.json({error:'Historical player list unavailable'},503);}
 });
 
 events.post('/:id/end', authMiddleware, async (c) => {

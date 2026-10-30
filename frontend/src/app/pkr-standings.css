@@ -333,3 +333,29 @@
     grid-row:1 / span 2;
   }
 }
+
+/* Three distinct historical-player actions remain readable on iPhone. */
+.pkr-historical-player-roster .pkr-historical-player-row{
+ grid-template-columns:38px minmax(0,1fr) max-content max-content max-content;
+}
+.pkr-historical-player-archived{
+ padding:12px 14px;border:1px solid #314540;border-radius:12px;
+ color:#b9cbc7;background:#0b211c;
+}
+.pkr-historical-player-archived summary{cursor:pointer;font-size:13px;font-weight:600;color:#e6efeb}
+.pkr-historical-player-archived p{font-size:12px;line-height:1.5}
+.pkr-historical-player-archived .pkr-historical-player-row{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+}
+@media(max-width:560px){
+ .pkr-historical-player-roster .pkr-historical-player-row{
+  grid-template-columns:32px minmax(0,1fr) auto;
+ }
+ .pkr-historical-player-roster .pkr-historical-player-row .pkr-historical-archive-action{
+  grid-column:3;grid-row:3;min-width:60px;
+ }
+ .pkr-historical-player-roster .pkr-historical-player-name,
+ .pkr-historical-player-roster .pkr-historical-player-avatar{
+  grid-row:1 / span 3;
+ }
+}

@@ -5,6 +5,7 @@ import { corsHeaders } from './middleware';
 import auth    from './routes/auth';
 import events  from './routes/events';
 import memberProfiles from './routes/member-profiles';
+import historicalVisibility from './routes/historical-visibility';
 import games   from './routes/games';
 import rsvpBoard from './routes/rsvp-board';
 import phoneMembers from './routes/phone-members';
@@ -29,6 +30,7 @@ app.use('*', async (c, next) => {
 
 app.route('/auth',    auth);
 app.route('/events',  memberProfiles);
+app.route('/events',  historicalVisibility);
 app.route('/events',  events);
 // Staging cannot initiate payments, expose a billing portal, or accept webhooks.
 app.use('/billing/*', async (c, next) => {
