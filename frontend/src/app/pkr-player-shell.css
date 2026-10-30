@@ -1,0 +1,54 @@
+/* Player-only chrome, scoped so host/co-host layouts stay unchanged. */
+@media(min-width:1100px){
+ .pkr-player-mode.pkr-dashboard{padding-left:0!important;margin-left:0!important}
+ .pkr-player-mode .pkr-content{max-width:1280px!important}
+ .pkr-player-mode .pkr-topbar>div{max-width:1280px!important}
+}
+.pkr-player-mode .pkr-brand-mark{
+ border-color:#bd9c60!important;
+ background:#153c2f!important;
+ color:#e6ca83!important;
+}
+.pkr-player-mode .pkr-topbar{border-bottom-color:#365646!important}
+.pkr-player-mode .pkr-player-head-avatar{
+ width:28px;height:28px;display:inline-grid;place-items:center;
+ border-radius:50%;background:#214d3b;border:1px solid #577968;
+ color:#e2f1e4;font-weight:700;font-size:13px;flex-shrink:0;
+}
+.pkr-player-mode .pkr-content{max-width:1280px!important;margin-inline:auto!important}
+.pkr-player-install-link{
+ color:#9db8a4;font-size:12px;line-height:1.5;margin:14px 0 20px;
+}
+.pkr-player-install-link button{
+ background:transparent;border:0;color:#e1c780;padding:4px;
+ cursor:pointer;text-decoration:underline;text-underline-offset:3px;
+}
+@media(max-width:1099px){
+ .pkr-player-universal-nav{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  background:#071e17f8!important;
+  border-top-color:#43634c!important;
+ }
+ .pkr-player-universal-nav button.active{color:#ebcf83!important}
+ .pkr-player-universal-nav .pkr-player-scan-glyph{
+  font-size:21px;line-height:1.2;color:#e0c27d;
+ }
+ .pkr-player-mode .pkr-user-name{display:block!important;color:#d6e3d7!important}
+ .pkr-player-mode .pkr-header-controls{gap:9px!important}
+ .pkr-player-mode .pkr-content{padding-top:16px!important}
+}
+@media(max-width:420px){
+ .pkr-player-mode .pkr-user-name{max-width:42px!important}
+ .pkr-player-mode .pkr-topbar>div{padding:0 12px!important}
+ .pkr-player-mode .pkr-brand-sub{display:none!important}
+}
+
+/* A real gold spade for players, rather than the general lime app mark. */
+.pkr-player-mode.pkr-dashboard .pkr-topbar .pkr-brand-mark{
+ background:#163b2c!important;color:#e8ca84!important;
+ border:1px solid #cbb176!important;border-radius:50%!important;
+ font-size:22px!important;
+}
+.pkr-player-mode.pkr-dashboard .pkr-header-controls .pkr-user-name{
+ display:block!important;color:#d6e3d7!important;max-width:52px!important;
+}

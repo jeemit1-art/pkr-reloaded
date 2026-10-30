@@ -133,6 +133,16 @@ function DashboardInner() {
     setScanning(true);
   }
 
+  useEffect(()=>{
+    const onScan=()=>{void startScan();};
+    window.addEventListener('pkr:scan-invite',onScan);
+    if(searchParams.get('scanInvite')==='1'){
+      window.history.replaceState(window.history.state,'','/dashboard');
+      void startScan();
+    }
+    return()=>window.removeEventListener('pkr:scan-invite',onScan);
+  },[searchParams]);
+
   async function doEndEvent(eventId: string) {
     setEndingEvent(true);
     try {
@@ -403,7 +413,7 @@ function DashboardInner() {
   );
 
   return (
-    <div className="pkr-app pkr-dashboard pkr-casino pkr-premium-shell" style={{minHeight:'100vh',paddingBottom:80}}>
+    <div className={"pkr-app pkr-dashboard pkr-casino pkr-premium-shell"+(playerOnly?" pkr-player-mode":"")} style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
         color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
 
@@ -463,6 +473,7 @@ function DashboardInner() {
           <div className="pkr-brand"><span className="pkr-brand-mark" aria-hidden="true">♠</span>PKR<span className="pkr-brand-sub">HOME POKER</span></div>
           <label className="pkr-pro-search"><span>⌕</span><input aria-label="Search poker rooms" placeholder="Search poker rooms…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
           <div className="pkr-header-controls" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
+            {playerOnly&&!user?.avatar_url&&<span className="pkr-player-head-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase()||"P"}</span>}
             {user?.avatar_url && (
               <img src={user.avatar_url} alt={user.name}
                 style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
@@ -516,7 +527,7 @@ function DashboardInner() {
             </div>
           </section>
         )}
-        {featuredRoom && activeRooms.every(room=>room.role!=='host') && (
+        {featuredRoom && activeRooms.every(room=>room.role!=='host') && !playerOnly && (
           <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid rgba(201,168,76,.28)',
             borderRadius:12,background:'linear-gradient(115deg,rgba(21,47,32,.97),rgba(7,17,11,.97))',
             padding:'17px 19px',display:'flex',gap:15,justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
@@ -658,6 +669,10 @@ function DashboardInner() {
         <div className="pkr-room-grid" id="pkr-active-rooms">
           {searchedRooms.map(renderRoomCard)}
         </div>
+        {playerOnly&&featuredRoom&&<p className="pkr-player-install-link">
+          Want alerts and app shortcuts? <button type="button"
+            onClick={()=>router.push('/install?group='+encodeURIComponent(featuredRoom.id))}>Set up PKR →</button>
+        </p>}
         {activeRooms.length===0&&events.length>0&&
           <p className="pkr-pro-empty">No active rooms. Create a room or open Archived rooms to view previous ones.</p>}
         {activeRooms.length>0&&searchedRooms.length===0&&

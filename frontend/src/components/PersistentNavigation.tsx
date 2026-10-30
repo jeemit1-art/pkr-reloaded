@@ -111,6 +111,7 @@ export default function PersistentNavigation(){
   ||gameEventId||preferredRoom?.id||rooms.find(r=>r.status!=='ended')?.id||rooms[0]?.id;
  const roomPath=eventId?'/events/'+encodeURIComponent(eventId):'/dashboard';
  const roomChoices=rooms.filter(r=>r.status!=='ended'||r.id===eventId);
+ const isMemberView=rooms.find(r=>r.id===eventId)?.role==='member';
  const inRoom=pathname.startsWith('/events/');
  const inGame=pathname.startsWith('/games/');
  const isSettlement=pathname==='/insights'&&insightsHash==='#pkr-settlement';
@@ -132,6 +133,11 @@ export default function PersistentNavigation(){
  }
  function visit(destination:string){
   setMoreOpen(false);
+  if(destination==='scan'){
+   if(pathname==='/dashboard')window.dispatchEvent(new window.Event('pkr:scan-invite'));
+   else router.push('/dashboard?scanInvite=1');
+   return;
+  }
   if(destination==='room'||destination==='members'||destination==='leaderboard'){
    if(!eventId){router.push('/dashboard');return}
    if(pathname==='/events/'+eventId){
@@ -157,7 +163,7 @@ export default function PersistentNavigation(){
  }
 
  return <>
-  <aside className="pkr-persistent-nav" aria-label="PKR navigation">
+  {!isMemberView&&<aside className="pkr-persistent-nav" aria-label="PKR navigation">
    <div className="pkr-persistent-brand"><span aria-hidden="true">♠</span> PKR</div>
    <div className="pkr-persistent-room">
     <span>YOUR POKER CLUB</span>
@@ -180,8 +186,21 @@ export default function PersistentNavigation(){
     </Fragment>)}
    </nav>
    <div className="pkr-persistent-footer">PRIVATE POKER · YOUR GAME</div>
-  </aside>
-  <nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">
+  </aside>}
+  {isMemberView?<nav className="pkr-universal-bottom-nav pkr-player-universal-nav" aria-label="Player mobile navigation">
+    {([
+      {name:'Home',href:'/dashboard',icon:'home'},
+      {name:'Rooms',href:'room',icon:'games'},
+      {name:'Scan',href:'scan',icon:'scan'},
+      {name:'Standings',href:'leaderboard',icon:'players'},
+    ] as const).map(item=><button key={item.name} type="button"
+      className={selected(item.name,true)?'active':''}
+      aria-current={selected(item.name,true)?'page':undefined}
+      onClick={()=>visit(item.href)}>
+      {item.icon==='scan'?<span className="pkr-player-scan-glyph" aria-hidden="true">▣</span>:<PkrGlyph name={item.icon}/>}
+      <small>{item.name}</small>
+    </button>)}
+  </nav>:<nav className="pkr-universal-bottom-nav" aria-label="Mobile navigation">
    {mobileNavigation.map(item=><button key={item.name} type="button"
     className={selected(item.name,true)||item.name==='More'&&moreOpen?'active':''}
     aria-current={selected(item.name,true)?'page':undefined}
@@ -190,8 +209,8 @@ export default function PersistentNavigation(){
     {item.name==='More'?<span aria-hidden="true" className="pkr-more-icon">•••</span>:<PkrGlyph name={item.icon}/>}
     <small>{item.name}</small>
    </button>)}
-  </nav>
-  {moreOpen&&<>
+  </nav>}
+  {!isMemberView&&moreOpen&&<>
 
    <AppDialog aria-label="More PKR navigation" onDismiss={()=>setMoreOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setMoreOpen(false);}}><div className="pkr-mobile-more-panel"   >
     <div className="pkr-mobile-more-title"><strong>More from PKR</strong><button type="button" aria-label="Close menu" onClick={()=>setMoreOpen(false)}>×</button></div>
