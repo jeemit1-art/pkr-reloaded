@@ -46,6 +46,9 @@ def audit_all(release):
         "multi_name_player_groups": 0, "ambiguous_name_groups": 0,
         "named_example_groups": 0, "named_example_sessions": 0,
         "named_example_net_cents": 0, "named_example_profitable": 0,
+        "named_example_identity_review": 0,
+        "named_example_rooms_with_multiple_groups": 0,
+        "named_example_room_summaries": [],
     }
     mapping = {
         "source_rows": "settled_player_rows",
@@ -59,6 +62,7 @@ def audit_all(release):
         "named_example_sessions": "named_example_sessions",
         "named_example_net_cents": "named_example_net_cents",
         "named_example_profitable": "named_example_profitable",
+        "named_example_identity_review": "named_example_identity_review",
     }
     for room in rooms:
         room_id = room.get("room_id")
@@ -77,10 +81,30 @@ def audit_all(release):
             "JOIN games g ON g.id=gp.game_id WHERE g.event_id='"
             + room_id + "' AND g.status='settled'"
         )
+        host_links = release.remote_query(
+            "SELECT ep.user_id,ep.display_name FROM event_players ep "
+            "JOIN users u ON u.id=ep.user_id WHERE ep.event_id='"
+            + room_id + "' AND ep.user_id IS NOT NULL"
+        )
+        member_names = release.remote_query(
+            "SELECT u.id AS user_id,u.name AS display_name FROM users u "
+            "JOIN event_members em ON em.user_id=u.id WHERE em.event_id='"
+            + room_id + "'"
+        )
+        profile_names = release.remote_query(
+            "SELECT u.id AS user_id,p.screen_name AS display_name "
+            "FROM room_player_profiles p JOIN users u ON u.id=substr(p.profile_key,8) "
+            "WHERE p.event_id='" + room_id + "' "
+            "AND p.profile_key LIKE 'member:%' "
+            "AND p.screen_name IS NOT NULL AND trim(p.screen_name)!=''"
+        )
+        all_links = host_links + member_names + profile_names
+        ids = sorted(set([u["id"] for u in users] +
+                         [u["user_id"] for u in all_links]))
         # Only private stdin carries names/IDs; subprocess stdout is aggregated.
         result = subprocess.run(
             ["node", "scripts/offline-ledger-audit.cjs"], cwd=ROOT,
-            input=json.dumps({"rows": rows, "verified": [u["id"] for u in users]}),
+            input=json.dumps({"rows": rows, "verified": ids, "links": all_links}),
             text=True, capture_output=True, timeout=45,
         )
         if result.returncode != 0:
@@ -93,6 +117,17 @@ def audit_all(release):
                 metrics["source_net"] != metrics["ranked_net"]):
             raise RuntimeError("Saved and reconciled totals do not agree.")
         totals["rooms"] += 1
+        if metrics["named_example_groups"] > 0:
+            # Room ordinal does not identify a room, person or membership.
+            totals["named_example_room_summaries"].append({
+                "room_number": totals["rooms"],
+                "groups": int(metrics["named_example_groups"]),
+                "sessions": int(metrics["named_example_sessions"]),
+                "net_cents": int(metrics["named_example_net_cents"]),
+                "requires_identity_review": int(metrics["named_example_identity_review"]),
+            })
+        if metrics["named_example_groups"] > 1:
+            totals["named_example_rooms_with_multiple_groups"] += 1
         for source, destination in mapping.items():
             totals[destination] += int(metrics[source])
     if (totals["settled_player_rows"] != totals["reconciled_sessions"] or

@@ -18,6 +18,7 @@ export type SettledPlayerRow={
   scheduled_at:number;
 };
 export type SourcePlayerRef={game_id:string;user_id:string};
+export type VerifiedNameLink={user_id:string;display_name:string};
 export type PlayerLeaderboardRow={
   user_id:string;
   display_name:string;
@@ -47,6 +48,7 @@ const stableSort=(a:string,b:string)=>a.localeCompare(b,'en');
 export function resolvePlayerLeaderboard(
   rawRows:readonly SettledPlayerRow[],
   verifiedUserIds:ReadonlySet<string>,
+  verifiedNameLinks:readonly VerifiedNameLink[]=[],
 ):{leaders:PlayerLeaderboardRow[];audit:PlayerLeaderboardAudit}{
   // Every saved settlement row must be represented. Reject corrupt rows
   // rather than silently dropping financial amounts from a public total.
@@ -55,20 +57,38 @@ export function resolvePlayerLeaderboard(
       throw new Error('A saved settled-game result is invalid. No totals were inferred.');
   }
   const rows=rawRows.map(r=>({...r,display_name:r.display_name?.trim()||'Unnamed player'}));
+  const reviewNames=new Set<string>();
+  const verifiedNameOwners=new Map<string,Set<string>>();
+  // Host-linked event-player identities and authenticated account/profile names
+  // are the ONLY cross-name evidence used here. Names alone are never used to
+  // connect two different verified accounts.
+  for(const link of verifiedNameLinks){
+    if(!verifiedUserIds.has(link.user_id)||!link.display_name?.trim())continue;
+    const name=normalise(link.display_name),owners=verifiedNameOwners.get(name)||new Set<string>();
+    owners.add(link.user_id);verifiedNameOwners.set(name,owners);
+  }
+  const anchoredAccount=rows.map(r=>{
+    const name=normalise(r.display_name),owners=verifiedNameOwners.get(name);
+    const direct=verifiedUserIds.has(r.user_id)?r.user_id:null;
+    if(owners&&owners.size>1){reviewNames.add(name);return direct;}
+    const linked=owners?.size===1?[...owners][0]:null;
+    if(direct&&linked&&direct!==linked){reviewNames.add(name);return direct;}
+    return direct||linked;
+  });
   const parent=rows.map((_,i)=>i);
   const gameSets=rows.map(r=>new Set([r.game_id]));
-  const verifiedSets=rows.map(r=>new Set(verifiedUserIds.has(r.user_id)?[r.user_id]:[]));
+  const verifiedSets=rows.map((_,i)=>new Set(anchoredAccount[i]?[anchoredAccount[i]!]:[]));
   const find=(i:number):number=>{
     if(parent[i]!==i)parent[i]=find(parent[i]);
     return parent[i];
   };
-  const unite=(a:number,b:number,reason:'id'|'name'):boolean=>{
+  const unite=(a:number,b:number,reason:'id'|'name'|'linked'):boolean=>{
     a=find(a);b=find(b);
     if(a===b)return true;
     // A single person cannot have two separately recorded seats in one game.
     // Do not collapse such records or silently discard their money.
     for(const gameId of gameSets[a])if(gameSets[b].has(gameId))return false;
-    if(reason==='name'&&verifiedSets[a].size&&verifiedSets[b].size){
+    if(verifiedSets[a].size&&verifiedSets[b].size){
       const distinct=new Set([...verifiedSets[a],...verifiedSets[b]]);
       if(distinct.size>1)return false;
     }
@@ -85,7 +105,17 @@ export function resolvePlayerLeaderboard(
   rows.forEach((r,i)=>{
     const prev=firstId.get(r.user_id);
     if(prev===undefined)firstId.set(r.user_id,i);
-    else unite(i,prev,'id');
+    else if(!unite(i,prev,'id'))reviewNames.add(normalise(r.display_name));
+  });
+  // Two display names explicitly linked to the same registered account are
+  // its verified aliases, even when old guest records used different IDs.
+  const firstAccount=new Map<string,number>();
+  rows.forEach((r,i)=>{
+    const id=anchoredAccount[i];
+    if(!id)return;
+    const prev=firstAccount.get(id);
+    if(prev===undefined)firstAccount.set(id,i);
+    else if(!unite(i,prev,'linked'))reviewNames.add(normalise(r.display_name));
   });
 
   const byName=new Map<string,number[]>();
@@ -94,13 +124,12 @@ export function resolvePlayerLeaderboard(
     const matches=byName.get(name)||[];
     matches.push(i);byName.set(name,matches);
   });
-  const reviewNames=new Set<string>();
   for(const [name,indices] of byName){
-    const verified=new Set(indices.filter(i=>verifiedUserIds.has(rows[i].user_id)).map(i=>rows[i].user_id));
+    const verified=new Set(indices.map(i=>anchoredAccount[i]).filter((v):v is string=>!!v));
     if(verified.size>1)reviewNames.add(name);
     // A name that belongs to two different registered people is ambiguous;
     // never use it to attach their historical guest rows to either person.
-    const eligible=verified.size>1?indices.filter(i=>!verifiedUserIds.has(rows[i].user_id)):indices;
+    const eligible=verified.size>1?indices.filter(i=>!anchoredAccount[i]):indices;
     if(eligible.length<2)continue;
     const first=eligible[0];
     for(let i=1;i<eligible.length;i++){
@@ -132,16 +161,18 @@ export function resolvePlayerLeaderboard(
       if(r.net<0)biggestLoss=Math.max(biggestLoss,-r.net);
       last=Math.max(last,r.settled_at||r.scheduled_at);
     }
+    const anchorIds=[...new Set(indices.map(i=>anchoredAccount[i]).filter((v):v is string=>!!v))];
     const ids=[...idCounts].sort((a,b)=>
       Number(verifiedUserIds.has(b[0]))-Number(verifiedUserIds.has(a[0]))||
       b[1]-a[1]||stableSort(a[0],b[0]));
+    const canonicalId=anchorIds.length===1?anchorIds[0]:ids[0][0];
     const names=[...nameCounts.values()].sort((a,b)=>
       b.count-a.count||b.latest-a.latest||b.display.length-a.display.length||stableSort(a.display,b.display));
     const sources=records.map(r=>({game_id:r.game_id,user_id:r.user_id})).sort((a,b)=>
       stableSort(a.game_id,b.game_id)||stableSort(a.user_id,b.user_id));
     const reviewed=records.some(r=>reviewNames.has(normalise(r.display_name)));
     leaders.push({
-      user_id:ids[0][0],display_name:names[0].display,
+      user_id:canonicalId,display_name:names[0].display,
       games_played:records.length,games_won:wins,total_net:total,
       biggest_win:biggestWin,biggest_loss:biggestLoss,last_played:last,
       source_game_players:sources,
@@ -165,7 +196,7 @@ export function resolvePlayerLeaderboard(
 }
 
 export async function computeRoomLeaderboard(db:D1Database,eventId:string){
-  const [saved,registered]=await Promise.all([
+  const [saved,registered,eventLinks,memberNames,profileNames]=await Promise.all([
     db.prepare(
       "SELECT gp.game_id,gp.user_id,gp.display_name,gp.net,gp.settled_at,g.scheduled_at "+
       "FROM game_players gp JOIN games g ON g.id=gp.game_id "+
@@ -178,7 +209,30 @@ export async function computeRoomLeaderboard(db:D1Database,eventId:string){
       "JOIN games g ON g.id=gp.game_id "+
       "WHERE g.event_id=? AND g.status='settled'"
     ).bind(eventId).all<{id:string}>(),
+    db.prepare(
+      "SELECT ep.user_id,ep.display_name FROM event_players ep "+
+      "JOIN users u ON u.id=ep.user_id "+
+      "WHERE ep.event_id=? AND ep.user_id IS NOT NULL"
+    ).bind(eventId).all<VerifiedNameLink>(),
+    db.prepare(
+      "SELECT u.id AS user_id,u.name AS display_name FROM users u "+
+      "JOIN event_members em ON em.user_id=u.id WHERE em.event_id=?"
+    ).bind(eventId).all<VerifiedNameLink>(),
+    // Member profile display names are optional in older deployments.
+    db.prepare(
+      "SELECT u.id AS user_id,p.screen_name AS display_name "+
+      "FROM room_player_profiles p JOIN users u ON u.id=substr(p.profile_key,8) "+
+      "WHERE p.event_id=? AND p.profile_key LIKE 'member:%' AND "+
+      "p.screen_name IS NOT NULL AND trim(p.screen_name)!=''"
+    ).bind(eventId).all<VerifiedNameLink>().catch(()=>({results:[] as VerifiedNameLink[]})),
   ]);
-  return resolvePlayerLeaderboard(saved.results,new Set(registered.results.map(u=>u.id)));
+  const verifiedIds=new Set([
+    ...registered.results.map(u=>u.id),
+    ...eventLinks.results.map(u=>u.user_id),
+    ...memberNames.results.map(u=>u.user_id),
+    ...profileNames.results.map(u=>u.user_id),
+  ]);
+  return resolvePlayerLeaderboard(saved.results,verifiedIds,[
+    ...eventLinks.results,...memberNames.results,...profileNames.results
+  ]);
 }
-

@@ -17,6 +17,16 @@ class FakeRelease:
             return [{"room_id":"room-A"},{"room_id":"room-B"}]
         if "SELECT DISTINCT u.id FROM users u" in sql:
             return [{"id":"auth-1"}] if "room-A" in sql else [{"id":"auth-2"}]
+        if "FROM event_players ep" in sql:
+            return ([{"user_id":"auth-1","display_name":"Jeemit"},
+                     {"user_id":"auth-1","display_name":"Jeemit Shah"}]
+                    if "room-A" in sql else [])
+        if "JOIN event_members em" in sql:
+            return ([{"user_id":"auth-1","display_name":"Jeemit Shah"}]
+                    if "room-A" in sql else
+                    [{"user_id":"auth-2","display_name":"Prakash"}])
+        if "FROM room_player_profiles p" in sql:
+            return []
         if "SELECT gp.game_id,gp.user_id,gp.display_name" in sql:
             if "room-A" in sql:
                 return [
@@ -42,5 +52,7 @@ assert result["multi_name_player_groups"] == 1
 assert result["named_example_groups"] == 1
 assert result["named_example_sessions"] == 3
 assert result["named_example_net_cents"] == 3000
+assert result["named_example_rooms_with_multiple_groups"] == 0
+assert len(result["named_example_room_summaries"]) == 1
 print("PASS: production audit aggregates all rooms, preserves money, and logs no records.")
 

@@ -18,7 +18,7 @@ process.stdin.on('end',()=>{
  try{
   const data=JSON.parse(input);
   if(!Array.isArray(data.rows)||!Array.isArray(data.verified))throw Error('Invalid private audit payload');
-  const {leaders,audit}=moduleObject.exports.resolvePlayerLeaderboard(data.rows,new Set(data.verified));
+  const {leaders,audit}=moduleObject.exports.resolvePlayerLeaderboard(data.rows,new Set(data.verified),Array.isArray(data.links)?data.links:[]);
   const matches=leaders.filter(p=>p.aliases.some(n=>['jeemit','jeemit shah'].includes(n.trim().toLowerCase())));
   console.log(JSON.stringify({
     ...audit,
@@ -26,6 +26,7 @@ process.stdin.on('end',()=>{
     named_example_sessions:matches.reduce((n,p)=>n+p.games_played,0),
     named_example_net_cents:matches.reduce((n,p)=>n+p.total_net,0),
     named_example_profitable:matches.reduce((n,p)=>n+p.games_won,0),
+    named_example_identity_review:matches.filter(p=>p.identity_review_required).length,
   }));
  }catch{
   console.error('Read-only player audit could not reconcile source records.');

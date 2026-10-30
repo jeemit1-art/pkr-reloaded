@@ -12,9 +12,10 @@ describe('authoritative D1 read path',()=>{
     bind:(eventId:string)=>({
      all:async()=>{
       observed.push({sql,bound:eventId});
-      return sql.includes('SELECT DISTINCT u.id')
-       ?{results:[{id:'auth'}]}
-       :{results:[row('game-1','auth','Alex',4500)]};
+      if(sql.includes('SELECT DISTINCT u.id'))return {results:[{id:'auth'}]};
+      if(sql.includes('FROM event_players')||sql.includes('FROM event_members')||
+        sql.includes('FROM room_player_profiles'))return {results:[]};
+      return {results:[row('game-1','auth','Alex',4500)]};
      },
     }),
    }),
@@ -22,8 +23,8 @@ describe('authoritative D1 read path',()=>{
   const {leaders,audit}=await computeRoomLeaderboard(db as any,'room-1');
   expect(leaders).toHaveLength(1);
   expect(leaders[0].total_net).toBe(4500);
-  expect(observed).toHaveLength(2);
-  expect(observed.every(q=>q.bound==='room-1'&&q.sql.includes("g.status='settled'")&&q.sql.includes('g.event_id=?'))).toBe(true);
+  expect(observed).toHaveLength(5);
+  expect(observed.every(q=>q.bound==='room-1'&&q.sql.includes('event_id=?'))).toBe(true);
   expect(observed.some(q=>q.sql.includes('gp.net IS NOT NULL'))).toBe(true);
   expect(audit.source_net).toBe(audit.ranked_net);
  });
@@ -51,6 +52,36 @@ describe('per-room canonical settled-game ledger',()=>{
    expect(audit.source_rows).toBe(audit.ranked_sessions);
    expect(audit.multi_name_players).toBe(1);
    expect(leaders).toHaveLength(2);
+ });
+ it('uses host-linked historical aliases without rewriting guest game records',()=>{
+   const {leaders,audit}=resolvePlayerLeaderboard([
+     row('g1','manual-1','Jeemit',2300),
+     row('g2','manual-2','Jeemit Shah',-700),
+     row('g3','manual-3','Jeemit',1000),
+   ],new Set(['verified-account']),[
+     {user_id:'verified-account',display_name:'Jeemit'},
+     {user_id:'verified-account',display_name:'Jeemit Shah'},
+   ]);
+   expect(leaders).toHaveLength(1);
+   expect(leaders[0].user_id).toBe('verified-account');
+   expect(leaders[0].games_played).toBe(3);
+   expect(leaders[0].total_net).toBe(2600);
+   expect(leaders[0].aliases).toEqual(['Jeemit','Jeemit Shah']);
+   expect(audit.multi_name_players).toBe(1);
+ });
+ it('does not trust conflicting host mappings to two registered accounts',()=>{
+   const {leaders,audit}=resolvePlayerLeaderboard([
+     row('g1','guest-1','Alex',1000),
+     row('g2','guest-2','Alex',2000),
+     row('g3','auth-1','Alexander',-3000),
+     row('g4','auth-2','Alexis',4000),
+   ],new Set(['auth-1','auth-2']),[
+     {user_id:'auth-1',display_name:'Alex'},
+     {user_id:'auth-2',display_name:'Alex'},
+   ]);
+   expect(audit.ambiguous_name_groups).toBeGreaterThan(0);
+   expect(leaders.some(l=>l.identity_review_required)).toBe(true);
+   expect(leaders.reduce((n,l)=>n+l.total_net,0)).toBe(4000);
  });
  it('preserves all other players and each source amount exactly once',()=>{
    const sample=[
