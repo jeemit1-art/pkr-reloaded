@@ -5,6 +5,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
 import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
+import {playerCountLabel} from '@/lib/game-player-count';
 import {loadRoomTransfers} from '@/lib/room-payment-schedule';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './settlement-filter.css';
@@ -358,7 +359,7 @@ export default function InsightsPage(){
     <section className="pkr-vnext-card pkr-insights-recent">
      <div className="pkr-vnext-card-heading"><h2>♛ Recent Settled Games</h2><button type="button" onClick={()=>router.push(roomUrl('history'))}>View all →</button></div>
      {recent.length?recent.slice(0,6).map(g=><button className="pkr-vnext-game-row" key={g.id} onClick={()=>router.push('/games/'+g.id)}>
-      <span><strong>{fmtDate(g.scheduled_at)}</strong><small>{g.location||room?.name||'Poker game'} · {g.player_count||0} players</small></span>
+      <span><strong>{fmtDate(g.scheduled_at)}</strong><small>{g.location||room?.name||'Poker game'} · {playerCountLabel(g.player_count)}</small></span>
       <span className="pkr-vnext-status paid">✓ Settled</span>
      </button>):<p className="pkr-vnext-empty">No completed settlements yet.</p>}
     </section>

@@ -45,7 +45,12 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
   const eventId = c.req.param('eventId');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const { status } = c.req.query();
-  let q = "SELECT g.*,CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format FROM games g WHERE g.event_id=?";
+  // Count saved game participants, not room members, RSVPs or seat capacity.
+  // Previous list API omitted player_count; clients consequently displayed
+  // zero for every settled game despite existing game_players records.
+  let q = "SELECT g.*, (SELECT COUNT(*) FROM game_players gp WHERE gp.game_id=g.id) AS player_count, "+
+    "CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format "+
+    "FROM games g WHERE g.event_id=?";
   const b: unknown[] = [eventId];
   if (status) { q+=' AND g.status=?'; b.push(status); }
   q+=' ORDER BY g.scheduled_at DESC';

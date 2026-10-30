@@ -6,6 +6,7 @@ import AppDialog from '@/components/AppDialog';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type RoomPlayerProfile, type RoomPlayerProfileInput } from '@/lib/api';
+import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
@@ -949,7 +950,7 @@ export default function EventPage() {
                   <div style={{padding:'14px 16px',cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:4}}>
                       <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
-                      <span className="badge badge-settled">{(g as any).player_count||0} players</span>
+                      <span className="badge badge-settled">{playerCountLabel(g.player_count)}</span>
                     </div>
                     {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
                     {((g as any).top_players||[]).length>0 && (
