@@ -74,7 +74,7 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export interface PrivateGroupContact {id:string;display_name:string;phone:string;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;user_id?:string|null;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
 
 export const api = {
   phoneInvites: {
@@ -107,6 +107,9 @@ export const api = {
     phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
     inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>
       req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),
+    linkPhoneContact:(id:string,contactId:string,userId:string)=>req<{ok:boolean;status:'joined';user_id:string}>(
+      '/events/'+encodeURIComponent(id)+'/phone-contacts/'+encodeURIComponent(contactId)+'/link-member',
+      {method:'POST',body:JSON.stringify({user_id:userId})}),
     removePhoneContact:(id:string,contactId:string)=>req<{ok:boolean}>(`/events/${id}/phone-contacts/${contactId}`,{method:'DELETE'}),
     redeemInvite:   (token:string)   => req<{ok:boolean;event:Event;role:string}>(`/events/invite/${token}`),
     pushRegistrations:(eventId:string)=>req<{members:Array<{user_id:string;device_count:number}>;definition:string}>(`/events/${eventId}/push-registrations`),

@@ -18,13 +18,16 @@ function makeFixture(){
    if(sql.includes('JOIN group_phone_contacts c')&&sql.includes('group_phone_invites i'))
     return dbState.consumed?null:{id:'invite-1',event_id:'room-1',contact_id:'contact-1',display_name:'Expected Player',phone_cipher:'fake-opaque-cipher-used-only-by-invite',role:'member',expires_at:Math.floor(Date.now()/1000)+3600,consumed_at:null,sent_count:0,last_sent_at:null,verify_count:0,event_name:'Friday Test Group'};
    if(sql.includes('SELECT role FROM event_members'))return args[0]==='room-1'&&args[1]==='host-1'?{role:'host'}:null;
-   if(sql.includes('SELECT id FROM group_phone_invites'))return dbState.consumed?null:{id:'invite-1'};
+   if(sql.includes('SELECT id,expires_at FROM group_phone_invites'))return dbState.consumed?null:{id:'invite-1',expires_at:Math.floor(Date.now()/1000)+3500};
+    if(sql.includes('SELECT id FROM group_phone_invites'))return dbState.consumed?null:{id:'invite-1'};
    if(sql.includes('SELECT user_id FROM group_phone_contacts'))return {user_id:dbState.userId};
-   if(sql.includes('SELECT display_name,phone_cipher FROM group_phone_contacts'))return {display_name:'Expected Player',phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678')};
+   if(sql.includes('SELECT display_name,phone_cipher,user_id FROM group_phone_contacts'))return {display_name:'Expected Player',phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678')};
    return null;
   },
   async all(){
-   if(sql.includes('SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts')){
+   if(sql.includes('SELECT user_id FROM event_members WHERE event_id=?'))
+     return {results:dbState.members.filter(m=>m.eventId===args[0]).map(m=>({user_id:m.userId}))};
+    if(sql.includes('SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts')){
     return {results:[{id:'contact-1',event_id:'room-1',display_name:'Expected Player',
       phone_cipher:await encryptPhone({PKR_CONTACT_KEY:fakeKey} as any,'+61412345678'),
       user_id:dbState.userId,created_at:1}]};

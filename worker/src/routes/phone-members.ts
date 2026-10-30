@@ -38,6 +38,10 @@ router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
     const result=await c.env.DB.prepare(
       'SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts WHERE event_id=? ORDER BY display_name'
     ).bind(eventId).all<Contact & {created_at:number}>();
+    const roomMemberships=await c.env.DB.prepare(
+      'SELECT user_id FROM event_members WHERE event_id=?'
+    ).bind(eventId).all<{user_id:string}>();
+    const activeMemberIds=new Set(roomMemberships.results.map(m=>m.user_id));
     // Host approval is a separate state from actual room membership. A player
     // must still redeem their own private claim before event_members is created.
     // Always show this distinction instead of calling approved joins "pending".
@@ -73,11 +77,13 @@ router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
     }
     const contacts=await Promise.all(result.results.map(async row=>{
       const approved=await c.env.KV.get('approved-contact:'+eventId+':'+row.id);
-      const status=row.user_id?'joined'
+      const joined=!!row.user_id&&activeMemberIds.has(row.user_id);
+      const status=joined?'joined'
         :approved||legacyApprovedContactIds.has(row.id)?'approved_awaiting_member'
         :pendingContactIds.has(row.id)?'awaiting_host_approval':'invited';
       return {id:row.id,display_name:row.display_name,
         phone:await decryptPhone(c.env,row.phone_cipher),
+        user_id:joined?row.user_id:null,
         status,created_at:row.created_at};
     }));
     privateHeaders(c);
@@ -123,6 +129,64 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
     privateHeaders(c);
     return c.json({ok:true,contact:{id:contact.id,display_name:name,phone:mobile,status:'invited'},
       invite:{url,expires_at:expires,role},whatsapp_url:'https://wa.me/'+mobile.slice(1)+'?text='+encodeURIComponent(message)},201);
+  }catch{return failed(c);}
+});
+// A member may have accepted a different legitimate invitation before their
+// private WhatsApp contact was created. A host can reconcile that contact to an
+// EXISTING authorised room member without creating a user, granting any access,
+// or relying on an unverified match of names/phone numbers.
+router.post('/events/:id/phone-contacts/:contactId/link-member',authMiddleware,async c=>{
+  if(!phoneMembersReady(c.env))return unavailable(c);
+  const eventId=c.req.param('id'),contactId=c.req.param('contactId');
+  if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Host only'},403);
+  const body=await c.req.json().catch(()=>null) as {user_id?:unknown}|null;
+  const userId=typeof body?.user_id==='string'?body.user_id.trim():'';
+  if(!userId||userId.length>128)return c.json({error:'Select an existing room member'},400);
+  try{
+    const contact=await c.env.DB.prepare(
+      'SELECT id,user_id FROM group_phone_contacts WHERE event_id=? AND id=?'
+    ).bind(eventId,contactId).first<{id:string;user_id:string|null}>();
+    if(!contact)return c.json({error:'Contact not found in this room'},404);
+    const member=await c.env.DB.prepare(
+      'SELECT role FROM event_members WHERE event_id=? AND user_id=?'
+    ).bind(eventId,userId).first<{role:string}>();
+    if(!member)return c.json({error:'Player has not completed joining this room'},409);
+    if(member.role==='host')return c.json({error:'Cannot link the room host as an invited player'},403);
+    if(contact.user_id&&contact.user_id!==userId)
+      return c.json({error:'This contact is already linked to a different account'},409);
+    const elsewhere=await c.env.DB.prepare(
+      'SELECT id FROM group_phone_contacts WHERE event_id=? AND user_id=? AND id!=?'
+    ).bind(eventId,userId,contactId).first<{id:string}>();
+    if(elsewhere)return c.json({error:'This account is already linked to another contact'},409);
+    // D1 batch is transactional. Link the confirmed existing member and
+    // revoke unused invitation links together, never leaving an open invite
+    // that could create a second account for the same contact.
+    const updates=[];
+    if(!contact.user_id)updates.push(c.env.DB.prepare(
+      'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL'
+    ).bind(userId,eventId,contactId));
+    updates.push(c.env.DB.prepare(
+      'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE event_id=? AND contact_id=? AND consumed_at IS NULL AND EXISTS (SELECT 1 FROM group_phone_contacts WHERE event_id=? AND id=? AND user_id=?)'
+    ).bind(eventId,contactId,eventId,contactId,userId));
+    const results=await c.env.DB.batch(updates);
+    if(!contact.user_id&&results[0].meta.changes!==1)
+      return c.json({error:'Contact changed. Refresh and retry.'},409);
+    // Pending KV requests can outlive membership. Best-effort clean-up only.
+    try{
+      const listed=await c.env.KV.list({prefix:'join-request:'+eventId+':'});
+      await Promise.all(listed.keys.map(async key=>{
+        const raw=await c.env.KV.get(key.name);
+        if(!raw)return;
+        try{
+          const state=JSON.parse(raw);
+          if(state.event_id===eventId&&state.contact_id===contactId)
+            await c.env.KV.delete(key.name);
+        }catch{}
+      }));
+      await c.env.KV.delete('approved-contact:'+eventId+':'+contactId);
+    }catch{}
+    privateHeaders(c);
+    return c.json({ok:true,status:'joined',user_id:userId});
   }catch{return failed(c);}
 });
 router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
@@ -227,9 +291,9 @@ router.get('/events/:id/join-requests',authMiddleware,async c=>{
     const raw=await c.env.KV.get(k.name);if(!raw)return null;
     const r=JSON.parse(raw);
     const contact=await c.env.DB.prepare(
-      'SELECT display_name,phone_cipher FROM group_phone_contacts WHERE id=? AND event_id=?'
-    ).bind(r.contact_id,id).first<{display_name:string;phone_cipher:string}>();
-    if(!contact)return null;
+      'SELECT display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
+    ).bind(r.contact_id,id).first<{display_name:string;phone_cipher:string;user_id:string|null}>();
+    if(!contact||contact.user_id)return null;
     return {id:k.name.slice(('join-request:'+id+':').length),name:r.display_name,
       expected_member:contact.display_name,phone:maskMobile(await decryptPhone(c.env,contact.phone_cipher)),
       requested_at:r.requested_at};
@@ -249,12 +313,15 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
     // Final membership is created only when the approved claimant redeems their
     // own secret; the request ID alone does not authenticate that claimant.
     const invite=await c.env.DB.prepare(
-      'SELECT id FROM group_phone_invites WHERE id=? AND event_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
-    ).bind(state.invite_id,id).first();
+      'SELECT id,expires_at FROM group_phone_invites WHERE id=? AND event_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+    ).bind(state.invite_id,id).first<{id:string;expires_at:number}>();
     if(!invite)return c.json({error:'Original invitation expired; resend it'},409);
-    await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify({...state,approved_at:Date.now()}),{expirationTtl:3600});
+    // Cloudflare KV requires at least 60 seconds. Approval must remain visible
+    // until the original invitation expires, not disappear after one hour.
+    const approvalTtl=Math.max(60,Math.min(172800,invite.expires_at-Math.floor(Date.now()/1000)));
+    await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify({...state,approved_at:Date.now()}),{expirationTtl:approvalTtl});
     // Read-only visibility for the room host; this is not membership.
-    await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:3600});
+    await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:approvalTtl});
   }
   await c.env.KV.delete(key);
   return c.json({ok:true,approved:body?.approve===true,contact_id:state.contact_id});

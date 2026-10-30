@@ -63,7 +63,11 @@ export default function EventPage() {
   const [joinDecisionNotice,setJoinDecisionNotice]=useState('');
   const memberDeepLinkScroll=useRef(false);
   const [memberSection,setMemberSection]=useState<'invite'|'requests'|'roster'|'notifications'>('invite');
-  const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string}>);
+  const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string;user_id?:string|null}>);
+  const [contactToLink,setContactToLink]=useState<{id:string;name:string}|null>(null);
+  const [linkMemberId,setLinkMemberId]=useState('');
+  const [linkBusy,setLinkBusy]=useState(false);
+  const [linkError,setLinkError]=useState('');
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
   const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
@@ -294,6 +298,22 @@ export default function EventPage() {
       setPhoneName('');setPhoneNumber('');setPhoneRole('member');
     }catch(e:any){setPhoneError(e.message||'Unable to prepare the private invitation.');}
     finally{setPhoneBusy(false);}
+  }
+  async function linkExistingRoomMember(){
+    if(!contactToLink||!linkMemberId)return;
+    setLinkBusy(true);setLinkError('');
+    try{
+      const linked=await api.events.linkPhoneContact(id,contactToLink.id,linkMemberId);
+      setPhoneContacts(list=>list.map(item=>item.id===contactToLink.id
+        ?{...item,status:linked.status,user_id:linked.user_id}:item));
+      setContactToLink(null);setLinkMemberId('');
+      // Refresh both independent resources; a member can have joined using
+      // another legitimate invitation or account before their phone contact.
+      void api.events.phoneContacts(id).then(r=>setPhoneContacts(r.contacts)).catch(()=>{});
+      void api.events.get(id).then(e=>setEvent(e as any)).catch(()=>{});
+      void api.events.joinRequests(id).then(r=>setJoinRequests(r.requests)).catch(()=>{});
+    }catch(e:any){setLinkError(e.message||'Unable to match this contact.');}
+    finally{setLinkBusy(false);}
   }
   async function removeMobileContact(contactId:string,name:string){
     if(!window.confirm('Remove '+name+' from this group? Their group membership and pending invitations will be revoked.'))return;
@@ -644,8 +664,16 @@ export default function EventPage() {
                     {upcoming.map(game=><option value={game.id} key={game.id}>{fmtDate(game.scheduled_at)}</option>)}
                   </select>
                 </label>}
-                <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>
-                  Your private contacts · {phoneContacts.length}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:10}}>
+                  <span style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.1em'}}>
+                    Your private contacts · {phoneContacts.length}
+                  </span>
+                  <button type="button" className="btn btn-outline" style={{fontSize:11,padding:'5px 9px'}} disabled={phoneBusy}
+                    onClick={()=>{void api.events.phoneContacts(id).then(r=>setPhoneContacts(r.contacts)).catch(e=>setPhoneError(e.message||'Unable to refresh contacts.'));
+                      void api.events.get(id).then(e=>setEvent(e as any)).catch(()=>{});
+                      void api.events.joinRequests(id).then(r=>setJoinRequests(r.requests)).catch(()=>{});}}>
+                    ↻ Refresh
+                  </button>
                 </div>
                 {phoneContacts.map(contact=><div key={contact.id} style={{padding:'12px 0',borderTop:'1px solid var(--border-sub)',
                   display:'flex',alignItems:'center',flexWrap:'wrap',gap:8}}>
@@ -656,6 +684,11 @@ export default function EventPage() {
                       :contact.status==='awaiting_host_approval'?'Waiting for host approval'
                       :'Invitation sent — not yet joined'}</div>
                   </div>
+                  {contact.status!=='joined'&&<button type="button" className="btn btn-outline"
+                    style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy}
+                    onClick={()=>{setContactToLink({id:contact.id,name:contact.display_name});setLinkMemberId('');setLinkError('');}}>
+                    Match existing member
+                  </button>}
                   {contact.status==='approved_awaiting_member'&&
                     <a className="btn btn-outline" target="_blank" rel="noopener noreferrer"
                       style={{fontSize:10,padding:'7px 9px',textDecoration:'none'}}
@@ -676,6 +709,40 @@ export default function EventPage() {
                 WhatsApp opens on your device; PKR does not automatically send messages to contacts.
               </p>
             </section>}
+            {contactToLink&&<AppDialog className="modal-overlay"
+              onDismiss={()=>{if(!linkBusy)setContactToLink(null);}}
+              onClick={e=>{if(e.currentTarget===e.target&&!linkBusy)setContactToLink(null);}}>
+              <div className="modal-sheet" style={{maxWidth:440}}>
+                <h2 style={{fontSize:21,marginBottom:9}}>Match existing room member</h2>
+                <p style={{color:'var(--muted)',fontSize:13,lineHeight:1.6}}>
+                  Link <strong style={{color:'var(--white)'}}>{contactToLink.name}</strong> only if this person
+                  is already in the room's registered members and you have confirmed they are the same person.
+                  This does not create an account or bypass approval.
+                </p>
+                <label htmlFor="pkr-link-member-choice" style={{display:'block',margin:'14px 0 6px',fontSize:12}}>
+                  Existing registered member
+                </label>
+                <select id="pkr-link-member-choice" value={linkMemberId} onChange={e=>setLinkMemberId(e.target.value)}
+                  style={{width:'100%',minHeight:46,padding:10,background:'var(--bg3)',color:'var(--white)',
+                    border:'1px solid var(--border-hi)',borderRadius:8}}>
+                  <option value="">Select the matching member…</option>
+                  {(event.members||[]).filter((member:any)=>member.role!=='host'&&
+                    !phoneContacts.some(contact=>contact.id!==contactToLink.id&&contact.user_id===member.id))
+                    .map((member:any)=><option key={member.id} value={member.id}>{member.name} ({member.role})</option>)}
+                </select>
+                <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.5}}>
+                  If they aren't listed above, they have not completed registration. Ask them to reopen their
+                  original invitation and select “Check approval now” instead.
+                </p>
+                {linkError&&<p role="alert" style={{color:'var(--red)',fontSize:12}}>{linkError}</p>}
+                <div style={{display:'flex',gap:9,justifyContent:'flex-end',flexWrap:'wrap',marginTop:18}}>
+                  <button type="button" className="btn btn-ghost" disabled={linkBusy}
+                    onClick={()=>setContactToLink(null)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" disabled={!linkMemberId||linkBusy}
+                    onClick={()=>void linkExistingRoomMember()}>{linkBusy?'Matching…':'Confirm member match'}</button>
+                </div>
+              </div>
+            </AppDialog>}
             {phoneShare&&<AppDialog className="modal-overlay" onClick={e=>{if(e.currentTarget===e.target)setPhoneShare(null);}}>
               <div className="modal-sheet">
                 <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
