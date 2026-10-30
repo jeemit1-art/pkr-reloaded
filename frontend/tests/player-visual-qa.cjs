@@ -96,16 +96,23 @@ async function main(){
     assert(!amount.includes('$9,900'));
     if(size.width<1100){
       assert.equal(await page.locator('.pkr-player-universal-nav button').count(),4,'Player bottom navigation');
-      assert.equal(await page.locator('.pkr-persistent-nav').count(),0,'No desktop sidebar for players');
+      assert.equal(await page.locator('.pkr-persistent-nav').isVisible(),false,'Desktop sidebar must stay hidden on mobile');
+      assert.equal(await page.locator('.pkr-player-universal-nav').getByRole('button',{name:'More'}).count(),1);
     } else {
-      assert.equal(await page.locator('.pkr-persistent-nav').count(),0,'No host sidebar for players');
+      const sidebar=page.locator('.pkr-persistent-nav');
+      assert.equal(await sidebar.isVisible(),true,'Player desktop gets limited sidebar');
+      assert.equal(await sidebar.getByRole('button',{name:'Members'}).count(),1);
+      assert.equal(await sidebar.getByRole('button',{name:'My payments'}).count(),1);
+      assert.equal(await sidebar.getByRole('button',{name:'Settlements'}).count(),0);
+      assert.equal(await sidebar.getByRole('button',{name:'Schedule'}).count(),0);
     }
     await noOverflow('dashboard');
     await page.screenshot({path:path.join(output,size.name+'-player-dashboard.png'),fullPage:true});
    });
    if(size.name==='phone'){
     await check('scan navigation',async()=>{
-      await page.locator('.pkr-player-universal-nav').getByRole('button',{name:'Scan'}).click();
+      await page.locator('.pkr-player-universal-nav').getByRole('button',{name:'More'}).click();
+      await page.locator('.pkr-navigation-more-panel').getByRole('button',{name:'Scan invitation'}).click();
       await page.locator('#scanVideo').waitFor({state:'visible',timeout:10000});
     });
    }
