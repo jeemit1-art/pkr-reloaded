@@ -3,12 +3,14 @@
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ProductTour,MobileProductShowcase} from '@/components/ProductShowcase';
+import {LandingVideoStories,LandingFeatureUpdates} from '@/components/LandingShowcase2026';
+import './pkr-landing-2026.css';
 
 const steps = [
   {number:'01',symbol:'♠',title:'Create your private room',detail:'Keep your regular players, hosts and upcoming games together.'},
-  {number:'02',symbol:'↗',title:'Send the invites',detail:'Share personal WhatsApp links and approve who joins the room.'},
-  {number:'03',symbol:'◷',title:'Get everyone seated',detail:'See RSVPs, arrival times and seat choices before the first hand.'},
-  {number:'04',symbol:'♛',title:'Play. Track. Settle.',detail:'Manage the table, run tournament blinds and record final results.'},
+  {number:'02',symbol:'↗',title:'Invite and approve',detail:'Share personal WhatsApp links and approve the players who join your room.'},
+  {number:'03',symbol:'◷',title:'Plan the arrivals',detail:'See RSVPs, expected arrival times and seat choices before the first hand.'},
+  {number:'04',symbol:'♛',title:'Play, record and settle',detail:'Track buy-ins, cash-outs and results, then follow up outstanding settlements.'},
 ];
 
 const faqs = [
@@ -19,6 +21,9 @@ const faqs = [
   {q:'Can PKR calculate who owes whom after poker night?',a:'Yes. PKR records the results and produces a settlement record so the group can review who needs to pay whom. The players arrange transfers themselves outside PKR.'},
   {q:'Does PKR handle gambling or transfer money between players?',a:'No. PKR is a management and record-keeping tool for privately arranged games. It does not offer online real-money poker, take wagers, hold players’ funds or transfer settlement money.'},
   {q:'Can I use PKR on my iPhone, Android phone or computer?',a:'Yes. PKR runs in compatible web browsers on phones, tablets and computers. You can also add the web app to your phone’s home screen where supported; PKR is not an App Store or Google Play download.'},
+  {q:'Does PKR automatically message my WhatsApp group?',a:'No. PKR prepares relevant invitations, RSVP summaries, results and private payment messages. You review the text and tap Send in WhatsApp. No paid WhatsApp API is needed.'},
+  {q:'Can players use PKR without installing an app?',a:'Yes. An invited and approved player can use PKR from a browser link. Adding PKR to the Home Screen is optional; iPhone push alerts require the installed web app and a separate permission step.'},
+  {q:'How are payments confirmed?',a:'PKR records the settlement amounts and lets people mark payments as sent and received. Money is transferred outside PKR. The host can review outstanding records.'},
   {q:'What does PKR cost?',a:'Host subscriptions are listed in Australian dollars: Starter is AUD $9.99 per month for one group with up to nine seats, and Pro is AUD $19.99 per month for multiple groups with up to fifteen seats. Check the final Stripe checkout before paying.'},
 ];
 
@@ -106,7 +111,7 @@ export default function HomePage() {
           <a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem" aria-hidden="true">♠</span><span>PKR<small>PRIVATE POKER CLUB</small></span></a>
           <nav className="pkr-l2-navlinks" aria-label="Landing page">
             <a href="#product-tour">See the app</a>
-            <a href="#how-it-works">How it works</a>
+            <a href="#watch-demo">Watch demo</a>
             <a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
           </nav>
           <div className="pkr-l2-header-actions">
@@ -123,15 +128,15 @@ export default function HomePage() {
             <div className="pkr-l2-hero-copy">
               <span className="pkr-l2-eyebrow"><i/> YOUR HOME GAME. FINALLY ORGANISED.</span>
               <h1 id="pkr-l2-main-heading">More poker.<br/><em>Less admin.</em></h1>
-              <p>Run a smoother poker night from your first invite to the final payout. Players, buy-ins, tournaments, results and settlements — all in one place.</p>
+              <p>Your private poker club, organised from the first WhatsApp invite to the final settlement. Plan games, manage RSVPs, run the table, track results and follow up payments — all in one place.</p>
               <div className="pkr-l2-hero-actions">
                 <button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start your poker club <span aria-hidden="true">↗</span></button>
-                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">Explore the live app <span aria-hidden="true">↓</span></a>
+                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#watch-demo">Watch the walkthrough <span aria-hidden="true">↓</span></a>
               </div>
               <div className="pkr-l2-hero-trust"><span>♠ Private groups</span><span>♣ Live game tracking</span><span>♛ Clear settlements</span></div>
             </div>
 
-            <div className="pkr-hero-real" aria-label="Real PKR desktop poker table and mobile Insights screens, with demo data">
+            <div className="pkr-hero-real" aria-label="PKR interface screenshots from an earlier app build with fictional data">
               <div className="pkr-hero-desktop">
                 <div className="pkr-hero-desktop-header"><span>PKR · THE LIVE TABLE</span><span>PKR APP INTERFACE</span></div>
                 <img src="/demo/theme-a/live-table.webp" alt="Actual PKR green felt oval poker table with host controls and eight player seats, sample data" width="1440" height="900" fetchPriority="high"/>
@@ -139,7 +144,7 @@ export default function HomePage() {
               <div className="pkr-hero-mobile" aria-hidden="true">
                 <img src="/demo/theme-a/mobile-insights.webp" alt="" width="390" height="844" loading="eager"/>
               </div>
-              <div className="pkr-hero-real-label"><i aria-hidden="true"/> PKR · REAL APP PREVIEW</div>
+              <div className="pkr-hero-real-label"><i aria-hidden="true"/> PKR SCREENS · SAMPLE DATA</div>
             </div>
           </div>
           <span className="pkr-l2-hero-annotation">HOME POKER TRACKING · CASH GAMES · TOURNAMENTS · SETTLEMENTS</span>
@@ -151,51 +156,11 @@ export default function HomePage() {
           <div><span className="pkr-l2-ribbon-icon">03</span><strong>After the game</strong><small>Results · Balances · History</small></div>
         </section>
 
+        <LandingVideoStories />
+
         <ProductTour />
 
-        <section id="features" className="pkr-l2-section pkr-l2-feature-intro">
-          <div className="pkr-l2-intro-copy">
-            <span className="pkr-l2-section-kicker">BUILT FOR THE PEOPLE WHO HOST</span>
-            <h2>One place.<br/><em>Every poker night.</em></h2>
-            <p>A good game should not end with missing buy-ins or an argument over payouts. Keep player records, arrivals, tournament blinds, results and settlement together.</p>
-            <div className="pkr-l2-intro-highlights"><span><b>✓</b> Private room management</span><span><b>✓</b> Cash games and tournaments</span><span><b>✓</b> Full player history</span></div>
-          </div>
-          <div className="pkr-feature-photo-real">
-            <img src="/demo/theme-a/host-dashboard.webp" alt="Actual PKR host dashboard showing a private poker room, upcoming games, members and results using sample data" width="1225" height="845" loading="lazy" decoding="async"/>
-            <span>THE PKR HOST DASHBOARD</span>
-          </div>
-        </section>
-
-        <section className="pkr-l2-section pkr-l2-features">
-          <div className="pkr-l2-section-heading">
-            <span className="pkr-l2-section-kicker">A CLOSER LOOK AT THE PRODUCT</span>
-            <h2>From first buy-in<br/><em>to final result.</em></h2>
-            <p>Screens from PKR in action, captured using fictional players and results.</p>
-          </div>
-          <div className="pkr-l2-feature-grid">
-            <article className="pkr-l2-feature-card">
-              <div className="pkr-real-feature-image">
-                <img src="/demo/theme-a/rsvp-board.webp" alt="Real PKR RSVP screen with private room invitations and response choices" width="1225" height="845" loading="lazy" decoding="async"/>
-                <span>PKR · RSVPS</span>
-              </div>
-              <div className="pkr-l2-feature-copy"><span>01 / BEFORE</span><h3>Know who&apos;s coming.</h3><p>Collect RSVPs and arrival times, offer available seats and stop chasing the group chat.</p></div>
-            </article>
-            <article className="pkr-l2-feature-card">
-              <div className="pkr-real-feature-image">
-                <img src="/demo/theme-a/game-detail.webp" alt="Real PKR game details screen showing a scheduled game and Start Game controls" width="1225" height="845" loading="lazy" decoding="async"/>
-                <span>PKR · GAME SETUP</span>
-              </div>
-              <div className="pkr-l2-feature-copy"><span>02 / DURING</span><h3>Run a better game.</h3><p>Keep buy-ins, player seating, blind levels and tournament progress together.</p></div>
-            </article>
-            <article className="pkr-l2-feature-card">
-              <div className="pkr-real-feature-image">
-                <img src="/demo/theme-a/insights.webp" alt="Real PKR Insights screen showing demo game totals, player balances and settlement records" width="1225" height="845" loading="lazy" decoding="async"/>
-                <span>PKR · INSIGHTS</span>
-              </div>
-              <div className="pkr-l2-feature-copy"><span>03 / AFTER</span><h3>Finish with clarity.</h3><p>Record cash-outs, review settlements and see every recorded player&apos;s results.</p></div>
-            </article>
-          </div>
-        </section>
+        <LandingFeatureUpdates />
 
         <section id="how-it-works" className="pkr-l2-section pkr-l2-how">
           <div className="pkr-l2-section-heading">
@@ -238,7 +203,7 @@ export default function HomePage() {
           <div className="pkr-l2-section-heading">
             <span className="pkr-l2-section-kicker">STRAIGHT ANSWERS FOR HOME GAME HOSTS</span>
             <h2 id="pkr-faq-title">Before you <em>deal the cards.</em></h2>
-            <p>How PKR works, what it costs and what happens after the last hand.</p>
+            <p>How hosting, invitations, phone setup and payments work in PKR.</p>
           </div>
           <div className="pkr-l2-faq-list">
             {faqs.map(({q,a})=><details className="pkr-l2-faq-item" key={q}><summary><span>{q}</span><b aria-hidden="true">+</b></summary><p>{a}</p></details>)}

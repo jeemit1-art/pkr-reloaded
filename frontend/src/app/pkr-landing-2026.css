@@ -1,0 +1,247 @@
+/* PKR marketing refresh — scoped to the public landing page only.
+   No gameplay, financial, room or authenticated app selector is changed. */
+.pkr-landing-v2 .pkr-26-wrap{width:min(1320px,100%);margin:0 auto}
+.pkr-landing-v2 .pkr-26-heading{max-width:800px;margin:0 auto 35px;text-align:center}
+.pkr-landing-v2 .pkr-26-overline{
+ display:inline-block;color:#3DDC97;font-size:11px;line-height:1.5;
+ letter-spacing:.13em;font-weight:750;text-transform:uppercase
+}
+.pkr-landing-v2 .pkr-26-heading h2{
+ font-size:clamp(32px,4vw,57px)!important;font-weight:700!important;
+ line-height:1.08;letter-spacing:-.055em;margin:13px 0 17px;color:#EAF0F2
+}
+.pkr-landing-v2 .pkr-26-heading>p{
+ max-width:670px;margin:0 auto;color:#ADBDC5;line-height:1.7;font-size:15px
+}
+.pkr-landing-v2 .pkr-26-films{
+ padding:clamp(62px,8vw,110px) clamp(18px,4vw,64px);
+ background:radial-gradient(ellipse 75% 50% at 50% 55%,#14362E66,transparent),#0B0F12;
+ border-bottom:1px solid #26323A;color:#EAF0F2
+}
+.pkr-landing-v2 .pkr-26-film-switcher{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
+ width:min(760px,100%);margin:0 auto 18px
+}
+.pkr-landing-v2 .pkr-26-film-tab{
+ display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;min-height:52px;
+ padding:12px 15px;border-radius:11px;background:#131A1F;border:1px solid #36454B;
+ color:#C5D0D5;font-size:13px;line-height:1.25;font-weight:700;
+ transition:background .18s,border-color .18s,color .18s
+}
+.pkr-landing-v2 .pkr-26-film-tab span{font-size:10px;color:#78949A}
+.pkr-landing-v2 .pkr-26-film-tab:is(:hover,:focus-visible){border-color:#3DDC97}
+.pkr-landing-v2 .pkr-26-film-tab.is-active{color:#071410;background:#3DDC97;border-color:#3DDC97}
+.pkr-landing-v2 .pkr-26-film-tab.is-active span{color:#194838}
+.pkr-landing-v2 .pkr-26-film-player{
+ display:grid;grid-template-columns:minmax(255px,.7fr) minmax(0,1.3fr);
+ background:linear-gradient(125deg,#1B242B 0%,#11191D 55%,#13241F 100%);
+ border:1px solid #30424A;border-radius:22px;overflow:hidden;min-height:500px;
+ box-shadow:0 34px 80px #0008
+}
+.pkr-landing-v2 .pkr-26-film-text{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ min-width:0;padding:clamp(24px,3.7vw,55px)
+}
+.pkr-landing-v2 .pkr-26-film-number{
+ color:#3DDC97;font-size:10px;font-weight:750;letter-spacing:.14em
+}
+.pkr-landing-v2 .pkr-26-film-text h3{
+ color:#EAF0F2;font-size:clamp(26px,2.6vw,39px)!important;
+ line-height:1.11;letter-spacing:-.045em;margin:15px 0
+}
+.pkr-landing-v2 .pkr-26-film-text>p{color:#A6B8C0;font-size:14px;line-height:1.7;max-width:360px}
+.pkr-landing-v2 .pkr-26-now-showing{
+ margin:32px 0 22px;padding:18px 0 0;border-top:1px solid #3C4D53;
+ width:100%;display:grid;gap:8px
+}
+.pkr-landing-v2 .pkr-26-now-showing>span{color:#F2B84B;letter-spacing:.12em;font-size:10px;font-weight:800}
+.pkr-landing-v2 .pkr-26-now-showing strong{font-size:17px;line-height:1.25;color:#EAF0F2}
+.pkr-landing-v2 .pkr-26-now-showing p{font-size:13px;color:#AFC0C8;line-height:1.6;margin:0}
+.pkr-landing-v2 .pkr-26-film-controls{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.pkr-landing-v2 .pkr-26-play{
+ display:inline-flex;align-items:center;justify-content:center;gap:10px;
+ background:#3DDC97;border:1px solid #3DDC97;color:#071410;
+ padding:12px 18px;min-height:48px;border-radius:10px;font-weight:800;font-size:13px
+}
+.pkr-landing-v2 .pkr-26-play:hover{background:#68E8B0}
+.pkr-landing-v2 .pkr-26-play span{font-size:12px}
+.pkr-landing-v2 .pkr-26-duration{color:#A7BCC5;font:700 12px/1 var(--font-num),monospace}
+.pkr-landing-v2 .pkr-26-film-screen{
+ position:relative;display:flex;flex-direction:column;
+ min-width:0;min-height:440px;background:#090F11;border-left:1px solid #30424A
+}
+.pkr-landing-v2 .pkr-26-film-chrome{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ color:#93A9B0;background:#1B242B;padding:10px 15px;border-bottom:1px solid #293942;
+ font-size:9px;line-height:1.4;letter-spacing:.08em
+}
+.pkr-landing-v2 .pkr-26-film-chrome>span{display:flex;gap:4px}
+.pkr-landing-v2 .pkr-26-film-chrome i{width:6px;height:6px;border-radius:50%;display:block;background:#5C7279}
+.pkr-landing-v2 .pkr-26-film-chrome i:nth-child(2){background:#8CA3A9}
+.pkr-landing-v2 .pkr-26-film-chrome i:nth-child(3){background:#3DDC97}
+.pkr-landing-v2 .pkr-26-film-chrome strong{font-weight:750;color:#E3EBEF}
+.pkr-landing-v2 .pkr-26-film-chrome small{font-weight:700;color:#7C999B;font-size:9px}
+.pkr-landing-v2 .pkr-26-scene{
+ display:flex;justify-content:center;align-items:center;flex:1;min-height:0;
+ padding:clamp(12px,2.7vw,35px);overflow:hidden;
+ animation:pkr26-arrive .45s ease-out both
+}
+.pkr-landing-v2 .pkr-26-scene img{
+ display:block;width:100%;height:auto;max-height:540px;
+ border-radius:9px;object-fit:contain;box-shadow:0 18px 50px #0008;
+ border:1px solid #2B3E42
+}
+.pkr-landing-v2 .pkr-26-scene.is-mobile img{
+ width:auto;max-width:min(220px,78%);max-height:470px;
+ border:5px solid #465960;border-radius:24px
+}
+.pkr-landing-v2 .pkr-26-scene-progress{
+ display:flex;align-items:center;gap:10px;padding:14px 24px 19px;background:#111A1F
+}
+.pkr-landing-v2 .pkr-26-scene-progress button{
+ flex:1;display:flex;align-items:center;min-height:24px;
+ border:0;background:transparent;padding:0;cursor:pointer
+}
+.pkr-landing-v2 .pkr-26-scene-progress button span{
+ display:block;width:100%;height:4px;border-radius:10px;background:#3B525B;
+ transition:background .18s,height .18s
+}
+.pkr-landing-v2 .pkr-26-scene-progress button.is-active span{background:#3DDC97;height:5px}
+.pkr-landing-v2 .pkr-26-scene-progress button:hover span{background:#91EBC4}
+.pkr-landing-v2 .pkr-26-disclaimer{
+ color:#8A9DA7;font-size:11px;line-height:1.6;text-align:center;
+ margin:17px auto 0;max-width:760px
+}
+.pkr-landing-v2 .pkr-26-features{
+ padding:clamp(64px,8vw,105px) clamp(18px,4vw,64px);
+ background:#0B0F12!important;color:#EAF0F2
+}
+.pkr-landing-v2 .pkr-26-app-areas{
+ display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;
+ margin:0 auto 35px;max-width:760px
+}
+.pkr-landing-v2 .pkr-26-app-areas span{
+ padding:9px 19px;border-radius:50px;background:#18241F;border:1px solid #396C54;
+ font-size:12px;font-weight:750;color:#BDECD5
+}
+.pkr-landing-v2 .pkr-26-feature-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px
+}
+.pkr-landing-v2 .pkr-26-feature{
+ min-width:0;display:flex;flex-direction:column;background:#131A1F;
+ border:1px solid #2D3C43;border-radius:17px;overflow:hidden;
+ transition:border-color .2s ease,transform .2s ease
+}
+.pkr-landing-v2 .pkr-26-feature:hover{border-color:#497F67;transform:translateY(-3px)}
+.pkr-landing-v2 .pkr-26-feature-image{
+ position:relative;aspect-ratio:1.55;background:#1B242B;overflow:hidden;
+ border-bottom:1px solid #2D3C43
+}
+.pkr-landing-v2 .pkr-26-feature-image img{
+ display:block;width:100%;height:100%;object-fit:cover;object-position:center top
+}
+.pkr-landing-v2 .pkr-26-feature-image>span{
+ position:absolute;left:13px;bottom:12px;z-index:1;
+ font-size:9px;font-weight:800;letter-spacing:.07em;color:#EAF0F2;
+ background:#0B0F12E6;padding:7px 9px;border:1px solid #425D5E;border-radius:6px
+}
+.pkr-landing-v2 .pkr-26-feature-body{padding:26px 26px 30px;display:flex;flex:1;flex-direction:column}
+.pkr-landing-v2 .pkr-26-feature-tag{color:#3DDC97;font-size:10px;font-weight:800;letter-spacing:.1em}
+.pkr-landing-v2 .pkr-26-feature h3{
+ font-size:clamp(20px,2vw,26px)!important;line-height:1.15;
+ margin:14px 0;color:#EAF0F2;letter-spacing:-.035em
+}
+.pkr-landing-v2 .pkr-26-feature-body>p{color:#B2C1C8;font-size:13px;line-height:1.75;margin:0 0 18px}
+.pkr-landing-v2 .pkr-26-feature-body ul{
+ display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:auto 0 0;padding:0
+}
+.pkr-landing-v2 .pkr-26-feature-body li{
+ font-size:10px;font-weight:650;line-height:1.3;color:#C3D8D0;background:#20352F;
+ padding:7px 9px;border-radius:7px;border:1px solid #355047
+}
+.pkr-landing-v2 .pkr-26-whatsapp-visual{
+ aspect-ratio:1.55;min-height:180px;display:flex;flex-direction:column;justify-content:center;align-items:center;
+ padding:16px;background:radial-gradient(circle at top right,#255446,#0E231C 70%);
+ border-bottom:1px solid #305143
+}
+.pkr-landing-v2 .pkr-26-message-label{
+ align-self:flex-start;font-size:9px;letter-spacing:.1em;font-weight:800;color:#A2E6C4
+}
+.pkr-landing-v2 .pkr-26-message-top{
+ display:flex;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:#ECF6F1
+}
+.pkr-landing-v2 .pkr-26-message-top>span{
+ background:#3DDC97;color:#09281C;border-radius:7px;padding:2px 7px
+}
+.pkr-landing-v2 .pkr-26-message{
+ display:grid;gap:5px;background:#D6F5DD;border-radius:11px 11px 3px 11px;
+ padding:12px 16px;color:#173627;width:min(100%,280px);font-size:11px;line-height:1.4;
+ box-shadow:0 7px 22px #0005
+}
+.pkr-landing-v2 .pkr-26-message b{font-size:12px}
+.pkr-landing-v2 .pkr-26-message-link{color:#157950;text-decoration:underline;font-weight:750}
+.pkr-landing-v2 .pkr-26-message-private{
+ color:#B3D6C4;font-size:10px;margin-top:9px;text-align:center
+}
+.pkr-landing-v2 .pkr-26-message-private>span{color:#3DDC97}
+.pkr-landing-v2 .pkr-26-phone-banner{
+ display:flex;justify-content:space-between;align-items:center;gap:25px;
+ margin-top:31px;padding:clamp(23px,3.5vw,43px);
+ background:linear-gradient(112deg,#18372D,#141F24 70%);border:1px solid #416E5B;border-radius:17px
+}
+.pkr-landing-v2 .pkr-26-phone-banner>div:first-child{max-width:770px}
+.pkr-landing-v2 .pkr-26-phone-banner h3{
+ font-size:clamp(23px,2.8vw,32px)!important;line-height:1.16;
+ margin:10px 0;color:#ECF5F0
+}
+.pkr-landing-v2 .pkr-26-phone-banner p{color:#BAD0C7;font-size:13px;line-height:1.75}
+.pkr-landing-v2 .pkr-26-phone-actions{display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+.pkr-landing-v2 .pkr-26-phone-actions a{
+ display:flex;justify-content:space-between;gap:20px;align-items:center;
+ background:#3DDC97;color:#081C15!important;border:1px solid #3DDC97;
+ border-radius:9px;font-size:12px;font-weight:800;padding:13px 17px;min-width:195px
+}
+.pkr-landing-v2 .pkr-26-phone-actions a+a{
+ background:transparent;color:#EAF0F2!important;border-color:#587E70
+}
+.pkr-landing-v2 .pkr-26-phone-actions a:hover{filter:brightness(1.13)}
+.pkr-landing-v2 .pkr-26-films :is(button,a):focus-visible,
+.pkr-landing-v2 .pkr-26-features :is(button,a):focus-visible{
+ outline:3px solid #F2B84B!important;outline-offset:3px!important
+}
+@keyframes pkr26-arrive{
+ from{opacity:.56;transform:scale(.98)}
+ to{opacity:1;transform:scale(1)}
+}
+@media(max-width:1020px){
+ .pkr-landing-v2 .pkr-26-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-landing-v2 .pkr-26-film-player{grid-template-columns:minmax(225px,.7fr) minmax(0,1fr)}
+ .pkr-landing-v2 .pkr-26-film-screen{min-height:370px}
+ .pkr-landing-v2 .pkr-26-film-text{padding:25px}
+}
+@media(max-width:700px){
+ .pkr-landing-v2 .pkr-26-film-player{display:flex;flex-direction:column-reverse;min-height:0}
+ .pkr-landing-v2 .pkr-26-film-screen{border-left:0;border-bottom:1px solid #30424A;min-height:285px}
+ .pkr-landing-v2 .pkr-26-scene{min-height:260px;padding:14px 17px}
+ .pkr-landing-v2 .pkr-26-scene.is-mobile img{max-height:315px;max-width:140px}
+ .pkr-landing-v2 .pkr-26-film-chrome small{display:none}
+ .pkr-landing-v2 .pkr-26-film-text{padding:28px}
+ .pkr-landing-v2 .pkr-26-now-showing{margin:18px 0 14px;padding-top:13px}
+ .pkr-landing-v2 .pkr-26-film-tab{font-size:11px;gap:6px;padding:11px 7px}
+ .pkr-landing-v2 .pkr-26-film-tab span{display:none}
+ .pkr-landing-v2 .pkr-26-feature-grid{grid-template-columns:1fr}
+ .pkr-landing-v2 .pkr-26-feature-image,.pkr-landing-v2 .pkr-26-whatsapp-visual{aspect-ratio:1.8}
+ .pkr-landing-v2 .pkr-26-phone-banner{flex-direction:column;align-items:stretch}
+ .pkr-landing-v2 .pkr-26-phone-actions{flex-direction:row;flex-wrap:wrap}
+ .pkr-landing-v2 .pkr-26-phone-actions a{flex:1}
+}
+@media(max-width:380px){
+ .pkr-landing-v2 .pkr-26-film-switcher{gap:5px}
+ .pkr-landing-v2 .pkr-26-film-tab{font-size:10px}
+ .pkr-landing-v2 .pkr-26-phone-actions{flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){
+ .pkr-landing-v2 .pkr-26-scene{animation:none}
+ .pkr-landing-v2 .pkr-26-feature,.pkr-landing-v2 .pkr-26-film-tab,
+ .pkr-landing-v2 .pkr-26-scene-progress button span{transition:none}
+}
