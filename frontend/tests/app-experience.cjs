@@ -209,8 +209,16 @@ async function run(){
       return !!money&&!!actions&&!!(money.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING);
     });
     assert(prioritised,'Outstanding payments must appear before action shortcuts');
+    const dashboardTools=page.locator('[data-testid="dual-dashboard"] .pkr-dual-discovery');
+    assert.equal(await dashboardTools.count(),1,'Feature hub is missing from Command Centre');
+    assert(await dashboardTools.getByRole('button',{name:/RSVP settings/}).isVisible(),
+      'Host cannot discover RSVP settings from Home');
+    assert(await dashboardTools.getByRole('button',{name:/Payment reminders/}).isVisible(),
+      'Host cannot discover reminders from Home');
     await page.getByRole('button',{name:/Live Poker/}).click();
     await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
+    assert.equal(await page.locator('[data-testid="dual-dashboard"] .pkr-dual-discovery').count(),1,
+      'Live Poker must expose the same feature hub as Command Centre');
     if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
     assert.equal(layoutWrites,1,'Changing layout must issue one saved preference update');
     assert.equal(await page.getByTestId('dual-dashboard').getAttribute('data-layout'),'live');
