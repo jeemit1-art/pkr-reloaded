@@ -1,0 +1,88 @@
+/* Purpose-built Game Night hub. Scoped to avoid touching the poker table. */
+.pkr-night-hub{color:var(--ivory,#f0eee2);max-width:100%;padding-bottom:18px}
+.pkr-night-hub button,.pkr-night-hub select{font:inherit}
+.pkr-night-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+.pkr-night-heading>div{min-width:0}
+.pkr-night-heading span,.pkr-night-kicker{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--gold,#dbba75);text-transform:uppercase}
+.pkr-night-heading h1{font:600 clamp(28px,4vw,37px)/1.15 Georgia,serif;color:var(--white,#f9f5e6);margin:9px 0}
+.pkr-night-heading p{color:var(--muted,#a6b3a7);font-size:13px;line-height:1.5;margin:0;max-width:560px}
+.pkr-night-heading label{display:grid;gap:6px;min-width:230px;font-size:11px;color:var(--muted,#bac7b9)}
+.pkr-night-heading select{max-width:320px;color:var(--ivory,#e6f1ea);background:var(--bg2,#142a24);padding:10px 12px;border:1px solid var(--border-hi,#466054);border-radius:11px;min-height:43px}
+.pkr-night-session,.pkr-night-action-panel,.pkr-night-panel{border-radius:15px;border:1px solid var(--border-hi,#486454);background:var(--bg2,#153228);padding:19px 21px;margin-bottom:13px}
+.pkr-night-session{background:linear-gradient(115deg,#153b2d,#0e2823 78%);display:flex;justify-content:space-between;gap:16px;align-items:center;border-color:#637452}
+.pkr-night-session small{display:block;font-size:10px;letter-spacing:.1em;color:#e1c38b}
+.pkr-night-session h2{font:600 clamp(19px,3vw,27px)/1.3 Georgia,serif;margin:6px 0;color:#f8f2dc}
+.pkr-night-session p{font-size:12px;color:#afc6b4}
+.pkr-night-session-side{display:flex;gap:9px;align-items:flex-end;flex-direction:column}
+.pkr-night-session-side button{border-radius:9px;padding:7px 11px;color:var(--ivory,#eee);border:1px solid #537463;background:#163c2f;cursor:pointer;font-size:12px}
+.pkr-night-session-side small{letter-spacing:0;color:#a9bcae;font-size:10px}
+.pkr-night-status{font-size:11px;font-weight:700;padding:7px 10px;border-radius:30px;background:#293d31;color:#f0d09e;white-space:nowrap}
+.pkr-night-status.live{color:#93e8b1;background:#174537}
+.pkr-night-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}
+.pkr-night-stats>div{background:var(--bg2,#163027);border:1px solid var(--border-hi,#385849);border-radius:13px;padding:14px 15px;display:grid;gap:5px}
+.pkr-night-stats small{font-size:11px;color:#b4c4b7}
+.pkr-night-stats strong{font:700 clamp(26px,4vw,34px)/1 Georgia,serif;color:#e8d8ac}
+.pkr-night-stats span{font-size:10px;color:#a7b9a9}
+.pkr-night-action-panel{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(200px,.8fr);align-items:center;gap:15px;background:linear-gradient(125deg,#14402d,#112921 74%);border-color:#b28e53}
+.pkr-night-hub h3{font:600 20px/1.25 Georgia,serif;margin:8px 0;color:#f5efdf}
+.pkr-night-panel h4{font-size:15px;color:#f2e7c3;margin:15px 0}
+.pkr-night-hub p{font-size:12px;line-height:1.6;color:#b8c9be;margin:7px 0 12px}
+.pkr-night-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.pkr-night-grid>.pkr-night-panel{min-width:0}
+.pkr-night-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pkr-night-action-panel .pkr-night-actions{justify-content:flex-end}
+.pkr-night-actions button,.pkr-night-panel>button,.pkr-night-empty button,.pkr-night-followup button,.pkr-night-secondary-link button,.pkr-night-warning button{background:#193f31;border:1px solid #55755e;border-radius:9px;color:#eff1e3;padding:10px 13px;font-weight:650;font-size:12px;cursor:pointer;min-height:41px}
+.pkr-night-actions .pkr-night-primary{background:#d0ad67;color:#152318;border-color:#d0ad67}
+.pkr-night-hub button:disabled{opacity:.48;cursor:not-allowed}
+.pkr-night-hub button:focus-visible,.pkr-night-hub select:focus-visible{outline:2px solid #ffe1a0;outline-offset:3px}
+.pkr-night-roster,.pkr-night-followups{display:grid;gap:0}
+.pkr-night-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.pkr-night-panel-heading h3{margin:4px 0}
+.pkr-night-pulse{font-size:10px;color:#88d5a7}
+.pkr-night-person{display:grid;grid-template-columns:35px minmax(120px,1fr) minmax(100px,.75fr) minmax(90px,.75fr);align-items:center;gap:8px;padding:10px 0;border-top:1px solid #334a3d;font-size:12px}
+.pkr-night-person strong{color:#f3f0e8;overflow:hidden;text-overflow:ellipsis}
+.pkr-night-person span:nth-of-type(2){color:#b9c9bb}
+.pkr-night-person b{color:#deb977;font-size:11px;text-align:right}
+.pkr-night-avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#315340;color:#eee2c1;font-weight:700}
+.pkr-night-followup{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #334a3d}
+.pkr-night-followup>div{display:grid;gap:5px;min-width:0}
+.pkr-night-followup strong{color:#f1eddc;font-size:13px}
+.pkr-night-followup small{font-size:11px;color:#b0c3b2}
+.pkr-night-followup button{flex-shrink:0}
+.pkr-night-secondary-link{margin-top:10px}
+.pkr-night-secondary-link button{background:transparent;border-color:#536a59;color:#dbccac}
+.pkr-night-count{font:600 23px Georgia,serif;color:#e7c78e}
+.pkr-night-muted{color:#b8c8b9!important}
+.pkr-night-warning{background:#493a25;border:1px solid #a78857;border-radius:10px;padding:12px 13px;margin-bottom:13px;color:#f3d7a9;font-size:12px;line-height:1.55}
+.pkr-night-warning button{margin-left:10px}
+.pkr-night-check{font-size:12px;color:#e9e3d6;display:flex;gap:9px;align-items:center;margin:12px 0}
+.pkr-night-check input{width:17px;height:17px;accent-color:#cfa85d}
+.pkr-night-payments{margin-top:20px;border-top:1px solid #476150;padding-top:6px}
+.pkr-night-notice{padding:12px 14px;border:1px solid #4a765a;border-radius:10px;background:#173c2f;color:#e4ebde!important;margin:10px 0}
+.pkr-night-footer{font-size:11px;color:#a3b2a5;text-align:center;line-height:1.5;padding:14px 3px}
+.pkr-night-empty{border:1px dashed #5a765b;background:#173026;padding:25px;border-radius:14px;color:#f2dfb3;font-size:15px}
+@media(max-width:740px){
+ .pkr-night-heading{flex-direction:column;align-items:stretch;gap:12px}
+ .pkr-night-heading label{min-width:0}
+ .pkr-night-heading select{max-width:none;width:100%}
+ .pkr-night-grid,.pkr-night-action-panel{grid-template-columns:1fr}
+ .pkr-night-action-panel .pkr-night-actions{justify-content:flex-start}
+ .pkr-night-session,.pkr-night-panel,.pkr-night-action-panel{padding:15px}
+ .pkr-night-session-side{align-items:flex-end}
+ .pkr-night-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-night-actions button{flex:1 1 130px}
+ .pkr-night-person{grid-template-columns:30px minmax(80px,1fr) minmax(80px,.85fr)}
+ .pkr-night-person b{grid-column:2/4;text-align:left;padding-left:2px}
+ .pkr-night-pulse{font-size:9px;text-align:right}
+ .pkr-night-followup button{font-size:11px;max-width:47%}
+}
+@media(max-width:360px){.pkr-night-session{flex-direction:column;align-items:stretch}.pkr-night-session-side{flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:center}.pkr-night-session-side small{width:100%}}
+
+/* Notifications moved out of Members into Game Night. */
+.pkr-night-notification-tools{border:1px solid #456457;border-radius:14px;background:#112b23;padding:18px 19px;margin:12px 0}
+.pkr-night-notification-title h3{margin:6px 0}
+.pkr-night-notification-tools .pkr-members-alert-panel{display:block;background:transparent;border:0;padding:0;margin:8px 0 0}
+.pkr-night-notification-tools .pkr-members-alert-panel .pkr-members-alert-head{gap:12px}
+.pkr-night-notification-tools .pkr-members-alert-panel a{color:#e8c98b}
+.pkr-member-subpage[hidden]{display:none!important}
+@media(max-width:740px){.pkr-night-notification-tools{padding:14px 12px}}

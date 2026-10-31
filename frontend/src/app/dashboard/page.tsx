@@ -520,7 +520,7 @@ function DashboardInner() {
             <div style={{display:'flex',gap:9,flexWrap:'wrap',marginTop:10}}>
               {activeRooms.filter(room=>pendingByRoom[room.id]>0).map(room=>(
                 <button key={room.id} type="button" className="btn btn-primary"
-                  onClick={()=>router.push('/events/'+room.id+'?tab=members')}>
+                  onClick={()=>router.push('/events/'+room.id+'?tab=members&view=requests')}>
                   Review {room.name} ({pendingByRoom[room.id]})
                 </button>
               ))}

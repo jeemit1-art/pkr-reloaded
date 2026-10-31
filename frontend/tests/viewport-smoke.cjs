@@ -705,6 +705,30 @@ async function test(){
      }
      if(item.id==='room'){
       const selector=size.width>=1100?'.pkr-persistent-nav button':'.pkr-universal-bottom-nav button';
+      const nightNav=page.locator(selector).filter({hasText:'Game Night'}).first();
+      if(!await nightNav.isVisible())errors.push(size.name+' Game Night main navigation missing');
+      else{
+        await nightNav.click();
+        await page.getByTestId('game-night-hub').waitFor({state:'visible',timeout:7000});
+        if(new URL(page.url()).searchParams.get('tab')!=='night')
+          errors.push(size.name+' Game Night did not open the dedicated tab');
+        try{
+          await page.getByRole('heading',{name:'Share once. Always up to date.'}).waitFor({state:'visible',timeout:12000});
+        }catch{
+          errors.push(size.name+' current PKR RSVP board missing from Game Night');
+        }
+        const selectedNight=await page.getByLabel('Choose game night').inputValue();
+        if(selectedNight!=='test-game')
+          errors.push(size.name+' old unfinished game was selected for live Game Night: '+selectedNight);
+        const registration=page.getByLabel('Member notification registrations');
+        await registration.waitFor({state:'visible',timeout:7000});
+        if(!await registration.getByText('1 of 2 members have a registered notification device').count())
+          errors.push(size.name+' Game Night push setup summary incorrect');
+        await registration.getByRole('button',{name:'↻ Refresh'}).click();
+        await registration.getByText('1 of 2 members have a registered notification device').waitFor({state:'visible',timeout:7000});
+        if(await page.locator('#pkr-share-text').count())
+          errors.push(size.name+' obsolete WhatsApp message composer still present');
+      }
       const memberNav=page.locator(selector).filter({hasText:'Members'}).first();
       if(await memberNav.count() && await memberNav.isVisible()){
        await memberNav.click();
@@ -730,16 +754,22 @@ async function test(){
          await nav.filter({hasText:'Members'}).first().click();
          await page.waitForTimeout(130);
        }
-       const registration=page.getByLabel('Member notification registrations');
-       await registration.waitFor({state:'visible',timeout:5000});
-       if(!await registration.getByText('1 of 2 members have a registered notification device').count())
-         errors.push(size.name+' host notification summary did not show synthetic registration count');
-       const badges=page.locator('.pkr-member-push-state');
-       if(await badges.count()!==2 || !await badges.first().getByText('Registered on 2 devices').count()
-          || !await badges.last().getByText('Notifications not enabled on this member’s device').count())
-         errors.push(size.name+' registered/unregistered member badges were not rendered');
-       await registration.getByRole('button',{name:'↻ Refresh'}).click();
-       await registration.getByText('1 of 2 members have a registered notification device').waitFor({state:'visible',timeout:5000});
+       if(await page.getByLabel('Member notification registrations').count())
+         errors.push(size.name+' notification settings still clutter Members instead of Game Night');
+       const inviteChoice=page.getByRole('button',{name:/Invite & QR/});
+       await inviteChoice.click();
+       if(!await page.locator('.pkr-member-invite').isVisible())errors.push(size.name+' private invitations missing');
+       if(await page.locator('.pkr-member-roster').isVisible())errors.push(size.name+' roster not separated from invitations');
+       await page.getByRole('button',{name:/Players \(/}).click();
+       await page.locator('.pkr-member-roster').waitFor({state:'visible'});
+       if(size.width>=1100){
+         await page.getByRole('button',{name:'+ Invite Member by Mobile'}).click();
+         await page.getByLabel('WhatsApp mobile number').waitFor({state:'visible',timeout:5000});
+         if(await page.locator('.pkr-member-roster').isVisible())
+           errors.push(size.name+' roster should close when shortcut opens invitations');
+         await page.getByRole('button',{name:/Players \(/}).click();
+         await page.locator('.pkr-member-roster').waitFor({state:'visible'});
+       }
        const search=page.locator('#pkr-member-search');
        if(await search.count()){
          await search.fill('Jordan');

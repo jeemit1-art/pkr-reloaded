@@ -84,7 +84,6 @@ export default function RoomDashboardDual({
   const active=featured&&isLiveGame(featured)?featured:null;
   const settlements=useMemo(()=>history.filter(g=>g.status==='settled')
     .sort((a,b)=>b.scheduled_at-a.scheduled_at),[history]);
-  const shareGame=featured||settlements[0]||null;
 
   // The Worker is authoritative; localStorage is deliberately NOT a room setting.
   // Refresh on focus as well as room changes so other devices see host choices.
@@ -161,6 +160,7 @@ export default function RoomDashboardDual({
   };
   const goMembers=()=>onMembers?onMembers():router.push('/events/'+encodeURIComponent(room.id)+'?tab=members');
   const goHistory=()=>onHistory?onHistory():router.push('/events/'+encodeURIComponent(room.id)+'?tab=history');
+  const goGameNight=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=night'+(featured?'&game='+encodeURIComponent(featured.id):''));
   const goInvite=()=>viewerIsHost?(onInvite?onInvite():goMembers()):goMembers();
   const goCreate=()=>canManageGames?(onCreateGame?onCreateGame():openRoom()):openRoom();
   const goSchedule=()=>router.push('/schedule');
@@ -261,13 +261,6 @@ export default function RoomDashboardDual({
           </div>}
         </div>}
       </header>
-      {canManageGames&&<div className="pkr-dual-whatsapp-strip" role="region" aria-label="Host WhatsApp sharing">
-        <div><strong>♠ WhatsApp Sharing Centre</strong><small>{shareGame?'Invitations, RSVP updates, announcements, results and private payments':'Invite players to your private poker room'}</small></div>
-        <button type="button" onClick={()=>shareGame?router.push('/games/'+shareGame.id+'/share'):goInvite()}>
-          {shareGame?'Open Sharing Centre →':'Invite members →'}
-        </button>
-      </div>}
-
       <div className="pkr-dual-switcher" aria-label="Dashboard presentation">
         <div className="pkr-dual-switcher-heading">
           <span className="pkr-dual-diamond">◆</span>
@@ -310,7 +303,7 @@ export default function RoomDashboardDual({
           <div className="pkr-dual-section-title"><h3>Quick Actions</h3><small>Get the game going</small></div>
           <div className="pkr-dual-quick-grid">
             <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':canManageGames?'Create Game':'View Games'}</strong><small>{canManageGames?'Manage a session':'Review game sessions'}</small></button>
-            <button type="button" onClick={goInvite}><b><DashIcon name="people"/></b><span>↗</span><strong>{viewerIsHost?'Invite Players':'Members'}</strong><small>{viewerIsHost?'Share your room':'View the room'}</small></button>
+            <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Game Night</strong><small>Live RSVPs & seats</small></button>
             <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Next game night</small></button>
             <button type="button" onClick={onScan||goMembers}><b><DashIcon name="scan"/></b><span>↗</span><strong>{onScan?'Scan Invite':'View Players'}</strong><small>{onScan?'Join a room':'Private roster'}</small></button>
           </div>
@@ -449,9 +442,9 @@ export default function RoomDashboardDual({
             <p className="pkr-dual-help">Select an amount, then select a player at the table to confirm. No buy-in is recorded here.</p>
           </section>
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>♟ WhatsApp Invitations</h3><small>Private room</small></div>
-            <p className="pkr-dual-help">Create a personal WhatsApp invitation for each player. The room host must approve joining.</p>
-            <button type="button" className="pkr-dual-wide-link" onClick={goInvite}>{viewerIsHost?'Create personal WhatsApp invite':'View room members'} →</button>
+            <div className="pkr-dual-section-title"><h3>♟ Game Night RSVPs</h3><small>Live board</small></div>
+            <p className="pkr-dual-help">Current attendance, arrival times, available seats and one-tap WhatsApp updates are in Game Night.</p>
+            <button type="button" className="pkr-dual-wide-link" onClick={goGameNight}>Open Game Night →</button>
           </section>
         </div>
         <section className="pkr-dual-data-card pkr-dual-settlements">

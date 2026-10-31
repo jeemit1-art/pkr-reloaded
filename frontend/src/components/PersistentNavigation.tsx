@@ -11,23 +11,25 @@ import PkrGlyph from '@/components/PkrGlyph';
 const mobileNavigation=[
  {name:'Home',icon:'home',href:'/dashboard'},
  {name:'Games',icon:'games',href:'room'},
+ {name:'Game Night',icon:'schedule',href:'night'},
  {name:'Members',icon:'members',href:'members'},
- {name:'Insights',icon:'insights',href:'/insights'},
  {name:'More',icon:'install',href:'#more'},
 ] as const;
 const playerNavigation=[
  {name:'Home',icon:'home',href:'/dashboard'},
  {name:'Games',icon:'games',href:'room'},
+ {name:'Game Night',icon:'schedule',href:'night'},
  {name:'Standings',icon:'players',href:'leaderboard'},
  {name:'More',icon:'install',href:'#more'},
 ] as const;
 
 const navigation=[
  {name:'Home',icon:'home',href:'/dashboard',group:'OVERVIEW'},
- {name:'Games',icon:'games',href:'room',group:'GAME NIGHT'},
- {name:'Game history',icon:'games',href:'history',group:'GAME NIGHT'},
- {name:'Standings',icon:'players',href:'leaderboard',group:'GAME NIGHT'},
- {name:'Schedule',icon:'schedule',href:'/schedule',group:'GAME NIGHT'},
+ {name:'Games',icon:'games',href:'room',group:'PLAY & SCHEDULE'},
+ {name:'Schedule',icon:'schedule',href:'/schedule',group:'PLAY & SCHEDULE'},
+ {name:'Game Night',icon:'schedule',href:'night',group:'RSVPS & UPDATES'},
+ {name:'Game history',icon:'games',href:'history',group:'RESULTS & HISTORY'},
+ {name:'Standings',icon:'players',href:'leaderboard',group:'RESULTS & HISTORY'},
  {name:'Members',icon:'members',href:'members',group:'CLUB & PEOPLE'},
  {name:'Insights',icon:'insights',href:'/insights',group:'FINANCES & RESULTS'},
  {name:'Settlements',icon:'settle',href:'/insights#pkr-settlement',group:'FINANCES & RESULTS'},
@@ -36,6 +38,7 @@ const navigation=[
 const playerDesktopNavigation=[
  {name:'Home',icon:'home',href:'/dashboard',group:'PLAYER HOME'},
  {name:'Games',icon:'games',href:'room',group:'YOUR ROOM'},
+ {name:'Game Night',icon:'schedule',href:'night',group:'YOUR ROOM'},
  {name:'Standings',icon:'players',href:'leaderboard',group:'YOUR ROOM'},
  {name:'Members',icon:'members',href:'members',group:'YOUR ROOM'},
  {name:'My payments',icon:'settle',href:'payments',group:'YOUR RECORDS'},
@@ -43,6 +46,7 @@ const playerDesktopNavigation=[
 ] as const;
 
 const moreNavigation=[
+ {name:'Insights',icon:'insights',href:'/insights'},
  {name:'Game history',icon:'games',href:'history'},
  {name:'Standings',icon:'players',href:'leaderboard'},
  {name:'Schedule',icon:'schedule',href:'/schedule'},
@@ -96,7 +100,7 @@ export default function PersistentNavigation(){
  useEffect(()=>{
   const onRoomTab=(e:globalThis.Event)=>{
    const tab=(e as CustomEvent<string>).detail;
-   if(['games','leaderboard','history','members'].includes(tab))setRoomTab(tab);
+   if(['games','night','leaderboard','history','members'].includes(tab))setRoomTab(tab);
   };
   window.addEventListener('pkr:select-room-tab',onRoomTab);
   return()=>window.removeEventListener('pkr:select-room-tab',onRoomTab);
@@ -146,13 +150,14 @@ export default function PersistentNavigation(){
    case 'Games':case 'Rooms':case 'Rooms & games':
     return inGame||(inRoom&&roomTab==='games');
    case 'Game history':return inRoom&&roomTab==='history';
+   case 'Game Night':return inRoom&&roomTab==='night';
    case 'Standings':case 'Players':return inRoom&&roomTab==='leaderboard';
    case 'Members':return inRoom&&roomTab==='members';
    case 'Insights':return pathname==='/insights'&&!isSettlement;
    case 'Settlements':case 'Settle':return isSettlement;
    case 'Schedule':return pathname==='/schedule';
    case 'Install':case 'Install PKR':return pathname==='/install';
-   case 'More':return moreOpen||pathname==='/schedule'||pathname==='/install'||isSettlement||(inRoom&&roomTab==='history');
+   case 'More':return moreOpen||pathname==='/schedule'||pathname==='/install'||pathname==='/insights'||isSettlement||(inRoom&&roomTab==='history');
    default:return false;
   }
  }
@@ -178,7 +183,7 @@ export default function PersistentNavigation(){
    router.push('/dashboard#pkr-my-payments');
    return;
   }
-  if(destination==='room'||destination==='members'||destination==='leaderboard'||destination==='history'){
+  if(destination==='room'||destination==='night'||destination==='members'||destination==='leaderboard'||destination==='history'){
    if(!eventId){router.push('/dashboard');return}
    const next=destination==='room'?'games':destination;
    if(pathname==='/events/'+eventId){
