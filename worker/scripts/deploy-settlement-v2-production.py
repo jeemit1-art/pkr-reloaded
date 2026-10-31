@@ -28,6 +28,7 @@ WORKER = "pkr-reloaded-worker"
 HOST = "https://pkr-reloaded-worker.jeemit1.workers.dev"
 MIGRATION = "migrations/20261027_settlement_v2.sql"
 PROFILE_MIGRATION = "migrations/20261029_room_player_profiles.sql"
+RSVP_CUSTOM_MIGRATION = "migrations/20261031_rsvp_custom_choice.sql"
 PROFILE_COLUMNS = {"event_id","profile_key","screen_name","avatar_data","avatar_emoji",
                    "phone_cipher","preferred_contact","private_notes","updated_by","created_at","updated_at"}
 
@@ -306,6 +307,7 @@ def preflight_backup():
             # Rehearse this exact additive migration TWICE on the independently
             # restored production export, not only on synthetic staging rows.
             rehearse_profile_migration(conn)
+            rehearse_rsvp_choice_migration(conn)
             for table, expected in before.items():
                 actual = tuple(int(x or 0) for x in conn.execute(aggregate_sql(table)).fetchone())
                 if actual != expected:
@@ -342,6 +344,41 @@ def rehearse_profile_migration(conn):
             or int(conn.execute("SELECT COUNT(*) FROM event_members").fetchone()[0]) != before_members):
         raise Stop("Profile migration altered restored game or member rows.")
     return True
+
+
+def rehearse_rsvp_choice_migration(conn):
+    """Rehearse one additive RSVP field on restored D1; never write to live D1."""
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(game_rsvp_guests)")}
+    expected = {"id", "game_id", "display_name", "status",
+                "arrival_option", "seat_number", "edit_token_hash"}
+    if not expected.issubset(columns):
+        raise Stop("RSVP production schema differs from reviewed constraints.")
+    before = conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0]
+    if "choice_value" not in columns:
+        sql = (ROOT / RSVP_CUSTOM_MIGRATION).read_text(encoding="utf-8")
+        if "DROP " in sql.upper() or "DELETE " in sql.upper() or "UPDATE " in sql.upper():
+            raise Stop("RSVP additive migration contains unexpected destructive SQL.")
+        conn.executescript(sql)
+    after_columns = {r[1] for r in conn.execute("PRAGMA table_info(game_rsvp_guests)")}
+    after = conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0]
+    if "choice_value" not in after_columns or before != after:
+        raise Stop("Rehearsed RSVP migration changed existing guest records.")
+    # SQLite still enforces the original yes/no and seat restrictions.
+    sql_text = next((r[0] or "" for r in conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='game_rsvp_guests'")), "")
+    if "status IN ('yes','no')" not in sql_text or "arrival_option = 'not-coming'" not in sql_text:
+        raise Stop("Rehearsed RSVP schema no longer enforces original attendance constraints.")
+    return True
+
+
+def rsvp_choice_schema_state():
+    """Read-only column presence check before deploying the new Worker."""
+    rows = remote_query("SELECT name FROM pragma_table_info('game_rsvp_guests')")
+    columns = {r["name"] for r in rows}
+    required = {"id", "game_id", "status", "arrival_option", "seat_number"}
+    if not required.issubset(columns):
+        raise Stop("Production RSVP schema missing reviewed columns; no Worker deployment.")
+    return "choice_value" in columns
 
 
 def profile_schema_state():
@@ -459,6 +496,19 @@ def main():
     verify_profile_schema()
     if {t: aggregate(t) for t in before} != before:
         raise Stop("Financial aggregates changed during profile migration; halted.")
+    # New RSVP routes read choice_value. The original table has a strict
+    # yes/no CHECK; add only the nullable reply column before Worker code
+    # can be published, preserving rows and all database constraints.
+    if not rsvp_choice_schema_state():
+        wrangler("d1", "execute", DB, "--config", "wrangler.toml", "--remote",
+                 "--file", RSVP_CUSTOM_MIGRATION)
+        print("Additive RSVP choice column applied.", flush=True)
+    else:
+        print("RSVP choice column already present; skipping migration.", flush=True)
+    if not rsvp_choice_schema_state():
+        raise Stop("RSVP choice column missing after migration; no Worker deployment.")
+    if {t: aggregate(t) for t in before} != before:
+        raise Stop("Financial aggregates changed during RSVP schema upgrade; halted.")
     # Deploy only after schema check; preserve vars set in Cloudflare dashboard.
     wrangler("deploy", "--config", "wrangler.toml", "--keep-vars")
     print("Production Worker deployed.", flush=True)

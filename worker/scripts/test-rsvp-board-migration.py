@@ -53,4 +53,19 @@ blocked(lambda:conn.execute(
 ))
 assert conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0] == 4
 assert conn.execute("SELECT COUNT(*) FROM game_rsvp_guests WHERE seat_number=1").fetchone()[0] == 1
-print("PASS: idempotent migration, no duplicate names, unique reserved seats, safe not-coming and seat release")
+
+# Custom choices extend the existing table with one nullable field. Original
+# CHECK constraints, reserved-seat index and host-seat triggers remain active.
+upgrade=(root / "migrations/20261031_rsvp_custom_choice.sql").read_text()
+before=conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0]
+conn.executescript(upgrade)
+assert conn.execute("SELECT COUNT(*) FROM game_rsvp_guests").fetchone()[0] == before
+assert "choice_value" in [row[1] for row in conn.execute("PRAGMA table_info(game_rsvp_guests)")]
+conn.execute("UPDATE game_rsvp_guests SET choice_value='maybe', status='no',arrival_option='not-coming',seat_number=NULL WHERE id='g'")
+row=conn.execute("SELECT status,arrival_option,choice_value,seat_number FROM game_rsvp_guests WHERE id='g'").fetchone()
+assert row == ("no","not-coming","maybe",None),row
+blocked(lambda:conn.execute("UPDATE game_rsvp_guests SET status='maybe' WHERE id='g'"))
+blocked(lambda:conn.execute("UPDATE game_rsvp_guests SET status='no',arrival_option='custom-example' WHERE id='g'"))
+conn.execute("UPDATE game_rsvp_guests SET choice_value='custom-12345678', status='yes',arrival_option='custom-12345678' WHERE id='g'")
+assert conn.execute("SELECT status,arrival_option FROM game_rsvp_guests WHERE id='g'").fetchone()==('yes','custom-12345678')
+print("PASS: RSVP custom choice migration preserved existing rows, original yes/no checks, seat constraints and Maybe mapping (disposable SQLite only)")
