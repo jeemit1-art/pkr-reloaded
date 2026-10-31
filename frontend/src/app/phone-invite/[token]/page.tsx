@@ -47,8 +47,8 @@ export default function PhoneInvite(){
        playPkrSound('approved');
        // Joining must succeed before any optional app installation. The
        // WhatsApp browser and iPhone Home Screen app have separate storage.
-       setStatus('Approved! Opening your poker room…');
-       router.replace('/events/'+encodeURIComponent(result.event_id));
+       setStatus('Approved! Opening PKR Instant — no installation needed…');
+       router.replace('/instant?room='+encodeURIComponent(result.event_id));
      }else if(!silent){
        setStatus('Still waiting for your host. PKR will check again automatically.');
      }
@@ -76,11 +76,11 @@ export default function PhoneInvite(){
      <h1 style={{fontFamily:'var(--font-display),serif',fontSize:'clamp(26px,5vw,35px)',color:'var(--white)',margin:'7px 0'}}>
        {data?data.event_name:'Your private invitation'}
      </h1>
-     <p>One invitation. One approval. Then you're ready for game night.</p>
+     <p>One private invitation, one host approval — then you can RSVP and view your game straight from WhatsApp. No download needed.</p>
      <div className="pkr-onboard-steps" aria-label="Joining progress">
        <span className="complete">✓ QR or link opened</span>
        <span className={claim?'complete':'current'}>{claim?'✓ Request sent':'2 · Request access'}</span>
-       <span className={claim?'current':''}>3 · Start playing</span>
+       <span className={claim?'current':''}>3 · Open PKR Instant</span>
      </div>
      {data&&<p style={{fontSize:12}}>Private invite for <strong style={{color:'var(--ivory)'}}>{data.masked_phone}</strong>
        {' · '}{data.role==='cohost'?'Co-host':'Player'} access</p>}
@@ -116,6 +116,9 @@ export default function PhoneInvite(){
        </div>}
      {status&&<p role="status" style={{marginTop:14,color:'var(--green)',fontSize:12}}>{status}</p>}
      {error&&<p role="alert" style={{color:'var(--red)',marginTop:14,fontSize:12}}>{error}</p>}
+     <div style={{marginTop:14,display:'flex',gap:12,flexWrap:'wrap'}}>
+       <a href="/instant" style={{fontSize:13,color:'var(--gold)'}}>Already approved? Open PKR Instant →</a>
+     </div>
      <p style={{fontSize:11,color:'var(--muted)',marginTop:22,lineHeight:1.7}}>
        Your invitation expires after 48 hours and is single-use. A forwarded link does not prove phone ownership.
        If access is rejected or expires, ask the host to send a new personal invitation.

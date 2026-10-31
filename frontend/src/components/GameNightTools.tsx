@@ -265,6 +265,21 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
     finally{setImageBusy(false)}
   }
 
+  const instantPanel=<section className="pkr-night-panel" aria-label="No-install player access">
+    <div className="pkr-night-panel-heading">
+      <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
+        <h3>PKR Instant — no installation</h3></div>
+    </div>
+    <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
+    <div className="pkr-night-actions">
+      <button type="button" className="pkr-night-primary"
+        onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
+      <button type="button" onClick={()=>void copied(
+        window.location.origin+'/instant?room='+encodeURIComponent(event.id),
+        'PKR Instant room link')}>Copy member link</button>
+    </div>
+  </section>;
+
   if(!availableGames.length)return <section className="pkr-night-hub" aria-label="Game Night">
     <header className="pkr-night-heading"><div><span>RSVPs · SEATS · SHARING</span><h1>Game Night</h1>
       <p>Live RSVPs, seats and WhatsApp updates for upcoming games.</p></div></header>
@@ -272,6 +287,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
       {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}
       <button type="button" onClick={()=>router.push('/results?room='+encodeURIComponent(event.id)+'&view=history')}>View completed games →</button>
       <button type="button" onClick={()=>router.push('/account')}>Notification settings →</button></div>
+    {instantPanel}
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
@@ -382,6 +398,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
 
     </>}
 
+    {instantPanel}
     <div className="pkr-night-secondary-link"><button type="button" onClick={()=>router.push('/account')}>
       Notification & sound settings →</button></div>
     {notice&&<p className="pkr-night-notice" role="status">{notice}</p>}

@@ -1,0 +1,29 @@
+name: PKR native TypeScript and package checks
+on:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install native dependencies without store credentials
+        working-directory: native
+        run: npm install --no-audit --no-fund --package-lock=false
+      - name: Type-check genuine React Native screens
+        working-directory: native
+        run: npm run typecheck
+      - name: Validate app config (no native signing)
+        working-directory: native
+        run: npx expo config --type public --json > /tmp/pkr-native-public-config.json

@@ -15,6 +15,7 @@ import tournament from './routes/tournament';
 import analysis   from './routes/analysis';
 import payments   from './routes/payments';
 import { sendPaymentReminders,sendGameReminders } from './reminders';
+import {reconcileNativeReceipts} from './native-push';
 import { advanceExpiredTournamentLevels } from './tournament-clock';
 import {archiveAccidentalHistoricalPlayersOnce,TEST_HISTORY_ARCHIVE_DONE} from './maintenance/archive-test-players';
 
@@ -68,6 +69,7 @@ app.get('/health', async (c) => {
   features:{
     settlement_v2:c.env.PKR_SETTLEMENT_V2==='1',
     push_rooms_v2:c.env.PKR_PUSH_ROOMS_V2==='1',
+    native_push:c.env.PKR_NATIVE_PUSH_ENABLED==='1',
     phone_members_v1:c.env.PKR_PHONE_MEMBERS_V1==='1',
   },
   ts:Date.now(),
@@ -95,6 +97,7 @@ export default {
     }
     if(event.cron==='0 * * * *'){
       ctx.waitUntil(Promise.allSettled([
+        reconcileNativeReceipts(env),
         sendPaymentReminders(env),sendGameReminders(env),
       ]).then(()=>{}));
     }
