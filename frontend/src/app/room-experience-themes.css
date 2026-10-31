@@ -1,0 +1,432 @@
+/* PKR Command Centre / Live Poker: two original room-wide visual experiences.
+   The host's existing saved dashboard-layout value is the ONLY source of truth.
+   These rules change appearance, never tab order, gameplay math or settlement data. */
+
+html[data-pkr-room-experience="command"]{
+ --pkr-ex-bg:#061410;--pkr-ex-surface:#11271f;--pkr-ex-surface-2:#16372a;
+ --pkr-ex-ink:#eef7ef;--pkr-ex-secondary:#b1c8b8;--pkr-ex-border:#53745c;
+ --pkr-ex-accent:#e9bf76;--pkr-ex-accent-light:#fff0c9;--pkr-ex-accent-ink:#231a0d;
+ --pkr-ex-glow:#e2bb7161;--pkr-ex-focus:#e9c17a;--pkr-ex-green:#59e8a9;
+ --pkr-ex-header-image:url('/images/pkr-approved-hero-desktop.webp');
+ --pkr-ex-page:radial-gradient(ellipse at 80% -8%,rgba(27,86,54,.27),transparent 56%),#061410;
+ --pkr-ex-surface-grad:linear-gradient(133deg,#16382a,#0b211a);
+}
+html[data-pkr-room-experience="live"]{
+ --pkr-ex-bg:#061b13;--pkr-ex-surface:#0c2b1d;--pkr-ex-surface-2:#11432b;
+ --pkr-ex-ink:#f2fff3;--pkr-ex-secondary:#b4d8bf;--pkr-ex-border:#438b59;
+ --pkr-ex-accent:#66e6a2;--pkr-ex-accent-light:#a9ffcf;--pkr-ex-accent-ink:#042118;
+ --pkr-ex-glow:#4eeea662;--pkr-ex-focus:#eac779;--pkr-ex-green:#68f4af;
+ --pkr-ex-header-image:url('/images/casino/real-casino-props.webp');
+ --pkr-ex-page:radial-gradient(ellipse at 73% 2%,rgba(27,111,61,.29),transparent 57%),#061b13;
+ --pkr-ex-surface-grad:radial-gradient(ellipse at 52% 0%,#195039,#0c2e20 80%);
+}
+
+/* Retain the existing classic poker dashboard's photographic art / live-table UI.
+   Its two saved dashboard layouts already render their own distinct components. */
+html[data-pkr-room-experience] .pkr-app,
+html[data-pkr-room-experience] .pkr-primary-page,
+html[data-pkr-room-experience] .pkr-vnext-insights,
+html[data-pkr-room-experience] .pkr-schedule-page{
+ --bg:var(--pkr-ex-bg);
+ --bg2:var(--pkr-ex-surface);
+ --bg3:var(--pkr-ex-surface-2);
+ --gold:var(--pkr-ex-accent);
+ --gold-pale:var(--pkr-ex-accent-light);
+ --green:var(--pkr-ex-green);
+ --white:var(--pkr-ex-ink);
+ --ivory:var(--pkr-ex-ink);
+ --muted:var(--pkr-ex-secondary);
+ --border:color-mix(in srgb,var(--pkr-ex-border) 47%,transparent);
+ --border-hi:var(--pkr-ex-border);
+ color:var(--pkr-ex-ink);
+}
+html[data-pkr-room-experience] .pkr-primary-page,
+html[data-pkr-room-experience] .pkr-vnext-insights,
+html[data-pkr-room-experience] .pkr-schedule-page,
+html[data-pkr-room-experience] .pkr-app.pkr-event,
+html[data-pkr-room-experience] .pkr-app.pkr-game-detail{
+ background:var(--pkr-ex-page)!important;
+ color:var(--pkr-ex-ink);
+}
+
+/* Same five visible tabs as the approved restructure; original dark-green/gold
+   Command treatment and felt-green Live treatment, no new navigation drawer. */
+@media(min-width:1100px){
+ html[data-pkr-room-experience] .pkr-primary-sidebar{
+  background:linear-gradient(176deg,var(--pkr-ex-surface),var(--pkr-ex-bg) 54%)!important;
+  border-right:1px solid var(--pkr-ex-border)!important;
+ }
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-persistent-brand span,
+html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-persistent-room>span,
+html[data-pkr-room-experience] .pkr-primary-sidebar nav button svg{
+ color:var(--pkr-ex-accent)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-persistent-room{
+ background:var(--pkr-ex-surface)!important;
+ border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar nav button{
+ color:var(--pkr-ex-secondary)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar nav button.active,
+html[data-pkr-room-experience] .pkr-primary-sidebar nav button:hover{
+ background:color-mix(in srgb,var(--pkr-ex-accent) 14%,var(--pkr-ex-surface))!important;
+ border-color:var(--pkr-ex-border)!important;
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar-footer button,
+html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-room-switcher{
+ background:var(--pkr-ex-surface)!important;
+ border-color:var(--pkr-ex-border)!important;
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-primary-view-clubs{
+ color:var(--pkr-ex-accent)!important;
+}
+@media(max-width:1099px){
+ html[data-pkr-room-experience] .pkr-primary-mobile-utility{
+  background:var(--pkr-ex-surface)!important;border-bottom-color:var(--pkr-ex-border)!important;
+  color:var(--pkr-ex-ink)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-mobile-mark{
+  color:var(--pkr-ex-accent)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-club-name,
+ html[data-pkr-room-experience] .pkr-primary-mobile-utility select{
+  color:var(--pkr-ex-ink)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-account{
+  color:var(--pkr-ex-accent-light)!important;
+  background:var(--pkr-ex-surface-2)!important;border-color:var(--pkr-ex-border)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
+  background:var(--pkr-ex-bg)!important;
+  border-top:1px solid var(--pkr-ex-border)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-bottom-nav button{
+  color:var(--pkr-ex-secondary)!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-bottom-nav button.active{
+  color:var(--pkr-ex-accent-light)!important;
+  background:color-mix(in srgb,var(--pkr-ex-accent) 17%,var(--pkr-ex-bg))!important;
+ }
+ html[data-pkr-room-experience] .pkr-primary-bottom-nav button.active svg{
+  color:var(--pkr-ex-accent)!important;
+ }
+}
+
+/* Restore the approved dashboard's prominent two-option selector. */
+html[data-pkr-room-experience] .pkr-app .pkr-dual-switcher{
+ display:flex!important;align-items:center;justify-content:space-between;flex-wrap:wrap;
+ gap:12px;border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface-grad)!important;
+}
+html[data-pkr-room-experience] .pkr-app .pkr-dual-switch-actions{
+ background:var(--pkr-ex-bg)!important;border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience] .pkr-app .pkr-dual-switch-actions button.active{
+ color:var(--pkr-ex-accent-light)!important;
+ border-color:var(--pkr-ex-border)!important;
+ background:color-mix(in srgb,var(--pkr-ex-accent) 20%,var(--pkr-ex-surface-2))!important;
+}
+@media(max-width:700px){
+ html[data-pkr-room-experience] .pkr-app .pkr-dual-switcher{
+  padding:12px!important;align-items:stretch;
+ }
+ html[data-pkr-room-experience] .pkr-app .pkr-dual-switch-actions{
+  flex:1 1 100%;max-width:100%;min-width:0;
+ }
+ html[data-pkr-room-experience] .pkr-app .pkr-dual-switch-actions button{
+  flex:1 1 50%;min-width:0!important;font-size:11px!important;
+ }
+}
+
+/* All five tab destinations share the chosen poker-club look.
+   Command Centre: real photo, restrained champagne highlights.
+   Live Poker: casino props, felt-green highlights and chip-like numbers. */
+html[data-pkr-room-experience] .pkr-primary-page-head{
+ position:relative;isolation:isolate;overflow:hidden;
+ border:1px solid var(--pkr-ex-border);
+ border-radius:17px;padding:23px;
+ min-height:148px;align-items:center;
+ background:linear-gradient(102deg,var(--pkr-ex-surface) 0%,var(--pkr-ex-bg) 100%);
+}
+html[data-pkr-room-experience] .pkr-primary-page-head::before{
+ content:"";position:absolute;inset:0;z-index:-1;opacity:.55;
+ background:linear-gradient(90deg,var(--pkr-ex-surface) 10%,transparent 100%),
+    var(--pkr-ex-header-image) right 40%/cover no-repeat;
+ pointer-events:none;
+}
+html[data-pkr-room-experience="command"] .pkr-primary-page-head::before{
+ background:linear-gradient(90deg,#10261fea 16%,#10261faf 62%,#0719147a 100%),
+  var(--pkr-ex-header-image) center 57%/cover no-repeat;
+ opacity:.7;
+}
+html[data-pkr-room-experience="live"] .pkr-primary-page-head::before{
+ background:linear-gradient(90deg,#082719f0 22%,#072216bc 58%,#071b1380 100%),
+  var(--pkr-ex-header-image) right center/cover no-repeat;
+ opacity:.67;
+}
+html[data-pkr-room-experience] .pkr-primary-page-head h1{
+ color:var(--pkr-ex-ink);position:relative;
+}
+html[data-pkr-room-experience] .pkr-primary-kicker,
+html[data-pkr-room-experience] .pkr-primary-page-head label{
+ color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-page-head p,
+html[data-pkr-room-experience] .pkr-primary-panel p{
+ color:var(--pkr-ex-secondary);
+}
+html[data-pkr-room-experience] .pkr-section-tabs{
+ background:var(--pkr-ex-surface)!important;border-color:var(--pkr-ex-border)!important;
+ box-shadow:inset 0 1px 0 #ffffff0d;
+}
+html[data-pkr-room-experience] .pkr-section-tabs button{
+ color:var(--pkr-ex-secondary)!important;
+}
+html[data-pkr-room-experience] .pkr-section-tabs button[aria-current="page"],
+html[data-pkr-room-experience] .pkr-section-tabs button[aria-selected="true"]{
+ background:color-mix(in srgb,var(--pkr-ex-accent) 18%,var(--pkr-ex-surface-2))!important;
+ border-color:var(--pkr-ex-border)!important;color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-panel,
+html[data-pkr-room-experience] .pkr-primary-metric{
+ background:var(--pkr-ex-surface-grad)!important;
+ border-color:var(--pkr-ex-border)!important;
+ box-shadow:0 10px 26px #00000015;
+}
+html[data-pkr-room-experience] .pkr-primary-metric strong,
+html[data-pkr-room-experience] .pkr-section-count,
+html[data-pkr-room-experience] .pkr-results-rank-number{
+ color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-outline{
+ background:var(--pkr-ex-surface-2)!important;
+ color:var(--pkr-ex-ink)!important;border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-action{
+ background:var(--pkr-ex-accent)!important;color:var(--pkr-ex-accent-ink)!important;
+ border-color:var(--pkr-ex-accent)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-page input,
+html[data-pkr-room-experience] .pkr-primary-page select{
+ background:var(--pkr-ex-surface)!important;
+ border-color:var(--pkr-ex-border)!important;color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-primary-row{
+ border-color:var(--pkr-ex-border);
+}
+html[data-pkr-room-experience] .pkr-results-podium-card{
+ background:var(--pkr-ex-surface-grad)!important;
+ border-color:var(--pkr-ex-border)!important;color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-results-podium-card span{
+ color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience="live"] .pkr-results-podium-card:first-child{
+ background:linear-gradient(150deg,#236341,#0c281e)!important;
+ border-color:#80d4a0!important;
+ box-shadow:0 0 0 1px #48e6a333,0 18px 25px #0002;
+}
+html[data-pkr-room-experience] .pkr-results-rank-number{
+ background:var(--pkr-ex-surface-2)!important;border-color:var(--pkr-ex-border)!important;
+}
+
+/* Games: sessions, arrivals, RSVP activity, calendar. */
+html[data-pkr-room-experience] .pkr-app .pkr-room-games-intro,
+html[data-pkr-room-experience] .pkr-schedule-hero,
+html[data-pkr-room-experience] .pkr-app .pkr-member-summary,
+html[data-pkr-room-experience] .pkr-app .pkr-event-overview{
+ border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface-grad)!important;
+}
+html[data-pkr-room-experience] .pkr-app .pkr-game-card,
+html[data-pkr-room-experience] .pkr-app .pkr-member-roster,
+html[data-pkr-room-experience] .pkr-app .pkr-member-request-card,
+html[data-pkr-room-experience] .pkr-schedule-game,
+html[data-pkr-room-experience] .pkr-schedule-entry{
+ border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface)!important;
+}
+html[data-pkr-room-experience] .pkr-app .pkr-event .btn-primary,
+html[data-pkr-room-experience] .pkr-app.pkr-event .btn-primary,
+html[data-pkr-room-experience] .pkr-schedule-actions button:first-child{
+ background:var(--pkr-ex-accent)!important;
+ color:var(--pkr-ex-accent-ink)!important;
+ border-color:var(--pkr-ex-accent)!important;
+}
+html[data-pkr-room-experience] .pkr-app .pkr-night-session,
+html[data-pkr-room-experience] .pkr-night-session,
+html[data-pkr-room-experience] .pkr-night-action-panel,
+html[data-pkr-room-experience] .pkr-night-panel,
+html[data-pkr-room-experience] .pkr-night-stats>div,
+html[data-pkr-room-experience] .pkr-night-empty{
+ border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface-grad)!important;
+}
+html[data-pkr-room-experience] .pkr-night-heading h1,
+html[data-pkr-room-experience] .pkr-night-session h2,
+html[data-pkr-room-experience] .pkr-night-stats strong,
+html[data-pkr-room-experience] .pkr-night-hub h3{
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-night-actions button,
+html[data-pkr-room-experience] .pkr-night-panel button:not(.pkr-night-primary){
+ background:var(--pkr-ex-surface-2)!important;border-color:var(--pkr-ex-border)!important;
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-night-actions .pkr-night-primary{
+ background:var(--pkr-ex-accent)!important;color:var(--pkr-ex-accent-ink)!important;
+ border-color:var(--pkr-ex-accent)!important;
+}
+html[data-pkr-room-experience] .pkr-night-avatar{
+ background:var(--pkr-ex-surface-2)!important;color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience="live"] .pkr-app .pkr-night-session,html[data-pkr-room-experience="live"] .pkr-night-session{
+ border:1px solid #64986f!important;
+ background:linear-gradient(106deg,#0d3e2a 15%,#082b21a9 70%),
+ url('/images/casino/real-chip-closeup.webp') 86% 50%/cover no-repeat!important;
+}
+html[data-pkr-room-experience="command"] .pkr-app .pkr-night-session,html[data-pkr-room-experience="command"] .pkr-night-session{
+ background:linear-gradient(100deg,#0c251aed 25%,#142c24aa 80%),
+ url('/images/pkr-approved-hero-desktop.webp') right 43%/cover no-repeat!important;
+}
+html[data-pkr-room-experience] .pkr-night-pulse,
+html[data-pkr-room-experience] .pkr-night-kicker{
+ color:var(--pkr-ex-accent-light)!important;
+}
+
+/* Payment/settlements - keep red/green financial semantics authoritative. */
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-vnext-card,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-kpi{
+ background:var(--pkr-ex-surface-grad)!important;
+ border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-kpi-icon,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-vnext-card-heading h2,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-eyebrow,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-selector label{
+ color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-hero,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-header,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-intro{
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-selector select,
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-payment-status-select{
+ background:var(--pkr-ex-surface)!important;color:var(--pkr-ex-ink)!important;
+ border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-insights-settlement{
+ border-color:var(--pkr-ex-border)!important;
+}
+html[data-pkr-room-experience="live"] .pkr-vnext-insights .pkr-insights-settlement{
+ background:radial-gradient(ellipse at 90% 0%,#20553d 0%,#0c2b1d 70%)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights .pkr-payment-row-actions button{
+ border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface-2)!important;color:var(--pkr-ex-ink)!important;
+}
+
+/* The room selector also appears in the account tab. These two choices
+   intentionally use the same original labels as the dashboard. */
+.pkr-experience-choice{display:grid;gap:13px}
+.pkr-experience-choice>p{margin:0!important}
+.pkr-experience-choice-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pkr-experience-choice-options button{
+ display:grid;gap:7px;text-align:left;padding:16px;
+ background:var(--pkr-ex-surface-grad,var(--bg2));color:var(--pkr-ex-ink,var(--ivory));
+ border:1px solid var(--pkr-ex-border,var(--border-hi));border-radius:12px;min-width:0;
+ cursor:pointer;
+}
+.pkr-experience-choice-options button>span{font-size:25px;color:var(--pkr-ex-accent,var(--gold))}
+.pkr-experience-choice-options button strong{font-size:13px}
+.pkr-experience-choice-options button small{color:var(--pkr-ex-secondary,#b5c9b8);line-height:1.5;font-size:11px}
+.pkr-experience-choice-options button.is-active{
+ border-color:var(--pkr-ex-accent,#e9be70);
+ box-shadow:inset 0 0 0 1px var(--pkr-ex-glow,#e9be7044);
+}
+.pkr-experience-choice-options button:disabled{cursor:default;opacity:.82}
+.pkr-experience-choice-note{font-size:11px!important;color:var(--pkr-ex-secondary,#b7c5b9)}
+html[data-pkr-room-experience] .pkr-account-page .pkr-account-status{
+ background:var(--pkr-ex-surface-2)!important;
+ border-color:var(--pkr-ex-border)!important;
+}
+
+/* Secondary screens retain the visible room-specific theme without moving
+   the gameplay table or changing seating and money layouts. */
+html[data-pkr-room-experience] .pkr-app.pkr-game-detail .card,
+html[data-pkr-room-experience] .pkr-app.pkr-game-detail .card-gold{
+ border-color:var(--pkr-ex-border)!important;
+ background:var(--pkr-ex-surface-grad)!important;
+}
+html[data-pkr-room-experience] .pkr-app.pkr-game-detail .btn-primary{
+ background:var(--pkr-ex-accent)!important;color:var(--pkr-ex-accent-ink)!important;
+}
+@media(max-width:640px){
+ html[data-pkr-room-experience] .pkr-primary-page-head{
+  min-height:126px;padding:17px;gap:10px;
+ }
+ html[data-pkr-room-experience] .pkr-primary-page-head::before{opacity:.4}
+ html[data-pkr-room-experience] .pkr-primary-page-head h1{font-size:29px}
+ html[data-pkr-room-experience] .pkr-primary-page-head select{max-width:100%}
+ .pkr-experience-choice-options{grid-template-columns:1fr}
+}
+
+/* Bring approved, original photographs back to the other main pages, while
+   retaining the newly approved navigation information architecture. */
+html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-room-games-intro,
+html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-member-summary,
+html[data-pkr-room-experience] .pkr-schedule-hero,
+html[data-pkr-room-experience] .pkr-vnext-insights-top{
+ position:relative;border:1px solid var(--pkr-ex-border)!important;border-radius:16px;
+ padding:19px 22px;min-height:105px;
+}
+html[data-pkr-room-experience="command"] .pkr-app.pkr-event .pkr-room-games-intro,
+html[data-pkr-room-experience="command"] .pkr-app.pkr-event .pkr-member-summary,
+html[data-pkr-room-experience="command"] .pkr-schedule-hero,
+html[data-pkr-room-experience="command"] .pkr-vnext-insights-top{
+ background:linear-gradient(100deg,#09251ce8 22%,#0b241eaf 70%,#09251c8f),
+ url('/images/pkr-approved-hero-desktop.webp') 63% 50%/cover no-repeat!important;
+}
+html[data-pkr-room-experience="live"] .pkr-app.pkr-event .pkr-room-games-intro,
+html[data-pkr-room-experience="live"] .pkr-app.pkr-event .pkr-member-summary,
+html[data-pkr-room-experience="live"] .pkr-schedule-hero,
+html[data-pkr-room-experience="live"] .pkr-vnext-insights-top{
+ background:linear-gradient(100deg,#092d1af5 22%,#0b3923c9 70%,#0b281f91),
+ url('/images/casino/real-casino-props.webp') 74% 49%/cover no-repeat!important;
+}
+html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-member-summary h2,
+html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-room-games-intro h1,
+html[data-pkr-room-experience] .pkr-vnext-insights-top h1,
+html[data-pkr-room-experience] .pkr-schedule-hero h1{
+ color:var(--pkr-ex-ink)!important;
+}
+html[data-pkr-room-experience] .pkr-vnext-insights-top .pkr-eyebrow,
+html[data-pkr-room-experience] .pkr-schedule-hero .pkr-eyebrow{
+ color:var(--pkr-ex-accent-light)!important;
+}
+html[data-pkr-room-experience="live"] .pkr-app.pkr-event .pkr-member-roster,
+html[data-pkr-room-experience="live"] .pkr-app.pkr-event .pkr-member-invite{
+ border-color:#569a6b!important;
+ box-shadow:inset 3px 0 0 #4bdd94;
+}
+html[data-pkr-room-experience="live"] .pkr-primary-panel,
+html[data-pkr-room-experience="live"] .pkr-vnext-insights .pkr-vnext-card{
+ box-shadow:inset 0 1px 0 #c3fbd00c,0 11px 28px #0003;
+}
+html[data-pkr-room-experience="command"] .pkr-primary-panel,
+html[data-pkr-room-experience="command"] .pkr-vnext-insights .pkr-vnext-card{
+ box-shadow:inset 0 1px 0 #f5d69a12,0 12px 32px #0002;
+}
+@media(max-width:700px){
+ html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-room-games-intro,
+ html[data-pkr-room-experience] .pkr-app.pkr-event .pkr-member-summary,
+ html[data-pkr-room-experience] .pkr-schedule-hero,
+ html[data-pkr-room-experience] .pkr-vnext-insights-top{
+  padding:15px 16px;min-height:90px;
+ }
+}

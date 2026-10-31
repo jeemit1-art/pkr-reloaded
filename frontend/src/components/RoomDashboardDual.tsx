@@ -148,6 +148,7 @@ export default function RoomDashboardDual({
       const saved=await api.events.saveDashboardLayout(room.id,next);
       if(saved.event_id!==room.id||saved.layout!==next)throw Error('The saved layout did not match.');
       setLayout(saved.layout);
+      window.dispatchEvent(new CustomEvent('pkr:room-experience-saved',{detail:{roomId:room.id,layout:saved.layout}}));
     }catch(e){
       setLayoutError(e instanceof Error?e.message:'Unable to save room layout. Nothing changed.');
       // No optimistic changes; current dashboard is unchanged on a failed write.
@@ -262,24 +263,24 @@ export default function RoomDashboardDual({
           </div>}
         </div>}
       </header>
-      <details className="pkr-dual-switcher pkr-dual-switcher-compact" aria-label="Customise dashboard">
-        <summary className="pkr-dual-switcher-heading" aria-label="Customise dashboard">
+      <div className="pkr-dual-switcher" aria-label="Poker room appearance">
+        <div className="pkr-dual-switcher-heading">
           <span className="pkr-dual-diamond">◆</span>
-          <div><strong>Customise dashboard</strong>
-            <small>{viewerIsHost?'Choose your shared club dashboard':'Chosen by your host'}</small></div>
-          <span className="pkr-dashboard-layout-arrow" aria-hidden="true">⌄</span>
-        </summary>
-        {viewerIsHost&&<div className="pkr-dual-switch-actions" role="group" aria-label="Host dashboard layout">
+          <div><strong>Room appearance</strong>
+            <small>{viewerIsHost?'Your choice applies across Home, Games, Players, Results and Payments':
+              'Command Centre or Live Poker · selected by your host'}</small></div>
+        </div>
+        {viewerIsHost&&<div className="pkr-dual-switch-actions" role="group" aria-label="Host poker room appearance">
           <button type="button" aria-pressed={layoutReady&&layout==='command'}
-            disabled={!viewerIsHost||!layoutReady||saving}
-            onClick={()=>void choose('command')} className={layout==='command'?'active':''}>
+            disabled={!layoutReady||saving} onClick={()=>void choose('command')}
+            className={layout==='command'?'active':''}>
             ▦ <span>Command Centre</span></button>
           <button type="button" aria-pressed={layoutReady&&layout==='live'}
-            disabled={!viewerIsHost||!layoutReady||saving}
-            onClick={()=>void choose('live')} className={layout==='live'?'active':''}>
+            disabled={!layoutReady||saving} onClick={()=>void choose('live')}
+            className={layout==='live'?'active':''}>
             ♠ <span>Live Poker</span></button>
         </div>}
-      </details>
+      </div>
       {layoutError&&<p role="alert" className="pkr-dual-error">{layoutError}</p>}
       {!layoutReady?<div role="status" className="pkr-dual-wait">Loading the room's saved layout…</div>:layout==='command'?<>
         <div className="pkr-dual-heading">
