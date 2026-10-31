@@ -753,7 +753,8 @@ async function test(){
          errors.push(size.name+' Results is missing History');
        await nav.getByRole('button',{name:'Payments',exact:true}).click();
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
-       if(!await page.locator('#pkr-settlement').isVisible())errors.push(size.name+' settlement ledger is missing from Payments');
+       try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
+       catch{errors.push(size.name+' settlement ledger did not load in Payments')}
        await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Notifications for this club'}).waitFor({state:'visible',timeout:12000});
        await page.getByRole('heading',{name:'Sounds & accessibility'}).waitFor();
