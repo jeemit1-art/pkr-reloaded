@@ -1,0 +1,21 @@
+/* Keep all PKR capabilities visible without a large layout selector. */
+.pkr-app .pkr-dual-switcher-compact{display:block!important;padding:10px 14px!important;max-width:640px;
+  margin:6px 0 18px;min-height:0!important}
+.pkr-app .pkr-dual-switcher-compact>.pkr-dual-switcher-heading{cursor:pointer;list-style:none;
+  display:flex;align-items:center;gap:10px;min-height:32px}
+.pkr-dual-switcher-compact>summary::-webkit-details-marker{display:none}
+.pkr-dual-switcher-compact .pkr-dual-switcher-heading strong{font-size:12px!important}
+.pkr-dual-switcher-compact .pkr-dual-switcher-heading small{font-size:10px!important}
+.pkr-dual-switcher-compact .pkr-dashboard-layout-arrow{margin-left:auto;color:#e1cd99;font-size:17px}
+.pkr-dual-switcher-compact[open] .pkr-dashboard-layout-arrow{transform:rotate(180deg)}
+.pkr-app .pkr-dual-switcher-compact .pkr-dual-switch-actions{margin:13px 0 4px;display:flex;gap:8px;flex-wrap:wrap}
+.pkr-app .pkr-dual-switcher-compact .pkr-dual-switch-actions button{min-height:38px}
+.pkr-app .pkr-dual-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pkr-app .pkr-dual-quick-grid button{min-height:104px;padding:12px}
+.pkr-app .pkr-dual-quick-grid button strong{overflow-wrap:anywhere}
+@media(max-width:720px){
+ .pkr-app .pkr-dual-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-app .pkr-dual-quick-grid button{min-height:112px}
+ .pkr-app .pkr-dual-switcher-compact{margin:5px 0 12px;padding:8px 12px!important}
+}
+/* The extra menu was removed. Prioritise gameplay and club actions instead. */

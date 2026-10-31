@@ -10,7 +10,7 @@ import './PlayerRoomDashboard.css';
 type Props={
   room:Event;games:Game[];history?:Game[];leaders?:LeaderboardEntry[];
   memberId?:string|null;memberName?:string|null;
-  onMyProfile?:()=>void;showAllPayments?:boolean;
+  onMyProfile?:()=>void;showAllPayments?:boolean;paymentsOnly?:boolean;
 };
 
 function statusText(status:string|undefined,isPayer:boolean){
@@ -22,7 +22,7 @@ function statusText(status:string|undefined,isPayer:boolean){
 }
 
 export default function PlayerRoomDashboard({
-  room,games,history=[],leaders=[],memberId,memberName,onMyProfile,showAllPayments=false,
+  room,games,history=[],leaders=[],memberId,memberName,onMyProfile,showAllPayments=false,paymentsOnly=false,
 }:Props){
   const router=useRouter();
   const [ledger,setLedger]=useState<RoomTransferLoad|null>(null);
@@ -65,6 +65,8 @@ export default function PlayerRoomDashboard({
   const roomUrl='/events/'+encodeURIComponent(room.id);
   const goTab=(tab:string)=>router.push(roomUrl+'?tab='+tab);
   const goProfile=()=>onMyProfile?onMyProfile():router.push(roomUrl+'?tab=members&mine=profile');
+  const goResults=()=>router.push('/results?room='+encodeURIComponent(room.id));
+  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id));
   const openGame=(game:Game)=>router.push('/games/'+encodeURIComponent(game.id));
   const openResults=(game:Game)=>router.push(game.results_token
     ?'/games/results/'+encodeURIComponent(game.results_token)
@@ -74,15 +76,15 @@ export default function PlayerRoomDashboard({
     ?'/games/live/'+encodeURIComponent(next.live_token)
     :'/games/'+encodeURIComponent(next.id));};
 
-  return <section className="pkr-player-home" data-testid="player-dashboard" aria-label="Player dashboard">
-    <header className="pkr-player-home-header">
+  return <section className={'pkr-player-home'+(paymentsOnly?' payments-only':'')} data-testid="player-dashboard" aria-label={paymentsOnly?'My payments':'Player dashboard'}>
+    {!paymentsOnly&&<header className="pkr-player-home-header">
       <div><span className="pkr-player-eyebrow">♠ PLAYER VIEW</span>
         <h2>{memberName?'Welcome, '+memberName.trim().split(' ')[0]:'Your poker night'}</h2>
         <p>{room.name} · Your games, payments and results.</p>
       </div>
       <button type="button" className="pkr-player-outline" onClick={goProfile}>My profile ↗</button>
-    </header>
-    <div className="pkr-player-feature">
+    </header>}
+    {!paymentsOnly&&<div className="pkr-player-feature">
       <div className="pkr-player-feature-content">
         <span className="pkr-player-eyebrow">{live?'● LIVE NOW':next?'NEXT GAME':'NO UPCOMING GAMES'}</span>
         <h3>{next?fmtDate(next.scheduled_at):'Your next poker night'}</h3>
@@ -94,13 +96,13 @@ export default function PlayerRoomDashboard({
         </div>
       </div>
       <div className="pkr-player-feature-chip" aria-hidden="true">♠</div>
-    </div>
-    <nav className="pkr-player-actions" aria-label="Player actions">
+    </div>}
+    {!paymentsOnly&&<nav className="pkr-player-actions" aria-label="Player actions">
       <button type="button" onClick={next?goRsvp:()=>goTab('games')}><b>✋</b><strong>My RSVP</strong><small>Arrival and seat</small></button>
-      <button type="button" onClick={()=>document.getElementById('pkr-my-payments')?.scrollIntoView({behavior:'smooth'})}><b>⇄</b><strong>My payments</strong><small>Pay or confirm</small></button>
-      <button type="button" onClick={()=>goTab('leaderboard')}><b>🏆</b><strong>Standings</strong><small>Game results</small></button>
+      <button type="button" onClick={goPayments}><b>⇄</b><strong>Payments</strong><small>Pay or confirm</small></button>
+      <button type="button" onClick={goResults}><b>🏆</b><strong>Results</strong><small>Standings & history</small></button>
       <button type="button" onClick={goProfile}><b>♟</b><strong>My profile</strong><small>Avatar and details</small></button>
-    </nav>
+    </nav>}
     <div className="pkr-player-columns">
       <section className="pkr-player-panel" id="pkr-my-payments" aria-label="My settlement payments">
         <div className="pkr-player-panel-head"><div><span className="pkr-player-eyebrow">MY SETTLEMENTS</span><h3>My payments</h3></div><small>{ledger?pending.length:'—'} pending</small></div>
@@ -119,19 +121,19 @@ export default function PlayerRoomDashboard({
               <b className={transfer.from===memberId?'pkr-player-negative':'pkr-player-positive'}>{fmt(transfer.amount)}</b><span aria-hidden="true">›</span>
             </button>)}
           </div>:<p className="pkr-player-empty">{showAllPayments?'No recorded payments are linked to your account.':'No outstanding payments are linked to your account.'}</p>}
-          {!showAllPayments&&<button type="button" className="pkr-player-link" onClick={()=>router.push('/insights?room='+encodeURIComponent(room.id)+'&payments=all#pkr-my-payments')}>View my payment history →</button>}
+          {!showAllPayments&&<button type="button" className="pkr-player-link" onClick={()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=all')}>View my payment history →</button>}
           <p className="pkr-player-fineprint">Open a payment to mark it sent or confirm receipt when you are the verified payer or recipient. PKR does not transfer money.</p>
         </>}
       </section>
-      <section className="pkr-player-panel">
-        <div className="pkr-player-panel-head"><div><span className="pkr-player-eyebrow">YOUR PERFORMANCE</span><h3>My results</h3></div><button type="button" className="pkr-player-link" onClick={()=>goTab('leaderboard')}>Standings →</button></div>
+      {!paymentsOnly&&<section className="pkr-player-panel">
+        <div className="pkr-player-panel-head"><div><span className="pkr-player-eyebrow">YOUR PERFORMANCE</span><h3>My results</h3></div><button type="button" className="pkr-player-link" onClick={goResults}>Standings →</button></div>
         <div className="pkr-player-my-result">{ownResult?<><strong className={ownResult.total_net>=0?'pkr-player-positive':'pkr-player-negative'}>{fmtSign(ownResult.total_net)}</strong><span>{ownResult.games_played} linked games · {ownResult.games_won} profitable</span></>:
           <><strong>—</strong><span>No settled results linked to your approved account yet.</span></>}</div>
         <h4>Recent completed games</h4>
         {settled.length?<div className="pkr-player-recent">{settled.slice(0,3).map(game=><button type="button" key={game.id} onClick={()=>openGame(game)}><span>{fmtDate(game.scheduled_at)}</span><span>View results ›</span></button>)}</div>:
          <p className="pkr-player-empty">Completed games will appear here.</p>}
-        <button type="button" className="pkr-player-link" onClick={()=>goTab('history')}>Game history →</button>
-      </section>
+        <button type="button" className="pkr-player-link" onClick={()=>router.push('/results?room='+encodeURIComponent(room.id)+'&view=history')}>Game history →</button>
+      </section>}
     </div>
   </section>;
 }

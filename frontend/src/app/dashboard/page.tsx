@@ -559,6 +559,7 @@ function DashboardInner() {
           onRoomSelect={roomId=>{
             setPreferredRoomId(roomId);
             try{localStorage.setItem('pkr_preferred_room',roomId);}catch{}
+            window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:roomId}));
           }}
           onCreateGame={()=>router.push('/events/'+featuredRoom.id+'?newGame=1')} onScan={startScan}
           onInvite={()=>router.push('/events/'+featuredRoom.id+'?tab=members&view=invite')}

@@ -1,0 +1,24 @@
+/* A payments-first view of the verified room ledger, without altering ledger logic. */
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-kpi:not(:last-child){display:none}
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-kpis{display:grid;grid-template-columns:minmax(0,1fr)}
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-trend,
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-recent,
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-players-grid,
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-upcoming-note{display:none}
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-overview-grid,
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-activity-grid{display:grid;grid-template-columns:minmax(0,1fr)}
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-balance-summary,
+.pkr-vnext-insights.pkr-payments-focus #pkr-settlement{width:100%;min-width:0}
+.pkr-vnext-insights.pkr-payments-focus .pkr-vnext-insights-stats{grid-template-columns:minmax(0,1fr)}
+.pkr-vnext-insights.pkr-payments-focus .pkr-insights-balance-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pkr-vnext-insights.pkr-payments-focus{padding-bottom:calc(106px + env(safe-area-inset-bottom))}
+.pkr-player-home.payments-only .pkr-player-columns{display:grid;grid-template-columns:minmax(0,1fr)}
+.pkr-player-home.payments-only{margin:0 0 16px}
+@media(max-width:720px){.pkr-vnext-insights.pkr-payments-focus .pkr-insights-balance-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.pkr-payments-focus .pkr-payment-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:160px}
+.pkr-payments-focus .pkr-payment-row-actions button{border:1px solid #4b785f!important;
+ background:#1a3a2b!important;color:#f4e5c4!important;border-radius:8px!important;
+ padding:9px 10px!important;min-height:36px;font-weight:700;white-space:nowrap}
+.pkr-payments-focus .pkr-payment-row-actions button:disabled{opacity:.5}
+.pkr-payments-focus .pkr-insights-balance-tiles>div{min-width:0}

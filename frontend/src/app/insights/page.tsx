@@ -2,19 +2,23 @@
 import RecordMetric from '@/components/RecordMetric';
 
 import {useEffect,useMemo,useState} from 'react';
-import {useRouter} from 'next/navigation';
+import {useRouter,usePathname} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry,type Transfer} from '@/lib/api';
 import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {loadRoomTransfers} from '@/lib/room-payment-schedule';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './settlement-filter.css';
+import '../payments/payments.css';
+import {buildPrivatePayment,normaliseWhatsappPhone,whatsappUrl,isShareablePayment} from '@/lib/whatsapp-sharing';
+import {type PrivateGroupContact} from '@/lib/api';
 
 type SettlementRow={game:Game;transfer:Transfer};
 type SettlementView='transfers'|'balances'|'status';
 
 export default function InsightsPage(){
  const router=useRouter();
+ const paymentsFocus=usePathname()==='/payments';
  const [rooms,setRooms]=useState<Event[]>([]);
  const [myUserId,setMyUserId]=useState<string|null>(null);
  const [selected,setSelected]=useState('');
@@ -30,6 +34,7 @@ export default function InsightsPage(){
  const [paymentBusy,setPaymentBusy]=useState<string|null>(null);
  const [selectedTransfers,setSelectedTransfers]=useState<string[]>([]);
  const [paymentNotice,setPaymentNotice]=useState('');
+ const [contacts,setContacts]=useState<PrivateGroupContact[]>([]);
  const [transferPage,setTransferPage]=useState(0);
  const [period,setPeriod]=useState<'all'|'90d'>('all');
  const [paymentFilter,setPaymentFilter]=useState<'all'|'outstanding'|'paid'>('all');
@@ -72,6 +77,13 @@ export default function InsightsPage(){
 
  const room=rooms.find(x=>x.id===selected);
  const canManagePayments=room?.role==='host'||room?.role==='cohost';
+ useEffect(()=>{
+   if(!selected||!paymentsFocus||!canManagePayments){setContacts([]);return}
+   let live=true;
+   api.events.phoneContacts(selected).then(result=>{if(live)setContacts(result.contacts||[])})
+    .catch(()=>{if(live)setContacts([])});
+   return()=>{live=false};
+ },[selected,paymentsFocus,canManagePayments]);
  const played=games.filter(g=>g.status==='settled');
  const upcoming=games.filter(g=>isCurrentGame(g));
  const unfinished=games.filter(g=>isUnfinishedGame(g));
@@ -187,15 +199,55 @@ export default function InsightsPage(){
      setPaymentNotice('Could not change payment status: '+(e instanceof Error?e.message:'Please try again.'));
    }finally{setPaymentBusy(null);}
  }
- return <main className="pkr-vnext-insights pkr-casino pkr-insights-refresh">
+ async function sendPrivateReminder(row:SettlementRow){
+   if(!paymentsFocus||!canManagePayments||!row.transfer.id||!row.game.results_token||!isShareablePayment(row.transfer.status)||
+      row.game.status!=='settled'||paymentBusy)return;
+   const targetId=row.transfer.status==='payer_claimed'?row.transfer.to:row.transfer.from;
+   const contact=contacts.find(x=>x.status==='joined'&&x.user_id===targetId);
+   const phone=normaliseWhatsappPhone(contact?.phone);
+   const popup=phone?window.open('about:blank','_blank'):null;
+   if(phone&&!popup){setPaymentNotice('Allow pop-ups or contact the player privately from the game results.');return}
+   const key='reminder:'+row.game.id+':'+row.transfer.id;
+   setPaymentBusy(key);setPaymentNotice('');
+   try{
+     const data=await api.games.results(row.game.results_token);
+     const saved=data.transfers?.find(t=>t.id===row.transfer.id);
+     if(data.game.status!=='settled'||data.game.event_id!==selected||data.game.variance!==0||
+        !saved||saved.amount!==row.transfer.amount||saved.status!==row.transfer.status||
+        !isShareablePayment(saved.status)){
+       popup?.close();
+       setPaymentNotice('Payment details have changed or are not reconciled. Refresh Payments before reminding.');
+       setRefreshLedger(n=>n+1);return;
+     }
+     const link=window.location.origin+'/games/results/'+encodeURIComponent(row.game.results_token);
+     const message=buildPrivatePayment({room:room?.name||'PKR poker room',
+        date:fmtDate(data.game.scheduled_at),transfer:saved,gameUrl:link});
+     if(popup&&phone){
+       popup.location.replace(whatsappUrl(message,phone));
+       setPaymentNotice('Private WhatsApp draft opened. Check the recipient and tap Send.');
+     }else{
+       await navigator.clipboard.writeText(message);
+       setPaymentNotice('Private payment reminder copied. Send only to the intended payer or recipient.');
+     }
+   }catch(e){
+     popup?.close();
+     setPaymentNotice('Nothing was sent. '+(e instanceof Error?e.message:'Unable to verify this payment.'));
+   }finally{setPaymentBusy(null)}
+ }
+ return <main className={"pkr-vnext-insights pkr-casino pkr-insights-refresh"+(paymentsFocus?" pkr-payments-focus":"")} aria-label={paymentsFocus?"Payments and settlements":"Insights and settlement"}>
   <header className="pkr-vnext-insights-top">
-   <div className="pkr-insights-intro"><span className="pkr-eyebrow">▥ INSIGHTS &amp; SETTLEMENT</span>
-    <h1>Insights &amp; Settlement</h1>
-    <p>Track your room's results, review balances and settle up after game night.</p>
+   <div className="pkr-insights-intro"><span className="pkr-eyebrow">{paymentsFocus?'＄ PAYMENTS & SETTLEMENTS':'▥ INSIGHTS & SETTLEMENT'}</span>
+    <h1>{paymentsFocus?'Payments':'Insights & Settlement'}</h1>
+    <p>{paymentsFocus?'All saved payments, outstanding transfers and confirmations for the selected poker club.':
+      "Track your room's results, review balances and settle up after game night."}</p>
+    {paymentsFocus&&<button type="button" className="pkr-primary-outline"
+      onClick={()=>router.push('/results?room='+encodeURIComponent(selected))}>Results, history & insights ↗</button>}
    </div>
    <div className="pkr-insights-selector"><label htmlFor="pkr-insights-room">Poker room</label>
     <select id="pkr-insights-room" value={selected} onChange={e=>{
       const next=e.target.value;setSelected(next);
+      try{localStorage.setItem('pkr_preferred_room',next)}catch{}
+      window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:next}));
       const url=new URL(window.location.href);url.searchParams.set('room',next);
       window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
     }} disabled={loadingRooms||!rooms.length}>
@@ -208,7 +260,7 @@ export default function InsightsPage(){
    <section className="pkr-vnext-card"><h2>No poker rooms yet</h2><p>Create a room to start recording games and results.</p><button onClick={()=>router.push('/dashboard')}>Go to dashboard →</button></section>:
   <>
    {room?.role==='member' ? <PlayerRoomDashboard room={room} games={games} history={games}
-      leaders={leaders} memberId={myUserId} showAllPayments/> : <>
+      leaders={leaders} memberId={myUserId} showAllPayments paymentsOnly={paymentsFocus}/> : <>
    <section className="pkr-vnext-insights-stats pkr-insights-kpis" aria-label="Recorded poker room statistics">
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:selected}}><span className="pkr-insights-kpi-icon">♧</span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></RecordMetric></div>
     <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
@@ -332,7 +384,11 @@ export default function InsightsPage(){
              {item.transfer.status==='paid'?'Paid':item.transfer.status==='not_received'?'Not received':item.transfer.status==='payer_claimed'?'Sent · awaiting receipt':item.transfer.status==='legacy'?'Needs review':'Pending'}
            </span>}
          </td>
-        <td><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button></td>
+        <td className="pkr-payment-row-actions"><button type="button" onClick={()=>router.push(item.game.results_token?'/games/results/'+encodeURIComponent(item.game.results_token):'/games/'+item.game.id)}>View results →</button>
+         {paymentsFocus&&canManagePayments&&!!item.transfer.id&&!!item.game.results_token&&item.game.status==='settled'&&isShareablePayment(item.transfer.status)&&
+          <button type="button" disabled={paymentBusy!==null} onClick={()=>void sendPrivateReminder(item)}>
+           {paymentBusy==='reminder:'+item.game.id+':'+item.transfer.id?'Verifying…':'Private reminder ↗'}
+          </button>}</td>
        </tr>)}
       </tbody></table>
        {pageCount>1&&<div className="pkr-insights-pagination">

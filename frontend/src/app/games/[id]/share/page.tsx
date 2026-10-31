@@ -15,7 +15,10 @@ export default function OldSharingLink(){
     let active=true;
     api.games.get(id).then(game=>{
       if(!active)return;
-      router.replace('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id));
+      const kind=new URLSearchParams(window.location.search).get('type')||'';
+      if(kind==='results'||game.status==='settled')router.replace('/results?room='+encodeURIComponent(game.event_id)+'&view=history');
+      else if(kind==='settlements'||kind==='payments')router.replace('/payments?room='+encodeURIComponent(game.event_id));
+      else router.replace('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id));
     }).catch(e=>{
       if(active)setError(e instanceof Error?e.message:'Unable to open this game.');
     });

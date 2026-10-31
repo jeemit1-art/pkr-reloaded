@@ -1,0 +1,22 @@
+.pkr-results-summary{margin:0 0 15px}
+.pkr-results-top-name{font:650 clamp(16px,2.6vw,23px)/1.25 var(--font-display),Georgia,serif!important;overflow-wrap:anywhere}
+.pkr-results-ranking{display:grid;gap:0}
+.pkr-results-rank{display:grid;grid-template-columns:40px minmax(110px,1fr) max-content 16px;
+  align-items:center;gap:15px;padding:14px 5px;border-bottom:1px solid #365344;
+  color:#eee;min-width:0;cursor:pointer}
+.pkr-results-rank>span:nth-last-child(2){white-space:nowrap;font:750 13px var(--font-body),Arial,sans-serif}
+.pkr-results-rank-number{width:33px;height:33px;display:grid;place-items:center;
+  background:#2e4431;color:#e4c37e;border:1px solid #6e694d;border-radius:50%;font-weight:800}
+.pkr-results-rank-name{display:grid;gap:5px;min-width:0}
+.pkr-results-rank-name strong{font-size:14px;overflow-wrap:anywhere}
+.pkr-results-rank-name small{font-size:11px;color:#acc2b1}
+.pkr-results-history-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+.pkr-results-history-title p{margin-top:3px}
+.pkr-results-amount-option{font-size:12px;display:flex;align-items:center;gap:8px;color:#e8d8ab;max-width:290px}
+.pkr-results-amount-option input{width:17px;height:17px;accent-color:#d4b76d;flex-shrink:0}
+.pkr-results-trend{display:flex;align-items:flex-end;gap:12px;height:220px;padding:10px 0 0}
+.pkr-results-trend-col{flex:1;display:grid;grid-template-rows:20px 1fr 20px;gap:5px;height:100%;text-align:center;color:#becdbb;font-size:11px}
+.pkr-results-trend-col strong{color:#f3e2b8;font-size:12px}
+.pkr-results-trend-col>div{display:flex;align-items:flex-end;height:100%;border-bottom:1px solid #5a775d}
+.pkr-results-trend-col>div>span{width:55%;display:block;background:linear-gradient(#d0b16b,#367754);border-radius:6px 6px 0 0;margin:0 auto;min-height:2px}
+@media(max-width:700px){.pkr-results-rank{grid-template-columns:30px minmax(90px,1fr) max-content 10px;gap:7px}.pkr-results-rank-name strong{font-size:12px}.pkr-results-rank>span:nth-last-child(2){font-size:12px}}

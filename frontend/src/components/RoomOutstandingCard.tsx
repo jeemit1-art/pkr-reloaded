@@ -29,7 +29,7 @@ export default function RoomOutstandingCard({roomId}:Props){
   const awaiting=outstanding.filter(({transfer})=>transfer.status==='payer_claimed').length;
   const owed=outstanding.filter(({transfer})=>transfer.status==='owed').length;
   const reportedAmount=loading||error?'—':incomplete?(outstanding.length?'≥ '+fmt(amount):'—'):fmt(amount);
-  const fullUrl='/insights?room='+encodeURIComponent(roomId)+'&payments=outstanding#pkr-settlement';
+  const fullUrl='/payments?room='+encodeURIComponent(roomId)+'&payments=outstanding';
   return (
     <section className="pkr-room-outstanding" aria-label="Outstanding room payments" data-testid="room-outstanding">
       <header className="pkr-room-outstanding-heading">
