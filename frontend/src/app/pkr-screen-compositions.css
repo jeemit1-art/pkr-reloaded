@@ -227,3 +227,150 @@
 
 /* Keep the empty-club state full width when the leader sidebar is absent. */
 .pkr-results-layout-command>.pkr-results-board:only-child{grid-column:1/-1}
+
+/* iPhone regression fix: PokerClubStage now exposes the original command/live
+   style hooks. At narrow widths, never squeeze desktop headings and metrics
+   into adjacent columns. */
+@media(max-width:860px){
+ .pkr-app.pkr-event .pkr-experience-stage-command{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  width:100%;min-width:0;min-height:0!important;gap:10px!important;
+  align-items:start!important;padding:15px 16px!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-command-copy{width:100%;min-width:0;max-width:100%}
+ .pkr-app.pkr-event .pkr-experience-command-copy .pkr-experience-eyebrow{
+  display:block;max-width:100%;overflow-wrap:break-word;font-size:10px;letter-spacing:.09em;
+ }
+ .pkr-app.pkr-event .pkr-experience-command-stats{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  width:100%!important;max-width:none!important;min-width:0!important;
+  gap:7px!important;flex:none!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-command-stat{
+  min-width:0!important;max-width:none!important;min-height:73px!important;
+  padding:10px 9px!important;gap:6px!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-command-stat>span{
+  overflow-wrap:normal;word-break:normal;font-size:10px;line-height:1.35;
+ }
+ .pkr-app.pkr-event .pkr-experience-command-stat strong{font-size:20px}
+ .pkr-app.pkr-event .pkr-experience-stage h1{
+  font-size:clamp(25px,6vw,31px)!important;line-height:1.08!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-stage p{
+  max-width:100%!important;margin:4px 0 8px!important;
+  font-size:12px!important;overflow-wrap:normal;word-break:normal;
+ }
+ .pkr-app.pkr-event .pkr-experience-command .pkr-room-games-links{
+  display:flex!important;flex-wrap:wrap!important;gap:7px!important;width:100%;margin-top:10px!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-command .pkr-room-games-links button{
+  flex:1 1 145px;min-width:0;max-width:100%;white-space:normal;line-height:1.25;
+ }
+}
+@media(max-width:600px){
+ .pkr-app.pkr-event .pkr-experience-stage-live{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  align-items:start!important;gap:6px!important;width:100%;
+  min-height:0!important;padding:15px 16px!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-live-copy{min-width:0;width:100%!important;flex:none!important}
+ .pkr-app.pkr-event .pkr-experience-stage-live .pkr-experience-felt{display:none!important}
+ .pkr-app.pkr-event .pkr-experience-live-metrics{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px!important;margin:10px 0!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-live-metrics>span{
+  min-width:0;padding:10px 8px;border:1px solid #498762;border-radius:9px;background:#0a231ccc;
+ }
+ .pkr-app.pkr-event .pkr-experience-live-metrics strong{font-size:20px}
+ .pkr-app.pkr-event .pkr-experience-live-metrics small{
+  font-size:10px;overflow-wrap:normal;word-break:normal;
+ }
+ .pkr-app.pkr-event .pkr-experience-live .pkr-room-games-links{
+  display:flex!important;flex-wrap:wrap!important;gap:7px!important;
+ }
+ .pkr-app.pkr-event .pkr-experience-live .pkr-room-games-links button{
+  flex:1 1 145px;min-width:0;white-space:normal;
+ }
+}
+
+/* Restore the meaningful red/green net-result graph in Results > Insights.
+   Each bar remains a tappable saved player record. */
+.pkr-results-page .pkr-results-net-panel{min-width:0}
+.pkr-results-net-heading{
+ display:flex;justify-content:space-between;align-items:start;
+ flex-wrap:wrap;gap:8px 15px;margin-bottom:11px
+}
+.pkr-results-net-heading h2{margin:0 0 4px!important;font-size:19px!important}
+.pkr-results-net-heading p{margin:0!important;max-width:590px}
+.pkr-results-net-legend{
+ display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+ color:#bed1bd;font-size:11px;
+}
+.pkr-results-net-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.pkr-results-net-legend .gain,.pkr-results-net-track .gain{background:#36d890}
+.pkr-results-net-legend .loss,.pkr-results-net-track .loss{background:#f47d83}
+.pkr-results-net-track .even{background:#9bada0}
+.pkr-results-net-chart{display:grid;gap:0;min-width:0}
+.pkr-results-page .pkr-results-net-row{
+ display:grid!important;
+ grid-template-columns:minmax(100px,1.1fr) minmax(45px,1.4fr) minmax(66px,max-content);
+ align-items:center;gap:11px;width:100%;min-width:0;min-height:47px;
+ border:0;border-bottom:1px solid #64806650;border-radius:0;
+ padding:8px 0;margin:0;color:#e9f3e7;background:transparent!important;
+ box-shadow:none;text-align:left;cursor:pointer;
+}
+.pkr-results-page .pkr-results-net-row:last-child{border-bottom:0}
+.pkr-results-page .pkr-results-net-row:hover{background:#29604433!important}
+.pkr-results-net-person{display:grid;gap:3px;min-width:0}
+.pkr-results-net-person strong{
+ color:#f2f7eb;font-size:12px;line-height:1.3;
+ overflow-wrap:break-word;word-break:normal;
+}
+.pkr-results-net-person small{color:#adbfaf;font-size:10px;line-height:1.2}
+.pkr-results-net-track{
+ display:block;min-width:0;height:13px;padding:0;overflow:hidden;
+ border-radius:4px;background:#081a15;border:1px solid #456350;
+}
+.pkr-results-net-track i{
+ display:block;height:100%;min-width:0;border-radius:3px;
+ box-shadow:inset 0 1px 1px #ffffff25;
+}
+.pkr-results-net-amount{
+ justify-self:end;text-align:right;white-space:nowrap;
+ font:800 13px/1.2 var(--font-num),monospace;
+}
+.pkr-results-page .pkr-results-net-row:focus-visible{
+ outline:3px solid #e5c878;outline-offset:2px;
+}
+
+/* An installed iPhone exposes the system clock above the web view. The
+   top club utility owns this inset, and the sticky room header follows it.
+   Use higher specificity than the older Results-specific sticky rule. */
+@media(max-width:1099px){
+ .pkr-primary-mobile-utility,
+ body:has(.pkr-results-page) .pkr-primary-mobile-utility{
+  position:sticky!important;top:0!important;z-index:200!important;
+  min-height:calc(51px + env(safe-area-inset-top))!important;
+  padding-top:calc(6px + env(safe-area-inset-top))!important;
+ }
+ .pkr-app.pkr-event>.pkr-topbar,
+ .pkr-app.pkr-dashboard>.nav.pkr-topbar{
+  top:calc(51px + env(safe-area-inset-top))!important;
+ }
+ .pkr-results-page{
+  padding-bottom:calc(var(--pkr-navigation-height,85px) + 42px)!important;
+ }
+}
+@media(max-width:480px){
+ .pkr-results-page .pkr-results-net-panel{padding:13px 12px!important}
+ .pkr-results-page .pkr-results-net-row{
+  grid-template-columns:minmax(85px,1fr) minmax(40px,1.2fr) minmax(62px,max-content);
+  gap:7px;min-height:48px;padding:7px 0;
+ }
+ .pkr-results-net-person strong{font-size:11px}
+ .pkr-results-net-amount{font-size:11px}
+ .pkr-results-net-track{height:12px}
+ .pkr-results-net-heading{margin-bottom:9px}
+}
