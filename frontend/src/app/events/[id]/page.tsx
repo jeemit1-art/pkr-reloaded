@@ -529,7 +529,7 @@ export default function EventPage() {
                   {label:'Upcoming sessions',value:upcoming.length},
                   {label:'Live games',value:upcoming.filter(g=>isLiveGame(g)).length},
                   {label:'Historical unfinished',value:unfinished.length}
-                ]} players={event.members?.map(m=>m.name)||[]}>
+                ]} players={event.members?.map((m:{name:string})=>m.name)||[]}>
                 <div className="pkr-room-games-links">
                   {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
                   {upcoming[0]&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight(upcoming[0].id)}>Manage RSVPs →</button>}
@@ -591,7 +591,7 @@ export default function EventPage() {
                   {label:'Players in club',value:event.members?.length||0},
                   {label:'Awaiting approval',value:joinRequests.length},
                   {label:'Completed games',value:settled.length}
-                ]} players={event.members?.map(m=>m.name)||[]} />
+                ]} players={event.members?.map((m:{name:string})=>m.name)||[]} />
             </header>
             <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
               {([
