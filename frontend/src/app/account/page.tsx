@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation';
 import {api,clearToken,getToken,type Event,type User} from '@/lib/api';
 import {canUsePush,ensurePushForRoom,isPWAInstalled,subscribePush,unsubscribePush,sendRealTestNotification} from '@/lib/push';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
+import RoomExperienceChoice from '@/components/RoomExperienceChoice';
 import './account.css';
 
 type Registration={user_id:string;device_count:number};
@@ -106,10 +107,19 @@ export default function AccountSettings(){
      <button type="button" className="pkr-primary-outline" onClick={()=>router.push('/dashboard#pkr-rooms')}>My poker clubs ↗</button>
     </div>
    </section>
+   <section className="pkr-primary-panel pkr-account-appearance">
+    <h2>Room appearance</h2>
+    {selected?<RoomExperienceChoice roomId={selected} canChange={room?.role==='host'}/>:
+      <p>Join a poker club to see its selected experience.</p>}
+   </section>
    <section className="pkr-primary-panel">
     <h2>Notifications for this club</h2>
     <label className="pkr-account-label">Poker club
-     <select aria-label="Settings poker club" value={selected} onChange={e=>{setSelected(e.target.value);setNotice('')}}>
+     <select aria-label="Settings poker club" value={selected} onChange={e=>{
+      const id=e.target.value;setSelected(id);setNotice('');
+      try{localStorage.setItem('pkr_preferred_room',id)}catch{}
+      window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:id}));
+     }}>
       {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
      </select>
     </label>

@@ -4,6 +4,7 @@ import {useEffect,useState,type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
 import {RecordProvider} from '@/components/RecordMetric';
 import {restoreKnownPushSubscriptions} from '@/lib/push';
+import RoomExperienceTheme from '@/components/RoomExperienceTheme';
 
 export default function AppExperience({children}:{children:ReactNode}){
   const pathname=usePathname();
@@ -106,7 +107,7 @@ export default function AppExperience({children}:{children:ReactNode}){
     };
   },[pathname]);
 
-  return <RecordProvider>{children}
+  return <RecordProvider><RoomExperienceTheme/>{children}
     {appRoute&&!online&&<div className="pkr-connection-notice" role="status">You are offline. Changes are not confirmed until PKR reconnects.</div>}
     {appRoute&&online&&updateReady&&!inGame&&<div className="pkr-update-notice" role="status">
       <span>An app update is ready.</span><button type="button" onClick={()=>{

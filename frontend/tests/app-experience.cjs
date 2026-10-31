@@ -153,7 +153,6 @@ async function run(){
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
-    await page.locator('.pkr-dual-switcher-compact summary').click();
     await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
     assert.equal(await page.getByRole('button',{name:/Command Centre/}).getAttribute('aria-pressed'),'true');
     assert.equal(await page.getByRole('button',{name:/Live Poker/}).getAttribute('aria-pressed'),'false');
@@ -210,22 +209,44 @@ async function run(){
       return !!money&&!!actions&&!!(money.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING);
     });
     assert(prioritised,'Outstanding payments must appear before action shortcuts');
-    // A preceding payment-error regression deliberately reloads the page and
-    // closes the compact dashboard selector. Reopen it before changing layouts.
-    if(await page.locator('.pkr-dual-switcher-compact').getAttribute('open')===null)
-      await page.locator('.pkr-dual-switcher-compact summary').click();
     await page.getByRole('button',{name:/Live Poker/}).click();
     await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
     if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
     assert.equal(layoutWrites,1,'Changing layout must issue one saved preference update');
     assert.equal(await page.getByTestId('dual-dashboard').getAttribute('data-layout'),'live');
+    await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
+    if(engine==='chromium'&&name==='phone'){
+      // The saved Live Poker appearance must apply across all five destinations
+      // and Account; navigation must never reset the selected room's design.
+      for(const [route,surface] of [
+        ['/results?room=test-room','.pkr-primary-page-head'],
+        ['/payments?room=test-room','.pkr-vnext-insights'],
+        ['/events/test-room?tab=games','.pkr-room-games-intro'],
+        ['/events/test-room?tab=members','.pkr-member-summary'],
+        ['/account','.pkr-account-appearance']
+      ]){
+        await page.goto(BASE+route,{waitUntil:'domcontentloaded'});
+        await page.locator(surface).first().waitFor({state:'visible',timeout:15000});
+        await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
+        const applied=await page.locator(surface).first().evaluate(el=>{
+          const style=getComputedStyle(el);
+          const root=getComputedStyle(document.documentElement);
+          return {border:style.borderColor,background:style.backgroundImage,
+            accent:root.getPropertyValue('--pkr-ex-accent').trim()};
+        });
+        assert.equal(applied.accent,'#66e6a2','Live Poker accent missing from '+route);
+        assert(applied.border!=='rgba(0, 0, 0, 0)','Theme border missing from '+route);
+      }
+      await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+      await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+    }
     await page.reload({waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
-    await page.locator('.pkr-dual-switcher-compact summary').click();
     assert.equal(layoutWrites,1,'Reload must reuse the saved server layout, not write again');
     await page.getByRole('button',{name:/Command Centre/}).click();
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
     assert.equal(layoutWrites,2,'Returning to Command Centre must save exactly once');
+    await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='command');
     if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-command.png'),fullPage:false});
     if(engine==='chromium'&&name==='phone'){
       // A regular member sees the host-selected variant but has no choice controls.

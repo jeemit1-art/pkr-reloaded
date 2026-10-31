@@ -239,7 +239,7 @@ async function test(){
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
-       await page.locator('.pkr-dual-switcher-compact summary').click();
+       await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='command');
        await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
        await page.locator('.pkr-dual-hero-command').waitFor({state:'visible'});
        await page.locator('.pkr-dual-root .pkr-room-outstanding-total').waitFor({state:'visible'});
@@ -274,6 +274,18 @@ async function test(){
        else {
          await toggle.click();
          await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+         await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
+         if(size.name==='small-phone'||size.name==='desktop'){
+           await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
+           await page.locator('.pkr-primary-page-head').waitFor({state:'visible'});
+           await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
+           const photo=await page.locator('.pkr-primary-page-head').evaluate(node=>
+             getComputedStyle(node,'::before').backgroundImage);
+           if(!photo.includes('real-casino-props.webp'))
+             errors.push(size.name+' Live Poker artwork not applied to Results page');
+           await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+           await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+         }
          const liveSeatCount=await page.locator('.pkr-dual-felt-stage .pkr-dual-table-seat').count();
          if(liveSeatCount!==8) errors.push(size.name+' approved perimeter seating count '+liveSeatCount+' !== 8');
          if(!await page.locator('.pkr-dual-stage-note').isVisible())
@@ -294,6 +306,7 @@ async function test(){
          await page.screenshot({path:path.join(output,size.name+'-dashboard-live.png'),fullPage:false});
          await page.getByRole('button',{name:/Command Centre/}).click();
          await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+         await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='command');
          if(layoutWrites!==2)errors.push(size.name+' layout toggle should save exactly two preferences');
        }
      }
