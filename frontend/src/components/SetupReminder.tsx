@@ -60,15 +60,22 @@ export default function SetupReminder(){
   useEffect(()=>{
     if(!relevant||!getToken()){setAuthorised(false);setRoomId('');return;}
     let live=true;
+    const allowed=new Set<string>();
+    const onRoomChanged=(event:globalThis.Event)=>{
+      const selected=(event as CustomEvent<string>).detail;
+      if(allowed.has(selected))setRoomId(selected);
+    };
+    window.addEventListener('pkr:room-changed',onRoomChanged);
     api.events.list().then(rooms=>{
       if(!live)return;
+      rooms.forEach(room=>allowed.add(room.id));
       const candidate=currentRoom(pathname);
       const room=rooms.find(r=>r.id===candidate)||
         rooms.find(r=>r.status!=='ended')||rooms[0];
       setRoomId(room?.id||'');
       setAuthorised(Boolean(room));
     }).catch(()=>{if(live){setAuthorised(false);setRoomId('');}});
-    return()=>{live=false;};
+    return()=>{live=false;window.removeEventListener('pkr:room-changed',onRoomChanged)};
   },[pathname,relevant]);
 
   useEffect(()=>{

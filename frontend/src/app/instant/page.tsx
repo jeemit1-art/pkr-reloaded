@@ -157,6 +157,8 @@ export default function Instant(){
     const found=rooms.find(r=>r.id===id);
     if(!found)return;
     setRoomId(id);setNotice('');
+    try{localStorage.setItem('pkr_preferred_room',id)}catch{}
+    window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:id}));
     const url=new URL(window.location.href);
     url.searchParams.set('room',id);
     window.history.replaceState(window.history.state,'',url.pathname+url.search);
