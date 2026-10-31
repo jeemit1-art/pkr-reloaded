@@ -184,3 +184,43 @@
  .pkr-results-page .pkr-results-live-table{width:min(100%,268px)}
  .pkr-results-page .pkr-results-live-person small{font-size:9px}
 }
+
+/* Final narrow-screen pass from real Chromium captures: rankings, not forms,
+   must occupy the first viewport. Keep search/sort accessible side by side. */
+.pkr-results-layout-command>.pkr-results-board:only-child{grid-column:1/-1}
+@media(max-width:740px){
+ .pkr-results-page .pkr-results-board-top .pkr-results-board-eyebrow{display:none!important}
+ .pkr-results-page .pkr-results-board-top h2{margin:0;font-size:17px}
+ .pkr-results-page .pkr-results-board-top{margin:3px 0 8px;gap:6px}
+ .pkr-results-page .pkr-results-board-counter{font-size:10px;white-space:nowrap}
+ .pkr-results-page .pkr-results-board-heading{display:none!important}
+ .pkr-results-page .pkr-results-board{padding:10px 11px}
+ .pkr-results-page .pkr-results-filters{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:6px 8px!important;align-items:end;margin:0 0 7px!important;
+ }
+ .pkr-results-page .pkr-results-filters label:not(.pkr-results-min-games){
+  min-width:0!important;max-width:none!important;width:auto!important;
+  grid-column:auto!important;flex:none!important;font-size:10px;
+ }
+ .pkr-results-page .pkr-results-filters label:not(.pkr-results-min-games) :is(input,select){
+  min-width:0!important;width:100%!important;min-height:33px!important;
+  height:33px!important;padding:6px 8px!important;font-size:11px!important;
+ }
+ .pkr-results-page .pkr-results-filters .pkr-results-min-games{
+  grid-column:1/-1!important;min-height:22px!important;gap:6px!important;
+  padding:0!important;margin:0!important;font-size:10px!important;
+  align-items:center!important;
+ }
+ .pkr-results-page .pkr-results-filters input[type=checkbox]{
+  width:15px!important;min-width:15px!important;height:15px!important;
+  min-height:15px!important;margin:0!important;
+ }
+ .pkr-results-page .pkr-results-live-net small{font-size:9px}
+ .pkr-results-page .pkr-results-ledger-net small{font-size:9px}
+}
+@media(max-width:365px){
+ .pkr-results-page .pkr-results-command-stats>div:nth-child(3){display:none!important}
+ .pkr-results-page .pkr-results-command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-results-page .pkr-results-live-net b{font-size:12px}
+}

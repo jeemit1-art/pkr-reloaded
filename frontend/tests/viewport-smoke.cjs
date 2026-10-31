@@ -290,8 +290,8 @@ async function test(){
              getComputedStyle(node).backgroundImage);
            if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
              errors.push(size.name+' Live Poker artwork not applied to Results page');
-            await page.screenshot({path:path.join(output,size.name+'-results-live.png'),fullPage:true});
             await page.screenshot({path:path.join(output,size.name+'-results-live-first-screen.png'),fullPage:false});
+            await page.screenshot({path:path.join(output,size.name+'-results-live.png'),fullPage:true});
            await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
            await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
          }
@@ -776,8 +776,8 @@ async function test(){
           errors.push(size.name+' Command Centre lost ledger players');
         if(await page.locator('.pkr-results-live-player').count()!==0)
           errors.push(size.name+' Command Centre is still rendering the Live Poker board');
-         await page.screenshot({path:path.join(output,size.name+'-results-command.png'),fullPage:true});
          await page.screenshot({path:path.join(output,size.name+'-results-command-first-screen.png'),fullPage:false});
+         await page.screenshot({path:path.join(output,size.name+'-results-command.png'),fullPage:true});
         if(size.width<1100){
           await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
           await page.waitForTimeout(120);
