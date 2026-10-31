@@ -127,7 +127,6 @@ export default function GamePage() {
     active:'var(--green)', settled:'var(--green)', cancelled:'var(--red)'
   };
   const yesRsvps   = (game.rsvps||[]).filter((r:any)=>r.status==='yes');
-  const maybeRsvps = (game.rsvps||[]).filter((r:any)=>r.status==='maybe');
   const seated     = (game.players||[]).filter((p:any)=>p.buy_ins>0);
   const cashedOut  = (game.players||[]).filter((p:any)=>p.cashout!=null);
 
@@ -332,42 +331,6 @@ export default function GamePage() {
               onClick={()=>router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id))}>
               📱 Share group-safe results
             </button>}
-          </div>
-        )}
-
-        {/* RSVPs */}
-        {(game.rsvps||[]).length>0 && (
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border-sub)',fontSize:9,
-              letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--muted)',
-              fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
-              RSVPs — {yesRsvps.length} in · {maybeRsvps.length} maybe · {(game.rsvps||[]).filter((r:any)=>r.status==='no').length} out
-            </div>
-            {(game.rsvps||[]).map((r:any)=>(
-              <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,
-                padding:'10px 16px',borderBottom:'1px solid var(--border-sub)'}}>
-                <span style={{fontSize:14,width:18,textAlign:'center',
-                  color:r.status==='yes'?'var(--green)':r.status==='maybe'?'var(--amber)':'var(--red)'}}>
-                  {r.status==='yes'?'✓':r.status==='maybe'?'~':'✗'}
-                </span>
-                <span style={{flex:1,fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>
-                  {r.display_name}
-                </span>
-                {(r as any).arrival_option && (
-                  <span style={{fontSize:11,color:'var(--gold)',marginRight:8}}>
-                    {(r as any).arrival_option==='late'?'Late':(r as any).arrival_option}
-                    {(r as any).seat_number?' · Seat '+(r as any).seat_number:''}
-                  </span>
-                )}
-                {r.whatsapp && (
-                  <a href={`https://wa.me/${r.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent('Game on — '+fmtDate(game.scheduled_at))}`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{fontSize:11,color:'var(--gold)',textDecoration:'none',fontFamily:'var(--font-body),sans-serif'}}>
-                    WA
-                  </a>
-                )}
-              </div>
-            ))}
           </div>
         )}
 

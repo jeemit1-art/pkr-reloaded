@@ -23,7 +23,7 @@ const validTransfer=(value:Transfer)=>!!value.id&&value.amount>0&&Number.isSafeI
 export default function GameNightTools({event,games,isHost,onMembers,onSchedule,notificationTools}:Props){
   const router=useRouter();
   const availableGames=useMemo(()=>{
-    const future=games.filter(isCurrentGame)
+    const future=games.filter(g=>isCurrentGame(g))
       .sort((a,b)=>(a.status==='active'?-1:0)-(b.status==='active'?-1:0)||a.scheduled_at-b.scheduled_at);
     const complete=games.filter(g=>g.status==='settled').sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,5);
     return [...future,...complete];

@@ -717,6 +717,9 @@ async function test(){
         }catch{
           errors.push(size.name+' current PKR RSVP board missing from Game Night');
         }
+        const selectedNight=await page.getByLabel('Choose game night').inputValue();
+        if(selectedNight!=='test-game')
+          errors.push(size.name+' old unfinished game was selected for live Game Night: '+selectedNight);
         const registration=page.getByLabel('Member notification registrations');
         await registration.waitFor({state:'visible',timeout:7000});
         if(!await registration.getByText('1 of 2 members have a registered notification device').count())
