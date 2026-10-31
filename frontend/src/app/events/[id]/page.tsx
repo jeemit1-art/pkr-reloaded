@@ -123,7 +123,10 @@ export default function EventPage() {
       url.searchParams.set('tab','night');url.searchParams.delete('view');
       window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
     }else if(section==='requests'||section==='invite'||section==='roster')setMemberSection(section);
-    if(query.get('inviteGame'))setSelectedInviteGameId(query.get('inviteGame')||'');
+    if(query.get('inviteGame')){
+      setSelectedInviteGameId(query.get('inviteGame')||'');
+      if(requestedTab==='members')setMemberSection('invite');
+    }
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
       setEvent(e as any); setUser(u as any);
       const me = e.members.find((m:any)=>m.id===u.id);
@@ -204,7 +207,8 @@ export default function EventPage() {
   }
   useEffect(()=>{
     if(tab!=='members'||!event||memberDeepLinkScroll.current)return;
-    const section=new URLSearchParams(window.location.search).get('view');
+    const query=new URLSearchParams(window.location.search);
+    const section=query.get('view')||(query.has('inviteGame')?'invite':null);
     if(section==='requests'||section==='roster'||section==='invite'){
       memberDeepLinkScroll.current=true;
       window.setTimeout(()=>document.getElementById('pkr-members-'+section)?.scrollIntoView({behavior:'smooth',block:'start'}),300);

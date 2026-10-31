@@ -270,6 +270,11 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
       <p>Once a game is scheduled, live attendance and sharing actions will appear here.</p></div></header>
     <div className="pkr-night-empty"><strong>No game night to manage</strong><p>Schedule a game to create its private RSVP board and live link.</p>
       {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}</div>
+    {notificationTools&&<section className="pkr-night-notification-tools" aria-label="Game night alerts and notification settings">
+      <div className="pkr-night-notification-title"><span className="pkr-night-kicker">FREE PKR ALERTS</span>
+        <h3>Notifications & device setup</h3><p>Enable PKR push and sound even before your first game has been scheduled.</p></div>
+      {notificationTools}
+    </section>}
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
