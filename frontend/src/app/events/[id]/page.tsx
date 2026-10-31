@@ -497,6 +497,7 @@ export default function EventPage() {
               </div>
               <div className="pkr-room-games-links">
                 {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
+                {isHost&&(upcoming[0]||settled[0])&&<button type="button" className="btn btn-outline" onClick={()=>router.push('/games/'+(upcoming[0]||settled[0]).id+'/share')}>WhatsApp Sharing →</button>}
                 <button type="button" className="btn btn-outline" onClick={()=>selectTab('history')}>Game history →</button>
               </div>
             </div>
@@ -520,7 +521,8 @@ export default function EventPage() {
                 onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
                 onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
                 onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members');}}/>
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members');}}
+                onShare={()=>router.push('/games/'+g.id+'/share')}/>
             ))}
             {unfinished.length>0&&<section aria-label="Unfinished game sessions" style={{margin:'20px 0'}}>
               <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
@@ -532,7 +534,8 @@ export default function EventPage() {
                 onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
                 onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true)}}
                 onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members')}}/>)}
+                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members')}}
+                onShare={()=>router.push('/games/'+g.id+'/share')}/>)}
             </section>}
             {settled.length>0 && (
               <>
@@ -1411,7 +1414,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers}:any) {
+function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers,onShare}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
@@ -1491,6 +1494,10 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
               Delete
             </button>}
           </>)}
+          {isHost && <button type="button" onClick={e=>{e.stopPropagation();onShare();}}
+            className="btn btn-outline" style={{fontSize:10,padding:'5px 10px'}}>
+            ♠ WhatsApp Sharing
+          </button>}
           {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
             className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
             📱 Invite approved group members

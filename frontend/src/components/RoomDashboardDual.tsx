@@ -84,6 +84,7 @@ export default function RoomDashboardDual({
   const active=featured&&isLiveGame(featured)?featured:null;
   const settlements=useMemo(()=>history.filter(g=>g.status==='settled')
     .sort((a,b)=>b.scheduled_at-a.scheduled_at),[history]);
+  const shareGame=featured||settlements[0]||null;
 
   // The Worker is authoritative; localStorage is deliberately NOT a room setting.
   // Refresh on focus as well as room changes so other devices see host choices.
@@ -260,6 +261,12 @@ export default function RoomDashboardDual({
           </div>}
         </div>}
       </header>
+      {canManageGames&&<div className="pkr-dual-whatsapp-strip" role="region" aria-label="Host WhatsApp sharing">
+        <div><strong>♠ WhatsApp Sharing Centre</strong><small>{shareGame?'Invitations, RSVP updates, announcements, results and private payments':'Invite players to your private poker room'}</small></div>
+        <button type="button" onClick={()=>shareGame?router.push('/games/'+shareGame.id+'/share'):goInvite()}>
+          {shareGame?'Open Sharing Centre →':'Invite members →'}
+        </button>
+      </div>}
 
       <div className="pkr-dual-switcher" aria-label="Dashboard presentation">
         <div className="pkr-dual-switcher-heading">

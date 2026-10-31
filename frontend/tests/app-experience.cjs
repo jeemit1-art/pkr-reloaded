@@ -9,7 +9,7 @@ const room={id:'test-room',name:'Friday Night Poker',role:'host',host_id:'test-u
 const user={id:'test-user',name:'Alex Morgan',email:'test@invalid.example',plan:'pro',is_active:true,trial_active:false,trial_days_left:0,avatar_url:null};
 const members=[{id:'test-user',name:'Alex Morgan',role:'host',joined_at:now-86400},{id:'member-2',name:'Jordan Lee',role:'member',joined_at:now-86400}];
 const upcoming={id:'test-game',event_id:room.id,status:'scheduled',scheduled_at:now+86400,location:'Test venue',notes:'',seats:8,buy_in:5000,created_at:now,player_count:2,live_token:'synthetic-live',results_token:null};
-const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:now-86400,results_token:'synthetic-results'};
+const finished={...upcoming,id:'test-finished',status:'settled',scheduled_at:now-86400,results_token:'synthetic-results',variance:0};
 const old={...finished,id:'test-old',scheduled_at:now-120*86400,results_token:'synthetic-old-results'};
 const players=[{game_id:finished.id,user_id:'test-user',display_name:'Alex Morgan',buy_ins:1,buy_in_total:5000,cashout:12500,net:7500,seat_number:1,settled_at:now-86400,whatsapp:null},{game_id:finished.id,user_id:'member-2',display_name:'Jordan Lee',buy_ins:2,buy_in_total:10000,cashout:2500,net:-7500,seat_number:2,settled_at:now-86400,whatsapp:null}];
 const leaders=players.map(p=>({...p,games_played:2,games_won:p.net>0?2:0,total_net:p.net*2,biggest_win:Math.max(0,p.net),biggest_loss:Math.min(0,p.net),last_played:now-86400}));
@@ -217,9 +217,10 @@ async function run(){
       // A regular member sees the host-selected variant but has no choice controls.
       simulateMember=true;
       await page.reload({waitUntil:'domcontentloaded'});
-      await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
-      assert.equal(await page.getByRole('button',{name:/Live Poker/}).isDisabled(),true);
-      assert.equal(await page.getByRole('button',{name:/Command Centre/}).isDisabled(),true);
+      await page.getByTestId('player-dashboard').waitFor();
+      assert.equal(await page.getByTestId('dual-dashboard').count(),0,'Members now have a dedicated player dashboard');
+      assert.equal(await page.getByRole('button',{name:/Live Poker/}).count(),0);
+      assert.equal(await page.getByRole('button',{name:/Command Centre/}).count(),0);
       assert.equal(layoutWrites,2,'Member must not issue layout writes');
       simulateMember=false;
       await page.reload({waitUntil:'domcontentloaded'});
@@ -272,6 +273,38 @@ async function run(){
     await page.goto(BASE+'/games/test-game',{waitUntil:'domcontentloaded'});await page.locator('.pkr-game-metrics .pkr-metric-trigger').first().waitFor();
     await page.locator('.pkr-game-metrics .pkr-metric-trigger').nth(0).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),8);await closeSheet(page);
     await page.locator('.pkr-game-metrics .pkr-metric-trigger').nth(2).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),1);await closeSheet(page);
+    if(engine==='chromium'&&name==='phone'){
+      // Synthetic end-to-end smoke of the new host WhatsApp Sharing Centre.
+      await page.goto(BASE+'/games/test-game/share',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'WhatsApp Sharing Centre'}).waitFor();
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('RSVP'));
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/Friday Night Poker/);
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/games\/test-game\/rsvp/);
+      await page.getByRole('button',{name:/Host announcement/}).click();
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('Message from your host:'));
+      const openWhatsApp=page.getByRole('button',{name:/Open WhatsApp/});
+      assert.equal(await openWhatsApp.isDisabled(),true,'Blank announcements must not be shareable');
+      await page.locator('#pkr-share-text').fill((await page.locator('#pkr-share-text').inputValue())+'\nGame moves to 8 pm.');
+      assert.equal(await openWhatsApp.isEnabled(),true,'An edited announcement must be shareable');
+      await page.getByRole('button',{name:/RSVP update/}).click();
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('Confirmed:'));
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/Jordan Lee/);
+      await page.goto(BASE+'/games/test-finished/share?type=results',{waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('GAME RESULTS'));
+      assert.doesNotMatch(await page.locator('#pkr-share-text').inputValue(),/Transfers:/);
+      assert.doesNotMatch(await page.locator('#pkr-share-text').inputValue(),/\$75/);
+      await page.getByRole('checkbox',{name:/Include player net amounts/}).check();
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('$75'));
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/\$75/);
+      await page.getByRole('button',{name:/Private payment reminder/}).click();
+      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('outstanding payment'));
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/Hi Jordan Lee/);
+      assert.match(await page.locator('#pkr-share-text').inputValue(),/\$75/);
+      assert.equal(await page.getByRole('button',{name:'Phone share'}).count(),0,'Private financial details must not have group share actions');
+      await page.screenshot({path:path.join(output,'chromium-phone-whatsapp-sharing.png'),fullPage:false});
+      await page.goto(BASE+'/games/test-game',{waitUntil:'domcontentloaded'});
+      await page.locator('.pkr-game-metrics .pkr-metric-trigger').first().waitFor();
+    }
     assert(!/\blegacy\b/i.test(await page.locator('body').innerText()),'Obsolete status terminology visible');
     assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Dialog scroll lock leaked');
     assert.deepEqual(unexpected,[]);console.log('PASS',engine,name);

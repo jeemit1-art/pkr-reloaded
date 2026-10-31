@@ -17,27 +17,43 @@ SQL_START = re.compile(r"^\s*(?:SELECT|INSERT|UPDATE|DELETE|REPLACE|WITH)\b", re
 
 
 def extract_literal(source, position, quote):
-    chars = []
-    i = position
-    while i < len(source):
-        current = source[i]
-        if current == "\\" and i + 1 < len(source):
-            nxt = source[i + 1]
-            if nxt == "n":
-                chars.append("\n")
-            elif nxt == "r":
-                chars.append("\r")
-            elif nxt == "t":
-                chars.append("\t")
-            else:
-                chars.append(nxt)
-            i += 2
-            continue
-        if current == quote:
-            return "".join(chars)
-        chars.append(current)
-        i += 1
-    raise AssertionError("Unterminated SQL string")
+    """Read a SQL literal, including adjacent TypeScript string concatenation.
+
+    Prior implementation stopped at the first quote in expressions such as
+    prepare("SELECT gp.id " + "FROM game_players gp WHERE ..."), causing
+    false syntax/unknown-alias failures. Nonliteral concatenations are marked
+    dynamic rather than presenting an incomplete fragment as complete SQL.
+    """
+    parts = []
+
+    def segment(start, delimiter):
+        chars = []
+        cursor = start
+        while cursor < len(source):
+            current = source[cursor]
+            if current == "\\" and cursor + 1 < len(source):
+                nxt = source[cursor + 1]
+                chars.append({"n": "\n", "r": "\r", "t": "\t"}.get(nxt, nxt))
+                cursor += 2
+                continue
+            if current == delimiter:
+                return "".join(chars), cursor + 1
+            chars.append(current)
+            cursor += 1
+        raise AssertionError("Unterminated SQL string")
+
+    part, cursor = segment(position, quote)
+    parts.append(part)
+    while True:
+        match = re.match(r"\s*\+\s*", source[cursor:])
+        if not match:
+            return "".join(parts)
+        cursor += match.end()
+        if cursor >= len(source) or source[cursor] not in ("'", '"', "`"):
+            return "".join(parts) + "${dynamic}"
+        delimiter = source[cursor]
+        part, cursor = segment(cursor + 1, delimiter)
+        parts.append(part)
 
 
 def main():

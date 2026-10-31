@@ -398,3 +398,12 @@
  .pkr-app.pkr-dashboard .pkr-dual-no-room>div{width:100%}
  .pkr-app.pkr-dashboard .pkr-dual-no-room button{flex:1 1 100%}
 }
+
+/* Host-only WhatsApp sharing, shared by Command Centre and Live Poker layouts. */
+.pkr-dual-whatsapp-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;border:1px solid rgba(201,168,76,.42);border-radius:13px;background:linear-gradient(115deg,rgba(24,56,41,.97),rgba(11,37,28,.97))}
+.pkr-dual-whatsapp-strip>div{display:flex;flex-direction:column;gap:5px}
+.pkr-dual-whatsapp-strip strong{font-size:14px;color:#e3c58c}
+.pkr-dual-whatsapp-strip small{font-size:11px;color:#adbfaf;line-height:1.4}
+.pkr-dual-whatsapp-strip button{background:#c9a84c;color:#0b2119;font-weight:750;border:0;border-radius:9px;min-height:43px;padding:10px 15px;white-space:nowrap;cursor:pointer}
+.pkr-dual-whatsapp-strip button:focus-visible{outline:2px solid #f6e6b1;outline-offset:3px}
+@media(max-width:640px){.pkr-dual-whatsapp-strip{flex-direction:column;align-items:stretch;padding:13px}.pkr-dual-whatsapp-strip button{width:100%}}

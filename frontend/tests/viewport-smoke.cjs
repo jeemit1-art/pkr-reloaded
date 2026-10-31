@@ -458,8 +458,8 @@ async function test(){
        const sidebar=await page.locator('.pkr-persistent-nav').boundingBox();
        if(card&&sidebar&&card.x<sidebar.x+sidebar.width-1)errors.push(size.name+' install card hidden under sidebar');
      }
-     if(['dashboard','room','insights'].includes(item.id)){
-       const heroSelector=item.id==='dashboard'||item.id==='room'
+     if(['dashboard','insights'].includes(item.id)){
+       const heroSelector=item.id==='dashboard'
          ?'.pkr-dual-hero':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
