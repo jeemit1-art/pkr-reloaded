@@ -917,8 +917,8 @@ export default function EventPage() {
               </details>}
             {isGroupOwner && (
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');document.getElementById('pkr-mobile-name')?.focus();}}>+ Invite Member by Mobile</button>
-                <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('cohost');document.getElementById('pkr-mobile-name')?.focus();}}>+ Co-host by Mobile</button>
+                <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Invite Member by Mobile</button>
+                <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('cohost');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Co-host by Mobile</button>
                 {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}} onClick={()=>{setMergeFrom('');setMergeTo('');setMergeMsg('');setShowMerge(true);}}>⟳ Merge Duplicate Players</button>}
               </div>
             )}
