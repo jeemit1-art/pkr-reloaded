@@ -533,6 +533,11 @@ export default function EventPage() {
                 <div className="pkr-room-games-links">
                   {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
                   {upcoming[0]&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight(upcoming[0].id)}>Manage RSVPs →</button>}
+                  {isHost&&upcoming.some(g=>['scheduled','lobby'].includes(g.status))&&
+                    <button type="button" className="btn btn-outline" onClick={()=>{
+                      const next=upcoming.find(g=>['scheduled','lobby'].includes(g.status));
+                      if(next)router.push('/games/'+encodeURIComponent(next.id)+'/rsvp?settings=1#pkr-rsvp-settings');
+                    }}>⚙ RSVP settings →</button>}
                   <button type="button" className="btn btn-outline" onClick={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}>Completed games →</button>
                 </div>
               </PokerClubStage>
