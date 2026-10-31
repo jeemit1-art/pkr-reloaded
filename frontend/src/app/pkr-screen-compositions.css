@@ -374,3 +374,58 @@
  .pkr-results-net-track{height:12px}
  .pkr-results-net-heading{margin-bottom:9px}
 }
+
+
+/* Payments shares the same stage composition. Give it the same full-width
+   mobile treatment so the corrected style hooks cannot squeeze its ledger
+   headline or truncate a long outstanding balance. */
+@media(max-width:860px){
+ .pkr-payments-stage .pkr-experience-stage-command{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  width:100%;min-width:0;min-height:0!important;
+  align-items:start!important;gap:12px!important;padding:15px 16px!important;
+ }
+ .pkr-payments-stage .pkr-experience-command-copy{
+  min-width:0;width:100%;max-width:none;
+ }
+ .pkr-payments-stage .pkr-experience-command-stats{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(74px,1fr))!important;
+  width:100%!important;max-width:none!important;min-width:0!important;gap:7px!important;
+ }
+ .pkr-payments-stage .pkr-experience-command-stat{
+  min-width:0!important;max-width:none!important;
+  padding:10px 8px!important;gap:5px!important;
+ }
+ .pkr-payments-stage .pkr-experience-command-stat>span{
+  font-size:10px;word-break:normal;overflow-wrap:normal;
+ }
+ .pkr-payments-stage .pkr-experience-command-stat strong{
+  font-size:18px;overflow-wrap:anywhere;
+ }
+ .pkr-payments-stage .pkr-experience-stage h1{font-size:29px!important}
+}
+@media(max-width:600px){
+ .pkr-payments-stage .pkr-experience-stage-live{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  align-items:start!important;gap:8px!important;
+  min-height:0!important;padding:15px 16px!important;
+ }
+ .pkr-payments-stage .pkr-experience-live-copy{
+  width:100%!important;min-width:0!important;flex:none!important;
+ }
+ .pkr-payments-stage .pkr-experience-felt{display:none!important}
+ .pkr-payments-stage .pkr-experience-live-metrics{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(74px,1fr))!important;
+  width:100%;gap:7px!important;
+ }
+ .pkr-payments-stage .pkr-experience-live-metrics>span{
+  min-width:0!important;padding:10px 8px!important;
+  border:1px solid #397c5a;border-radius:9px;background:#0b3023e8;
+ }
+ .pkr-payments-stage .pkr-experience-live-metrics strong{
+  font-size:18px;overflow-wrap:anywhere;
+ }
+ .pkr-payments-stage .pkr-experience-live-metrics small{
+  font-size:10px;word-break:normal;overflow-wrap:normal;
+ }
+}

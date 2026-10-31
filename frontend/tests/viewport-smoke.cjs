@@ -857,6 +857,21 @@ async function test(){
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
        try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
        catch{errors.push(size.name+' settlement ledger did not load in Payments')}
+       if(size.width<=740){
+         const paymentStage=await page.locator('.pkr-payments-stage [data-testid="payments-command-stage"]').evaluate(stage=>{
+           const copy=stage.querySelector('.pkr-experience-command-copy')?.getBoundingClientRect();
+           const cards=stage.querySelector('.pkr-experience-command-stats')?.getBoundingClientRect();
+           const rect=stage.getBoundingClientRect();
+           return {width:rect.width,height:rect.height,copyWidth:copy?.width,
+             copyBottom:copy?.bottom,cardsTop:cards?.top,cardsRight:cards?.right,
+             stageRight:rect.right};
+         }).catch(()=>null);
+         if(!paymentStage||paymentStage.copyWidth<175||
+             paymentStage.cardsTop<paymentStage.copyBottom-3||
+             paymentStage.cardsRight>paymentStage.stageRight+3||
+             paymentStage.height>340)
+           errors.push(size.name+' Payments Command hero squashed or clipped: '+JSON.stringify(paymentStage));
+       }
        await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Notifications for this club'}).waitFor({state:'visible',timeout:12000});
        await page.getByRole('heading',{name:'Sounds & accessibility'}).waitFor();
