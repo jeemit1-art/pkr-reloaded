@@ -160,6 +160,61 @@ auth.post('/refresh', authMiddleware, async (c) => {
   });
 });
 
+// Securely move an existing signed-in player session from a WhatsApp browser
+// to an iPhone Home Screen app, which may have a separate storage context.
+// Transfer codes are short-lived, high-entropy and never placed in URLs.
+const transferAlphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function newTransferCode():string{
+  const random=crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(random,b=>transferAlphabet[b%transferAlphabet.length]).join('');
+}
+async function transferHash(value:string):Promise<string>{
+  const raw=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(raw),b=>b.toString(16).padStart(2,'0')).join('');
+}
+auth.post('/transfer/start',authMiddleware,async c=>{
+  const userId=c.get('userId');
+  const user=await c.env.DB.prepare('SELECT id FROM users WHERE id=?')
+    .bind(userId).first<{id:string}>();
+  if(!user)return c.json({error:'Sign in first'},401);
+  const key='pkr-app-transfer:start:'+userId;
+  if(await c.env.KV.get(key))
+    return c.json({error:'Please wait one minute before generating another code.'},429);
+  const code=newTransferCode();
+  await c.env.KV.put('pkr-app-transfer:code:'+await transferHash(code),userId,{expirationTtl:300});
+  await c.env.KV.put(key,'1',{expirationTtl:60});
+  c.header('Cache-Control','no-store, private');
+  c.header('Referrer-Policy','no-referrer');
+  return c.json({code,expires_in:300});
+});
+auth.post('/transfer/redeem',async c=>{
+  const body=await c.req.json().catch(()=>null) as {code?:unknown}|null;
+  const code=typeof body?.code==='string'
+    ?body.code.replace(/[\s-]/g,'').toUpperCase():'';
+  if(!/^[A-HJ-NP-Z2-9]{16}$/.test(code))
+    return c.json({error:'Enter the 16-character transfer code.'},400);
+  // This rate limit supplements an 80-bit random code and five-minute TTL.
+  // It is not a substitute for a code with high entropy.
+  const ip=c.req.header('CF-Connecting-IP')||'unknown';
+  const bucket='pkr-app-transfer:rate:'+await transferHash(ip)+':'+Math.floor(Date.now()/300000);
+  const count=Number(await c.env.KV.get(bucket)||'0');
+  if(count>=8)return c.json({error:'Too many attempts. Try again later.'},429);
+  await c.env.KV.put(bucket,String(count+1),{expirationTtl:300});
+  const codeKey='pkr-app-transfer:code:'+await transferHash(code);
+  const userId=await c.env.KV.get(codeKey);
+  if(!userId)return c.json({error:'Code expired or invalid. Generate another code from your original browser.'},401);
+  // A code is redeemed once in normal use. KV is eventually consistent,
+  // so the high-entropy code must still be kept private until it expires.
+  await c.env.KV.delete(codeKey);
+  const user=await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
+    .bind(userId).first<{id:string;email:string;name:string}>();
+  if(!user)return c.json({error:'Account no longer available'},404);
+  const token=await signJWT({sub:user.id,email:user.email,name:user.name},c.env.JWT_SECRET);
+  c.header('Cache-Control','no-store, private');
+  c.header('Referrer-Policy','no-referrer');
+  return c.json({token});
+});
+
 // /me — returns user + plan status
 auth.get('/me', authMiddleware, async (c) => {
   const user = await c.env.DB.prepare(

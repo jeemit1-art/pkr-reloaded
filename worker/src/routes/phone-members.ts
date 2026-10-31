@@ -272,8 +272,8 @@ router.post('/phone-invites/:token/request-approval',async c=>{
   // room host after writing the pending approval, never a name-only recipient.
   try {
     c.executionCtx.waitUntil(sendPushToHosts(c.env,invite.event_id,{
-      title:'New player waiting for approval',
-      body:'A player requested access to '+invite.event_name+'. Open Members to verify and approve or reject.',
+      title:'🔔 Approve player: '+name,
+      body:name+' requested to join '+invite.event_name+'. Open Members to review and approve or reject.',
       data:{type:'join_request',eventId:invite.event_id,
         url:'/events/'+encodeURIComponent(invite.event_id)+'?tab=members&view=requests',
         notificationId:invite.id}
@@ -367,8 +367,8 @@ router.post('/phone-invites/complete-approval',async c=>{
   // a phone number in a lock-screen notification.
   try {
     c.executionCtx.waitUntil(sendPushToHosts(c.env,state.event_id,{
-      title:'Player joined your poker room',
-      body:'An approved player has completed setup. Open Members to see the roster.',
+      title:'✅ '+name+' joined your poker room',
+      body:name+' completed approval and is now in your member list. Open PKR to view your group.',
       data:{type:'member_joined',eventId:state.event_id,
         url:'/events/'+encodeURIComponent(state.event_id)+'?tab=members&view=roster',
         notificationId:state.invite_id}

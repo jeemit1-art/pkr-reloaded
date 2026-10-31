@@ -5,7 +5,9 @@ export type PkrSound='new-request'|'approved'|'update';
 
 export function foregroundSoundsEnabled():boolean {
   if(typeof window==='undefined')return false;
-  try{return localStorage.getItem(KEY)==='on';}catch{return false;}
+  // Opted-out listeners stay muted across deployments. For new installs,
+  // meaningful foreground alerts are enabled by default.
+  try{return localStorage.getItem(KEY)!=='off';}catch{return false;}
 }
 
 export function setForegroundSoundsEnabled(enabled:boolean):void {
@@ -24,18 +26,23 @@ export function playPkrSound(kind:PkrSound='update',test=false):void {
     if(!Audio)return;
     const ctx=new Audio();
     void ctx.resume().then(()=>{
-      const notes=kind==='new-request'?[740,990,1175]:kind==='approved'?[660,880,1100]:[660,880];
+      // Higher-presence foreground alert, without controlling the phone's
+      // system notification volume (which browsers and PWAs cannot change).
+      const notes=kind==='new-request'?[784,1047,1319,1568]:
+        kind==='approved'?[659,880,1175]:[698,932,1175];
       const start=ctx.currentTime+0.015;
+      const peak=kind==='new-request'?0.18:0.13;
       notes.forEach((hz,i)=>{
+        const at=start+i*0.17;
         const osc=ctx.createOscillator(),gain=ctx.createGain();
-        osc.type='sine';osc.frequency.setValueAtTime(hz,start+i*0.13);
-        gain.gain.setValueAtTime(0.0001,start+i*0.13);
-        gain.gain.exponentialRampToValueAtTime(0.055,start+i*0.13+0.023);
-        gain.gain.exponentialRampToValueAtTime(0.0001,start+i*0.13+0.11);
+        osc.type='triangle';osc.frequency.setValueAtTime(hz,at);
+        gain.gain.setValueAtTime(0.0001,at);
+        gain.gain.exponentialRampToValueAtTime(peak,at+0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001,at+0.15);
         osc.connect(gain);gain.connect(ctx.destination);
-        osc.start(start+i*0.13);osc.stop(start+i*0.13+0.13);
+        osc.start(at);osc.stop(at+0.16);
       });
-      window.setTimeout(()=>void ctx.close().catch(()=>{}),900);
+      window.setTimeout(()=>void ctx.close().catch(()=>{}),1400);
     }).catch(()=>void ctx.close().catch(()=>{}));
   }catch{/* Missing Web Audio or autoplay protection: always fail quietly. */}
 }

@@ -9,7 +9,7 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type R
 import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
-import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
+import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import './room-dashboard-polish.css';
 import InviteQRCode from '@/components/InviteQRCode';
@@ -165,8 +165,23 @@ export default function EventPage() {
     return()=>{active=false};
   },[id,tab]);
   useEffect(()=>{
-    isPushSubscribedToEvent(id).then(setPushEnabled);
-  },[id]);
+    let live=true;
+    const check=()=>{
+      if(document.visibilityState!=='visible')return;
+      void ensurePushForRoom(id).then(value=>{if(live)setPushEnabled(value);})
+        .catch(()=>{if(live)setPushEnabled(false);});
+    };
+    check();
+    window.addEventListener('focus',check);
+    document.addEventListener('visibilitychange',check);
+    window.addEventListener('pkr:push-changed',check);
+    return()=>{
+      live=false;
+      window.removeEventListener('focus',check);
+      document.removeEventListener('visibilitychange',check);
+      window.removeEventListener('pkr:push-changed',check);
+    };
+  },[id,user?.id]);
 
   // Only the host sees registered devices; endpoints and keys stay private.
   useEffect(()=>{

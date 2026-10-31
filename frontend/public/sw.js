@@ -5,44 +5,57 @@ self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { title:'PKR Reloaded', body: event.data?.text() }; }
 
-  if (data.data && data.data.type === 'game_scheduled' && data.data.scheduled_at) {
-    const dt = new Date(data.data.scheduled_at * 1000).toLocaleString(undefined, {
-      weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'
-    });
-    data.body = dt + (data.data.location ? ' · ' + data.data.location : '');
-  }
-
   const kind = data.data?.type || 'general';
-  const headings = {
-    game_scheduled:'♠ NEW GAME — RSVP NOW',
-    game_reminder:'♠ POKER NIGHT REMINDER',
-    rsvp_confirmed:'✓ RSVP CONFIRMED',
-    join_request:'♟ NEW PLAYER JOIN REQUEST',
-    member_joined:'✓ NEW MEMBER READY',
-    rsvp_changed:'♟ RSVP UPDATED',
-    game_changed:'♠ GAME DETAILS CHANGED',
-    game_cancelled:'♠ POKER NIGHT CANCELLED',
-    member_approved:'✓ YOU CAN JOIN YOUR ROOM',
-    buyin:'🪙 BUY-IN RECORDED',
-    rebuy:'🪙 REBUY RECORDED',
-    cashout:'💵 CASH-OUT RECORDED',
-    game_settled:'📋 GAME SETTLED — REVIEW PAYMENT',
-    payment_status:'📋 PAYMENT STATUS UPDATED',
-    payment_reminder:'💳 PAYMENT FOLLOW-UP',
-    test:'✓ PKR ALERT TEST',
+  const fallbacks = {
+    game_scheduled:'♠ New poker game scheduled',
+    game_reminder:'♠ Poker night reminder',
+    rsvp_confirmed:'RSVP confirmed',
+    join_request:'Approval needed: new player',
+    member_joined:'New member joined',
+    rsvp_changed:'Player RSVP updated',
+    game_changed:'Poker night details changed',
+    game_cancelled:'Poker night cancelled',
+    member_approved:'Your group access is approved',
+    buyin:'Buy-in recorded',
+    rebuy:'Rebuy recorded',
+    cashout:'Cash-out recorded',
+    game_settled:'Game results are ready',
+    settlement_request:'Settlement requires your attention',
+    payment_status:'Payment status changed',
+    payment_reminder:'Payment follow-up',
+    test:'PKR test notification',
   };
-  const heading=headings[kind] || data.title || 'PKR Reloaded';
-  const route=kind==='game_scheduled'&&data.data?.gameId ? '/games/'+data.data.gameId+'/rsvp' : null;
-  event.waitUntil(self.registration.showNotification(heading, {
-    body: data.body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: kind + ':' + (data.data?.gameId || data.data?.eventId || 'general') + ':' + (data.data?.notificationId || 'latest'),
+  // The server supplies context such as group name, amount and next action.
+  // Do not discard it in favour of a generic headline.
+  const title=typeof data.title==='string'&&data.title.trim()
+    ?data.title.trim().slice(0,140):(fallbacks[kind]||'PKR update');
+  let body=typeof data.body==='string'?data.body.trim().slice(0,300):'';
+  if(!body&&kind==='game_scheduled'&&data.data?.scheduled_at){
+    const dt=new Date(data.data.scheduled_at*1000).toLocaleString(undefined,{
+      weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'
+    });
+    body=dt+(data.data.location?' · '+data.data.location:'')+' — open PKR to RSVP.';
+  }
+  if(!body)body='Open PKR to see the update and what to do next.';
+  const important=['join_request','game_reminder','game_changed','cashout',
+    'game_settled','settlement_request','payment_reminder'].includes(kind);
+  const urgent=['join_request','settlement_request','payment_reminder'].includes(kind);
+  const route=kind==='game_scheduled'&&data.data?.gameId ?
+    '/games/'+data.data.gameId+'/rsvp' : null;
+  // Vibration is supported by some Android browsers; iOS controls alert
+  // sound, volume and vibration through system settings and Focus.
+  const pattern=urgent?[220,100,220,100,300]:important?[180,80,180,80,220]:[140,75,140];
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    icon:'/icon-192.png',
+    badge:'/icon-192.png',
+    tag:kind+':'+(data.data?.gameId||data.data?.eventId||'general')+':'+
+      (data.data?.notificationId||'latest'),
     renotify:true,
-    requireInteraction: kind === 'cashout' || kind === 'game_settled' || kind === 'join_request',
-    vibrate:kind==='join_request'?[180,80,180,80,250]:kind==='buyin'?[90,55,90,55,160]:kind==='cashout'||kind==='game_settled'?[260,100,260,100,260]:[200,100,200],
-    data: {...(data.data || {}),url:route || data.data?.url},
-    actions: [{ action:'view', title:'View' }, { action:'dismiss', title:'Dismiss' }],
+    requireInteraction:urgent,
+    vibrate:pattern,
+    data:{...(data.data||{}),url:route||data.data?.url},
+    actions:[{action:'view',title:'Open PKR'},{action:'dismiss',title:'Dismiss'}],
   }));
 });
 
