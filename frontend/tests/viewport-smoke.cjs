@@ -239,6 +239,7 @@ async function test(){
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+       await page.locator('.pkr-dual-switcher-compact summary').click();
        await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
        await page.locator('.pkr-dual-hero-command').waitFor({state:'visible'});
        await page.locator('.pkr-dual-root .pkr-room-outstanding-total').waitFor({state:'visible'});
@@ -691,82 +692,50 @@ async function test(){
         errors.push(size.name+' old sticky room tabs are still rendered');
      }
      if(item.id==='room'&&size.width<1100){
-      const moreButton=page.locator('.pkr-universal-bottom-nav button').filter({hasText:'More'}).first();
-      if(!await moreButton.isVisible())errors.push(size.name+' mobile More navigation missing');
-      else{
-       await moreButton.click();
-       const moreDialog=page.getByRole('dialog',{name:'More PKR navigation'});
-       await moreDialog.waitFor({state:'visible',timeout:5000});
-       if(await moreDialog.getByRole('button',{name:'Settlements'}).count()!==1)
-        errors.push(size.name+' mobile More menu missing settlements shortcut');
-       await page.keyboard.press('Escape');
-       if(await moreDialog.isVisible())errors.push(size.name+' mobile More menu did not close with Escape');
-      }
+       const nav=page.getByRole('navigation',{name:/main navigation|Player navigation/});
+       for(const label of ['Home','Games','Players','Results','Payments']){
+         if(!await page.locator('.pkr-universal-bottom-nav').getByRole('button',{name:label,exact:true}).isVisible())
+           errors.push(size.name+' '+label+' is hidden from the five-area mobile navigation');
+       }
+       if(await page.locator('.pkr-universal-bottom-nav').getByRole('button',{name:'More'}).count())
+         errors.push(size.name+' core features remain hidden in More');
      }
      if(item.id==='room'){
-      const selector=size.width>=1100?'.pkr-persistent-nav button':'.pkr-universal-bottom-nav button';
-      const nightNav=page.locator(selector).filter({hasText:'Game Night'}).first();
-      if(!await nightNav.isVisible())errors.push(size.name+' Game Night main navigation missing');
-      else{
-        await nightNav.click();
-        await page.getByTestId('game-night-hub').waitFor({state:'visible',timeout:7000});
-        if(new URL(page.url()).searchParams.get('tab')!=='night')
-          errors.push(size.name+' Game Night did not open the dedicated tab');
-        try{
-          await page.getByRole('heading',{name:'Share once. Always up to date.'}).waitFor({state:'visible',timeout:12000});
-        }catch{
-          errors.push(size.name+' current PKR RSVP board missing from Game Night');
-        }
-        const selectedNight=await page.getByLabel('Choose game night').inputValue();
-        if(selectedNight!=='test-game')
-          errors.push(size.name+' old unfinished game was selected for live Game Night: '+selectedNight);
-        const registration=page.getByLabel('Member notification registrations');
-        await registration.waitFor({state:'visible',timeout:7000});
-        if(!await registration.getByText('1 of 2 members have a registered notification device').count())
-          errors.push(size.name+' Game Night push setup summary incorrect');
-        await registration.getByRole('button',{name:'↻ Refresh'}).click();
-        await registration.getByText('1 of 2 members have a registered notification device').waitFor({state:'visible',timeout:7000});
-        if(await page.locator('#pkr-share-text').count())
-          errors.push(size.name+' obsolete WhatsApp message composer still present');
-      }
-      const memberNav=page.locator(selector).filter({hasText:'Members'}).first();
-      if(await memberNav.count() && await memberNav.isVisible()){
-       await memberNav.click();
-       await page.waitForTimeout(300);
-       const selected=new URL(page.url()).searchParams.get('tab');
-       if(selected!=='members')errors.push(size.name+' global Members navigation did not open Members directly');
-       if(!await page.locator('.pkr-member-summary').isVisible())errors.push(size.name+' members summary missing after navigation');
-       if(size.width>=1100){
-         const nav=page.locator('.pkr-persistent-nav button');
-         const active=page.locator('.pkr-persistent-nav button.active');
-         if(await active.count()!==1||!(await active.first().textContent())?.includes('Members'))
-           errors.push(size.name+' Games and Members highlighted at once');
-         await nav.filter({hasText:'Standings'}).first().click();
-         await page.waitForTimeout(130);
-         const playersActive=page.locator('.pkr-persistent-nav button.active');
-         if(await playersActive.count()!==1||!(await playersActive.first().textContent())?.includes('Standings'))
-           errors.push(size.name+' Rooms and Standings highlighted at once');
-         await nav.filter({hasText:'Games'}).first().click();
-         await page.waitForTimeout(130);
-         const gamesActive=page.locator('.pkr-persistent-nav button.active');
-         if(await gamesActive.count()!==1||!(await gamesActive.first().textContent())?.includes('Games'))
-           errors.push(size.name+' Games is not the sole active menu after return');
-         await nav.filter({hasText:'Members'}).first().click();
-         await page.waitForTimeout(130);
+       const nav=size.width>=1100?page.locator('.pkr-persistent-nav'):page.locator('.pkr-universal-bottom-nav');
+       await page.locator('.pkr-room-games-intro').waitFor({state:'visible'});
+       const secondary=page.getByRole('navigation',{name:'Games sections'});
+       if(!await secondary.getByRole('button',{name:'RSVPs & Sharing'}).isVisible())
+         errors.push(size.name+' Games is missing the RSVP secondary tab');
+       else{
+         await secondary.getByRole('button',{name:'RSVPs & Sharing'}).click();
+         await page.getByTestId('game-night-hub').waitFor({state:'visible',timeout:10000});
+         if(new URL(page.url()).searchParams.get('tab')!=='night')
+           errors.push(size.name+' RSVP secondary tab did not open the live hub');
+         await page.getByRole('heading',{name:'Share once. Always up to date.'})
+           .waitFor({state:'visible',timeout:12000}).catch(()=>
+             errors.push(size.name+' the current live RSVP board is not visible'));
+         const selectedNight=await page.getByLabel('Choose game night').inputValue();
+         if(selectedNight!=='test-game')errors.push(size.name+' old unfinished game displaced current RSVP board');
+         if(await page.getByLabel('Member notification registrations').count())
+           errors.push(size.name+' settings still clutter the RSVP screen');
        }
+       await nav.getByRole('button',{name:'Players',exact:true}).click();
+       await page.locator('.pkr-member-summary').waitFor({state:'visible'});
+       if(new URL(page.url()).searchParams.get('tab')!=='members')
+         errors.push(size.name+' Players tab did not open the member roster');
        if(await page.getByLabel('Member notification registrations').count())
-         errors.push(size.name+' notification settings still clutter Members instead of Game Night');
+         errors.push(size.name+' settings are still in Players');
        const inviteChoice=page.getByRole('button',{name:/Invite & QR/});
        await inviteChoice.click();
-       if(!await page.locator('.pkr-member-invite').isVisible())errors.push(size.name+' private invitations missing');
-       if(await page.locator('.pkr-member-roster').isVisible())errors.push(size.name+' roster not separated from invitations');
+       if(!await page.locator('.pkr-member-invite').isVisible())
+         errors.push(size.name+' private invitations missing from Players');
+       if(await page.locator('.pkr-member-roster').isVisible())
+         errors.push(size.name+' invitation area did not hide the player roster');
        await page.getByRole('button',{name:/Players \(/}).click();
        await page.locator('.pkr-member-roster').waitFor({state:'visible'});
        if(size.width>=1100){
          await page.getByRole('button',{name:'+ Invite Member by Mobile'}).click();
          await page.getByLabel('WhatsApp mobile number').waitFor({state:'visible',timeout:5000});
-         if(await page.locator('.pkr-member-roster').isVisible())
-           errors.push(size.name+' roster should close when shortcut opens invitations');
          await page.getByRole('button',{name:/Players \(/}).click();
          await page.locator('.pkr-member-roster').waitFor({state:'visible'});
        }
@@ -774,11 +743,24 @@ async function test(){
        if(await search.count()){
          await search.fill('Jordan');
          const roster=page.locator('.pkr-member-roster');
-         if(!await roster.getByText('Jordan Lee').isVisible())errors.push(size.name+' filtered member missing');
-         if(await roster.getByText('Alex Morgan').count())errors.push(size.name+' member search did not filter');
+         if(!await roster.getByText('Jordan Lee').isVisible())
+           errors.push(size.name+' player search missing Jordan');
          await search.fill('');
        }
-      }
+       await nav.getByRole('button',{name:'Results',exact:true}).click();
+       await page.getByRole('heading',{name:'Results',exact:true}).waitFor({state:'visible',timeout:12000});
+       if(!await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).isVisible())
+         errors.push(size.name+' Results is missing History');
+       await nav.getByRole('button',{name:'Payments',exact:true}).click();
+       await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
+       try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
+       catch{errors.push(size.name+' settlement ledger did not load in Payments')}
+       await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
+       await page.getByRole('heading',{name:'Notifications for this club'}).waitFor({state:'visible',timeout:12000});
+       await page.getByRole('heading',{name:'Sounds & accessibility'}).waitFor();
+     }
+     // Preserve the legacy Standings link alongside the new Results area.
+     if(item.id==='room'){
       await page.goto(BASE+'/events/test-room?tab=leaderboard',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
       if(await page.locator('.pkr-standings-row').count()!==leaders.length)

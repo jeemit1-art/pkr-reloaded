@@ -1,0 +1,16 @@
+.pkr-account-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.pkr-account-layout>.pkr-primary-panel{height:100%;min-height:150px}
+.pkr-account-layout>.pkr-primary-panel p strong{color:#f9e6b6}
+.pkr-account-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
+.pkr-account-label{display:grid;gap:7px;color:#e4c782;font-size:12px;margin:15px 0}
+.pkr-account-label select{width:100%}
+.pkr-account-status{padding:11px 13px;border:1px solid #446953;background:#17372a;border-radius:10px}
+.pkr-account-plan{align-self:center;color:#e4c782;font-size:12px;font-weight:750;padding-right:4px}
+.pkr-account-notification-summary{border-top:1px solid #395d46;margin-top:18px;padding-top:13px}
+.pkr-account-notification-summary>strong{font-size:13px;color:#f5de9b}
+.pkr-account-notice{padding:13px 16px;margin:12px 0;border-radius:10px;border:1px solid #6b814d;background:#27402d;color:#ffefa6;font-size:12px;line-height:1.5}
+.pkr-account-page .pkr-sound-control{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pkr-account-page .pkr-sound-control>div{flex:1 1 180px}
+.pkr-account-page .pkr-sound-control strong{font-size:13px}
+.pkr-account-page .pkr-sound-control button{min-height:40px;border:1px solid #56745b;border-radius:9px;background:#1b402e;color:#f0e3c0;padding:9px 12px}
+@media(max-width:760px){.pkr-account-layout{grid-template-columns:1fr}}

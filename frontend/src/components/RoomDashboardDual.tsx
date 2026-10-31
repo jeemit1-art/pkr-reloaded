@@ -9,6 +9,7 @@ import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomT
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import './RoomDashboardDual.css';
 import './RoomDashboardRefit.css';
+import './DashboardDiscoverability.css';
 
 type Props={
   room:Event;
@@ -159,13 +160,13 @@ export default function RoomDashboardDual({
     router.push('/games/'+encodeURIComponent(active.id)+'/play');
   };
   const goMembers=()=>onMembers?onMembers():router.push('/events/'+encodeURIComponent(room.id)+'?tab=members');
-  const goHistory=()=>onHistory?onHistory():router.push('/events/'+encodeURIComponent(room.id)+'?tab=history');
+  const goHistory=()=>router.push('/results?room='+encodeURIComponent(room.id)+'&view=history');
   const goGameNight=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=night'+(featured?'&game='+encodeURIComponent(featured.id):''));
   const goInvite=()=>viewerIsHost?(onInvite?onInvite():goMembers()):goMembers();
   const goCreate=()=>canManageGames?(onCreateGame?onCreateGame():openRoom()):openRoom();
   const goSchedule=()=>router.push('/schedule');
-  const goPayments=()=>router.push('/insights?room='+encodeURIComponent(room.id)+'&payments=outstanding#pkr-settlement');
-  const goLeaders=()=>router.push('/events/'+encodeURIComponent(room.id)+'?tab=leaderboard');
+  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=outstanding');
+  const goLeaders=()=>router.push('/results?room='+encodeURIComponent(room.id));
   const goRsvp=()=>featured&&router.push('/games/'+encodeURIComponent(featured.id)+'/rsvp');
   const goQuickBuyin=(amount:number)=>{
     if(!active||!canManageGames)return;
@@ -261,13 +262,13 @@ export default function RoomDashboardDual({
           </div>}
         </div>}
       </header>
-      <div className="pkr-dual-switcher" aria-label="Dashboard presentation">
-        <div className="pkr-dual-switcher-heading">
+      <details className="pkr-dual-switcher pkr-dual-switcher-compact" aria-label="Customise dashboard">
+        <summary className="pkr-dual-switcher-heading" aria-label="Customise dashboard">
           <span className="pkr-dual-diamond">◆</span>
-          <div><strong>Dashboard experience</strong>
-            <small>{viewerIsHost?'Host-controlled · saved for all room members':
-              'Selected by your room host'}</small></div>
-        </div>
+          <div><strong>Customise dashboard</strong>
+            <small>{viewerIsHost?'Choose your shared club dashboard':'Chosen by your host'}</small></div>
+          <span className="pkr-dashboard-layout-arrow" aria-hidden="true">⌄</span>
+        </summary>
         {viewerIsHost&&<div className="pkr-dual-switch-actions" role="group" aria-label="Host dashboard layout">
           <button type="button" aria-pressed={layoutReady&&layout==='command'}
             disabled={!viewerIsHost||!layoutReady||saving}
@@ -278,7 +279,7 @@ export default function RoomDashboardDual({
             onClick={()=>void choose('live')} className={layout==='live'?'active':''}>
             ♠ <span>Live Poker</span></button>
         </div>}
-      </div>
+      </details>
       {layoutError&&<p role="alert" className="pkr-dual-error">{layoutError}</p>}
       {!layoutReady?<div role="status" className="pkr-dual-wait">Loading the room's saved layout…</div>:layout==='command'?<>
         <div className="pkr-dual-heading">
@@ -300,12 +301,14 @@ export default function RoomDashboardDual({
         </section>
         <RoomOutstandingCard roomId={room.id}/>
         <section className="pkr-dual-block">
-          <div className="pkr-dual-section-title"><h3>Quick Actions</h3><small>Get the game going</small></div>
+          <div className="pkr-dual-section-title"><h3>What you can do in PKR</h3><small>Everything in one place</small></div>
           <div className="pkr-dual-quick-grid">
             <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':canManageGames?'Create Game':'View Games'}</strong><small>{canManageGames?'Manage a session':'Review game sessions'}</small></button>
-            <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Game Night</strong><small>Live RSVPs & seats</small></button>
-            <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Next game night</small></button>
-            <button type="button" onClick={onScan||goMembers}><b><DashIcon name="scan"/></b><span>↗</span><strong>{onScan?'Scan Invite':'View Players'}</strong><small>{onScan?'Join a room':'Private roster'}</small></button>
+            <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span><strong>RSVPs & Seats</strong><small>Live board & WhatsApp</small></button>
+            <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Calendar & dates</small></button>
+            <button type="button" onClick={goMembers}><b><DashIcon name="people"/></b><span>↗</span><strong>Players</strong><small>Profiles & invitations</small></button>
+            <button type="button" onClick={goLeaders}><b><DashIcon name="trophy"/></b><span>↗</span><strong>Results</strong><small>Rankings & history</small></button>
+            <button type="button" onClick={goPayments}><b><DashIcon name="wallet"/></b><span>↗</span><strong>Payments</strong><small>Settle outstanding</small></button>
           </div>
         </section>
         <section className="pkr-dual-nextgame">
@@ -442,9 +445,9 @@ export default function RoomDashboardDual({
             <p className="pkr-dual-help">Select an amount, then select a player at the table to confirm. No buy-in is recorded here.</p>
           </section>
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>♟ Game Night RSVPs</h3><small>Live board</small></div>
+            <div className="pkr-dual-section-title"><h3>♟ RSVP & WhatsApp updates</h3><small>Live board</small></div>
             <p className="pkr-dual-help">Current attendance, arrival times, available seats and one-tap WhatsApp updates are in Game Night.</p>
-            <button type="button" className="pkr-dual-wide-link" onClick={goGameNight}>Open Game Night →</button>
+            <button type="button" className="pkr-dual-wide-link" onClick={goGameNight}>Manage RSVPs →</button>
           </section>
         </div>
         <section className="pkr-dual-data-card pkr-dual-settlements">

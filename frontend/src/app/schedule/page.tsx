@@ -3,6 +3,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,fmtDate,type Event,type Game} from '@/lib/api';
 import {isCurrentGame,isLiveGame,isUnfinishedGame,gameStatusLabel} from '@/lib/game-status';
+import GamesSectionTabs from '@/components/GamesSectionTabs';
 
 type Scheduled={room:Event;game:Game};
 type Filter='all'|'live'|'upcoming'|'unfinished';
@@ -12,6 +13,10 @@ export default function SchedulePage(){
  const [items,setItems]=useState<Scheduled[]>([]);
  const [loading,setLoading]=useState(true),[error,setError]=useState('');
  const [roomId,setRoomId]=useState('all'),[filter,setFilter]=useState<Filter>('all'),[search,setSearch]=useState('');
+ useEffect(()=>{
+   const q=new URLSearchParams(window.location.search).get('room');
+   if(q)setRoomId(q);
+ },[]);
 
  async function refresh(){
    setLoading(true);setError('');
@@ -43,10 +48,11 @@ export default function SchedulePage(){
  ).sort((a,b)=>(isLiveGame(b.game)?1:0)-(isLiveGame(a.game)?1:0)||a.game.scheduled_at-b.game.scheduled_at),[items,roomId,filter,search]);
 
  return <main className="pkr-schedule-page">
+   <GamesSectionTabs roomId={roomId==='all'?'':roomId} active="calendar"/>
    <header className="pkr-schedule-hero">
      <span className="pkr-eyebrow">♠ YOUR POKER CALENDAR</span>
      <h1>Game Schedule</h1>
-     <p>Find upcoming poker nights, live tables and historical unfinished games without losing any records.</p>
+     <p>All your upcoming and live games, with quick links to manage RSVPs and open the table.</p>
      <div className="pkr-schedule-counts">
        <span><strong>{current.length}</strong> upcoming &amp; live</span>
        <span><strong>{live}</strong> live now</span>

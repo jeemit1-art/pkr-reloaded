@@ -97,6 +97,15 @@ async function run(){
     await page.goto(BASE+'/insights',{waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="current-outstanding"]').filter({hasText:'$100'}).waitFor();
     const nav=page.locator('.pkr-universal-bottom-nav');
+    const primary=width<1100?page.locator('.pkr-universal-bottom-nav'):page.locator('.pkr-persistent-nav');
+    await primary.waitFor({state:'visible'});
+    for(const label of ['Home','Games','Players','Results','Payments']){
+      assert.equal(await primary.getByRole('button',{name:label,exact:true}).count(),1,
+        'The '+label+' primary tab must be visible on every screen');
+    }
+    assert.equal(await primary.getByRole('button',{name:'More'}).count(),0,
+      'Primary features must not be hidden behind More');
+
     if(width<1100){await nav.waitFor({state:'visible'});const b=await nav.boundingBox();assert(b.y>height/2&&b.y+b.height<=height+1,'Bottom navigation is at the top or outside viewport');}
     assert.equal(await page.locator('.pkr-insights-kpis .pkr-metric-trigger').count(),5);
     for(const [index,count] of [[0,3],[1,2],[2,2],[3,2],[4,2]]){
@@ -144,6 +153,7 @@ async function run(){
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+    await page.locator('.pkr-dual-switcher-compact summary').click();
     await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
     assert.equal(await page.getByRole('button',{name:/Command Centre/}).getAttribute('aria-pressed'),'true');
     assert.equal(await page.getByRole('button',{name:/Live Poker/}).getAttribute('aria-pressed'),'false');
@@ -200,7 +210,10 @@ async function run(){
       return !!money&&!!actions&&!!(money.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING);
     });
     assert(prioritised,'Outstanding payments must appear before action shortcuts');
-    // Host changes the shared preference through the real app API (synthetic Worker).
+    // A preceding payment-error regression deliberately reloads the page and
+    // closes the compact dashboard selector. Reopen it before changing layouts.
+    if(await page.locator('.pkr-dual-switcher-compact').getAttribute('open')===null)
+      await page.locator('.pkr-dual-switcher-compact summary').click();
     await page.getByRole('button',{name:/Live Poker/}).click();
     await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
     if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
@@ -208,6 +221,7 @@ async function run(){
     assert.equal(await page.getByTestId('dual-dashboard').getAttribute('data-layout'),'live');
     await page.reload({waitUntil:'domcontentloaded'});
     await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
+    await page.locator('.pkr-dual-switcher-compact summary').click();
     assert.equal(layoutWrites,1,'Reload must reuse the saved server layout, not write again');
     await page.getByRole('button',{name:/Command Centre/}).click();
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
@@ -285,11 +299,36 @@ async function run(){
       assert.equal(await page.getByRole('button',{name:/Share current RSVP update/}).isEnabled(),true);
       assert.equal(await page.locator('.pkr-night-stats strong').count(),4,'RSVP totals must come from PKR');
       await page.screenshot({path:path.join(output,'chromium-phone-game-night.png'),fullPage:false});
-      await page.goto(BASE+'/events/test-room?tab=night&game=test-finished',{waitUntil:'domcontentloaded'});
-      await page.getByRole('heading',{name:'Results and private settlements'}).waitFor();
-      await page.getByRole('heading',{name:'Outstanding private payments (1)'}).waitFor();
-      assert.equal(await page.getByRole('button',{name:/Share group-safe results/}).count(),1);
-      assert.equal(await page.getByRole('checkbox',{name:/Include each player/}).isChecked(),false);
+      await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Player standings'}).waitFor();
+      await page.getByLabel('Search results by player').fill('Jordan');
+      assert.equal(await page.locator('.pkr-results-rank').count(),1,'Results search must filter recorded players');
+      await page.getByLabel('Search results by player').fill('');
+      await page.getByLabel('Sort results standings').selectOption('games');
+      assert.equal(await page.locator('.pkr-results-podium-card').count(),2,'Results retains the top-player podium');
+      await page.goto(BASE+'/results?room=test-room&view=history',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Completed games'}).waitFor();
+      const whatsappShare=page.getByRole('button',{name:/Share in WhatsApp/}).first();
+      try{await whatsappShare.waitFor({state:'visible',timeout:10000})}
+      catch{
+        const details=await page.locator('.pkr-primary-panel').first().innerText();
+        throw new Error('Host results sharing was not ready: '+details.slice(0,400));
+      }
+      assert.equal(await page.getByRole('checkbox',{name:/Include player net amounts/}).isChecked(),false);
+      await page.goto(BASE+'/payments?room=test-room&payments=outstanding',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Payments',exact:true}).waitFor();
+      await page.getByRole('button',{name:/Private reminder/}).first().waitFor();
+      await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Account & settings'}).waitFor();
+      await page.getByRole('heading',{name:'Notifications for this club'}).waitFor();
+      await page.goto(BASE+'/events/test-room?tab=games',{waitUntil:'domcontentloaded'});
+      const sections=page.getByRole('navigation',{name:'Games sections'});
+      await sections.waitFor({state:'visible',timeout:15000});
+      for(const name of ['Sessions','RSVPs & Sharing','Calendar']){
+        const control=sections.getByRole('button',{name,exact:true});
+        await control.waitFor({state:'visible',timeout:10000});
+        assert.equal(await control.count(),1,'Games subtab '+name+' should have one visible action');
+      }
       await page.goto(BASE+'/games/test-game/share',{waitUntil:'domcontentloaded'});
       await page.getByTestId('game-night-hub').waitFor();
       assert.match(page.url(),/tab=night/,'Old sharing URLs must redirect to Game Night');
@@ -298,7 +337,13 @@ async function run(){
     }
     assert(!/\blegacy\b/i.test(await page.locator('body').innerText()),'Obsolete status terminology visible');
     assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Dialog scroll lock leaked');
-    assert.deepEqual(unexpected,[]);console.log('PASS',engine,name);
+    // WebKit can report an aborted synthetic CORS fetch as a runtime error
+    // when the test navigates away during its pending join-request poll.
+    // Keep every unrelated exception fatal.
+    const unexpectedReal=unexpected.filter(message=>
+      !(engine==='webkit'&&message.includes('Fetch API cannot load')&&
+        message.includes('/join-requests due to access control checks')));
+    assert.deepEqual(unexpectedReal,[]);console.log('PASS',engine,name);
    }catch(error){errors.push(engine+' '+name+': '+error.stack);await page.screenshot({path:path.join(output,engine+'-'+name+'-failure.png')}).catch(()=>{});}
    finally{await context.close();}
   }}finally{await browser.close();}

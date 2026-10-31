@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {
   api,fmtDate,type EventDetail,type EventMember,type Game,type GameDetail,
@@ -12,7 +12,7 @@ import {createPkrResultsImage} from '@/lib/pkr-results-image';
 import {isCurrentGame} from '@/lib/game-status';
 import './GameNightTools.css';
 
-type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void;notificationTools?:ReactNode};
+type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void};
 type Data={game:GameDetail;board:RsvpBoardData|null;results:ResultsData|null;boardError:string;resultsError:string};
 type ShareKind='invitation'|'update'|'live'|'results';
 const money=(cents:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(cents/100);
@@ -20,13 +20,12 @@ const errorMessage=(error:unknown)=>error instanceof Error?error.message:'Unable
 const validTransfer=(value:Transfer)=>!!value.id&&value.amount>0&&Number.isSafeInteger(value.amount)&&
   ['owed','not_received','payer_claimed'].includes(value.status||'');
 
-export default function GameNightTools({event,games,isHost,onMembers,onSchedule,notificationTools}:Props){
+export default function GameNightTools({event,games,isHost,onMembers,onSchedule}:Props){
   const router=useRouter();
   const availableGames=useMemo(()=>{
     const future=games.filter(g=>isCurrentGame(g))
       .sort((a,b)=>(a.status==='active'?-1:0)-(b.status==='active'?-1:0)||a.scheduled_at-b.scheduled_at);
-    const complete=games.filter(g=>g.status==='settled').sort((a,b)=>b.scheduled_at-a.scheduled_at).slice(0,5);
-    return [...future,...complete];
+    return future;
   },[games]);
   const [selectedId,setSelectedId]=useState('');
   const currentGameRef=useRef('');
@@ -266,36 +265,35 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
     finally{setImageBusy(false)}
   }
 
+  const instantPanel=<section className="pkr-night-panel" aria-label="No-install player access">
+    <div className="pkr-night-panel-heading">
+      <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
+        <h3>PKR Instant — no installation</h3></div>
+    </div>
+    <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
+    <div className="pkr-night-actions">
+      <button type="button" className="pkr-night-primary"
+        onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
+      <button type="button" onClick={()=>void copied(
+        window.location.origin+'/instant?room='+encodeURIComponent(event.id),
+        'PKR Instant room link')}>Copy member link</button>
+    </div>
+  </section>;
+
   if(!availableGames.length)return <section className="pkr-night-hub" aria-label="Game Night">
     <header className="pkr-night-heading"><div><span>RSVPs · SEATS · SHARING</span><h1>Game Night</h1>
-      <p>Once a game is scheduled, live attendance and sharing actions will appear here.</p></div></header>
+      <p>Live RSVPs, seats and WhatsApp updates for upcoming games.</p></div></header>
     <div className="pkr-night-empty"><strong>No game night to manage</strong><p>Schedule a game to create its private RSVP board and live link.</p>
-      {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}</div>
-    <section className="pkr-night-panel" aria-label="No-install player access">
-      <div className="pkr-night-panel-heading">
-        <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
-          <h3>PKR Instant — no installation</h3></div>
-      </div>
-      <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
-      <div className="pkr-night-actions">
-        <button type="button" className="pkr-night-primary"
-          onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
-        <button type="button" onClick={()=>void copied(
-          window.location.origin+'/instant?room='+encodeURIComponent(event.id),
-          'PKR Instant room link')}>Copy member link</button>
-      </div>
-    </section>
-    {notificationTools&&<section className="pkr-night-notification-tools" aria-label="Game night alerts and notification settings">
-      <div className="pkr-night-notification-title"><span className="pkr-night-kicker">FREE PKR ALERTS</span>
-        <h3>Notifications & device setup</h3><p>Enable PKR push and sound even before your first game has been scheduled.</p></div>
-      {notificationTools}
-    </section>}
+      {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}
+      <button type="button" onClick={()=>router.push('/results?room='+encodeURIComponent(event.id)+'&view=history')}>View completed games →</button>
+      <button type="button" onClick={()=>router.push('/account')}>Notification settings →</button></div>
+    {instantPanel}
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
     <header className="pkr-night-heading">
       <div><span>RSVPs · SEATS · COMMUNICATION</span><h1>Game Night</h1>
-        <p>Live game information and one-tap actions. No message drafting or paid WhatsApp service.</p>
+        <p>Open RSVPs and available seats, or share the latest attendance through free WhatsApp drafts.</p>
       </div>
       <label>Session<select aria-label="Choose game night" value={selectedId} onChange={e=>setGame(e.target.value)}>
         {availableGames.map(g=><option key={g.id} value={g.id}>{fmtDate(g.scheduled_at)} · {g.status==='settled'?'Completed':g.status==='active'?'Live':'Upcoming'}</option>)}
@@ -398,56 +396,11 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
         </div>
       </section>}
 
-      {current?.status==='settled'&&<section className="pkr-night-panel">
-        <span className="pkr-night-kicker">AFTER THE GAME</span><h3>Results and private settlements</h3>
-        {!canPublish?<p className="pkr-night-warning">Saved, reconciled results are required before sharing.
-          {selectedState?.resultsError?' '+selectedState.resultsError:''}</p>:<>
-          <p>Share the final results card with your group. Individual payment instructions are never included in group messages.</p>
-          {isHost&&<label className="pkr-night-check"><input type="checkbox" checked={includeAmounts} onChange={e=>setIncludeAmounts(e.target.checked)}/>
-            Include each player's net amount in the group results (off by default)</label>}
-          <div className="pkr-night-actions">
-            <button className="pkr-night-primary" type="button" onClick={openResults}>View saved results ↗</button>
-            {isHost&&<button type="button" onClick={()=>void shareWhatsapp('results')}>Share group-safe results</button>}
-            {isHost&&<button type="button" disabled={imageBusy} onClick={()=>void shareResultsImage()}>{imageBusy?'Creating card…':'Share results image'}</button>}
-          </div>
-          {isHost&&<div className="pkr-night-payments">
-            <h4>Outstanding private payments ({outstanding.length})</h4>
-            {outstanding.length===0?<p className="pkr-night-muted">No outstanding verified payments.</p>:
-              outstanding.map(t=>{
-                const to=t.status==='payer_claimed'?t.to:t.from;
-                const phone=normaliseWhatsappPhone(contacts.find(c=>c.status==='joined'&&c.user_id===to)?.phone);
-                return <div className="pkr-night-followup" key={t.id}>
-                  <div><strong>{t.from_name} → {t.to_name} · {money(t.amount)}</strong>
-                    <small>{t.status==='payer_claimed'?'Receiver needs to confirm receipt':'Payer needs to mark payment sent'}</small></div>
-                  <button type="button" disabled={!!paymentBusy} onClick={()=>void paymentReminder(t,phone?'whatsapp':'copy')}>
-                    {paymentBusy===t.id?'Verifying…':phone?'Private WhatsApp ↗':'Copy reminder'}
-                  </button>
-                </div>;
-              })}
-          </div>}
-        </>}
-      </section>}
     </>}
 
-    <section className="pkr-night-panel" aria-label="No-install player access">
-      <div className="pkr-night-panel-heading">
-        <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
-          <h3>PKR Instant — no installation</h3></div>
-      </div>
-      <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
-      <div className="pkr-night-actions">
-        <button type="button" className="pkr-night-primary"
-          onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
-        <button type="button" onClick={()=>void copied(
-          window.location.origin+'/instant?room='+encodeURIComponent(event.id),
-          'PKR Instant room link')}>Copy member link</button>
-      </div>
-    </section>
-    {notificationTools&&<section className="pkr-night-notification-tools" aria-label="Game night alerts and notification settings">
-      <div className="pkr-night-notification-title"><span className="pkr-night-kicker">FREE PKR ALERTS</span>
-        <h3>Notifications & device setup</h3><p>Control free PKR push alerts and sound from here. WhatsApp messages still require a manual send.</p></div>
-      {notificationTools}
-    </section>}
+    {instantPanel}
+    <div className="pkr-night-secondary-link"><button type="button" onClick={()=>router.push('/account')}>
+      Notification & sound settings →</button></div>
     {notice&&<p className="pkr-night-notice" role="status">{notice}</p>}
     <footer className="pkr-night-footer">WhatsApp drafts are sent manually by the host. PKR never reads WhatsApp chats, charges messaging fees or sends financial details to the group.</footer>
   </section>;

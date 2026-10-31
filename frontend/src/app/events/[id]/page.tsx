@@ -9,6 +9,7 @@ import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type R
 import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
+import GamesSectionTabs from '@/components/GamesSectionTabs';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import './room-dashboard-polish.css';
@@ -118,10 +119,7 @@ export default function EventPage() {
       setTab(requestedTab);
     const section=query.get('view');
     if(section==='notifications'&&requestedTab==='members'){
-      setTab('night');
-      const url=new URL(window.location.href);
-      url.searchParams.set('tab','night');url.searchParams.delete('view');
-      window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+      router.replace('/account');return;
     }else if(section==='requests'||section==='invite'||section==='roster')setMemberSection(section);
     if(query.get('inviteGame')){
       setSelectedInviteGameId(query.get('inviteGame')||'');
@@ -185,7 +183,7 @@ export default function EventPage() {
 
   // Only the host sees registered devices; endpoints and keys stay private.
   useEffect(()=>{
-    if(tab!=='night'||!isGroupOwner)return;
+    if(tab!=='members'||!isGroupOwner)return;
     let alive=true;
     setPushRegistrationLoading(true);
     setPushRegistrationError('');
@@ -482,47 +480,6 @@ export default function EventPage() {
     }
     selectTab('night');
   };
-  const notificationTools=(
-<section className="pkr-members-alert-panel" id="pkr-members-notifications" aria-label="Member notification settings">
-              <div className="pkr-members-alert-head">
-                <div><span className="pkr-eyebrow">STAY IN THE LOOP</span>
-                  <h3>{isGroupOwner?'Host notifications':'Your poker notifications'}</h3>
-                  <p>{isGroupOwner
-                    ?'Get a push alert when someone requests membership, plus game and RSVP updates.'
-                    :'Get alerts for games, results and important updates on this device.'}</p>
-                </div>
-                <button type="button" className="btn btn-primary" disabled={pushLoading}
-                  onClick={()=>void togglePush()}>
-                  {pushLoading?'Updating…':pushEnabled?'🔔 Alerts on — disable':'🔔 Enable push alerts'}
-                </button>
-              </div>
-              <ForegroundSoundToggle/>
-              <a href={'/install?group='+encodeURIComponent(id)} className="pkr-members-setup-link">Phone setup & notification test →</a>
-              {isGroupOwner&&(
-                <div className="pkr-host-push-overview" aria-label="Member notification registrations">
-                  <div className="pkr-host-push-overview-head">
-                    <div>
-                      <strong>Notification setup (not member availability)</strong>
-                      <p>
-                        {pushRegistrationLoading?'Checking registrations…'
-                          :pushRegistrationError?'Unable to check notification registrations'
-                          :pushRegistrationStatus
-                            ?(event.members||[]).filter((member:any)=>(pushRegistrationStatus[member.id]||0)>0).length+
-                              ' of '+(event.members||[]).length+' members have a registered notification device'
-                            :'Not checked yet'}
-                      </p>
-                    </div>
-                    <button type="button" className="btn btn-outline" disabled={pushRegistrationLoading}
-                      onClick={()=>setPushRegistrationRefresh(n=>n+1)}>
-                      {pushRegistrationLoading?'Checking…':'↻ Refresh'}
-                    </button>
-                  </div>
-                  {pushRegistrationError&&<p role="alert" className="pkr-host-push-error">{pushRegistrationError}</p>}
-                  <p className="pkr-host-push-disclaimer">A missing registration does not mean the player is unavailable or has declined the game. It only means this room has no recorded notification device for them. RSVP attendance is tracked separately. Registration does not guarantee delivery.</p>
-                </div>
-              )}
-            </section>
-  );
   return (
     <div className="pkr-app pkr-event pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
@@ -554,10 +511,12 @@ export default function EventPage() {
         </div>
       </div>
 
-      {/* Home alone contains the full dashboard and live snapshot.
-           Games, Game Night, Members, Standings and History open directly to their section. */}
+      {/* The Games subtabs are secondary navigation; the five primary areas stay visible. */}
             <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
         {pushError&&<div role="alert" className="pkr-unfinished-note" style={{marginBottom:12}}>{pushError}</div>}
+        {(tab==='games'||tab==='night')&&<GamesSectionTabs roomId={id}
+          active={tab==='night'?'rsvps':'sessions'}
+          onChoose={next=>selectTab(next==='rsvps'?'night':'games')}/>}
 
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
@@ -566,12 +525,12 @@ export default function EventPage() {
               <div>
                 <span className="pkr-eyebrow">GAME NIGHT</span>
                 <h1>Games</h1>
-                <p>{event.name} · Upcoming sessions, results and game history.</p>
+                <p>{event.name} · Scheduled games, live tables and unfinished sessions.</p>
               </div>
               <div className="pkr-room-games-links">
                 {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
-                {(upcoming[0]||settled[0])&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight((upcoming[0]||settled[0]).id)}>Game Night & RSVPs →</button>}
-                <button type="button" className="btn btn-outline" onClick={()=>selectTab('history')}>Game history →</button>
+                {upcoming[0]&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight(upcoming[0].id)}>Manage RSVPs →</button>}
+                <button type="button" className="btn btn-outline" onClick={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}>Completed games →</button>
               </div>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
@@ -617,13 +576,12 @@ export default function EventPage() {
 
         {/* Host communications and live RSVP management have their own room tab. */}
         {tab==='night'&&<GameNightTools event={event} games={games} isHost={isHost}
-          onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}
-          notificationTools={notificationTools}/>}
+          onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}/>}
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>
             <header className="pkr-member-summary">
-              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Members</h2><p>Player profiles, private invitations and host approvals. Game RSVPs and alerts live under Game Night.</p></div>
+              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Players</h2><p>Player profiles, invitations, membership approvals and roles. Game RSVPs live in Games; notifications are under Account.</p></div>
               <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
               <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
             </header>
