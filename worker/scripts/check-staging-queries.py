@@ -68,6 +68,10 @@ def main():
     # interpret this as approval to migrate staging or production remotely.
     rsvp_migration = ROOT / "migrations/20261025_staging_rsvp_board.sql"
     connection.executescript(rsvp_migration.read_text(encoding="utf-8"))
+    # Optional custom reply column is additive. Compile queries against an
+    # upgraded disposable copy without touching any remote D1 database.
+    choice_migration = ROOT / "migrations/20261031_rsvp_custom_choice.sql"
+    connection.executescript(choice_migration.read_text(encoding="utf-8"))
     # Private mobile roster is optional until verified on STAGING.
     phone_migration = ROOT / "migrations/20261025_staging_phone_members.sql"
     connection.executescript(phone_migration.read_text(encoding="utf-8"))

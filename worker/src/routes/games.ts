@@ -174,11 +174,26 @@ games.get('/games/:id', authMiddleware, async (c) => {
     return c.json({error:'Financial revision records are not initialised.',code:'REVISION_UNAVAILABLE'},503);
   const rsvps   = await c.env.DB.prepare('SELECT id,game_id,display_name,status,created_at FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC').bind(gameId).all();
   if(c.env.PKR_RSVP_V2==='1'){
-    const arrivals=await c.env.DB.prepare(
-      'SELECT id,game_id,display_name,status,arrival_option,seat_number,created_at,updated_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
-    ).bind(gameId).all<any>();
-    const names=new Set(arrivals.results.map(r=>r.display_name.toLowerCase()));
-    rsvps.results=[...arrivals.results,...rsvps.results.filter((r:any)=>!names.has(r.display_name.toLowerCase()))];
+    const [arrivals,settings]=await Promise.all([
+      c.env.DB.prepare(
+        'SELECT id,game_id,display_name,status,arrival_option,choice_value,seat_number,created_at,updated_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
+      ).bind(gameId).all<any>(),
+      c.env.DB.prepare('SELECT options_json FROM game_rsvp_arrivals WHERE game_id=?')
+        .bind(gameId).first<{options_json:string}>(),
+    ]);
+    let choices:Array<{value:string;status:'yes'|'maybe'|'no'}>=[];
+    try{
+      const parsed=JSON.parse(settings?.options_json||'[]');
+      if(parsed&&!Array.isArray(parsed)&&Array.isArray(parsed.answers))choices=parsed.answers;
+    }catch{}
+    const visible=arrivals.results.map(row=>{
+      const chosen=String(row.choice_value||row.arrival_option);
+      const custom=choices.find(option=>option.value===chosen);
+      const status=custom?.status||row.status;
+      return {...row,status,arrival_option:chosen,seat_number:status==='yes'?row.seat_number:null};
+    });
+    const names=new Set(visible.map(r=>r.display_name.toLowerCase()));
+    rsvps.results=[...visible,...rsvps.results.filter((r:any)=>!names.has(r.display_name.toLowerCase()))];
   }
   const event   = await c.env.DB.prepare('SELECT name, buy_in FROM events WHERE id=?').bind(game.event_id).first<any>();
   // If settled, attach transfers too

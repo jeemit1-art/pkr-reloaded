@@ -39,7 +39,8 @@ The five primary tabs remain Home, Games, Players, Results, Payments. Features p
 
 ## Changes in this proposed release
 - Editable 3–8 host RSVP text choices, including three stable mandatory presets (late, maybe, not-coming) and optional custom responses; explicit attendance classification protects counts and seats.
-- All settings stored with existing arrival choices, no schema migration. Old JSON arrays and older clients remain readable. The Worker update must precede the new frontend to enable saving.
+- Response vocabulary is stored with existing arrival choices; old JSON arrays remain readable. Actual per-player custom reply IDs use **one additive nullable D1 column**, `game_rsvp_guests.choice_value`. Existing `yes/no` CHECK, seat constraints and automatic game-start seating are preserved: Maybe stores a non-attending internal `no` while the API accurately reports Maybe.
+- **Migration required before Worker deployment:** `worker/migrations/20261031_rsvp_custom_choice.sql`, after verifying a production D1 backup and table layout. This migration has not been applied to production by the PR. If the migration is missing, new Worker queries would fail. Cloudflare Worker deployment must follow the migration and precede the frontend.
 - Configured labels appear on the live RSVP board, Game Night list and PKR Instant; maybe/no cannot reserve a seat.
 - Direct RSVP Settings links from Game Night, Games and Home, with a deep link to host controls.
 - Matching feature shortcuts in both Command Centre and Live Poker.
@@ -53,8 +54,8 @@ The five primary tabs remain Home, Games, Players, Results, Payments. Features p
 5. Audit AI analysis separately for external dependency, data disclosure, consent and real activation before showing it as a customer feature.
 
 ## Release gates
-- Worker Hono/Vitest tests, including custom response classification and preserving answers on old-client updates.
+- Worker Hono/Vitest tests and disposable SQLite migration tests, including original CHECK constraints, custom response classification, and preserving answers on old-client updates.
 - Next production build and typecheck.
 - Browser smoke on six viewport sizes with synthetic data: RSVP custom labels/seat mapping, Game Night link, both dashboards, Payments toolbar, last row vs fixed nav.
-- Backend Worker production publish, verification of GET responses, then frontend promotion. A frontend-only Vercel deployment cannot enable new Worker behaviour.
+- Verify Cloudflare D1 backup and inspect live schema; apply additive migration once; publish updated Worker; verify GET and POST including Maybe and Out (synthetic/test-room only); then release frontend to Vercel and verify production. A frontend-only deployment cannot enable new Worker behaviour. No migration or deployment is authorised or performed by this draft PR.
 - No real data, messaging credentials, paid WhatsApp API or live push used by tests.
