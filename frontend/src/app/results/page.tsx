@@ -25,6 +25,9 @@ export default function ResultsPage(){
  const [sharing,setSharing]=useState('');
  const [notice,setNotice]=useState('');
  const [historyCount,setHistoryCount]=useState(15);
+ const [search,setSearch]=useState('');
+ const [sort,setSort]=useState<'net'|'average'|'profitable'|'games'>('net');
+ const [minGames,setMinGames]=useState(false);
 
  useEffect(()=>{
   const query=new URLSearchParams(window.location.search);
@@ -65,6 +68,14 @@ export default function ResultsPage(){
  },[games]);
  const highest=Math.max(1,...months.map(x=>x.count));
  const totalPlayed=leaders.reduce((sum,p)=>sum+p.games_played,0);
+ const visibleStandings=useMemo(()=>{
+  const q=search.trim().toLocaleLowerCase();
+  const amount=(p:LeaderboardEntry)=>sort==='average'?
+    (p.games_played?p.total_net/p.games_played:0):sort==='profitable'?
+    p.games_won:sort==='games'?p.games_played:p.total_net;
+  return leaders.filter(p=>(!minGames||p.games_played>=3)&&(!q||p.display_name.toLocaleLowerCase().includes(q)))
+    .sort((a,b)=>amount(b)-amount(a)||b.total_net-a.total_net||a.display_name.localeCompare(b.display_name));
+ },[leaders,search,sort,minGames]);
 
  function setSection(next:View){
   setView(next);setHistoryCount(15);setNotice('');
@@ -144,8 +155,28 @@ export default function ResultsPage(){
    <section className="pkr-primary-panel">
     <h2>Player standings</h2>
     <p>All recorded players with settled results. Select a player's record to see detailed results and source games.</p>
-    {ordered.length?<div className="pkr-results-ranking">
-     {ordered.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
+    {ordered.length>0&&<div className="pkr-results-podium" aria-label="Top three players by net result">
+     {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
+       className="pkr-results-podium-card" request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
+        playerId:p.user_id,playerName:p.display_name}}>
+       <span>#{i+1} ALL TIME</span><strong>{p.display_name}</strong>
+       <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
+       <small>{p.games_played} games · {p.games_won} profitable</small>
+      </RecordMetric>)}
+    </div>}
+    <div className="pkr-results-filters">
+      <label>Search players<input type="search" aria-label="Search results by player" placeholder="Find a player…"
+        value={search} onChange={e=>setSearch(e.target.value)}/></label>
+      <label>Rank by<select aria-label="Sort results standings" value={sort}
+        onChange={e=>setSort(e.target.value as 'net'|'average'|'profitable'|'games')}>
+         <option value="net">Total net</option><option value="average">Average per game</option>
+         <option value="profitable">Profitable games</option><option value="games">Games played</option>
+       </select></label>
+      <label className="pkr-results-min-games"><input type="checkbox" checked={minGames}
+        onChange={e=>setMinGames(e.target.checked)}/> 3+ games</label>
+    </div>
+    {visibleStandings.length?<div className="pkr-results-ranking">
+     {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
        className="pkr-results-rank" request={{
         kind:'player',title:player.display_name+' — game history',roomId:selected,
         playerId:player.user_id,playerName:player.display_name
@@ -153,10 +184,10 @@ export default function ResultsPage(){
        <span className="pkr-results-rank-number">{i+1}</span>
        <span className="pkr-results-rank-name"><strong>{player.display_name}</strong>
         <small>{player.games_played} games · {player.games_won} profitable{player.identity_review_required?' · Identity review':''}</small></span>
-       <span className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(player.total_net)}</span>
+       <span className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}</span>
        <span aria-hidden="true">›</span>
       </RecordMetric>)}
-    </div>:<div className="pkr-primary-empty">Standings appear after the first game has been settled.</div>}
+    </div>:<div className="pkr-primary-empty">{ordered.length?'No players match the selected filters.':'Standings appear after the first game has been settled.'}</div>}
    </section>
   </>}
   {view==='history'&&<section className="pkr-primary-panel">

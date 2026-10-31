@@ -210,7 +210,10 @@ async function run(){
       return !!money&&!!actions&&!!(money.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING);
     });
     assert(prioritised,'Outstanding payments must appear before action shortcuts');
-    // Host changes the shared preference through the real app API (synthetic Worker).
+    // A preceding payment-error regression deliberately reloads the page and
+    // closes the compact dashboard selector. Reopen it before changing layouts.
+    if(await page.locator('.pkr-dual-switcher-compact').getAttribute('open')===null)
+      await page.locator('.pkr-dual-switcher-compact summary').click();
     await page.getByRole('button',{name:/Live Poker/}).click();
     await page.getByTestId('dual-dashboard').locator('.pkr-dual-table-panel').waitFor();
     if(height>=700)await page.screenshot({path:path.join(output,engine+'-'+name+'-dual-live.png'),fullPage:false});
@@ -296,6 +299,13 @@ async function run(){
       assert.equal(await page.getByRole('button',{name:/Share current RSVP update/}).isEnabled(),true);
       assert.equal(await page.locator('.pkr-night-stats strong').count(),4,'RSVP totals must come from PKR');
       await page.screenshot({path:path.join(output,'chromium-phone-game-night.png'),fullPage:false});
+      await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Player standings'}).waitFor();
+      await page.getByLabel('Search results by player').fill('Jordan');
+      assert.equal(await page.locator('.pkr-results-rank').count(),1,'Results search must filter recorded players');
+      await page.getByLabel('Search results by player').fill('');
+      await page.getByLabel('Sort results standings').selectOption('games');
+      assert.equal(await page.locator('.pkr-results-podium-card').count(),2,'Results retains the top-player podium');
       await page.goto(BASE+'/results?room=test-room&view=history',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Completed games'}).waitFor();
       assert.equal(await page.getByRole('button',{name:/Share in WhatsApp/}).count()>0,true);
@@ -318,7 +328,13 @@ async function run(){
     }
     assert(!/\blegacy\b/i.test(await page.locator('body').innerText()),'Obsolete status terminology visible');
     assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Dialog scroll lock leaked');
-    assert.deepEqual(unexpected,[]);console.log('PASS',engine,name);
+    // WebKit can report an aborted synthetic CORS fetch as a runtime error
+    // when the test navigates away during its pending join-request poll.
+    // Keep every unrelated exception fatal.
+    const unexpectedReal=unexpected.filter(message=>
+      !(engine==='webkit'&&message.includes('Fetch API cannot load')&&
+        message.includes('/join-requests due to access control checks')));
+    assert.deepEqual(unexpectedReal,[]);console.log('PASS',engine,name);
    }catch(error){errors.push(engine+' '+name+': '+error.stack);await page.screenshot({path:path.join(output,engine+'-'+name+'-failure.png')}).catch(()=>{});}
    finally{await context.close();}
   }}finally{await browser.close();}
