@@ -86,6 +86,7 @@ export default function WhatsappSharingCentre(){
   const recipientPhone=normaliseWhatsappPhone(results?.players.find(p=>p.user_id===recipientId)?.whatsapp)||
     normaliseWhatsappPhone(contacts.find(c=>c.user_id===recipientId)?.phone);
   const groupAllowed=mode!=='members'&&mode!=='payment';
+  const announcementReady=mode!=='announcement'||Boolean(message.split('Message from your host:')[1]?.trim());
   let prepared='';
   if(snapshot){
     const base={room:snapshot.room.name,date,location:game?.location,rsvpUrl};
@@ -100,23 +101,23 @@ export default function WhatsappSharingCentre(){
   }
   useEffect(()=>{setMessage(prepared);setNotice('');},[prepared]);
   function inviteMembers(){
-    if(game)router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=members&inviteGame='+encodeURIComponent(id)+'#pkr-members-invite');
+    if(game)router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=members&view=invite&inviteGame='+encodeURIComponent(id)+'#pkr-members-invite');
   }
   function openWhatsapp(){
     if(mode==='payment'){void privateReminder('open');return}
-    if(!groupAllowed||!message.trim())return;
+    if(!groupAllowed||!message.trim()||!announcementReady)return;
     window.open(whatsappUrl(message,contact?.phone),'_blank','noopener,noreferrer');
     setNotice('WhatsApp opened. Choose the chat and tap Send. PKR has not sent a message.');
   }
   async function sharePhone(){
-    if(!groupAllowed||!message.trim())return;
+    if(!groupAllowed||!message.trim()||!announcementReady)return;
     if(!navigator.share){openWhatsapp();return}
     try{await navigator.share({title:'PKR · '+snapshot?.room.name,text:message});setNotice('Share sheet closed. PKR cannot confirm delivery.')}
     catch(e){if((e as Error)?.name!=='AbortError')setNotice('Phone sharing failed. Use WhatsApp or Copy instead.')}
   }
   async function copy(){
     if(mode==='payment'){await privateReminder('copy');return}
-    if(!groupAllowed||!message.trim())return;
+    if(!groupAllowed||!message.trim()||!announcementReady)return;
     try{await navigator.clipboard.writeText(message);setNotice('Message copied.')}
     catch{setNotice('Copy unavailable. Select the message text and copy it.')}
   }
@@ -134,6 +135,9 @@ export default function WhatsappSharingCentre(){
       const who=saved.status==='payer_claimed'?saved.to:saved.from;
       const fresh=buildPrivatePayment({room:snapshot!.room.name,date,transfer:saved,gameUrl});
       const phone=normaliseWhatsappPhone(latest.players.find(p=>p.user_id===who)?.whatsapp)||recipientPhone;
+      if(action==='open'&&!phone){
+        windowRef?.close();setNotice('No WhatsApp number saved for this player. Copy the reminder and send it only to their private chat.');return;
+      }
       if(action==='open'&&windowRef){
         windowRef.location.replace(whatsappUrl(fresh,phone));
         setNotice('Private draft prepared for '+recipientName+'. Check the recipient before tapping Send.');
@@ -208,13 +212,14 @@ export default function WhatsappSharingCentre(){
           {mode==='results'&&!canPublish&&<p role="alert" className="pkr-share-warning">Final, reconciled results could not be verified.</p>}
           {(mode==='invite'||mode==='rsvp')&&!['scheduled','lobby'].includes(game?.status||'')&&<p className="pkr-share-warning">This game is no longer accepting RSVPs.</p>}
           {mode==='announcement'&&<p className="pkr-share-note">Add your specific announcement below the host message heading before sending.</p>}
+          {mode==='announcement'&&!announcementReady&&<p className="pkr-share-warning">Write the actual update before sending this announcement.</p>}
           <label htmlFor="pkr-share-text">Prepared message</label>
           <textarea id="pkr-share-text" rows={12} value={message} readOnly={mode==='payment'}
             onChange={e=>setMessage(e.target.value)} placeholder="No shareable information available for this game."/>
           <div className="pkr-share-buttons">
-            <button type="button" className="pkr-share-action" disabled={!message.trim()||paymentBusy} onClick={openWhatsapp}>{paymentBusy?'Checking payment…':'Open WhatsApp ↗'}</button>
-            <button type="button" disabled={!message.trim()||paymentBusy} onClick={()=>void copy()}>Copy message</button>
-            {groupAllowed&&<button type="button" disabled={!message.trim()} onClick={()=>void sharePhone()}>Phone share</button>}
+            <button type="button" className="pkr-share-action" disabled={!message.trim()||!announcementReady||paymentBusy} onClick={openWhatsapp}>{paymentBusy?'Checking payment…':'Open WhatsApp ↗'}</button>
+            <button type="button" disabled={!message.trim()||!announcementReady||paymentBusy} onClick={()=>void copy()}>Copy message</button>
+            {groupAllowed&&<button type="button" disabled={!message.trim()||!announcementReady} onClick={()=>void sharePhone()}>Phone share</button>}
             {mode==='results'&&<button type="button" disabled={!canPublish||!results?.players.length||imageBusy} onClick={()=>void shareImage()}>{imageBusy?'Creating image…':'Share results image'}</button>}
           </div>
           {notice&&<p className="pkr-share-notice" role="status">{notice}</p>}
