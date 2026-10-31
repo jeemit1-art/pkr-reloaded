@@ -8,6 +8,7 @@ import {isCurrentGame,isUnfinishedGame} from '@/lib/game-status';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {loadRoomTransfers} from '@/lib/room-payment-schedule';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
+import {PokerClubStage} from '@/components/PokerClubStage';
 import './settlement-filter.css';
 import '../payments/payments.css';
 import {buildPrivatePayment,normaliseWhatsappPhone,whatsappUrl,isShareablePayment} from '@/lib/whatsapp-sharing';
@@ -235,14 +236,30 @@ export default function InsightsPage(){
    }finally{setPaymentBusy(null)}
  }
  return <main className={"pkr-vnext-insights pkr-casino pkr-insights-refresh"+(paymentsFocus?" pkr-payments-focus":"")} aria-label={paymentsFocus?"Payments and settlements":"Insights and settlement"}>
-  <header className="pkr-vnext-insights-top">
-   <div className="pkr-insights-intro"><span className="pkr-eyebrow">{paymentsFocus?'＄ PAYMENTS & SETTLEMENTS':'▥ INSIGHTS & SETTLEMENT'}</span>
-    <h1>{paymentsFocus?'Payments':'Insights & Settlement'}</h1>
-    <p>{paymentsFocus?'All saved payments, outstanding transfers and confirmations for the selected poker club.':
-      "Track your room's results, review balances and settle up after game night."}</p>
-    {paymentsFocus&&<button type="button" className="pkr-primary-outline"
-      onClick={()=>router.push('/results?room='+encodeURIComponent(selected))}>Results, history & insights ↗</button>}
-   </div>
+  {paymentsFocus&&<div className="pkr-payments-stage">
+    <PokerClubStage kind="payments" title="Payments" subtitle={room?.role==='member'?
+      'Your personal transfers, confirmations and outstanding payments.':
+      'Every transfer accounted for. Every player settled.'}
+      club={room?.name||'Your private club'}
+      metrics={room?.role==='member'?[
+        {label:'Settled games',value:played.length},
+        {label:'Your payment records',value:'Private ledger'}
+      ]:[
+        {label:'Outstanding recorded',value:pendingTotalText},
+        {label:'Awaiting payment',value:outstanding.length},
+        {label:'Marked paid',value:paid.length}
+      ]} />
+  </div>}
+  <header className={"pkr-vnext-insights-top"+(paymentsFocus?" pkr-payments-controls":"")}>
+   {!paymentsFocus&&<div className="pkr-insights-intro"><span className="pkr-eyebrow">▥ INSIGHTS & SETTLEMENT</span>
+     <h1>Insights & Settlement</h1>
+     <p>Track your room's results, review balances and settle up after game night.</p>
+   </div>}
+   {paymentsFocus&&<div className="pkr-payments-controls-links">
+     <span>PRIVATE CLUB LEDGER</span>
+     <button type="button" className="pkr-primary-outline"
+       onClick={()=>router.push('/results?room='+encodeURIComponent(selected))}>Results & history ↗</button>
+   </div>}
    <div className="pkr-insights-selector"><label htmlFor="pkr-insights-room">Poker room</label>
     <select id="pkr-insights-room" value={selected} onChange={e=>{
       const next=e.target.value;setSelected(next);
