@@ -642,11 +642,15 @@ async function test(){
          if(!await seatMap.isVisible())errors.push(size.name+' RSVP oval seating diagram missing');
          else if(await seatMap.locator('button').count()!==8)errors.push(size.name+' RSVP seat count is not based on game');
        }
-       const maybe=page.getByRole('button',{name:/May not come/});
-       const out=page.getByRole('button',{name:/Out/,exact:true});
-       const coming=page.getByRole('button',{name:/Coming after work/});
-       if(await maybe.count()!==1||await out.count()!==1||await coming.count()!==1)
-         errors.push(size.name+' host-configured RSVP labels are missing from the live board');
+       const choices=page.locator('.pkr-guest-options');
+       const maybe=choices.getByRole('button',{name:/May not come/});
+       const out=choices.getByRole('button',{name:/Out/});
+       const coming=choices.getByRole('button',{name:/Coming after work/});
+       const found={maybe:await maybe.count(),out:await out.count(),coming:await coming.count()};
+       if(found.maybe!==1||found.out!==1||found.coming!==1)
+         errors.push(size.name+' host-configured RSVP labels are missing: '+JSON.stringify({
+           found,visible:await choices.locator('button').allTextContents()
+         }));
        else{
          await maybe.click();
          if(await page.locator('.pkr-guest-seat-map').isVisible())
