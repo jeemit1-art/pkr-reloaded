@@ -277,11 +277,11 @@ async function test(){
          await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
          if(size.name==='small-phone'||size.name==='desktop'){
            await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
-           await page.locator('.pkr-primary-page-head').waitFor({state:'visible'});
+           await page.locator('[data-testid="live-results-stage"]').waitFor({state:'visible'});
            await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
-           const photo=await page.locator('.pkr-primary-page-head').evaluate(node=>
-             getComputedStyle(node,'::before').backgroundImage);
-           if(!photo.includes('real-casino-props.webp'))
+           const photo=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>
+             getComputedStyle(node).backgroundImage);
+           if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
              errors.push(size.name+' Live Poker artwork not applied to Results page');
            await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
            await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();

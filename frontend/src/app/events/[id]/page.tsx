@@ -10,6 +10,7 @@ import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
 import GamesSectionTabs from '@/components/GamesSectionTabs';
+import {PokerClubStage} from '@/components/PokerClubStage';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import './room-dashboard-polish.css';
@@ -521,17 +522,20 @@ export default function EventPage() {
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
           <div>
-            <div className="pkr-room-games-intro">
-              <div>
-                <span className="pkr-eyebrow">GAME NIGHT</span>
-                <h1>Games</h1>
-                <p>{event.name} · Scheduled games, live tables and unfinished sessions.</p>
-              </div>
-              <div className="pkr-room-games-links">
-                {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
-                {upcoming[0]&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight(upcoming[0].id)}>Manage RSVPs →</button>}
-                <button type="button" className="btn btn-outline" onClick={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}>Completed games →</button>
-              </div>
+            <div className="pkr-room-games-intro pkr-room-games-intro-experience">
+              <PokerClubStage kind="games" title="Games" subtitle="Your sessions, tables and live RSVPs."
+                club={event.name}
+                metrics={[
+                  {label:'Upcoming sessions',value:upcoming.length},
+                  {label:'Live games',value:upcoming.filter(g=>isLiveGame(g)).length},
+                  {label:'Historical unfinished',value:unfinished.length}
+                ]} players={event.members?.map((m:{name:string})=>m.name)||[]}>
+                <div className="pkr-room-games-links">
+                  {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
+                  {upcoming[0]&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight(upcoming[0].id)}>Manage RSVPs →</button>}
+                  <button type="button" className="btn btn-outline" onClick={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}>Completed games →</button>
+                </div>
+              </PokerClubStage>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
@@ -580,10 +584,14 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>
-            <header className="pkr-member-summary">
-              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Players</h2><p>Player profiles, invitations, membership approvals and roles. Game RSVPs live in Games; notifications are under Account.</p></div>
-              <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
-              <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
+            <header className="pkr-member-summary pkr-member-summary-experience">
+              <PokerClubStage kind="players" title="Players" subtitle="Your private poker club."
+                club={event.name}
+                metrics={[
+                  {label:'Players in club',value:event.members?.length||0},
+                  {label:'Awaiting approval',value:joinRequests.length},
+                  {label:'Completed games',value:settled.length}
+                ]} players={event.members?.map((m:{name:string})=>m.name)||[]} />
             </header>
             <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
               {([
