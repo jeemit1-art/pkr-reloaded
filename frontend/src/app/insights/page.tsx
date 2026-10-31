@@ -235,6 +235,13 @@ export default function InsightsPage(){
      setPaymentNotice('Nothing was sent. '+(e instanceof Error?e.message:'Unable to verify this payment.'));
    }finally{setPaymentBusy(null)}
  }
+ function openPaymentReminders(){
+   setPaymentFilter('outstanding');setSettlementView('transfers');setTransferPage(0);
+   const url=new URL(window.location.href);url.searchParams.set('payments','outstanding');
+   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+   window.requestAnimationFrame(()=>document.getElementById('pkr-settlement')?.scrollIntoView({behavior:'smooth',block:'start'}));
+ }
+ const reminderGame=outstanding[0]?.game||played[0]||null;
  return <main className={"pkr-vnext-insights pkr-casino pkr-insights-refresh"+(paymentsFocus?" pkr-payments-focus":"")} aria-label={paymentsFocus?"Payments and settlements":"Insights and settlement"}>
   {paymentsFocus&&<div className="pkr-payments-stage">
     <PokerClubStage kind="payments" title="Payments" subtitle={room?.role==='member'?
@@ -272,6 +279,19 @@ export default function InsightsPage(){
     </select>
    </div>
   </header>
+  {paymentsFocus&&canManagePayments&&<section className="pkr-payments-reminder-tools" aria-label="Payment reminder controls">
+    <div><strong>Payment reminders</strong>
+      <p>{outstanding.length?outstanding.length+' outstanding transfer'+(outstanding.length===1?'':'s')+' to follow up.':'No outstanding transfers recorded.'} WhatsApp reminders open as private drafts for you to send.</p>
+    </div>
+    <div className="pkr-payments-reminder-buttons">
+      <button type="button" disabled={!outstanding.length||loadingDetails} onClick={openPaymentReminders}>
+        Send private reminders ↗</button>
+      <button type="button" disabled={!reminderGame||loadingDetails}
+        title={reminderGame?'Open this settled game to manage automatic outstanding-payment reminders.':'Available after the first settled game is recorded.'}
+        onClick={()=>{if(reminderGame)router.push('/games/'+encodeURIComponent(reminderGame.id));}}>
+        Automatic 24-hour reminders ↗</button>
+    </div>
+  </section>}
   {error&&<p role="alert" className="pkr-insights-alert">{error}</p>}
   {loadingRooms?<p className="pkr-insights-loader" role="status">Loading your poker rooms…</p>:rooms.length===0?
    <section className="pkr-vnext-card"><h2>No poker rooms yet</h2><p>Create a room to start recording games and results.</p><button onClick={()=>router.push('/dashboard')}>Go to dashboard →</button></section>:

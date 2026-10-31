@@ -159,8 +159,10 @@ export const api = {
     rsvpBoard:(id:string)=>req<RsvpBoardData>('/games/'+id+'/rsvp-board'),
     submitRsvpBoard:(id:string,body:{display_name:string;arrival_option:string;seat_number:number|null;edit_token?:string})=>
       req<RsvpBoardReceipt>('/games/'+id+'/rsvp-board',{method:'POST',body:JSON.stringify(body)}),
-    setRsvpTimes:(id:string,options:string[])=>
-      req<{ok:boolean;options:string[]}>('/games/'+id+'/rsvp-arrivals',{method:'PUT',body:JSON.stringify({options})}),
+    setRsvpTimes:(id:string,options:string[],responses?:RsvpReplyChoice[])=>
+      req<{ok:boolean;options:string[];responses:RsvpReplyChoice[]}>('/games/'+id+'/rsvp-arrivals',{
+        method:'PUT',body:JSON.stringify(responses===undefined?{options}:{options,responses}),
+      }),
     seat:     (id:string,d:any)   => req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat`,{method:'POST',body:JSON.stringify(d)}),
     removeSeat:(id:string,userId:string,expectedSeatNumber:number|null) =>
       req<{ok:boolean;players:GamePlayer[]}>(`/games/${id}/seat/${userId}`,{
@@ -290,10 +292,16 @@ export function waLink(phone:string,msg:string):string {
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
 }
 
+export interface RsvpReplyChoice {
+  value:string;
+  label:string;
+  status:'yes'|'maybe'|'no';
+}
 export interface RsvpBoardData {
   game:{id:string;scheduled_at:number;location:string|null;seats:number;status:string};
   event:{id:string;name:string};
   options:string[];
+  responses?:RsvpReplyChoice[];
   guests:{id:string;display_name:string;status:'yes'|'no'|'maybe';arrival_option:string;seat_number:number|null;updated_at:number}[];
   players:{display_name:string;seat_number:number}[];
   version:number;

@@ -54,7 +54,11 @@ const fixture=(pathname,method,body)=>{
   if(pathname==='/games/'+finished.id)return {...finished,players:[],rsvps:[]};
   if(pathname==='/games/results/synthetic-results')return results;
   if(pathname==='/games/test-finished/transfers/synthetic-transfer/status'&&method==='PUT')return {ok:true,status:'paid'};
-  if(pathname==='/games/'+upcoming.id+'/rsvp-board')return {event:room,game:upcoming,players:[],guests:[],options:['19:00','20:00']};
+  if(pathname==='/games/'+upcoming.id+'/rsvp-board')return {event:room,game:upcoming,players:[],guests:[],options:['19:00','20:00'],
+    responses:[{value:'late',label:'Running late',status:'yes'},
+      {value:'maybe',label:'May not come',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'},
+      {value:'custom-abc12345',label:'Coming after work',status:'yes'}]};
   if(pathname==='/push/vapid-key')return {key:'test-not-a-real-vapid-key'};
   return {error:'Synthetic fixture not provided: '+pathname};
 };
@@ -638,6 +642,39 @@ async function test(){
          if(!await seatMap.isVisible())errors.push(size.name+' RSVP oval seating diagram missing');
          else if(await seatMap.locator('button').count()!==8)errors.push(size.name+' RSVP seat count is not based on game');
        }
+       const choices=page.locator('.pkr-guest-options');
+       const maybe=choices.getByRole('button',{name:/May not come/});
+       const out=choices.getByRole('button',{name:/Out/});
+       const coming=choices.getByRole('button',{name:/Coming after work/});
+       const found={maybe:await maybe.count(),out:await out.count(),coming:await coming.count()};
+       if(found.maybe!==1||found.out!==1||found.coming!==1)
+         errors.push(size.name+' host-configured RSVP labels are missing: '+JSON.stringify({
+           found,visible:await choices.locator('button').allTextContents()
+         }));
+       else{
+         await maybe.click();
+         if(await page.locator('.pkr-guest-seat-map').isVisible())
+           errors.push(size.name+' Maybe incorrectly offered a reserved seat');
+         await out.click();
+         if(await page.locator('.pkr-guest-seat-map').isVisible())
+           errors.push(size.name+' Out incorrectly offered a reserved seat');
+         await coming.click();
+         if(!await page.locator('.pkr-guest-seat-map').isVisible())
+           errors.push(size.name+' a custom confirmed RSVP cannot choose a seat');
+       }
+       const settings=page.locator('#pkr-rsvp-settings');
+       await settings.waitFor({state:'visible',timeout:10000}).catch(()=>
+         errors.push(size.name+' host RSVP settings are not accessible'));
+       if(await settings.count()){
+         if(!await settings.getByLabel('RSVP response label maybe').isVisible())
+           errors.push(size.name+' RSVP free-text reply editor is missing');
+         const layout=await settings.evaluate(card=>{
+           const rect=card.getBoundingClientRect();
+           return {width:rect.width,right:rect.right,viewport:document.documentElement.clientWidth};
+         });
+         if(layout.right>layout.viewport+4)
+           errors.push(size.name+' RSVP settings editor overflows the screen: '+JSON.stringify(layout));
+       }
      }
      if(item.id==='live-table'){
        // Gameplay uses the entire viewport, without the global desktop sidebar or mobile bottom navigation.
@@ -744,6 +781,8 @@ async function test(){
        const secondary=page.getByRole('navigation',{name:'Games sections'});
        if(!await secondary.getByRole('button',{name:'RSVPs & Sharing'}).isVisible())
          errors.push(size.name+' Games is missing the RSVP secondary tab');
+       if(!await page.getByRole('button',{name:/RSVP settings/}).first().isVisible())
+         errors.push(size.name+' RSVP settings not directly discoverable from Games');
        else{
          await secondary.getByRole('button',{name:'RSVPs & Sharing'}).click();
          await page.getByTestId('game-night-hub').waitFor({state:'visible',timeout:10000});
@@ -857,6 +896,10 @@ async function test(){
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
        try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
        catch{errors.push(size.name+' settlement ledger did not load in Payments')}
+       if(!await page.getByRole('button',{name:/Send private reminders/}).isVisible())
+         errors.push(size.name+' Payments reminder action is hidden');
+       if(!await page.getByRole('button',{name:/Automatic 24-hour reminders/}).isVisible())
+         errors.push(size.name+' automatic reminders link is hidden');
        if(size.width<=740){
          const paymentStage=await page.locator('.pkr-payments-stage [data-testid="payments-command-stage"]').evaluate(stage=>{
            const copy=stage.querySelector('.pkr-experience-command-copy')?.getBoundingClientRect();

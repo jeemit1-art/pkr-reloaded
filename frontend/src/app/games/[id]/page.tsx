@@ -228,11 +228,12 @@ export default function GamePage() {
             onClick={doStartGame}>
             {starting ? 'Starting…' : '🃏 Start Game'}
           </button>
-          <button className="btn btn-ghost"
-            style={{width:'100%',fontSize:12,padding:'10px',marginBottom:12}}
-            onClick={()=>router.push(`/games/${id}/rsvp`)}>
-            👥 Live RSVP & Arrival Times
-          </button>
+          <div className="pkr-game-rsvp-actions">
+            <button className="btn btn-ghost" type="button"
+              onClick={()=>router.push('/games/'+id+'/rsvp')}>👥 Live RSVPs & seats</button>
+            <button className="btn btn-ghost" type="button"
+              onClick={()=>router.push('/games/'+id+'/rsvp?settings=1#pkr-rsvp-settings')}>⚙ RSVP settings</button>
+          </div>
         </>)}
 
         {/* Player: scheduled or lobby — RSVP */}

@@ -430,3 +430,104 @@
   font-size:10px;word-break:normal;overflow-wrap:normal;
  }
 }
+
+/* Host-managed RSVP reply vocabulary: proper form controls that stay
+   readable in the iPhone PWA, and an anchor reachable from Games tools. */
+.pkr-rsvp-settings{scroll-margin-top:calc(128px + env(safe-area-inset-top))}
+.pkr-rsvp-settings-subtitle{
+ color:#f0dcaa;font-size:15px;font-weight:750;line-height:1.3;
+ margin:21px 0 11px;
+}
+.pkr-rsvp-settings-hint{
+ color:#baceba;font-size:12px;line-height:1.55;
+ margin:0 0 12px;max-width:600px;
+}
+.pkr-rsvp-replies{display:grid;gap:9px}
+.pkr-rsvp-reply{
+ display:grid;grid-template-columns:minmax(0,1.15fr) minmax(115px,.75fr) auto;
+ align-items:end;gap:9px;min-width:0;
+ border:1px solid #58705b;border-radius:11px;
+ background:#0a2219;padding:10px;
+}
+.pkr-rsvp-reply label{
+ display:grid;gap:6px;min-width:0;color:#c4d8c5;
+ font-size:10px;line-height:1.3;font-weight:650;
+}
+.pkr-rsvp-reply .pkr-guest-input{
+ width:100%;min-width:0;min-height:44px;margin:0;
+ font-size:13px;padding:10px 11px;
+ color:#f6f0da;background:#11291f;
+}
+.pkr-rsvp-reply select:disabled{opacity:.72}
+.pkr-rsvp-remove{
+ border:1px solid #9d6b68;background:#382322;
+ color:#ffd9d3;border-radius:8px;min-height:44px;
+ padding:9px 10px;font-size:11px;font-weight:750;
+}
+.pkr-rsvp-settings .pkr-guest-host-actions{margin-top:17px}
+.pkr-guest-stats{flex-wrap:wrap}
+.pkr-guest-stats>div{min-width:95px}
+.pkr-game-rsvp-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 13px}
+.pkr-game-rsvp-actions .btn{min-width:0;min-height:45px;padding:10px;white-space:normal}
+
+/* Payments: the reminder CTA stays visible without moving settlements,
+   exposing private WhatsApp drafts and per-game push scheduling. */
+.pkr-payments-reminder-tools{
+ display:flex;align-items:center;justify-content:space-between;gap:11px 20px;
+ flex-wrap:wrap;padding:15px 17px;margin:0 0 14px;
+ border:1px solid #507b5e;border-radius:14px;
+ background:linear-gradient(117deg,#12382b,#0a251d);
+ color:#f4f1df;
+}
+.pkr-payments-reminder-tools>div:first-child{flex:1 1 220px;min-width:0}
+.pkr-payments-reminder-tools strong{font-size:15px;color:#eed19a}
+.pkr-payments-reminder-tools p{margin:4px 0 0;color:#bcd1c2;font-size:11px;line-height:1.5}
+.pkr-payments-reminder-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.pkr-payments-reminder-buttons button{
+ min-height:44px;padding:10px 13px;border:1px solid #6b946e;
+ border-radius:10px;background:#1b4c35;color:#f0f7ed;
+ font-weight:750;font-size:12px;
+}
+.pkr-payments-reminder-buttons button:first-child{
+ background:#ddbc78;border-color:#e4cf98;color:#14261b;
+}
+.pkr-payments-reminder-buttons button:disabled{opacity:.45;cursor:not-allowed}
+
+/* One genuine feature inventory for both Command Centre and Live Poker.
+   No new bottom-tab or collapsed More menu. */
+.pkr-app .pkr-dual-discovery{gap:12px}
+.pkr-app .pkr-dual-discovery .pkr-dual-quick-grid{
+ grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;
+}
+.pkr-app .pkr-dual-discovery .pkr-dual-quick-grid>button{
+ display:grid;grid-template-columns:auto 1fr;align-content:start;
+ gap:4px 8px;min-height:105px;padding:12px;
+}
+.pkr-app .pkr-dual-discovery .pkr-dual-quick-grid button strong{
+ grid-column:1/-1;font-size:12px;line-height:1.25;overflow-wrap:normal;
+}
+.pkr-app .pkr-dual-discovery .pkr-dual-quick-grid button small{
+ grid-column:1/-1;font-size:10px;line-height:1.4;
+ white-space:normal;overflow-wrap:normal;
+}
+@media(max-width:920px){
+ .pkr-app .pkr-dual-discovery .pkr-dual-quick-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+}
+@media(max-width:620px){
+ .pkr-app .pkr-dual-discovery .pkr-dual-quick-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ .pkr-app .pkr-dual-discovery .pkr-dual-quick-grid>button{
+  padding:10px;min-height:98px;
+ }
+ .pkr-rsvp-reply{grid-template-columns:minmax(0,1fr) minmax(95px,.72fr)}
+ .pkr-rsvp-remove{grid-column:1/-1;justify-self:start;min-height:36px;padding:6px 11px}
+ .pkr-guest-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}
+ .pkr-guest-stats>div{min-width:0}
+ .pkr-game-rsvp-actions{grid-template-columns:1fr}
+ .pkr-payments-reminder-tools{padding:12px}
+ .pkr-payments-reminder-buttons{width:100%}
+ .pkr-payments-reminder-buttons button{flex:1 1 145px}
+}

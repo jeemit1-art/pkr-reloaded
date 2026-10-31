@@ -10,6 +10,7 @@ import {liveNightStats,nightInviteText,nightStatusText,nightReminderText,nightLi
 import {buildResultsShare,buildPrivatePayment,normaliseWhatsappPhone,whatsappUrl} from '@/lib/whatsapp-sharing';
 import {createPkrResultsImage} from '@/lib/pkr-results-image';
 import {isCurrentGame} from '@/lib/game-status';
+import {rsvpChoiceLabel} from '@/lib/rsvp-choices';
 import './GameNightTools.css';
 
 type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void};
@@ -120,6 +121,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
     window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
   }
   function openRsvp(){if(selectedId)router.push('/games/'+encodeURIComponent(selectedId)+'/rsvp')}
+  function openRsvpSettings(){if(selectedId)router.push('/games/'+encodeURIComponent(selectedId)+'/rsvp?settings=1#pkr-rsvp-settings')}
   function openResults(){if(current?.results_token)router.push('/games/results/'+encodeURIComponent(current.results_token))}
   async function copied(value:string,what:string){
     try{await navigator.clipboard.writeText(value);setNotice(what+' copied. Paste it into the intended WhatsApp chat.')}
@@ -325,6 +327,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
             <p>Pin the PKR RSVP link in your WhatsApp group. Members see the current arrivals and available seats whenever they open it.</p></div>
           <div className="pkr-night-actions">
             <button type="button" className="pkr-night-primary" onClick={openRsvp}>View live RSVP board ↗</button>
+            {isHost&&<button type="button" onClick={openRsvpSettings}>⚙ RSVP settings ↗</button>}
             {isHost&&<button type="button" onClick={()=>void shareWhatsapp('invitation')}>♧ Share invitation in WhatsApp</button>}
             <button type="button" onClick={()=>void copied(rsvpUrl,'Live RSVP link')}>Copy live link</button>
           </div>
@@ -355,7 +358,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
             {board!.guests.map(p=><div key={p.id} className="pkr-night-person">
               <span className="pkr-night-avatar">{p.display_name.slice(0,1).toUpperCase()}</span>
               <strong>{p.display_name}</strong>
-              <span>{p.status==='no'?'Not coming':p.status==='maybe'?'Maybe':p.arrival_option==='late'?'Running late':p.arrival_option||'Confirmed'}</span>
+              <span>{board?rsvpChoiceLabel(board,p.arrival_option):p.arrival_option}</span>
               <b>{p.status!=='yes'?'—':p.seat_number?'Seat '+p.seat_number:'Seat unassigned'}</b>
             </div>)}
           </div>:<p className="pkr-night-muted">No RSVPs recorded yet. Share the invitation to start collecting responses.</p>}

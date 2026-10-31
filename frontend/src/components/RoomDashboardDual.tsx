@@ -169,6 +169,12 @@ export default function RoomDashboardDual({
   const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=outstanding');
   const goLeaders=()=>router.push('/results?room='+encodeURIComponent(room.id));
   const goRsvp=()=>featured&&router.push('/games/'+encodeURIComponent(featured.id)+'/rsvp');
+  const goRsvpSettings=()=>{
+    const editable=current.find(g=>['scheduled','lobby'].includes(g.status));
+    if(editable)router.push('/games/'+encodeURIComponent(editable.id)+'/rsvp?settings=1#pkr-rsvp-settings');
+    else goGameNight();
+  };
+  const goNotificationSettings=()=>router.push('/account');
   const goQuickBuyin=(amount:number)=>{
     if(!active||!canManageGames)return;
     router.push('/games/'+encodeURIComponent(active.id)+'/play?quickBuyin='+amount);
@@ -220,6 +226,32 @@ export default function RoomDashboardDual({
   const secondsToStart=featured?Math.max(0,Math.floor((featured.scheduled_at*1000-clock)/1000)):0;
   const countDownText=[Math.floor(secondsToStart/3600),Math.floor(secondsToStart/60)%60,secondsToStart%60]
     .map(n=>String(n).padStart(2,'0')).join(' : ');
+
+  // Same discoverable feature grid in both host-selected dashboard designs.
+  // Every entry opens the existing authoritative feature rather than duplicating it.
+  const featureHub=<section className="pkr-dual-block pkr-dual-discovery" aria-label="PKR features and tools">
+    <div className="pkr-dual-section-title"><h3>Explore your PKR tools</h3>
+      <small>Tap to open a feature</small></div>
+    <div className="pkr-dual-quick-grid">
+      <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span>
+        <strong>Game sessions</strong><small>Schedule and manage tables</small></button>
+      <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span>
+        <strong>RSVPs & sharing</strong><small>Live board and WhatsApp</small></button>
+      {canManageGames&&<button type="button" onClick={goRsvpSettings}><b><DashIcon name="table"/></b><span>↗</span>
+        <strong>RSVP settings</strong><small>Arrival times and custom replies</small></button>}
+      <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span>
+        <strong>Calendar</strong><small>Upcoming and unfinished games</small></button>
+      <button type="button" onClick={goMembers}><b><DashIcon name="people"/></b><span>↗</span>
+        <strong>Players & invites</strong><small>Profiles, approvals and QR codes</small></button>
+      <button type="button" onClick={goLeaders}><b><DashIcon name="trophy"/></b><span>↗</span>
+        <strong>Results & insights</strong><small>Standings, graphs and history</small></button>
+      <button type="button" onClick={goPayments}><b><DashIcon name="wallet"/></b><span>↗</span>
+        <strong>{canManageGames?'Payment reminders':'My payments'}</strong>
+        <small>{canManageGames?'Outstanding transfers and follow-ups':'Private payment records'}</small></button>
+      <button type="button" onClick={goNotificationSettings}><b><DashIcon name="chip"/></b><span>↗</span>
+        <strong>Notifications</strong><small>Push alerts and sound settings</small></button>
+    </div>
+  </section>;
 
   return <section className={'pkr-dual-root pkr-dual-'+layout} data-testid="dual-dashboard"
     data-layout={layout} data-room-id={room.id} aria-label="Poker room dashboard">
@@ -301,17 +333,7 @@ export default function RoomDashboardDual({
           <div className="pkr-dual-hero-image" aria-hidden="true"><span>♠</span></div>
         </section>
         <RoomOutstandingCard roomId={room.id}/>
-        <section className="pkr-dual-block">
-          <div className="pkr-dual-section-title"><h3>What you can do in PKR</h3><small>Everything in one place</small></div>
-          <div className="pkr-dual-quick-grid">
-            <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span><strong>{featured?'Open Game':canManageGames?'Create Game':'View Games'}</strong><small>{canManageGames?'Manage a session':'Review game sessions'}</small></button>
-            <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span><strong>RSVPs & Seats</strong><small>Live board & WhatsApp</small></button>
-            <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span><strong>Schedule</strong><small>Calendar & dates</small></button>
-            <button type="button" onClick={goMembers}><b><DashIcon name="people"/></b><span>↗</span><strong>Players</strong><small>Profiles & invitations</small></button>
-            <button type="button" onClick={goLeaders}><b><DashIcon name="trophy"/></b><span>↗</span><strong>Results</strong><small>Rankings & history</small></button>
-            <button type="button" onClick={goPayments}><b><DashIcon name="wallet"/></b><span>↗</span><strong>Payments</strong><small>Settle outstanding</small></button>
-          </div>
-        </section>
+        {featureHub}
         <section className="pkr-dual-nextgame">
           <div><span className="pkr-dual-kicker">▦ NEXT GAME NIGHT</span>
             <h3>{featured?niceDate(featured.scheduled_at):'No session scheduled'}</h3>
@@ -376,6 +398,7 @@ export default function RoomDashboardDual({
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><span>♠</span></div>
         </section>
+        {featureHub}
         <div className="pkr-dual-highlights">
           <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
           <button type="button" onClick={goRsvp} disabled={!featured}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></button>
