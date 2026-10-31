@@ -478,7 +478,7 @@ async function test(){
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,
-           art:getComputedStyle(node).backgroundImage,border:s.borderTopColor};
+           art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
        });
        if(item.id==='insights'){
          if(!visual.background.includes('linear-gradient'))
