@@ -24,8 +24,10 @@ is still on the existing web console, pending native feature parity.
   for sensitive recipients, and drops invalid tokens when Expo reports
   DeviceNotRegistered. Push receipts are checked hourly. Receipt acceptance
   does **not** guarantee notification display.
-- iOS notification volume, Silent Mode and Focus are controlled by Apple.
-  Android high-importance notification channels are subject to device settings.
+- A short, original poker-chip alert sound is bundled for the native
+  application and enabled on the high-importance Android channel. iOS
+  notification volume, Silent Mode and Focus remain controlled by Apple.
+  Android channel sound/vibration are also subject to device settings.
 - Real push is **deliberately disabled by default** using
   PKR_NATIVE_PUSH_ENABLED. Do not turn it on until the native binary,
   APNs/FCM credentials and a controlled delivery test have succeeded.

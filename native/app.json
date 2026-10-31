@@ -18,7 +18,15 @@
       ]
     },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/pkr-alert.wav"
+          ],
+          "defaultChannel": "pkr-game-updates"
+        }
+      ],
       "expo-secure-store"
     ],
     "extra": {

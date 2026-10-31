@@ -239,7 +239,7 @@ export default function App(){
       if(Platform.OS==='android')await Notifications.setNotificationChannelAsync('pkr-game-updates',{
         name:'Poker night & payments',
         importance:Notifications.AndroidImportance.HIGH,
-        vibrationPattern:[0,250,100,250,100,250],sound:'default'
+        vibrationPattern:[0,250,100,250,100,250],sound:'pkr-alert.wav'
       });
       let permission=await Notifications.getPermissionsAsync();
       if(!permission.granted)permission=await Notifications.requestPermissionsAsync();

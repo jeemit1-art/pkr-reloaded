@@ -81,7 +81,7 @@ function message(payload:NativePayload,token:string){
     to:token,
     title:payload.title.slice(0,120),
     body:payload.body.slice(0,260),
-    sound:'default',
+    sound:'pkr-alert.wav',
     channelId:'pkr-game-updates',
     priority:'high',
     data:{type:typeof d.type==='string'?d.type:'pkr_update',
