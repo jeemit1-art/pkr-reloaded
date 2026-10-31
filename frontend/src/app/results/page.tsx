@@ -31,6 +31,14 @@ export default function ResultsPage(){
  const [sort,setSort]=useState<'net'|'average'|'profitable'|'games'>('net');
  const [minGames,setMinGames]=useState(false);
 
+ // Open the Results main tab at its heading, never at the old page scroll offset.
+ useEffect(()=>{
+  const reset=()=>window.scrollTo({top:0,behavior:'instant'});
+  reset();
+  const frame=window.requestAnimationFrame(reset);
+  return()=>window.cancelAnimationFrame(frame);
+ },[]);
+
  useEffect(()=>{
   const query=new URLSearchParams(window.location.search);
   setView(allowView(query.get('view')));
@@ -81,6 +89,7 @@ export default function ResultsPage(){
 
  function setSection(next:View){
   setView(next);setHistoryCount(15);setNotice('');
+  window.scrollTo({top:0,behavior:'instant'});
   const url=new URL(window.location.href);url.searchParams.set('view',next);
   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
  }

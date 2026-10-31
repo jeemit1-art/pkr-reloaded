@@ -224,3 +224,6 @@
  .pkr-results-page .pkr-results-command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
  .pkr-results-page .pkr-results-live-net b{font-size:12px}
 }
+
+/* Keep the empty-club state full width when the leader sidebar is absent. */
+.pkr-results-layout-command>.pkr-results-board:only-child{grid-column:1/-1}

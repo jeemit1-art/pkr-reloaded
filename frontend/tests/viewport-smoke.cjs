@@ -772,6 +772,10 @@ async function test(){
        await nav.getByRole('button',{name:'Results',exact:true}).click();
        await page.getByRole('heading',{name:'Results',exact:true}).waitFor({state:'visible',timeout:12000});
        await page.locator('.pkr-results-ledger-row').first().waitFor({state:'visible',timeout:15000});
+        await page.waitForTimeout(180);
+        const landingScroll=await page.evaluate(()=>window.scrollY);
+        if(landingScroll>24)errors.push(size.name+' Results opened mid-page instead of at the header: '+landingScroll);
+
         if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
           errors.push(size.name+' Command Centre lost ledger players');
         if(await page.locator('.pkr-results-live-player').count()!==0)
