@@ -1,0 +1,46 @@
+.pkr-guided-setup{min-height:100dvh;padding-bottom:70px}
+.pkr-guided-wrap{max-width:690px;margin:0 auto;padding:0 15px 50px}
+.pkr-guided-setup .pkr-install-hero{max-width:850px;margin:auto}
+.pkr-guided-setup .pkr-install-progress{max-width:690px;margin:13px auto 22px}
+.pkr-guided-setup .pkr-install-progress span.current{color:#f7d896;border-color:rgba(235,200,122,.65)}
+.pkr-guided-setup .pkr-install-card{position:relative;border-radius:15px;margin:0 0 15px}
+.pkr-guided-setup .pkr-install-card h2{font-size:clamp(20px,4vw,25px);line-height:1.25}
+.pkr-guided-primary{border-color:rgba(235,197,117,.65)!important;background:linear-gradient(120deg,rgba(33,55,43,.92),rgba(11,27,26,.96))!important}
+.pkr-guided-kicker{display:block;color:#e7c378;letter-spacing:.13em;font-weight:800;font-size:10px;margin:0 0 10px}
+.pkr-guided-setup button:focus-visible,.pkr-guided-setup input:focus-visible,
+.pkr-guided-setup select:focus-visible{outline:2px solid #f7d597;outline-offset:3px}
+.pkr-guided-setup .pkr-install-primary,.pkr-guided-setup .pkr-install-secondary{min-height:44px;border-radius:10px;font-size:13px}
+.pkr-guided-platform ol{padding:0 0 0 23px;margin:17px 0 0;list-style-type:decimal}
+.pkr-guided-platform li{font-size:13px;line-height:1.8;margin-bottom:10px;color:#e1e6da}
+.pkr-guided-platform b,.pkr-guided-platform strong{color:#f3dcac}
+.pkr-guided-action{border:1px solid rgba(229,192,111,.4);background:rgba(12,29,25,.8);border-radius:12px;padding:15px;margin:15px 0}
+.pkr-guided-action strong{display:block;font-size:15px;color:#f8e5bd;margin-bottom:7px}
+.pkr-guided-action p{line-height:1.65;margin:9px 0 13px}
+.pkr-guided-action input{width:100%;margin:12px 0 0;border:1px solid rgba(205,185,136,.45);background:#12221f;color:#e1e6d9;border-radius:7px;padding:9px;font-size:11px}
+.pkr-guided-success{background:linear-gradient(125deg,#153b30,#0e241e)!important;border-color:rgba(106,205,146,.53)!important}
+.pkr-guided-success-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;color:#183324;background:#91d6a4;font-weight:900;font-size:24px;margin:0 0 11px}
+.pkr-guided-room{display:grid;gap:8px;margin:0 0 15px}
+.pkr-guided-room label{font-size:12px;font-weight:750;color:#e7dcc4}
+.pkr-guided-room select{min-height:48px;border:1px solid rgba(231,202,133,.5);border-radius:10px;color:#f7eedf;background:#162b24;padding:11px 14px;font-size:13px}
+.pkr-guided-transfer{border:1px solid rgba(228,192,116,.36);background:rgba(11,29,23,.8);margin-top:15px;border-radius:10px;padding:15px}
+.pkr-guided-transfer>strong{display:block;font:700 clamp(17px,4vw,26px) var(--font-num),monospace;letter-spacing:.12em;color:#f5dc9f;overflow-wrap:anywhere;margin-bottom:9px}
+.pkr-guided-transfer button{background:transparent;color:#ead09d;border:1px solid rgba(234,200,132,.55);border-radius:8px;padding:10px;font-size:12px;cursor:pointer}
+.pkr-guided-transfer p{font-size:11px}
+.pkr-guided-meta{border:1px solid rgba(185,205,192,.3);background:rgba(14,36,29,.7);border-radius:9px;padding:10px;font-size:12px!important}
+.pkr-guided-meta strong{color:#e8d8b7}
+.pkr-guided-warning{border:1px solid #b86b59;background:rgba(98,42,34,.23);padding:14px;border-radius:10px;font-size:13px;line-height:1.65;color:#f6d9d2}
+.pkr-guided-test{display:grid;justify-items:start;gap:12px;border:1px solid rgba(139,203,152,.37);border-radius:12px;padding:14px;margin-top:14px;background:rgba(27,62,37,.32)}
+.pkr-guided-test strong{color:#e8d9ad;font-size:14px}
+.pkr-guided-test p{margin:0;font-size:12px}
+.pkr-guided-verified{color:#afe2b5;font-size:12px;font-weight:700}
+.pkr-guided-sounds{margin:17px 0;border-top:1px solid rgba(214,193,151,.18);padding-top:15px}
+.pkr-guided-setup .pkr-guided-muted{color:#acbbb2;font-size:11px;line-height:1.6;margin:9px 0}
+.pkr-guided-continue{background:rgba(24,40,36,.8)!important}
+@media(max-width:570px){.pkr-guided-wrap{padding:0 12px 46px}
+.pkr-guided-setup .pkr-install-card{padding:18px}
+.pkr-guided-setup .pkr-install-hero{padding-inline:13px}
+.pkr-guided-setup .pkr-install-progress{padding-inline:9px}
+.pkr-guided-setup .pkr-install-progress span{font-size:11px}
+.pkr-guided-platform ol{padding-left:20px}
+}
+@media(min-width:1100px){.pkr-guided-setup{margin-left:218px}}
