@@ -758,6 +758,8 @@ async function test(){
        await page.getByRole('heading',{name:'Notifications for this club'}).waitFor({state:'visible',timeout:12000});
        await page.getByRole('heading',{name:'Sounds & accessibility'}).waitFor();
      }
+     // Preserve the legacy Standings link alongside the new Results area.
+     if(item.id==='room'){
       await page.goto(BASE+'/events/test-room?tab=leaderboard',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-standings-board').waitFor({state:'visible',timeout:5000});
       if(await page.locator('.pkr-standings-row').count()!==leaders.length)
