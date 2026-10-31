@@ -352,13 +352,14 @@
  .pkr-primary-mobile-utility,
  body:has(.pkr-results-page) .pkr-primary-mobile-utility{
   position:sticky!important;top:0!important;z-index:200!important;
-  min-height:calc(51px + env(safe-area-inset-top))!important;
+  min-height:calc(56px + env(safe-area-inset-top))!important;
   padding-top:calc(6px + env(safe-area-inset-top))!important;
  }
  .pkr-app.pkr-event>.pkr-topbar,
  .pkr-app.pkr-dashboard>.nav.pkr-topbar{
-  top:calc(51px + env(safe-area-inset-top))!important;
+  top:calc(56px + env(safe-area-inset-top))!important;
  }
+ .pkr-app.pkr-dashboard>.nav.pkr-topbar{padding-top:0!important}
  .pkr-results-page{
   padding-bottom:calc(var(--pkr-navigation-height,85px) + 42px)!important;
  }
