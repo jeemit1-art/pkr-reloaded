@@ -4,6 +4,7 @@ import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStat
 import { clientSafeEvent, clientSafeGame } from '../public-data';
 import { computeRoomLeaderboard } from '../player-leaderboard';
 import {archivedHistoricalNames,normaliseHistoricalName} from './historical-visibility';
+import {sendPushTestToDevice} from '../push';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -299,6 +300,30 @@ events.post('/:id/subscribe-status', authMiddleware, async(c)=>{
     :'SELECT 1 AS active FROM push_subscriptions WHERE event_id=? AND endpoint=? AND user_id=?';
   const row=await c.env.DB.prepare(query).bind(eventId,endpoint,c.get('userId')).first();
   return c.json({subscribed:!!row});
+});
+
+// A real end-to-end push test. The caller can only target their own previously
+// registered endpoint, and tests are rate-limited to avoid notification spam.
+events.post('/:id/test-push', authMiddleware, async(c)=>{
+  const eventId=c.req.param('id');
+  if(!await requireEventRole(c,eventId,'member'))
+    return c.json({error:'Private group membership required'},403);
+  if(c.env.PKR_ENV==='staging')
+    return c.json({error:'Real device delivery is disabled on staging'},503);
+  const body=await c.req.json().catch(()=>({})) as {endpoint?:unknown};
+  const endpoint=typeof body.endpoint==='string'?body.endpoint:'';
+  if(!endpoint.startsWith('https://')||endpoint.length>2048)
+    return c.json({error:'A valid registered device is required'},400);
+  const userId=c.get('userId');
+  const rateKey='push-self-test:'+eventId+':'+userId;
+  if(await c.env.KV.get(rateKey))
+    return c.json({error:'Please wait at least 45 seconds before testing again.'},429);
+  await c.env.KV.put(rateKey,'1',{expirationTtl:45});
+  const accepted=await sendPushTestToDevice(c.env,eventId,userId,endpoint);
+  c.header('Cache-Control','private, no-store');
+  return c.json({accepted,meaning:'push_service_accepted_not_device_received',
+    ...(accepted?{}:{error:'The push service did not accept this test. Reconnect notifications and retry.'})},
+    accepted?200:503);
 });
 
 events.post('/:id/unsubscribe', optionalAuth, async (c) => {

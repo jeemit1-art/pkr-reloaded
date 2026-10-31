@@ -3,6 +3,7 @@
 import {useEffect,useState,type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
 import {RecordProvider} from '@/components/RecordMetric';
+import {restoreKnownPushSubscriptions} from '@/lib/push';
 
 export default function AppExperience({children}:{children:ReactNode}){
   const pathname=usePathname();
@@ -89,6 +90,21 @@ export default function AppExperience({children}:{children:ReactNode}){
     document.addEventListener('visibilitychange',check);
     return()=>{stopped=true;registration?.removeEventListener('updatefound',observe);document.removeEventListener('visibilitychange',check);};
   },[]);
+
+  // A service-worker update must not silently remove a previous opt-in.
+  // Reconcile known room/device registrations on foreground resume. Never
+  // prompt for OS permission in the background.
+  useEffect(()=>{
+    const heal=()=>{if(document.visibilityState==='visible')
+      void restoreKnownPushSubscriptions().catch(()=>{});};
+    heal();
+    window.addEventListener('focus',heal);
+    document.addEventListener('visibilitychange',heal);
+    return()=>{
+      window.removeEventListener('focus',heal);
+      document.removeEventListener('visibilitychange',heal);
+    };
+  },[pathname]);
 
   return <RecordProvider>{children}
     {appRoute&&!online&&<div className="pkr-connection-notice" role="status">You are offline. Changes are not confirmed until PKR reconnects.</div>}

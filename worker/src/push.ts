@@ -178,6 +178,30 @@ async function sendToSub(
   }
 }
 
+/**
+ * Self-test delivery only to a verified member's own registered device.
+ * Acceptance by the push provider is not confirmation of phone display.
+ */
+export async function sendPushTestToDevice(
+  env:Env,eventId:string,userId:string,endpoint:string
+):Promise<boolean>{
+  if(env.PKR_ENV==='staging'||env.PKR_PHONE_MEMBERS_V1!=='1'||!userId||!endpoint)return false;
+  const table=env.PKR_PUSH_ROOMS_V2==='1'?'push_room_subscriptions':'push_subscriptions';
+  const record=await env.DB.prepare(
+    'SELECT s.endpoint,s.p256dh,s.auth_key FROM '+table+' s '+
+    'JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id '+
+    'WHERE s.event_id=? AND s.user_id=? AND s.endpoint=? LIMIT 1'
+  ).bind(eventId,userId,endpoint).first<{endpoint:string;p256dh:string;auth_key:string}>();
+  if(!record)return false;
+  const payload=JSON.stringify({
+    title:'🔔 PKR test — a real notification',
+    body:'This alert came from the PKR server. Your phone controls its volume. Tap to open your poker room.',
+    data:{type:'test',eventId,url:'/events/'+encodeURIComponent(eventId),
+      notificationId:'self-test-'+Date.now()},
+  });
+  return sendToSub(env,record,payload);
+}
+
 /** Broadcast to ALL subscribers of an event */
 export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<number> {
   if (env.PKR_ENV === 'staging') return 0;

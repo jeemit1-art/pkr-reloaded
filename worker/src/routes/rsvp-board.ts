@@ -182,13 +182,15 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       c.header('Cache-Control','no-store');
       // Push is opt-in, event-scoped and already disabled by the push module in staging.
       try{c.executionCtx.waitUntil(sendPushToModerators(c.env,game.event_id,{
-        title:'RSVP update — '+(game.event_name||'Poker night'),body:'A player updated attendance or arrival. Review the RSVP board.',
+        title:'RSVP: '+name+' — '+(game.event_name||'Poker night'),
+        body:name+(status==='no'?' is not coming':(' is coming'+(arrival==='late'?' late':' at '+arrival)+(seat?' · Seat '+seat:'')))+'. Open the RSVP board.',
         data:{type:'rsvp_changed',eventId:game.event_id,gameId:game.id,url:'/games/'+game.id+'/rsvp'},
       }));}catch{/* Locally mocked request contexts need not supply waitUntil. */}
       return c.json({ok:true,id,edit_token:key,status,arrival_option:arrival,seat_number:seat},201);
     }
     try{c.executionCtx.waitUntil(sendPushToModerators(c.env,game.event_id,{
-      title:'RSVP changed — '+(game.event_name||'Poker night'),body:'A player changed their attendance. Check the RSVP board.',
+      title:'RSVP changed: '+name,
+      body:name+(status==='no'?' is not coming':(' is coming'+(arrival==='late'?' late':' at '+arrival)+(seat?' · Seat '+seat:'')))+'. Check '+(game.event_name||'your game')+' RSVP board.',
       data:{type:'rsvp_changed',eventId:game.event_id,gameId:game.id,url:'/games/'+game.id+'/rsvp'},
     }));}catch{}
     c.header('Cache-Control','no-store');

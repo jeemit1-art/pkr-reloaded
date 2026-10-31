@@ -5,7 +5,7 @@ type OnboardStep  = 'welcome' | 'install' | 'notify' | 'done';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { isPWAInstalled, isIOS, isSafari, canUsePush, getNotificationPermission, subscribePush } from '@/lib/push';
+import { isPWAInstalled, isIOS, isSafari, canUsePush, isPushSubscribedToEvent, subscribePush } from '@/lib/push';
 
 export default function InvitePage() {
   const { token } = useParams<{token:string}>();
@@ -36,9 +36,12 @@ export default function InvitePage() {
 
   useEffect(() => {
     setInstalled(isPWAInstalled());
-    const perm = getNotificationPermission();
-    setNotified(perm === 'granted');
+    setNotified(false);
   }, []);
+  useEffect(()=>{
+    if(!eventId)return;
+    void isPushSubscribedToEvent(eventId).then(setNotified).catch(()=>setNotified(false));
+  },[eventId]);
 
   useEffect(() => {
     const run = async () => {
@@ -80,7 +83,11 @@ export default function InvitePage() {
     if (installPrompt) {
       installPrompt.prompt();
       const { outcome } = await installPrompt.userChoice;
-      if (outcome === 'accepted') setInstalled(true);
+      if (outcome === 'accepted') {
+        // An accepted prompt does not establish that the app has launched.
+        // Do not claim installation succeeded before display-mode changes.
+        setInstalled(isPWAInstalled());
+      }
     }
   }
 
@@ -90,9 +97,12 @@ export default function InvitePage() {
     try {
       const perm = await Notification.requestPermission();
       if (perm === 'granted') {
-        await subscribePush(eventId, userId || undefined, userName || undefined);
-        setNotified(true); setStep('done');
-        setTimeout(goToEvent, 2000);
+        const confirmed=await subscribePush(eventId,userId||undefined,userName||undefined);
+        if(confirmed){
+          setNotified(true);setStep('done');setTimeout(goToEvent,2000);
+        }else {
+          router.push('/install?group='+encodeURIComponent(eventId));
+        }
       } else { goToEvent(); }
     } catch { goToEvent(); }
     finally { setSubscribing(false); }
@@ -101,7 +111,7 @@ export default function InvitePage() {
   function goToEvent() { router.push(`/events/${eventId}`); }
 
   function nextStep() {
-    if (step === 'welcome') { setStep(installed ? 'notify' : 'install'); }
+    if (step === 'welcome') { goToEvent(); }
     else if (step === 'install') {
       if (notified || !canUsePush()) { setStep('done'); setTimeout(goToEvent, 1500); }
       else setStep('notify');
@@ -158,7 +168,8 @@ export default function InvitePage() {
         <div style={{fontSize:11,color:'var(--gold)',fontWeight:600,marginBottom:4,fontFamily:'var(--font-body),sans-serif'}}>What to do</div>
         <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>Ask the host to generate a new invite link — they expire after 48 hours and can only be used once.</div>
       </div>
-      <button className="btn btn-ghost" style={{width:'100%',fontSize:13}} onClick={()=>router.push('/dashboard')}>Go to Dashboard</button>
+      <button className="btn btn-ghost" style={{width:'100%',fontSize:13}}
+        onClick={()=>router.push('/dashboard')}>Already joined? Open my rooms</button>
     </div>
   );
 
@@ -190,9 +201,12 @@ export default function InvitePage() {
         ))}
       </div>
       <button className="btn btn-primary" style={{width:'100%',fontSize:13}} onClick={nextStep}>
-        {installed ? 'Enable Notifications →' : 'Set Up PKR →'}
+        Open my poker room →
       </button>
-      <button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:8}} onClick={goToEvent}>Skip, take me to the event</button>
+      <button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:8}}
+        onClick={()=>router.push('/install?group='+encodeURIComponent(eventId))}>
+        Install PKR & set up alerts (optional)
+      </button>
     </>
   );
 

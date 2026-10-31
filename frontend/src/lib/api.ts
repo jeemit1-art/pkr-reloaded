@@ -86,6 +86,10 @@ export const api = {
     me:       () => req<User>('/auth/me'),
     logout:   () => req('/auth/logout',{method:'POST'}),
     loginUrl: () => `${API}/auth/google`,
+    transferStart:()=>req<{code:string;expires_in:number}>('/auth/transfer/start',{method:'POST'}),
+    transferRedeem:(code:string)=>pub<{token:string}>('/auth/transfer/redeem',{
+      method:'POST',body:JSON.stringify({code})
+    }),
     refresh:  () => req<{token:string}>('/auth/refresh',{method:'POST'}),
   },
   events: {
@@ -116,6 +120,10 @@ export const api = {
     pushStatus:     (eventId:string,endpoint:string)=>req<{subscribed:boolean}>(`/events/${eventId}/subscribe-status`,{
       method:'POST',body:JSON.stringify({endpoint})
     }),
+    testPush:       (eventId:string,endpoint:string) =>
+      req<{accepted:boolean;meaning:string}>(`/events/${encodeURIComponent(eventId)}/test-push`,{
+        method:'POST',body:JSON.stringify({endpoint})
+      }),
     subscribe:      (eventId:string,sub:any,userId?:string,displayName?:string) =>
       req(`/events/${eventId}/subscribe`,{method:'POST',body:JSON.stringify({...sub,userId,display_name:displayName})}),
     unsubscribe:    (eventId:string,endpoint:string) =>
