@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import RecordMetric from '@/components/RecordMetric';
+import {useRoomExperience} from '@/components/PokerClubStage';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -13,6 +14,7 @@ const allowView=(s:string|null):View=>s==='history'||s==='insights'?s:'standings
 const ranks=(data:LeaderboardEntry[])=>[...data].sort((a,b)=>b.total_net-a.total_net||b.games_won-a.games_won);
 export default function ResultsPage(){
  const router=useRouter();
+ const experience=useRoomExperience();
  const [rooms,setRooms]=useState<Event[]>([]);
  const [selected,setSelected]=useState('');
  const [games,setGames]=useState<Game[]>([]);
@@ -126,16 +128,50 @@ export default function ResultsPage(){
   }catch(e){setNotice(e instanceof Error?e.message:'Unable to create image.')}
   finally{setSharing('')}
  }
- return <main className="pkr-primary-page pkr-results-page"><div className="pkr-primary-page-inner">
-  <header className="pkr-primary-page-head">
-   <div><span className="pkr-primary-kicker">PERFORMANCE · HISTORY · INSIGHTS</span><h1>Results</h1>
-    <p>Player standings, complete game history and meaningful performance trends — all in one place.</p>
+ return <main className={'pkr-primary-page pkr-results-page pkr-results-experience-'+experience}>
+  <div className="pkr-primary-page-inner">
+   <div className="pkr-results-room-bar">
+    <span className="pkr-results-room-identity"><span aria-hidden="true">♠</span> PKR <small>/ RESULTS</small></span>
+    {rooms.length>1&&<label>Club
+     <select aria-label="Results poker club" value={selected} onChange={e=>changeRoom(e.target.value)}>
+      {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+     </select></label>}
    </div>
-   {rooms.length>0&&<label>Poker club
-    <select aria-label="Results poker club" value={selected} onChange={e=>changeRoom(e.target.value)}>
-     {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
-    </select></label>}
-  </header>
+   {experience==='command'?
+    <header className="pkr-results-command-hero" data-testid="command-results-stage"
+     aria-label="Command Centre results overview">
+     <div className="pkr-results-command-title">
+       <span className="pkr-results-hero-eyebrow">◆ COMMAND CENTRE · PERFORMANCE</span>
+       <h1>Results</h1><span className="pkr-results-command-tagline">At a glance.</span>
+       <p>{room?.name||'Your private poker club'} · Player rankings, settled sessions and history.</p>
+     </div>
+     <div className="pkr-results-command-stats">
+       <div><small>Ranked players</small><strong>{ordered.length}</strong></div>
+       <div><small>Completed games</small><strong>{settled.length}</strong></div>
+       <div><small>Top performer</small><strong className="pkr-results-command-winner">{ordered[0]?.display_name||'—'}</strong></div>
+     </div>
+    </header>:
+    <header className="pkr-results-live-hero" data-testid="live-results-stage"
+     aria-label="Live Poker results table">
+     <div className="pkr-results-live-intro">
+       <span className="pkr-results-hero-eyebrow">♠ LIVE POKER · {room?.name||'YOUR CLUB'}</span>
+       <h1>Results</h1>
+       <p>Real results. Real rivalries.</p>
+       <span className="pkr-results-live-count">{settled.length} settled games · {ordered.length} players</span>
+     </div>
+     <div className="pkr-results-live-table" aria-label="Top three players at the felt">
+       <span className="pkr-results-table-brand">PKR <small>ALL TIME</small></span>
+       {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
+        className={'pkr-results-felt-seat pkr-results-felt-seat-'+i}
+        request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
+         playerId:p.user_id,playerName:p.display_name}}>
+         <span className="pkr-results-seat-chip">#{i+1}</span>
+         <span className="pkr-results-seat-player">{p.display_name}</span>
+         <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
+       </RecordMetric>)}
+       {!ordered.length&&<span className="pkr-results-felt-empty">Results appear after your first settled game</span>}
+     </div>
+    </header>}
   <nav className="pkr-section-tabs" aria-label="Results sections">
    {([['standings','Standings'],['history','History'],['insights','Insights']] as const).map(([key,title])=>
     <button type="button" key={key} onClick={()=>setSection(key)}
@@ -148,49 +184,60 @@ export default function ResultsPage(){
    loading?<p role="status" className="pkr-primary-empty">Loading saved poker results…</p>:
   <>
   {view==='standings'&&<>
-   <div className="pkr-primary-grid pkr-results-summary">
-    <div className="pkr-primary-metric"><small>Recorded players</small><strong>{ordered.length}</strong><span>With settled results</span></div>
-    <div className="pkr-primary-metric"><small>Completed games</small><strong>{settled.length}</strong><span>Final results</span></div>
-    <div className="pkr-primary-metric"><small>Top recorded player</small><strong className="pkr-results-top-name">{ordered[0]?.display_name||'—'}</strong><span>{ordered.length?fmtSign(ordered[0].total_net):'No settled results yet'}</span></div>
-   </div>
-   <section className="pkr-primary-panel">
-    <h2>Player standings</h2>
-    <p>All recorded players with settled results. Select a player's record to see detailed results and source games.</p>
-    {ordered.length>0&&<div className="pkr-results-podium" aria-label="Top three players by net result">
-     {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
-       className="pkr-results-podium-card" request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
-        playerId:p.user_id,playerName:p.display_name}}>
-       <span>#{i+1} ALL TIME</span><strong>{p.display_name}</strong>
-       <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
-       <small>{p.games_played} games · {p.games_won} profitable</small>
-      </RecordMetric>)}
-    </div>}
-    <div className="pkr-results-filters">
-      <label>Search players<input type="search" aria-label="Search results by player" placeholder="Find a player…"
+    <div className="pkr-results-board-top">
+     <div><span className="pkr-results-board-eyebrow">
+       {experience==='command'?'CLUB PERFORMANCE':'♠ PLAYER BOARD'}</span>
+       <h2>{experience==='command'?'All-time standings':'Players at the felt'}</h2></div>
+     <span className="pkr-results-board-counter">{ordered.length} ranked players</span>
+    </div>
+    {experience==='command'&&ordered.length>0&&
+      <div className="pkr-results-podium" aria-label="Top three players by net result">
+       {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
+        className="pkr-results-podium-card"
+        request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
+         playerId:p.user_id,playerName:p.display_name}}>
+        <span className="pkr-results-podium-medal">{['♛','♠','♣'][i]} #{i+1} ALL TIME</span>
+        <strong>{p.display_name}</strong>
+        <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
+        <small>{p.games_played} games · {p.games_won} profitable</small>
+       </RecordMetric>)}
+      </div>}
+    <section className="pkr-results-board">
+     <div className="pkr-results-filters">
+      <label>Find player
+       <input type="search" aria-label="Search results by player" placeholder="Search names…"
         value={search} onChange={e=>setSearch(e.target.value)}/></label>
-      <label>Rank by<select aria-label="Sort results standings" value={sort}
+      <label>Rank by
+       <select aria-label="Sort results standings" value={sort}
         onChange={e=>setSort(e.target.value as 'net'|'average'|'profitable'|'games')}>
-         <option value="net">Total net</option><option value="average">Average per game</option>
-         <option value="profitable">Profitable games</option><option value="games">Games played</option>
+        <option value="net">Total net</option>
+        <option value="average">Average per game</option>
+        <option value="profitable">Profitable games</option>
+        <option value="games">Games played</option>
        </select></label>
       <label className="pkr-results-min-games"><input type="checkbox" checked={minGames}
-        onChange={e=>setMinGames(e.target.checked)}/> 3+ games</label>
-    </div>
-    {visibleStandings.length?<div className="pkr-results-ranking">
-     {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
+       onChange={e=>setMinGames(e.target.checked)}/> 3+ games</label>
+     </div>
+     {visibleStandings.length?<div className="pkr-results-ranking" aria-label="Player rankings">
+      {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
        className="pkr-results-rank" request={{
         kind:'player',title:player.display_name+' — game history',roomId:selected,
         playerId:player.user_id,playerName:player.display_name
        }}>
        <span className="pkr-results-rank-number">{i+1}</span>
        <span className="pkr-results-rank-name"><strong>{player.display_name}</strong>
-        <small>{player.games_played} games · {player.games_won} profitable{player.identity_review_required?' · Identity review':''}</small></span>
-       <span className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}</span>
+        <small>{player.games_played} games · {player.games_won} profitable
+         {player.identity_review_required?' · Identity review':''}</small></span>
+       <span className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
+        {sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}
+       </span>
        <span aria-hidden="true">›</span>
       </RecordMetric>)}
-    </div>:<div className="pkr-primary-empty">{ordered.length?'No players match the selected filters.':'Standings appear after the first game has been settled.'}</div>}
-   </section>
-  </>}
+     </div>:<div className="pkr-primary-empty">
+      {ordered.length?'No players match your search or filters.':'Standings appear after the first settled game.'}
+     </div>}
+    </section>
+   </>}
   {view==='history'&&<section className="pkr-primary-panel">
    <div className="pkr-results-history-title"><div><h2>Completed games</h2><p>{settled.length} settled sessions saved in this club.</p></div>
     {canShare&&<label className="pkr-results-amount-option"><input type="checkbox"

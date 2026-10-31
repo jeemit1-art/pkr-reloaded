@@ -5,6 +5,7 @@ import './pkr-theme-a.css';
 import './pkr-player-shell.css';
 import './pkr-navigation-stability.css';
 import './room-experience-themes.css';
+import './real-dual-experiences.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

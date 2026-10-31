@@ -219,7 +219,7 @@ async function run(){
       // The saved Live Poker appearance must apply across all five destinations
       // and Account; navigation must never reset the selected room's design.
       for(const [route,surface] of [
-        ['/results?room=test-room','.pkr-primary-page-head'],
+        ['/results?room=test-room','[data-testid="live-results-stage"]'],
         ['/payments?room=test-room','.pkr-vnext-insights'],
         ['/events/test-room?tab=games','.pkr-room-games-intro'],
         ['/events/test-room?tab=members','.pkr-member-summary'],
@@ -321,7 +321,7 @@ async function run(){
       assert.equal(await page.locator('.pkr-night-stats strong').count(),4,'RSVP totals must come from PKR');
       await page.screenshot({path:path.join(output,'chromium-phone-game-night.png'),fullPage:false});
       await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
-      await page.getByRole('heading',{name:'Player standings'}).waitFor();
+      await page.getByRole('heading',{name:'All-time standings'}).waitFor();
       await page.getByLabel('Search results by player').fill('Jordan');
       assert.equal(await page.locator('.pkr-results-rank').count(),1,'Results search must filter recorded players');
       await page.getByLabel('Search results by player').fill('');
@@ -332,7 +332,7 @@ async function run(){
       const whatsappShare=page.getByRole('button',{name:/Share in WhatsApp/}).first();
       try{await whatsappShare.waitFor({state:'visible',timeout:10000})}
       catch{
-        const details=await page.locator('.pkr-primary-panel').first().innerText();
+        const details=await page.locator('.pkr-results-board').first().innerText();
         throw new Error('Host results sharing was not ready: '+details.slice(0,400));
       }
       assert.equal(await page.getByRole('checkbox',{name:/Include player net amounts/}).isChecked(),false);
