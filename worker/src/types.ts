@@ -10,6 +10,11 @@ export interface Env {
   PKR_PHONE_MEMBERS_V1?: string;
   // Additive multi-room push mapping; enable only after applying 20261026_push_rooms.sql.
   PKR_PUSH_ROOMS_V2?: string;
+  // Native Expo/Apple/Android push stays off until signed builds and
+  // APNs/FCM credentials have passed real-device tests.
+  PKR_NATIVE_PUSH_ENABLED?: string;
+  // Optional Expo enhanced push security; store in Worker secrets, never git.
+  EXPO_ACCESS_TOKEN?: string;
   // Only enable after applying/validating 20261027_settlement_v2.sql in D1.
   PKR_SETTLEMENT_V2?: string;
   PKR_CONTACT_KEY?: string;

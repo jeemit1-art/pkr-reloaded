@@ -271,6 +271,20 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
       <p>Once a game is scheduled, live attendance and sharing actions will appear here.</p></div></header>
     <div className="pkr-night-empty"><strong>No game night to manage</strong><p>Schedule a game to create its private RSVP board and live link.</p>
       {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}</div>
+    <section className="pkr-night-panel" aria-label="No-install player access">
+      <div className="pkr-night-panel-heading">
+        <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
+          <h3>PKR Instant — no installation</h3></div>
+      </div>
+      <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
+      <div className="pkr-night-actions">
+        <button type="button" className="pkr-night-primary"
+          onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
+        <button type="button" onClick={()=>void copied(
+          window.location.origin+'/instant?room='+encodeURIComponent(event.id),
+          'PKR Instant room link')}>Copy member link</button>
+      </div>
+    </section>
     {notificationTools&&<section className="pkr-night-notification-tools" aria-label="Game night alerts and notification settings">
       <div className="pkr-night-notification-title"><span className="pkr-night-kicker">FREE PKR ALERTS</span>
         <h3>Notifications & device setup</h3><p>Enable PKR push and sound even before your first game has been scheduled.</p></div>
@@ -415,6 +429,20 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
       </section>}
     </>}
 
+    <section className="pkr-night-panel" aria-label="No-install player access">
+      <div className="pkr-night-panel-heading">
+        <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
+          <h3>PKR Instant — no installation</h3></div>
+      </div>
+      <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
+      <div className="pkr-night-actions">
+        <button type="button" className="pkr-night-primary"
+          onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
+        <button type="button" onClick={()=>void copied(
+          window.location.origin+'/instant?room='+encodeURIComponent(event.id),
+          'PKR Instant room link')}>Copy member link</button>
+      </div>
+    </section>
     {notificationTools&&<section className="pkr-night-notification-tools" aria-label="Game night alerts and notification settings">
       <div className="pkr-night-notification-title"><span className="pkr-night-kicker">FREE PKR ALERTS</span>
         <h3>Notifications & device setup</h3><p>Control free PKR push alerts and sound from here. WhatsApp messages still require a manual send.</p></div>

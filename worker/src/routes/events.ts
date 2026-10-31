@@ -5,6 +5,8 @@ import { clientSafeEvent, clientSafeGame } from '../public-data';
 import { computeRoomLeaderboard } from '../player-leaderboard';
 import {archivedHistoricalNames,normaliseHistoricalName} from './historical-visibility';
 import {sendPushTestToDevice} from '../push';
+import {nativePushReady,validNativeToken,registerNativeDevice,unregisterNativeDevice,
+  hasNativeDevice,sendNativeSelfTest} from '../native-push';
 
 const events = new Hono<{ Bindings: Env }>();
 
@@ -235,6 +237,52 @@ events.post('/:id/join', async (c) => {
   const hashed = Array.from(new Uint8Array(buf)).map((b:number)=>b.toString(16).padStart(2,'0')).join('');
   if (hashed !== event.master_password) return c.json({error:'Incorrect PIN'},403);
   return c.json({ok:true, event_id:eventId, event_name:event.name});
+});
+
+// Separate, verified native-device transport. Never accept user IDs from
+// clients, and never make this available in untrusted staging.
+events.post('/:id/native-push',authMiddleware,async c=>{
+  const eventId=c.req.param('id');
+  if(!nativePushReady(c.env))
+    return c.json({error:'Native notifications are awaiting App Store credentials'},503);
+  if(!await requireEventRole(c,eventId,'member'))
+    return c.json({error:'Private group membership required'},403);
+  const body=await c.req.json().catch(()=>null) as {token?:unknown;platform?:unknown}|null;
+  if(!validNativeToken(body?.token)||(body?.platform!=='ios'&&body?.platform!=='android'))
+    return c.json({error:'Invalid device token or platform'},400);
+  await registerNativeDevice(c.env,eventId,c.get('userId'),body.token,body.platform);
+  c.header('Cache-Control','private, no-store');
+  return c.json({ok:true,registered:true});
+});
+events.post('/:id/native-push-status',authMiddleware,async c=>{
+  const eventId=c.req.param('id');
+  if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
+  const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
+  if(!validNativeToken(body?.token))return c.json({error:'Invalid token'},400);
+  return c.json({registered:nativePushReady(c.env)&&
+    await hasNativeDevice(c.env,eventId,c.get('userId'),body.token)});
+});
+events.delete('/:id/native-push',authMiddleware,async c=>{
+  const eventId=c.req.param('id');
+  if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
+  const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
+  if(!validNativeToken(body?.token))return c.json({error:'Invalid token'},400);
+  await unregisterNativeDevice(c.env,eventId,c.get('userId'),body.token);
+  c.header('Cache-Control','private, no-store');
+  return c.json({ok:true});
+});
+events.post('/:id/native-test-push',authMiddleware,async c=>{
+  const eventId=c.req.param('id');
+  if(!nativePushReady(c.env))return c.json({error:'Native push not configured'},503);
+  if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
+  const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
+  if(!validNativeToken(body?.token))return c.json({error:'Invalid token'},400);
+  const key='native-self-test:'+eventId+':'+c.get('userId');
+  if(await c.env.KV.get(key))return c.json({error:'Wait 60 seconds before testing again'},429);
+  await c.env.KV.put(key,'1',{expirationTtl:60});
+  const accepted=await sendNativeSelfTest(c.env,eventId,c.get('userId'),body.token);
+  c.header('Cache-Control','private, no-store');
+  return c.json({accepted,meaning:'expo_queue_accepted_not_device_delivered'},accepted?200:503);
 });
 
 events.post('/:id/subscribe', optionalAuth, async (c) => {
