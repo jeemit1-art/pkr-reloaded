@@ -286,6 +286,7 @@ async function test(){
            await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
            await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
          }
+         await page.locator('.pkr-dual-felt-stage .pkr-dual-table-seat').first().waitFor({state:'visible',timeout:15000});
          const liveSeatCount=await page.locator('.pkr-dual-felt-stage .pkr-dual-table-seat').count();
          if(liveSeatCount!==8) errors.push(size.name+' approved perimeter seating count '+liveSeatCount+' !== 8');
          if(!await page.locator('.pkr-dual-stage-note').isVisible())
