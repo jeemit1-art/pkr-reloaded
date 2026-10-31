@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { api, getToken, ResultsData, Transfer, fmt, fmtSign, fmtDate, waLink } from '@/lib/api';
+import { api, getToken, ResultsData, Transfer, fmt, fmtSign, fmtDate } from '@/lib/api';
 import { subscribePush, canUsePush, isIOS, isPWAInstalled } from '@/lib/push';
+import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
 
 export default function ResultsPage() {
   const { token } = useParams<{token:string}>();
@@ -53,18 +54,18 @@ export default function ResultsPage() {
   const medals = ['♛','♝','♞'];
 
   function buildShareText() {
-    return [
-      `${event.name} — Results`,
-      fmtDate(game.scheduled_at), '',
-      ...sorted.map((p,i)=>`${i<3?medals[i]:`${i+1}.`} ${p.display_name}: ${fmtSign(p.net||0)}`),
-      transfers.length?'\nTransfers:':null,
-      ...transfers.map(t=>`  ${t.from_name} → ${t.to_name}: ${fmt(t.amount)}`),
-    ].filter(Boolean).join('\n');
+    // Group sharing never includes transfer instructions or individual debts.
+    return buildResultsShare({room:event.name,date:fmtDate(game.scheduled_at),players:players,includeAmounts:false});
   }
 
   function buildTransferMsg(t: typeof transfers[0]) {
     const link=typeof window!=='undefined'?window.location.origin+'/games/results/'+encodeURIComponent(token as string):'';
-    return `Hi ${t.from_name}! You owe ${t.to_name} ${fmt(t.amount)} from ${event.name}. Once paid, please tell the host so they can confirm receipt in PKR. 🃏${link?'\\nReview results: '+link:''}`;
+    if(t.status==='payer_claimed') {
+      return 'Hi '+t.to_name+'! '+t.from_name+' marked '+fmt(t.amount)+' as sent for '+event.name+
+        '. Please check your account and confirm receipt in PKR. '+link;
+    }
+    return 'Hi '+t.from_name+'! Your outstanding payment of '+fmt(t.amount)+' to '+t.to_name+
+      ' from '+event.name+' is awaiting payment. Please mark it sent in PKR once paid. '+link;
   }
 
   function patchTransfer(id:string, p:Partial<Transfer>) {
@@ -196,7 +197,7 @@ export default function ResultsPage() {
           <div className="card">
             <div className="section-header">Who Pays Who</div>
             {transfers.map((t,i)=>{
-              const recipient = players.find(p=>p.user_id===t.to);
+              const recipient = players.find(p=>p.user_id===(t.status==='payer_claimed'?t.to:t.from));
               const waMsg = buildTransferMsg(t);
               return (
                 <div key={i} style={{padding:'12px 16px',
@@ -263,7 +264,7 @@ export default function ResultsPage() {
                     </div>
                   )}
                   {/* Recorded-as-paid and unreviewed transfers must not offer payment reminders. */}
-                  {t.status!=='paid'&&t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
+                  {game.variance===0&&t.status!=='paid'&&t.status!=='legacy'&&<div style={{display:'flex',gap:6}}>
                     <button
                       onClick={()=>copyTransferMsg(t,i)}
                       className="btn btn-ghost"
@@ -273,7 +274,7 @@ export default function ResultsPage() {
                       {copied===i ? '✓ Copied!' : '📋 Copy reminder'}
                     </button>
                     {recipient?.whatsapp ? (
-                      <a href={waLink(recipient.whatsapp, waMsg)} target="_blank" rel="noopener noreferrer"
+                      <a href={whatsappUrl(waMsg,recipient.whatsapp)} target="_blank" rel="noopener noreferrer"
                         className="btn btn-ghost"
                         style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
                           display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>

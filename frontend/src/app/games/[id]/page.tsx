@@ -301,6 +301,16 @@ export default function GamePage() {
           </section>
         )}
 
+        {isHost&&game.status!=='cancelled'&&<section className="card" aria-label="WhatsApp Sharing Centre"
+          style={{padding:'16px 18px',marginBottom:16,border:'1px solid var(--gold-dim)'}}>
+          <div style={{fontSize:12,color:'var(--gold)',letterSpacing:'0.08em'}}>HOST SHARING</div>
+          <h3 style={{fontSize:18,margin:'6px 0'}}>WhatsApp Sharing Centre</h3>
+          <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.55,marginBottom:12}}>
+            Invite members, share RSVPs and announcements, publish results or privately remind players of outstanding payments.
+          </p>
+          <button className="btn btn-primary" style={{width:'100%',padding:12}} type="button"
+            onClick={()=>router.push('/games/'+encodeURIComponent(id)+'/share')}>↗ Open WhatsApp Sharing Centre</button>
+        </section>}
         {/* Personal game invitations are addressed from the private room roster. */}
         {isHost&&(game.status==='scheduled'||game.status==='lobby')&&(
           <div style={{marginBottom:16}}>
@@ -324,11 +334,11 @@ export default function GamePage() {
               onClick={()=>navigator.clipboard.writeText(resultsUrl).then(()=>alert('Results link copied!'))}>
               📋 Copy Results Link
             </button>
-            <a href={`https://wa.me/?text=${encodeURIComponent('♠ '+game.event_name+' results: '+resultsUrl)}`}
-              target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
-              style={{fontSize:11,padding:'7px 12px',textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
-              📱 Share Results
-            </a>
+            {isHost&&<button type="button" className="btn btn-ghost"
+              style={{fontSize:11,padding:'7px 12px'}}
+              onClick={()=>router.push('/games/'+encodeURIComponent(id)+'/share?type=results')}>
+              📱 Share group-safe results
+            </button>}
           </div>
         )}
 

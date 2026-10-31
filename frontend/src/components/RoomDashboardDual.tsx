@@ -260,6 +260,12 @@ export default function RoomDashboardDual({
           </div>}
         </div>}
       </header>
+      {canManageGames&&<div className="pkr-dual-whatsapp-strip" role="region" aria-label="Host WhatsApp sharing">
+        <div><strong>♠ WhatsApp Sharing Centre</strong><small>{featured?'Invitations, RSVP updates, announcements, results and private payments':'Invite players to your private poker room'}</small></div>
+        <button type="button" onClick={()=>featured?router.push('/games/'+featured.id+'/share'):goInvite()}>
+          {featured?'Open Sharing Centre →':'Invite members →'}
+        </button>
+      </div>}
 
       <div className="pkr-dual-switcher" aria-label="Dashboard presentation">
         <div className="pkr-dual-switcher-heading">
