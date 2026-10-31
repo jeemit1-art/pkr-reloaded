@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,getToken,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
+import {rsvpChoices,rsvpChoiceLabel,rsvpChoiceStatus} from '@/lib/rsvp-choices';
 import './instant.css';
 
 const activeGame=(g:Game)=>['scheduled','lobby','active'].includes(g.status);
@@ -171,13 +172,16 @@ export default function Instant(){
       if(myGuest&&!token)throw new Error(
         'An RSVP already exists under your name. To change it, use the original browser or ask the host for help.'
       );
+      const kind=rsvpChoiceStatus(board,choice);
+      if(!kind)throw new Error('Choose an available response for this poker night.');
       const response=await api.games.submitRsvpBoard(game.id,{
         display_name:user.name,arrival_option:choice,
-        seat_number:choice==='not-coming'||!seat?null:Number(seat),
+        seat_number:kind==='yes'&&seat?Number(seat):null,
         ...(token?{edit_token:token}:{})
       });
       if(response.edit_token)localStorage.setItem(rsvpKey(game.id),response.edit_token);
-      setNotice(choice==='not-coming'?'Your host can now see that you are not coming.':
+      setNotice(kind==='no'?'Your host can now see that you are not coming.':
+        kind==='maybe'?'Your maybe response has been saved without reserving a seat.':
         'RSVP saved. Your host can see your arrival and seat choice.');
       await refresh(roomId,true);
     }catch(e:any){setError(e?.message||'RSVP could not be saved.');}
@@ -248,19 +252,18 @@ export default function Instant(){
             <div><span className="pkr-instant-kicker">REPLY IN SECONDS</span><h2>Your RSVP</h2></div>
             <span className="pkr-instant-count">{rsvpCount} coming</span>
           </div>
-          {myGuest&&<p className="pkr-instant-current">Current response: {myGuest.status==='no'?'Not coming':myGuest.arrival_option==='late'?'Running late':myGuest.arrival_option||'Coming'}{myGuest.seat_number?' · Seat '+myGuest.seat_number:''}</p>}
+          {myGuest&&<p className="pkr-instant-current">Current response: {rsvpChoiceLabel(board,myGuest.arrival_option)}{myGuest.seat_number?' · Seat '+myGuest.seat_number:''}</p>}
           {myGuest&&!savedToken?<p className="pkr-instant-help">Your response was saved elsewhere. To edit it, return to the original browser or ask your host.</p>:
           <>
-            <div className="pkr-instant-choice" role="group" aria-label="Arrival time">
-              {board.options.map(option=><button key={option} type="button"
-                aria-pressed={choice===option} className={choice===option?'selected':''}
-                onClick={()=>{setChoice(option);}}>{option}</button>)}
-              <button type="button" aria-pressed={choice==='late'} className={choice==='late'?'selected':''}
-                onClick={()=>setChoice('late')}>Running late</button>
-              <button type="button" aria-pressed={choice==='not-coming'} className={choice==='not-coming'?'selected danger':''}
-                onClick={()=>{setChoice('not-coming');setSeat('');}}>Not coming</button>
+            <div className="pkr-instant-choice" role="group" aria-label="RSVP response">
+              {rsvpChoices(board).map(option=><button key={option.value} type="button"
+                aria-pressed={choice===option.value}
+                className={choice===option.value?'selected'+(option.status==='no'?' danger':''):''}
+                onClick={()=>{setChoice(option.value);if(option.status!=='yes')setSeat('');}}>
+                {option.label}
+              </button>)}
             </div>
-            {choice&&choice!=='not-coming'&&<div className="pkr-instant-seat">
+            {choice&&rsvpChoiceStatus(board,choice)==='yes'&&<div className="pkr-instant-seat">
               <label htmlFor="pkr-instant-seat">Choose a seat (optional)</label>
               <select id="pkr-instant-seat" value={seat} onChange={e=>setSeat(e.target.value)}>
                 <option value="">Let the host decide</option>
@@ -284,7 +287,7 @@ export default function Instant(){
             <div className="pkr-instant-guests">{board.guests.map(g=><div key={g.id} className="pkr-instant-person">
               <span className="pkr-instant-avatar">{g.display_name.slice(0,1).toUpperCase()}</span>
               <span className="pkr-instant-person-name">{g.display_name}</span>
-              <span className="pkr-instant-person-detail">{g.status==='no'?'Not coming':(g.arrival_option==='late'?'Late':g.arrival_option)+(g.seat_number?' · Seat '+g.seat_number:'')}</span>
+              <span className="pkr-instant-person-detail">{rsvpChoiceLabel(board,g.arrival_option)+(g.seat_number?' · Seat '+g.seat_number:'')}</span>
             </div>)}</div>}
         </section>}
         {room&&<section className="pkr-instant-personalised" aria-label="Your full PKR account">

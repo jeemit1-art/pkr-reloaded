@@ -15,7 +15,7 @@ interface RsvpGame {
   event_name?:string|null;
 }
 interface Guest {
-  id:string;display_name:string;status:'yes'|'no';arrival_option:string;
+  id:string;display_name:string;status:'yes'|'maybe'|'no';arrival_option:string;
   seat_number:number|null;created_at:number;updated_at:number;
 }
 function flagOn(env:Env) { return env.PKR_RSVP_V2 === '1'; }
