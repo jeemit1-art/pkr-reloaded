@@ -286,8 +286,10 @@ export default function InsightsPage(){
     <div className="pkr-payments-reminder-buttons">
       <button type="button" disabled={!outstanding.length||loadingDetails} onClick={openPaymentReminders}>
         Send private reminders ↗</button>
-      {reminderGame&&<button type="button" onClick={()=>router.push('/games/'+encodeURIComponent(reminderGame.id))}>
-        Automatic 24-hour reminders ↗</button>}
+      <button type="button" disabled={!reminderGame||loadingDetails}
+        title={reminderGame?'Open this settled game to manage automatic outstanding-payment reminders.':'Available after the first settled game is recorded.'}
+        onClick={()=>{if(reminderGame)router.push('/games/'+encodeURIComponent(reminderGame.id));}}>
+        Automatic 24-hour reminders ↗</button>
     </div>
   </section>}
   {error&&<p role="alert" className="pkr-insights-alert">{error}</p>}
