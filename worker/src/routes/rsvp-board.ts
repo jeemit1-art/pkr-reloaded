@@ -16,7 +16,7 @@ interface RsvpGame {
 }
 interface Guest {
   id:string;display_name:string;status:'yes'|'maybe'|'no';arrival_option:string;
-  seat_number:number|null;created_at:number;updated_at:number;
+  seat_number:number|null;created_at:number;updated_at:number;choice_value?:string|null;
 }
 function flagOn(env:Env) { return env.PKR_RSVP_V2 === '1'; }
 function notReady(c:any) {
@@ -114,7 +114,7 @@ board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       c.env.DB.prepare('SELECT options_json FROM game_rsvp_arrivals WHERE game_id=?')
         .bind(game.id).first<{options_json:string}>(),
       c.env.DB.prepare(
-        'SELECT id,display_name,status,arrival_option,seat_number,updated_at,created_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
+        'SELECT id,display_name,status,arrival_option,choice_value,seat_number,updated_at,created_at FROM game_rsvp_guests WHERE game_id=? ORDER BY created_at ASC'
       ).bind(game.id).all<Guest>(),
       c.env.DB.prepare('SELECT id,display_name,status,created_at FROM game_rsvps WHERE game_id=? ORDER BY created_at ASC')
         .bind(game.id).all<{id:string;display_name:string;status:string;created_at:number}>(),
@@ -122,7 +122,14 @@ board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
         'SELECT display_name,seat_number FROM game_players WHERE game_id=? AND seat_number IS NOT NULL ORDER BY seat_number ASC'
       ).bind(game.id).all<{display_name:string;seat_number:number}>(),
     ]);
-    const list=guests.results.map(publicGuest);
+    const config=decodeSettings(settings?.options_json||'');
+    const list=guests.results.map(row=>{
+      const choice=row.choice_value||row.arrival_option;
+      const reply=config.answers.find(x=>x.value===choice);
+      const status=reply?.status||row.status;
+      return {...publicGuest(row),arrival_option:choice,status,
+        seat_number:status==='yes'?row.seat_number:null};
+    });
     const names=new Set(list.map(x=>x.display_name.toLocaleLowerCase()));
     for(const row of legacy.results){
       if(!names.has(row.display_name.toLocaleLowerCase()))
@@ -134,8 +141,8 @@ board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       game:{id:game.id,scheduled_at:game.scheduled_at,location:game.location,
         seats:game.seats,status:game.status},
       event:{id:game.event_id,name:game.event_name||'Poker night'},
-      options:decodeSettings(settings?.options_json||'').times,
-      responses:decodeSettings(settings?.options_json||'').answers,
+      options:config.times,
+      responses:config.answers,
       guests:list,players:players.results,
       version:Math.max(0,...list.map(x=>Number(x.updated_at)||0)),
     });
@@ -165,12 +172,15 @@ board.put('/games/:id/rsvp-arrivals',authMiddleware,async(c)=>{
     const responses=body?.responses===undefined?previous.answers:normaliseAnswers(body.responses);
     if(!responses)return c.json({error:'Set 3–8 unique replies (2–40 characters) with valid attendance types'},400);
     const used=await c.env.DB.prepare(
-      'SELECT arrival_option,status FROM game_rsvp_guests WHERE game_id=?'
-    ).bind(game.id).all<{arrival_option:string;status:string}>();
-    for(const response of used.results){
-      if(options.includes(response.arrival_option))continue;
-      const candidate=responses.find(answer=>answer.value===response.arrival_option);
-      if(!candidate||candidate.status!==response.status)
+      'SELECT arrival_option,choice_value,status FROM game_rsvp_guests WHERE game_id=?'
+    ).bind(game.id).all<{arrival_option:string;choice_value:string|null;status:string}>();
+    for(const row of used.results){
+      const chosen=row.choice_value||row.arrival_option;
+      const previousResponse=previous.answers.find(answer=>answer.value===chosen);
+      const beforeStatus=previousResponse?.status||row.status;
+      if(options.includes(chosen)&&beforeStatus==='yes')continue;
+      const candidate=responses.find(answer=>answer.value===chosen);
+      if(!candidate||candidate.status!==beforeStatus)
         return conflict(c,'A player has already selected that option. Keep its attendance meaning or ask them to change their RSVP first.');
     }
     await c.env.DB.prepare(
@@ -211,6 +221,11 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       return c.json({error:'Choose an RSVP option provided by the host'},400);
     const status:RsvpAnswerStatus=response?.status||'yes';
     if(status!=='yes')seat=null;
+    // The original D1 table enforces yes/no and requires "not-coming" for no.
+    // Keep those financial/seating-safe constraints and store the actual
+    // custom choice in an additive column for accurate Maybe/Out projection.
+    const storedStatus=status==='yes'?'yes':'no';
+    const storedArrival=status==='yes'?arrival:'not-coming';
     const selectionLabel=response?.label||arrival;
 
     if(token){
@@ -221,8 +236,8 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       if(!current)return c.json({error:'Only the person who created this RSVP can edit it on this device'},403);
       try {
         const updated=await c.env.DB.prepare(
-          "UPDATE game_rsvp_guests SET display_name=?,status=?,arrival_option=?,seat_number=?,updated_at=unixepoch() WHERE id=? AND game_id=? AND edit_token_hash=? AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
-        ).bind(name,status,arrival,seat,current.id,game.id,hash,seat,game.id,seat,game.id).run();
+          "UPDATE game_rsvp_guests SET display_name=?,status=?,arrival_option=?,choice_value=?,seat_number=?,updated_at=unixepoch() WHERE id=? AND game_id=? AND edit_token_hash=? AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
+        ).bind(name,storedStatus,storedArrival,arrival,seat,current.id,game.id,hash,seat,game.id,seat,game.id).run();
         if(!updated.meta.changes)return conflict(c);
       }catch{return conflict(c);}
     }else{
@@ -232,8 +247,8 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
       const key=secret(),hash=await digest(key),id=generateId();
       try {
         const inserted=await c.env.DB.prepare(
-          "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby')) AND NOT EXISTS(SELECT 1 FROM game_rsvps WHERE game_id=? AND display_name=? COLLATE NOCASE)"
-        ).bind(id,game.id,name,status,arrival,seat,hash,game.id,seat,seat,game.id,game.id,name).run();
+          "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,choice_value,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby')) AND NOT EXISTS(SELECT 1 FROM game_rsvps WHERE game_id=? AND display_name=? COLLATE NOCASE)"
+        ).bind(id,game.id,name,storedStatus,storedArrival,arrival,seat,hash,game.id,seat,seat,game.id,game.id,name).run();
         if(!inserted.meta.changes)return conflict(c);
       }catch{return conflict(c);}
       c.header('Cache-Control','no-store');

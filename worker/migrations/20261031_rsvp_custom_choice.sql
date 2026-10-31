@@ -1,0 +1,12 @@
+-- 31 Oct 2026. RSVP custom choice values without rebuilding a constrained
+-- live table, touching game/settlement data or changing old RSVP semantics.
+--
+-- Preconditions: take/verify a production D1 backup, confirm existing table
+-- and migration history, and execute only once on the intended database.
+-- Roll back by reverting Worker/frontend to previous commit; retain this
+-- nullable column to avoid destructive schema changes.
+--
+-- The original status CHECK remains ('yes','no'); "maybe" maps to a stored
+-- non-attending "no"/"not-coming" with the actual choice saved here.
+-- This keeps maybe replies out of automatic seating and capacity counts.
+ALTER TABLE game_rsvp_guests ADD COLUMN choice_value TEXT;
