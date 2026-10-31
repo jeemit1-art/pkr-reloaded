@@ -323,8 +323,12 @@ async function run(){
       await page.getByRole('heading',{name:'Notifications for this club'}).waitFor();
       await page.goto(BASE+'/events/test-room?tab=games',{waitUntil:'domcontentloaded'});
       const sections=page.getByRole('navigation',{name:'Games sections'});
-      for(const name of ['Sessions','RSVPs & Sharing','Calendar'])
-        assert.equal(await sections.getByRole('button',{name}).count(),1);
+      await sections.waitFor({state:'visible',timeout:15000});
+      for(const name of ['Sessions','RSVPs & Sharing','Calendar']){
+        const control=sections.getByRole('button',{name,exact:true});
+        await control.waitFor({state:'visible',timeout:10000});
+        assert.equal(await control.count(),1,'Games subtab '+name+' should have one visible action');
+      }
       await page.goto(BASE+'/games/test-game/share',{waitUntil:'domcontentloaded'});
       await page.getByTestId('game-night-hub').waitFor();
       assert.match(page.url(),/tab=night/,'Old sharing URLs must redirect to Game Night');
