@@ -272,7 +272,7 @@ export default function ResultsPage(){
       </section>
     </div>
    </>}
-  {view==='history'&&<section className="pkr-primary-panel">
+  {view==='history'&&<section className="pkr-primary-panel pkr-results-history-panel">
    <div className="pkr-results-history-title"><div><h2>Completed games</h2><p>{settled.length} settled sessions saved in this club.</p></div>
     {canShare&&<label className="pkr-results-amount-option"><input type="checkbox"
       checked={includeAmounts} onChange={e=>setIncludeAmounts(e.target.checked)}/>Include player net amounts in group results</label>}
