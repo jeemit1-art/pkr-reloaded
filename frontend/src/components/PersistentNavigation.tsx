@@ -26,10 +26,10 @@ const playerNavigation=[
 const navigation=[
  {name:'Home',icon:'home',href:'/dashboard',group:'OVERVIEW'},
  {name:'Games',icon:'games',href:'room',group:'PLAY & SCHEDULE'},
+ {name:'Schedule',icon:'schedule',href:'/schedule',group:'PLAY & SCHEDULE'},
  {name:'Game Night',icon:'schedule',href:'night',group:'RSVPS & UPDATES'},
- {name:'Game history',icon:'games',href:'history',group:'GAME NIGHT'},
- {name:'Standings',icon:'players',href:'leaderboard',group:'GAME NIGHT'},
- {name:'Schedule',icon:'schedule',href:'/schedule',group:'GAME NIGHT'},
+ {name:'Game history',icon:'games',href:'history',group:'RESULTS & HISTORY'},
+ {name:'Standings',icon:'players',href:'leaderboard',group:'RESULTS & HISTORY'},
  {name:'Members',icon:'members',href:'members',group:'CLUB & PEOPLE'},
  {name:'Insights',icon:'insights',href:'/insights',group:'FINANCES & RESULTS'},
  {name:'Settlements',icon:'settle',href:'/insights#pkr-settlement',group:'FINANCES & RESULTS'},
@@ -157,7 +157,7 @@ export default function PersistentNavigation(){
    case 'Settlements':case 'Settle':return isSettlement;
    case 'Schedule':return pathname==='/schedule';
    case 'Install':case 'Install PKR':return pathname==='/install';
-   case 'More':return moreOpen||pathname==='/schedule'||pathname==='/install'||isSettlement||(inRoom&&roomTab==='history');
+   case 'More':return moreOpen||pathname==='/schedule'||pathname==='/install'||pathname==='/insights'||isSettlement||(inRoom&&roomTab==='history');
    default:return false;
   }
  }
