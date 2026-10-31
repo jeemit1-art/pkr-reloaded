@@ -77,6 +77,7 @@ export default function ResultsPage(){
   });
  },[games]);
  const highest=Math.max(1,...months.map(x=>x.count));
+ const peakNet=Math.max(1,...ordered.map(p=>Math.abs(p.total_net)));
  const totalPlayed=leaders.reduce((sum,p)=>sum+p.games_played,0);
  const visibleStandings=useMemo(()=>{
   const q=search.trim().toLocaleLowerCase();
@@ -316,14 +317,20 @@ export default function ResultsPage(){
       </div>)}
     </div>
    </section>
-   <section className="pkr-primary-panel"><h2>Player performance</h2>
-    <p>Lifetime recorded net results by player; green indicates gains and red indicates losses.</p>
-    {ordered.map(p=><RecordMetric key={p.user_id||p.display_name} className="pkr-primary-row"
+   <section className="pkr-primary-panel pkr-results-net-panel" aria-label="Player net results graph">
+    <div className="pkr-results-net-heading">
+     <div><h2>Player net results</h2><p>Lifetime results from settled games. Select a player to review their game history.</p></div>
+     <span className="pkr-results-net-legend"><i className="gain"/> Gain <i className="loss"/> Loss</span>
+    </div>
+    {ordered.length?<div className="pkr-results-net-chart" role="group" aria-label="Red and green player net result bars">
+     {ordered.map(p=><RecordMetric bare key={p.user_id||p.display_name} className="pkr-results-net-row"
       request={{kind:'player',title:p.display_name+' — game history',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
-      <span><strong>{p.display_name}</strong><small>{p.games_played} games</small></span>
-      <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
+      <span className="pkr-results-net-person"><strong>{p.display_name}</strong><small>{p.games_played} games</small></span>
+      <span className="pkr-results-net-track" aria-hidden="true"><i className={p.total_net>0?'gain':p.total_net<0?'loss':'even'}
+       style={{width:Math.max(p.total_net===0?0:3,Math.round(Math.abs(p.total_net)/peakNet*100))+'%'}}/></span>
+      <b className={'pkr-results-net-amount '+(p.total_net>0?'pkr-vnext-positive':p.total_net<0?'pkr-vnext-negative':'')}>{fmtSign(p.total_net)}</b>
      </RecordMetric>)}
-    {!ordered.length&&<p>No settled games or player results yet.</p>}
+    </div>:<p>No settled games or player results yet.</p>}
    </section>
   </>}
   </>}
