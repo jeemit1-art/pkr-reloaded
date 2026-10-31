@@ -108,7 +108,11 @@ export default function InvitePage() {
     finally { setSubscribing(false); }
   }
 
-  function goToEvent() { router.push(`/events/${eventId}`); }
+  function goToEvent() {
+    router.push(role==='member'
+      ?'/instant?room='+encodeURIComponent(eventId)
+      :'/events/'+encodeURIComponent(eventId));
+  }
 
   function nextStep() {
     if (step === 'welcome') { goToEvent(); }
@@ -201,7 +205,7 @@ export default function InvitePage() {
         ))}
       </div>
       <button className="btn btn-primary" style={{width:'100%',fontSize:13}} onClick={nextStep}>
-        Open my poker room →
+        {role==='member'?'Open PKR Instant →':'Open my poker room →'}
       </button>
       <button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:8}}
         onClick={()=>router.push('/install?group='+encodeURIComponent(eventId))}>

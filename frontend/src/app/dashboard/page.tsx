@@ -422,8 +422,8 @@ function DashboardInner() {
         <div style={{background:'var(--bg3)',borderBottom:'1px solid var(--border)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div>
-            <span style={{fontSize:13,color:'var(--ivory)',fontWeight:500}}>Install PKR</span>
-            <span style={{fontSize:12,color:'var(--muted)',marginLeft:8}}>Guided iPhone and Android setup</span>
+            <span style={{fontSize:13,color:'var(--ivory)',fontWeight:500}}>Optional phone shortcut</span>
+            <span style={{fontSize:12,color:'var(--muted)',marginLeft:8}}>PKR works without installation</span>
           </div>
           <div style={{display:'flex',gap:8}}>
             <button className="btn btn-primary" style={{fontSize:11,padding:'5px 12px'}} onClick={()=>router.push('/install')}>Set up on phone</button>
@@ -542,7 +542,26 @@ function DashboardInner() {
             </button>
           </section>
         )}
-        {featuredRoom&&(featuredRoom.role==='member'
+        {featuredRoom&&<section aria-label="PKR Instant no-install player access"
+           style={{marginBottom:18,padding:'16px 20px',borderRadius:15,
+             background:'linear-gradient(105deg,rgba(22,60,43,.88),rgba(16,27,29,.94))',
+             border:'1px solid rgba(213,181,106,.38)',display:'flex',
+             justifyContent:'space-between',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+           <div>
+             <span style={{display:'block',color:'var(--gold)',fontSize:10,letterSpacing:'.15em',fontWeight:800}}>NEW · NO INSTALLATION REQUIRED</span>
+             <strong style={{display:'block',marginTop:5,color:'var(--ivory)',fontSize:18}}>
+               PKR Instant {playerOnly?'— your game-night view':'— see what your players see'}
+             </strong>
+             <p style={{margin:'5px 0 0',fontSize:12,color:'var(--muted)',maxWidth:480}}>
+               Open games, RSVP, choose a seat and add the night to your calendar in the browser.
+             </p>
+           </div>
+           <button className="btn btn-primary" type="button"
+             onClick={()=>router.push('/instant?room='+encodeURIComponent(featuredRoom.id))}>
+             Open PKR Instant →
+           </button>
+         </section>}
+         {featuredRoom&&(featuredRoom.role==='member'
           ?<PlayerRoomDashboard room={featuredRoom} games={featuredGames} history={featuredHistory}
             leaders={featuredLeaders} memberId={user?.id} memberName={user?.name}/>
           :<RoomDashboardDual

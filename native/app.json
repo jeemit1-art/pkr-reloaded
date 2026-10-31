@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "PKR",
+    "slug": "pkr-mobile",
+    "scheme": "pkr",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.mypkr.mobile"
+    },
+    "android": {
+      "package": "app.mypkr.mobile",
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "description": "Private home poker group management. Confirm bundle identifiers with the Apple/Google account owner before signing."
+    }
+  }
+}

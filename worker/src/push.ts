@@ -1,4 +1,5 @@
 import { Env } from './types';
+import {sendNativePushToEvent,sendNativePushToAccount,sendNativePushToManagers} from './native-push';
 
 interface PushPayload {
   title: string;
@@ -205,6 +206,7 @@ export async function sendPushTestToDevice(
 /** Broadcast to ALL subscribers of an event */
 export async function sendPushToEvent(env: Env, eventId: string, payload: PushPayload): Promise<number> {
   if (env.PKR_ENV === 'staging') return 0;
+  const nativeAccepted=await sendNativePushToEvent(env,eventId,payload);
   const subs = await env.DB.prepare(
     env.PKR_PUSH_ROOMS_V2==='1'
       ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
@@ -212,10 +214,10 @@ export async function sendPushToEvent(env: Env, eventId: string, payload: PushPa
       ?'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_subscriptions s JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id WHERE s.event_id=?'
       :'SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE event_id=?'
   ).bind(eventId).all<{endpoint:string; p256dh:string; auth_key:string}>();
-  if (!subs.results.length) return 0;
+  if (!subs.results.length) return nativeAccepted;
   const body = JSON.stringify({ title:payload.title, body:payload.body, icon:'/icon-192.png', badge:'/icon-192.png', data:payload.data||{} });
   const delivered = await Promise.allSettled(subs.results.map(s => sendToSub(env, s, body)));
-  return delivered.filter(r=>r.status==='fulfilled'&&r.value===true).length;
+  return nativeAccepted+delivered.filter(r=>r.status==='fulfilled'&&r.value===true).length;
 }
 
 /**
@@ -229,6 +231,7 @@ export async function sendPushToAccount(
 ):Promise<number>{
   if(env.PKR_ENV==='staging'||env.PKR_PHONE_MEMBERS_V1!=='1'||
      env.PKR_PUSH_ROOMS_V2!=='1'||!userId)return 0;
+  const nativeAccepted=await sendNativePushToAccount(env,eventId,userId,payload);
   const rows=await env.DB.prepare(
     'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s '+
     'JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id '+
@@ -241,7 +244,7 @@ export async function sendPushToAccount(
   const outcomes=await Promise.allSettled(
     rows.results.map(sub=>sendToSub(env,sub,payloadBody))
   );
-  return outcomes.filter(o=>o.status==='fulfilled'&&o.value===true).length;
+  return nativeAccepted+outcomes.filter(o=>o.status==='fulfilled'&&o.value===true).length;
 }
 
 /** Send push to a specific player by display_name within an event */
@@ -318,19 +321,20 @@ async function sendPushToManagers(
   env: Env, eventId: string, roles: readonly string[], payload: PushPayload
 ): Promise<number> {
   if (env.PKR_ENV === 'staging' || env.PKR_PHONE_MEMBERS_V1 !== '1') return 0;
+  const nativeAccepted=await sendNativePushToManagers(env,eventId,roles,payload);
   const table=env.PKR_PUSH_ROOMS_V2==='1'?'push_room_subscriptions':'push_subscriptions';
   const managerSql =
     "SELECT DISTINCT s.endpoint,s.p256dh,s.auth_key FROM "+table+" s " +
     "JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id " +
     "WHERE s.event_id=? AND em.role IN (" + roles.map(() => '?').join(',') + ")";
   const subs = await env.DB.prepare(managerSql).bind(eventId,...roles).all<{endpoint:string;p256dh:string;auth_key:string}>();
-  if (!subs.results.length) return 0;
+  if (!subs.results.length) return nativeAccepted;
   const body = JSON.stringify({
     title:payload.title, body:payload.body, icon:'/icon-192.png',
     badge:'/icon-192.png',data:payload.data||{}
   });
   const results = await Promise.allSettled(subs.results.map(sub=>sendToSub(env,sub,body)));
-  return results.filter(r=>r.status==='fulfilled'&&r.value===true).length;
+  return nativeAccepted+results.filter(r=>r.status==='fulfilled'&&r.value===true).length;
 }
 
 /** Only the room owner can review and approve private membership requests. */
