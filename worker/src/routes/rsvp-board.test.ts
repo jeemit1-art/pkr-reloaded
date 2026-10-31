@@ -9,10 +9,11 @@ vi.mock('../middleware',async(importOriginal)=>{
 vi.mock('../push',()=>({sendPushToEvent:vi.fn(async()=>{})}));
 import board from './rsvp-board';
 
-function fixture(status='scheduled'){
+function fixture(status='scheduled',settings:unknown=['19:00','20:00']){
  const queries:string[]=[];
  const privateNumber='04-PRIVATE-DO-NOT-DISCLOSE';
  const editHash='sensitive-stored-hash';
+ const writes:Array<{sql:string;values:any[]}>=[];
  const env:any={
   PKR_ENV:'staging',PKR_RSVP_V2:'1',
   DB:{
@@ -25,7 +26,7 @@ function fixture(status='scheduled'){
         if(sql.includes('FROM games g JOIN events e'))return {
           id:'demo',event_id:'group',scheduled_at:1700000000,location:'Demo place',
           seats:6,status,event_name:'Test club'};
-        if(sql.includes('SELECT options_json FROM game_rsvp_arrivals'))return {options_json:'["19:00","20:00"]'};
+        if(sql.includes('SELECT options_json FROM game_rsvp_arrivals'))return {options_json:JSON.stringify(settings)};
         if(sql.includes('SELECT COUNT(*)'))return {total:1};
         if(sql.includes('edit_token_hash=?'))return {id:'r1'};
         return null;
@@ -43,14 +44,14 @@ function fixture(status='scheduled'){
         if(sql.includes('FROM game_players'))return {results:[{display_name:'Host',seat_number:1}]};
         return {results:[]};
        },
-       async run(){return {meta:{changes:1}};}
+       async run(){writes.push({sql,values});return {meta:{changes:1}};}
       };
      },
     };
    },
   },
  };
- return {env,queries,privateNumber,editHash};
+ return {env,queries,writes,privateNumber,editHash};
 }
 const base='https://example.invalid/games/demo';
 const json=(value:any):RequestInit=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
@@ -122,4 +123,113 @@ describe('public live RSVP board v2',()=>{
   },f.env);
   expect(r.status).toBe(400);
  });
+ it('uses backwards-compatible reply defaults for older time-only games',async()=>{
+  const f=fixture();
+  const r=await board.request(base+'/rsvp-board',{},f.env);
+  const data:any=await r.json();
+  expect(data.options).toEqual(['19:00','20:00']);
+  expect(data.responses).toEqual([
+    {value:'late',label:'Running late',status:'yes'},
+    {value:'maybe',label:'Maybe',status:'maybe'},
+    {value:'not-coming',label:'Not coming',status:'no'},
+  ]);
+ });
+ it('accepts custom Maybe and Out responses without falsely reserving seats',async()=>{
+  const settings={
+   times:['19:00','20:00'],
+   answers:[
+    {value:'late',label:'Coming late',status:'yes'},
+    {value:'maybe',label:'Might be there',status:'maybe'},
+    {value:'not-coming',label:'Out tonight',status:'no'},
+    {value:'custom-abc12345',label:'Will decide later',status:'maybe'}
+   ]
+  };
+  const f=fixture('scheduled',settings);
+  for(const [key,expected] of [
+    ['maybe','maybe'],['not-coming','no'],['custom-abc12345','maybe']
+  ] as const){
+   const r=await board.request(base+'/rsvp-board',json({
+     display_name:'Fictional Alice',arrival_option:key,seat_number:4
+   }),f.env,{waitUntil:()=>{}} as any);
+   expect(r.status).toBe(201);
+   const data:any=await r.json();
+   expect(data.status).toBe(expected);
+   expect(data.seat_number).toBeNull();
+   const saved=f.writes.at(-1);
+   expect(saved?.sql).toContain('choice_value');
+   // Existing production schema permits yes/no only and forces non-attenders
+   // to use arrival_option='not-coming'. The additive column retains the
+   // actual host-configured response, including Maybe.
+   expect(saved?.values[3]).toBe('no');
+   expect(saved?.values[4]).toBe('not-coming');
+   expect(saved?.values[5]).toBe(key);
+   expect(saved?.values[6]).toBeNull();
+  }
+  const response=await board.request(base+'/rsvp-board',json({
+   display_name:'Fictional Alice',arrival_option:'late',seat_number:4
+  }),f.env,{waitUntil:()=>{}} as any);
+  expect((await response.json() as any).status).toBe('yes');
+  expect(f.writes.at(-1)?.values.slice(3,7)).toEqual(['yes','late','late',4]);
+ });
+ it('projects persisted non-attending Maybe replies without revealing database internals',async()=>{
+  const configured={times:['19:00','20:00'],answers:[
+   {value:'late',label:'Running late',status:'yes'},
+   {value:'maybe',label:'May not come',status:'maybe'},
+   {value:'not-coming',label:'Out',status:'no'}
+  ]};
+  const f=fixture('scheduled',configured);
+  const original=f.env.DB.prepare.bind(f.env.DB);
+  f.env.DB.prepare=(sql:string)=>{
+   const statement=original(sql);
+   if(!sql.includes('SELECT id,display_name,status,arrival_option,choice_value'))return statement;
+   return {bind:()=>({all:async()=>({results:[{
+    id:'r1',display_name:'Fictional Jane',status:'no',
+    arrival_option:'not-coming',choice_value:'maybe',seat_number:null,updated_at:20,created_at:1
+   }]})})};
+  };
+  const response=await board.request(base+'/rsvp-board',{},f.env);
+  expect(response.status).toBe(200);
+  const json:any=await response.json();
+  expect(json.guests[0]).toMatchObject({
+    status:'maybe',arrival_option:'maybe',seat_number:null
+  });
+ });
+ it('allows host free-text labels with explicit attendance type',async()=>{
+  const f=fixture();
+  const responses=[
+    {value:'late',label:'Running behind',status:'yes'},
+    {value:'maybe',label:'May not come',status:'maybe'},
+    {value:'not-coming',label:'Out',status:'no'},
+    {value:'custom-aabbccdd',label:'Coming after work',status:'yes'}
+  ];
+  const r=await board.request(base+'/rsvp-arrivals',{method:'PUT',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({options:['19:00','20:00'],responses})
+  },f.env);
+  expect(r.status).toBe(200);
+  expect((await r.json() as any).responses).toEqual(responses);
+ });
+ it('rejects duplicate, unsafe or misleading custom answers',async()=>{
+  for(const answers of [
+    [{value:'late',label:'Late',status:'no'},...[
+      {value:'maybe',label:'Maybe',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'}
+    ]],
+    [{value:'late',label:'Late',status:'yes'},
+      {value:'maybe',label:'Late',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'}],
+    [{value:'late',label:'Late',status:'yes'},
+      {value:'maybe',label:'Maybe',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'},
+      {value:'custom-12345678',label:'<script>',status:'yes'}]
+  ]){
+   const f=fixture();
+   const r=await board.request(base+'/rsvp-arrivals',{method:'PUT',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({options:['19:00'],responses:answers})
+   },f.env);
+   expect(r.status).toBe(400);
+  }
+ });
+
 });
