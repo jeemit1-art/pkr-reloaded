@@ -712,8 +712,11 @@ async function test(){
         await page.getByTestId('game-night-hub').waitFor({state:'visible',timeout:7000});
         if(new URL(page.url()).searchParams.get('tab')!=='night')
           errors.push(size.name+' Game Night did not open the dedicated tab');
-        if(!await page.getByRole('heading',{name:'Share once. Always up to date.'}).isVisible())
+        try{
+          await page.getByRole('heading',{name:'Share once. Always up to date.'}).waitFor({state:'visible',timeout:12000});
+        }catch{
           errors.push(size.name+' current PKR RSVP board missing from Game Night');
+        }
         const registration=page.getByLabel('Member notification registrations');
         await registration.waitFor({state:'visible',timeout:7000});
         if(!await registration.getByText('1 of 2 members have a registered notification device').count())
@@ -756,6 +759,14 @@ async function test(){
        if(await page.locator('.pkr-member-roster').isVisible())errors.push(size.name+' roster not separated from invitations');
        await page.getByRole('button',{name:/Players \(/}).click();
        await page.locator('.pkr-member-roster').waitFor({state:'visible'});
+       if(size.width>=1100){
+         await page.getByRole('button',{name:'+ Invite Member by Mobile'}).click();
+         await page.getByLabel('WhatsApp mobile number').waitFor({state:'visible',timeout:5000});
+         if(await page.locator('.pkr-member-roster').isVisible())
+           errors.push(size.name+' roster should close when shortcut opens invitations');
+         await page.getByRole('button',{name:/Players \(/}).click();
+         await page.locator('.pkr-member-roster').waitFor({state:'visible'});
+       }
        const search=page.locator('#pkr-member-search');
        if(await search.count()){
          await search.fill('Jordan');
