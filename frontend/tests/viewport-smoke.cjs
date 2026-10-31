@@ -725,6 +725,22 @@ async function test(){
      if(item.id==='room'){
        const nav=size.width>=1100?page.locator('.pkr-persistent-nav'):page.locator('.pkr-universal-bottom-nav');
        await page.locator('.pkr-room-games-intro').waitFor({state:'visible'});
+       if(size.width<=740){
+         const geometry=await page.locator('[data-testid="games-command-stage"]').evaluate(stage=>{
+           const copy=stage.querySelector('.pkr-experience-command-copy');
+           const stats=stage.querySelector('.pkr-experience-command-stats');
+           if(!copy||!stats)return null;
+           const box=stage.getBoundingClientRect(),title=copy.getBoundingClientRect(),tiles=stats.getBoundingClientRect();
+           return {height:box.height,width:box.width,copyWidth:title.width,
+             tilesTop:tiles.top,copyBottom:title.bottom,tilesRight:tiles.right,stageRight:box.right,
+             properClass:stage.classList.contains('pkr-experience-command'),
+             columns:getComputedStyle(stats).gridTemplateColumns};
+         });
+         if(!geometry||!geometry.properClass||geometry.height>460||
+             geometry.copyWidth<175||geometry.tilesTop<geometry.copyBottom-3||
+             geometry.tilesRight>geometry.stageRight+3)
+           errors.push(size.name+' Games Command hero collapsed or overflowed: '+JSON.stringify(geometry));
+       }
        const secondary=page.getByRole('navigation',{name:'Games sections'});
        if(!await secondary.getByRole('button',{name:'RSVPs & Sharing'}).isVisible())
          errors.push(size.name+' Games is missing the RSVP secondary tab');
@@ -743,6 +759,17 @@ async function test(){
        }
        await nav.getByRole('button',{name:'Players',exact:true}).click();
        await page.locator('.pkr-member-summary').waitFor({state:'visible'});
+       if(size.width<=740){
+         const playerHero=await page.locator('[data-testid="players-command-stage"]').evaluate(stage=>{
+           const copy=stage.querySelector('.pkr-experience-command-copy')?.getBoundingClientRect();
+           const stats=stage.querySelector('.pkr-experience-command-stats')?.getBoundingClientRect();
+           return {height:stage.getBoundingClientRect().height,copyBottom:copy?.bottom,
+             tilesTop:stats?.top,properClass:stage.classList.contains('pkr-experience-command')};
+         });
+         if(!playerHero||!playerHero.properClass||playerHero.height>330||
+             playerHero.tilesTop<playerHero.copyBottom-3)
+           errors.push(size.name+' Players Command hero collapsed: '+JSON.stringify(playerHero));
+       }
        if(new URL(page.url()).searchParams.get('tab')!=='members')
          errors.push(size.name+' Players tab did not open the member roster');
        if(await page.getByLabel('Member notification registrations').count())
@@ -801,10 +828,50 @@ async function test(){
         }
         if(!await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).isVisible())
          errors.push(size.name+' Results is missing History');
+       await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Insights'}).click();
+       await page.locator('.pkr-results-net-row').first().waitFor({state:'visible',timeout:10000});
+       const bars=await page.locator('.pkr-results-net-row').count();
+       const gains=await page.locator('.pkr-results-net-track i.gain').count();
+       const losses=await page.locator('.pkr-results-net-track i.loss').count();
+       if(bars!==leaders.length||!gains||!losses)
+         errors.push(size.name+' Results Insights lost red/green player graphs: '+JSON.stringify({bars,gains,losses}));
+       if(size.width<1100){
+         const graph=await page.locator('.pkr-results-net-row').first().evaluate(row=>{
+           const style=getComputedStyle(row),person=row.querySelector('.pkr-results-net-person')?.getBoundingClientRect(),
+             track=row.querySelector('.pkr-results-net-track')?.getBoundingClientRect();
+           return {display:style.display,nameWidth:person?.width,trackWidth:track?.width,
+             scrollWidth:document.documentElement.scrollWidth,viewportWidth:document.documentElement.clientWidth};
+         });
+         if(!graph||graph.display!=='grid'||graph.nameWidth<70||graph.trackWidth<30||
+             graph.scrollWidth>graph.viewportWidth+4)
+           errors.push(size.name+' Results Insights bars not responsive: '+JSON.stringify(graph));
+         await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+         const lastGraph=await page.locator('.pkr-results-net-row').last().evaluate(row=>{
+           const nav=document.querySelector('.pkr-primary-bottom-nav');
+           return {rowBottom:row.getBoundingClientRect().bottom,navTop:nav?.getBoundingClientRect().top};
+         });
+         if(lastGraph.rowBottom>lastGraph.navTop-5)
+           errors.push(size.name+' last Insights graph row hidden by navigation: '+JSON.stringify(lastGraph));
+       }
        await nav.getByRole('button',{name:'Payments',exact:true}).click();
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
        try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
        catch{errors.push(size.name+' settlement ledger did not load in Payments')}
+       if(size.width<=740){
+         const paymentStage=await page.locator('.pkr-payments-stage [data-testid="payments-command-stage"]').evaluate(stage=>{
+           const copy=stage.querySelector('.pkr-experience-command-copy')?.getBoundingClientRect();
+           const cards=stage.querySelector('.pkr-experience-command-stats')?.getBoundingClientRect();
+           const rect=stage.getBoundingClientRect();
+           return {width:rect.width,height:rect.height,copyWidth:copy?.width,
+             copyBottom:copy?.bottom,cardsTop:cards?.top,cardsRight:cards?.right,
+             stageRight:rect.right};
+         }).catch(()=>null);
+         if(!paymentStage||paymentStage.copyWidth<175||
+             paymentStage.cardsTop<paymentStage.copyBottom-3||
+             paymentStage.cardsRight>paymentStage.stageRight+3||
+             paymentStage.height>340)
+           errors.push(size.name+' Payments Command hero squashed or clipped: '+JSON.stringify(paymentStage));
+       }
        await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Notifications for this club'}).waitFor({state:'visible',timeout:12000});
        await page.getByRole('heading',{name:'Sounds & accessibility'}).waitFor();
