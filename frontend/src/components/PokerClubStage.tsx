@@ -38,7 +38,7 @@ type StageProps={
 export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],children}:StageProps){
  const mode=useRoomExperience();
  if(mode==='live'){
-  return <section className={'pkr-experience-stage pkr-experience-stage-live pkr-experience-'+kind}
+  return <section className={'pkr-experience-stage pkr-experience-stage-live pkr-experience-live pkr-experience-'+kind}
     data-testid={kind+'-live-stage'} aria-label={title+' — Live Poker'}>
     <div className="pkr-experience-live-copy">
       <span className="pkr-experience-eyebrow">♠ LIVE POKER · {club}</span>
@@ -58,7 +58,7 @@ export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],chil
     </div>
    </section>;
  }
- return <section className={'pkr-experience-stage pkr-experience-stage-command pkr-experience-'+kind}
+ return <section className={'pkr-experience-stage pkr-experience-stage-command pkr-experience-command pkr-experience-'+kind}
    data-testid={kind+'-command-stage'} aria-label={title+' — Command Centre'}>
    <div className="pkr-experience-command-copy">
      <span className="pkr-experience-eyebrow">◆ COMMAND CENTRE · {club}</span>
