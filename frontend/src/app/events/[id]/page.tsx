@@ -8,6 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api, EventDetail, Game, LeaderboardEntry, fmtDate, fmt, fmtSign, type RoomPlayerProfile, type RoomPlayerProfileInput } from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
+import GameNightTools from '@/components/GameNightTools';
 import { subscribePush, unsubscribePush, isPushSubscribedToEvent, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import './room-dashboard-polish.css';
@@ -17,7 +18,7 @@ import {playPkrSound} from '@/lib/sounds';
 import StandingsBoard from '@/components/StandingsBoard';
 import {isCurrentGame,isLiveGame,isUnfinishedGame,gameStatusLabel} from '@/lib/game-status';
 
-type Tab = 'games' | 'leaderboard' | 'history' | 'members';
+type Tab = 'games' | 'night' | 'leaderboard' | 'history' | 'members';
 type InviteRole = 'cohost' | 'member';
 
 export default function EventPage() {
@@ -32,7 +33,7 @@ export default function EventPage() {
   useEffect(()=>{
     const open=(e:globalThis.Event)=>{
       const next=(e as CustomEvent<string>).detail;
-      if(next==='games'||next==='leaderboard'||next==='history'||next==='members'){
+      if(next==='games'||next==='night'||next==='leaderboard'||next==='history'||next==='members'){
         setTab(next);
         window.scrollTo(0,0);
       }
@@ -66,7 +67,7 @@ export default function EventPage() {
   const previousRequestCount=useRef<number|null>(null);
   const [joinDecisionNotice,setJoinDecisionNotice]=useState('');
   const memberDeepLinkScroll=useRef(false);
-  const [memberSection,setMemberSection]=useState<'invite'|'requests'|'roster'|'notifications'>('invite');
+  const [memberSection,setMemberSection]=useState<'invite'|'requests'|'roster'>('roster');
   const [phoneContacts,setPhoneContacts]=useState([] as Array<{id:string;display_name:string;phone:string;status:string;user_id?:string|null}>);
   const [contactToLink,setContactToLink]=useState<{id:string;name:string}|null>(null);
   const [linkMemberId,setLinkMemberId]=useState('');
@@ -113,11 +114,15 @@ export default function EventPage() {
   useEffect(()=>{
     const query=new URLSearchParams(window.location.search);
     const requestedTab=query.get('tab');
-    if(requestedTab==='games'||requestedTab==='leaderboard'||requestedTab==='history'||requestedTab==='members')
+    if(requestedTab==='games'||requestedTab==='night'||requestedTab==='leaderboard'||requestedTab==='history'||requestedTab==='members')
       setTab(requestedTab);
     const section=query.get('view');
-    if(section==='requests'||section==='invite'||section==='roster'||section==='notifications')
-      setMemberSection(section);
+    if(section==='notifications'&&requestedTab==='members'){
+      setTab('night');
+      const url=new URL(window.location.href);
+      url.searchParams.set('tab','night');url.searchParams.delete('view');
+      window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+    }else if(section==='requests'||section==='invite'||section==='roster')setMemberSection(section);
     if(query.get('inviteGame'))setSelectedInviteGameId(query.get('inviteGame')||'');
     Promise.all([api.events.get(id), api.auth.me()]).then(([e,u])=>{
       setEvent(e as any); setUser(u as any);
@@ -162,7 +167,7 @@ export default function EventPage() {
 
   // Only the host sees registered devices; endpoints and keys stay private.
   useEffect(()=>{
-    if(tab!=='members'||!isGroupOwner)return;
+    if(tab!=='night'||!isGroupOwner)return;
     let alive=true;
     setPushRegistrationLoading(true);
     setPushRegistrationError('');
@@ -191,7 +196,7 @@ export default function EventPage() {
     refresh();const timer=setInterval(refresh,15000);
     return()=>clearInterval(timer);
   },[isGroupOwner,id]);
-  function focusMemberSection(section:'invite'|'requests'|'roster'|'notifications'){
+  function focusMemberSection(section:'invite'|'requests'|'roster'){
     setTab('members');setMemberSection(section);
     window.setTimeout(()=>{
       document.getElementById('pkr-members-'+section)?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -200,7 +205,7 @@ export default function EventPage() {
   useEffect(()=>{
     if(tab!=='members'||!event||memberDeepLinkScroll.current)return;
     const section=new URLSearchParams(window.location.search).get('view');
-    if(section==='requests'||section==='roster'||section==='notifications'||section==='invite'){
+    if(section==='requests'||section==='roster'||section==='invite'){
       memberDeepLinkScroll.current=true;
       window.setTimeout(()=>document.getElementById('pkr-members-'+section)?.scrollIntoView({behavior:'smooth',block:'start'}),300);
     }
@@ -450,143 +455,16 @@ export default function EventPage() {
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
     window.scrollTo(0,0);
   };
-  return (
-    <div className="pkr-app pkr-event pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
-      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
-
-      {/* Header */}
-      <div className="pkr-topbar" style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
-        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',height:60,display:'flex',alignItems:'center',gap:12}}>
-          <button aria-label="Back to poker rooms" onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
-          <div style={{flex:1,minWidth:0}}>
-            <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
-          </div>
-          {/* Push bell */}
-          {canUsePush() && (
-            <button onClick={togglePush} disabled={pushLoading} title={pushEnabled?'Notifications ON — tap to disable':'Enable push notifications'}
-              style={{background:pushEnabled?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.05)',
-                color:pushEnabled?'var(--green)':'var(--muted)',
-                border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
-                borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
-                display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
-              {pushEnabled ? '🔔' : '🔕'}
-            </button>
-          )}
-          {isHost && (
-            <div className="pkr-header-game-actions" style={{display:'flex',gap:6}}>
-              <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
-              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Home alone contains the full dashboard and live snapshot.
-           Games, Members, Standings and History open directly to their section. */}
-            <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
-        {pushError&&<div role="alert" className="pkr-unfinished-note" style={{marginBottom:12}}>{pushError}</div>}
-
-        {/* Games, schedules and completed sessions */}
-        {tab==='games' && (
-          <div>
-            <div className="pkr-room-games-intro">
-              <div>
-                <span className="pkr-eyebrow">GAME NIGHT</span>
-                <h1>Games</h1>
-                <p>{event.name} · Upcoming sessions, results and game history.</p>
-              </div>
-              <div className="pkr-room-games-links">
-                {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
-                {isHost&&(upcoming[0]||settled[0])&&<button type="button" className="btn btn-outline" onClick={()=>router.push('/games/'+(upcoming[0]||settled[0]).id+'/share')}>WhatsApp Sharing →</button>}
-                <button type="button" className="btn btn-outline" onClick={()=>selectTab('history')}>Game history →</button>
-              </div>
-            </div>
-            {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon">♠</div>
-                <div className="empty-state-text">No games scheduled yet.</div>
-                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
-              </div>
-            )}
-            {upcoming.length>0 && (
-              <div className="pkr-games-heading">
-                <div><span className="pkr-eyebrow">Your schedule</span><h2>Upcoming &amp; live games</h2></div>
-                <span>{upcoming.filter(g=>isLiveGame(g)).length} live</span>
-              </div>
-            )}
-            {upcoming.map(g=>(
-              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
-                onClick={()=>router.push(`/games/${g.id}`)}
-                onOpenTable={()=>router.push(`/games/${g.id}/play`)}
-                onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
-                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
-                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members');}}
-                onShare={()=>router.push('/games/'+g.id+'/share')}/>
-            ))}
-            {unfinished.length>0&&<section aria-label="Unfinished game sessions" style={{margin:'20px 0'}}>
-              <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
-                <p>These historical sessions have been preserved. They are not counted as live or upcoming; open a game to review its records.</p>
-              </div>
-              {unfinished.map(g=><GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
-                onClick={()=>router.push('/games/'+g.id)}
-                onOpenTable={()=>router.push('/games/'+g.id+'/play')}
-                onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
-                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true)}}
-                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
-                onInviteMembers={()=>{setSelectedInviteGameId(g.id);selectTab('members')}}
-                onShare={()=>router.push('/games/'+g.id+'/share')}/>)}
-            </section>}
-            {settled.length>0 && (
-              <>
-                <div style={{fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--faint)',margin:'20px 0 10px',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>
-                  Recent Results
-                </div>
-                {settled.slice(0,3).map(g=>(
-                  <div key={g.id} className="card pkr-game-card" style={{marginBottom:8,cursor:'pointer'}} onClick={()=>router.push(`/games/${g.id}`)}>
-                    <div style={{padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:14,color:'var(--ivory)'}}>{fmtDate(g.scheduled_at)}</div>
-                        {g.location && <div style={{fontSize:11,color:'var(--muted)'}}>{g.location}</div>}
-                        {(g as any).format && (g as any).format !== 'cash' && (
-                          <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
-                            letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                            {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(g as any).format] || (g as any).format)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="badge badge-settled">Settled</span>
-                      <span style={{color:'var(--faint)',fontSize:16}}>›</span>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* All-time player standings — derived from settled game records. */}
-        {tab==='leaderboard'&&<StandingsBoard leaders={leaders} settledGames={settled.length} onSelectPlayer={setSelectedPlayer} roomId={id}/>}
-
-        {/* ── Members tab ── */}
-        {tab==='members' && (
-          <div className="pkr-members-panel">
-            <header className="pkr-member-summary">
-              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Members</h2><p>Manage your poker room and the people who play together.</p></div>
-              <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
-              <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
-            </header>
-            <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
-              {([
-                {id:'invite',text:'＋ Invite & QR',visible:isGroupOwner},
-                {id:'requests',text:'🔔 Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),visible:isGroupOwner},
-                {id:'roster',text:'♟ Players ('+(event.members?.length||0)+')',visible:true},
-                {id:'notifications',text:'🔊 Alerts & sound',visible:true},
-              ] as const).filter(action=>action.visible).map(action=>
-                <button type="button" key={action.id} className={memberSection===action.id?'active':''}
-                  onClick={()=>focusMemberSection(action.id)}>{action.text}</button>)}
-            </nav>
-            <section className="pkr-members-alert-panel" id="pkr-members-notifications" aria-label="Member notification settings">
+  const openGameNight=(gameId?:string)=>{
+    if(gameId){
+      const url=new URL(window.location.href);
+      url.searchParams.set('game',gameId);
+      window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+    }
+    selectTab('night');
+  };
+  const notificationTools=(
+<section className="pkr-members-alert-panel" id="pkr-members-notifications" aria-label="Member notification settings">
               <div className="pkr-members-alert-head">
                 <div><span className="pkr-eyebrow">STAY IN THE LOOP</span>
                   <h3>{isGroupOwner?'Host notifications':'Your poker notifications'}</h3>
@@ -625,6 +503,122 @@ export default function EventPage() {
                 </div>
               )}
             </section>
+  );
+  return (
+    <div className="pkr-app pkr-event pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
+      <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+
+      {/* Header */}
+      <div className="pkr-topbar" style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'sticky',top:0,zIndex:50,backdropFilter:'blur(16px)'}}>
+        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',height:60,display:'flex',alignItems:'center',gap:12}}>
+          <button aria-label="Back to poker rooms" onClick={()=>router.push('/dashboard')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,padding:'4px 8px',lineHeight:1,display:'flex',alignItems:'center'}}>‹</button>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="display" style={{fontSize:16,color:'var(--white)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.name}</div>
+          </div>
+          {/* Push bell */}
+          {canUsePush() && (
+            <button onClick={togglePush} disabled={pushLoading} title={pushEnabled?'Notifications ON — tap to disable':'Enable push notifications'}
+              style={{background:pushEnabled?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.05)',
+                color:pushEnabled?'var(--green)':'var(--muted)',
+                border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
+                borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
+                display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
+              {pushEnabled ? '🔔' : '🔕'}
+            </button>
+          )}
+          {isHost && (
+            <div className="pkr-header-game-actions" style={{display:'flex',gap:6}}>
+              <button className="btn btn-primary" style={{fontSize:11,padding:'7px 14px'}} onClick={()=>setShowCreate(true)}>+ Game</button>
+              <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}} onClick={()=>setShowInstall(true)}>Share</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Home alone contains the full dashboard and live snapshot.
+           Games, Game Night, Members, Standings and History open directly to their section. */}
+            <div className="pkr-content" style={{maxWidth:960,margin:'0 auto',padding:'24px 16px',position:'relative',zIndex:1}}>
+        {pushError&&<div role="alert" className="pkr-unfinished-note" style={{marginBottom:12}}>{pushError}</div>}
+
+        {/* Games, schedules and completed sessions */}
+        {tab==='games' && (
+          <div>
+            <div className="pkr-room-games-intro">
+              <div>
+                <span className="pkr-eyebrow">GAME NIGHT</span>
+                <h1>Games</h1>
+                <p>{event.name} · Upcoming sessions, results and game history.</p>
+              </div>
+              <div className="pkr-room-games-links">
+                {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
+                {(upcoming[0]||settled[0])&&<button type="button" className="btn btn-outline" onClick={()=>openGameNight((upcoming[0]||settled[0]).id)}>Game Night & RSVPs →</button>}
+                <button type="button" className="btn btn-outline" onClick={()=>selectTab('history')}>Game history →</button>
+              </div>
+            </div>
+            {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">♠</div>
+                <div className="empty-state-text">No games scheduled yet.</div>
+                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
+              </div>
+            )}
+            {upcoming.length>0 && (
+              <div className="pkr-games-heading">
+                <div><span className="pkr-eyebrow">Your schedule</span><h2>Upcoming &amp; live games</h2></div>
+                <span>{upcoming.filter(g=>isLiveGame(g)).length} live</span>
+              </div>
+            )}
+            {upcoming.map(g=>(
+              <GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
+                onClick={()=>router.push(`/games/${g.id}`)}
+                onOpenTable={()=>router.push(`/games/${g.id}/play`)}
+                onWatchLive={()=>g.live_token && router.push(`/games/live/${g.live_token}`)}
+                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true);}}
+                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
+                onShare={()=>openGameNight(g.id)}/>
+            ))}
+            {unfinished.length>0&&<section aria-label="Unfinished game sessions" style={{margin:'20px 0'}}>
+              <div className="pkr-unfinished-note" style={{marginBottom:10}}><strong>{unfinished.length} unfinished or past-due game{unfinished.length===1?'':'s'}</strong>
+                <p>These historical sessions have been preserved. They are not counted as live or upcoming; open a game to review its records.</p>
+              </div>
+              {unfinished.map(g=><GameCard key={g.id} game={g} appUrl={appUrl} eventName={event.name} isHost={isHost} canDelete={isGroupOwner}
+                onClick={()=>router.push('/games/'+g.id)}
+                onOpenTable={()=>router.push('/games/'+g.id+'/play')}
+                onWatchLive={()=>g.live_token&&router.push('/games/live/'+g.live_token)}
+                onQuickSeat={()=>{setQuickSeatGameId(g.id);setShowQuickSeat(true)}}
+                onCancel={()=>setConfirmDelete(g.id)} onDelete={()=>setConfirmDelete(g.id+':delete')}
+                onShare={()=>openGameNight(g.id)}/>)}
+            </section>}
+
+          </div>
+        )}
+
+        {/* All-time player standings — derived from settled game records. */}
+        {tab==='leaderboard'&&<StandingsBoard leaders={leaders} settledGames={settled.length} onSelectPlayer={setSelectedPlayer} roomId={id}/>}
+
+        {/* Host communications and live RSVP management have their own room tab. */}
+        {tab==='night'&&<GameNightTools event={event} games={games} isHost={isHost}
+          onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}
+          notificationTools={notificationTools}/>}
+        {/* ── Members tab ── */}
+        {tab==='members' && (
+          <div className="pkr-members-panel" data-section={memberSection}>
+            <header className="pkr-member-summary">
+              <div className="pkr-member-summary-copy"><span className="pkr-eyebrow">♟ PRIVATE POKER CLUB</span><h2>Members</h2><p>Player profiles, private invitations and host approvals. Game RSVPs and alerts live under Game Night.</p></div>
+              <div className="pkr-member-summary-metric"><strong>{event.members?.length||0}</strong><small>Room members</small></div>
+              <div className="pkr-member-summary-metric"><strong>{joinRequests.length}</strong><small>Join requests</small></div>
+            </header>
+            <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
+              {([
+                {id:'roster',text:'♟ Players ('+(event.members?.length||0)+')',visible:true},
+                {id:'invite',text:'＋ Invite & QR',visible:isGroupOwner},
+                {id:'requests',text:'🔔 Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),visible:isGroupOwner},
+              ] as const).filter(action=>action.visible).map(action=>
+                <button type="button" key={action.id} className={memberSection===action.id?'active':''}
+                  onClick={()=>focusMemberSection(action.id)}>{action.text}</button>)}
+            </nav>
+
+           <div className="pkr-member-subpage" hidden={memberSection!=='requests'}>
            <div id="pkr-members-requests" className="pkr-members-anchor" />
            {isGroupOwner&&joinRequests.length===0&&<section className="pkr-member-empty-approvals">
              <strong>✓ No approvals waiting</strong>
@@ -636,6 +630,8 @@ export default function EventPage() {
               {joinDecisionNotice}
             </div>}
            {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
+           </div>
+           <div className="pkr-member-subpage" hidden={memberSection!=='invite'}>
             <div id="pkr-members-invite" className="pkr-members-anchor" />
             {isGroupOwner&&<section className="pkr-member-invite" style={{padding:'20px',background:'var(--bg2)',border:'1px solid var(--border-hi)',
               borderRadius:10,marginBottom:16}}>
@@ -795,6 +791,8 @@ export default function EventPage() {
                 </div>
               </AppDialog>
             )}
+           </div>
+           <div className="pkr-member-subpage" hidden={memberSection!=='roster'}>
             <div id="pkr-members-roster" className="pkr-members-anchor" />
             {roomProfileError&&<p role="status" className="pkr-member-profile-notice">Player profile editing is currently unavailable: {roomProfileError}. Existing members and game records remain available.</p>}
             <div className="pkr-member-search-tools">
@@ -982,6 +980,7 @@ export default function EventPage() {
                 </div>
               </AppDialog>
             )}
+           </div>
           </div>
         )}
 
@@ -1315,6 +1314,7 @@ export default function EventPage() {
 
       <PkrMobileNav items={[
         {id:'games',label:'Games',icon:'games',active:tab==='games',onSelect:()=>selectTab('games')},
+        {id:'night',label:'Game Night',icon:'night',active:tab==='night',onSelect:()=>selectTab('night')},
         {id:'standings',label:'Standings',icon:'standings',active:tab==='leaderboard',onSelect:()=>selectTab('leaderboard')},
         {id:'history',label:'History',icon:'history',active:tab==='history',onSelect:()=>selectTab('history')},
         {id:'members',label:'Members',icon:'members',active:tab==='members',onSelect:()=>selectTab('members')}
@@ -1414,7 +1414,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
 }
 
 // ─── Game Card with RSVP count + push + links ───
-function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onInviteMembers,onShare}:any) {
+function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,onWatchLive,onQuickSeat,onCancel,onDelete,onShare}:any) {
   const lobbyUrl = `${appUrl}/games/${game.id}/rsvp`;
   const rsvpUrl = `${appUrl}/games/${game.id}/rsvp`;
   const liveUrl  = game.live_token ? `${appUrl}/games/live/${game.live_token}` : '';
@@ -1494,20 +1494,10 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
               Delete
             </button>}
           </>)}
-          {isHost && <button type="button" onClick={e=>{e.stopPropagation();onShare();}}
+          <button type="button" onClick={e=>{e.stopPropagation();onShare();}}
             className="btn btn-outline" style={{fontSize:10,padding:'5px 10px'}}>
-            ♠ WhatsApp Sharing
-          </button>}
-          {isHost && <button type="button" onClick={e=>{e.stopPropagation();onInviteMembers();}}
-            className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px'}}>
-            📱 Invite approved group members
-          </button>}
-          {liveUrl && isLive && (
-            <button onClick={(e)=>{e.stopPropagation();navigator.clipboard.writeText(liveUrl).then(()=>alert('Live link copied!'));}}
-              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--green)'}}>
-              📡 Live Link
-            </button>
-          )}
+            ♠ Game Night · RSVPs
+          </button>
         </div>
       )}
     </div>

@@ -301,25 +301,18 @@ export default function GamePage() {
           </section>
         )}
 
-        {isHost&&game.status!=='cancelled'&&<section className="card" aria-label="WhatsApp Sharing Centre"
+        {game.status!=='cancelled'&&<section className="card" aria-label="Game Night tools"
           style={{padding:'16px 18px',marginBottom:16,border:'1px solid var(--gold-dim)'}}>
-          <div style={{fontSize:12,color:'var(--gold)',letterSpacing:'0.08em'}}>HOST SHARING</div>
-          <h3 style={{fontSize:18,margin:'6px 0'}}>WhatsApp Sharing Centre</h3>
+          <div style={{fontSize:12,color:'var(--gold)',letterSpacing:'0.08em'}}>GAME NIGHT</div>
+          <h3 style={{fontSize:18,margin:'6px 0'}}>RSVPs, seats & sharing</h3>
           <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.55,marginBottom:12}}>
-            Invite members, share RSVPs and announcements, publish results or privately remind players of outstanding payments.
+            Open live attendance, share the current game details, manage reminders and see results — without writing a WhatsApp message.
           </p>
           <button className="btn btn-primary" style={{width:'100%',padding:12}} type="button"
-            onClick={()=>router.push('/games/'+encodeURIComponent(id)+'/share')}>↗ Open WhatsApp Sharing Centre</button>
+            onClick={()=>router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id))}>
+            ↗ Open Game Night
+          </button>
         </section>}
-        {/* Personal game invitations are addressed from the private room roster. */}
-        {isHost&&(game.status==='scheduled'||game.status==='lobby')&&(
-          <div style={{marginBottom:16}}>
-            <button className="btn btn-outline" style={{width:'100%',fontSize:12,padding:'11px'}}
-              onClick={()=>router.push('/events/'+game.event_id+'?tab=members&inviteGame='+game.id)}>
-              📱 Invite verified members via WhatsApp →
-            </button>
-          </div>
-        )}
         {game.status==='active' && game.live_token && (
           <div style={{display:'flex',gap:8,marginBottom:16}}>
             <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px',color:'var(--green)'}}
@@ -336,7 +329,7 @@ export default function GamePage() {
             </button>
             {isHost&&<button type="button" className="btn btn-ghost"
               style={{fontSize:11,padding:'7px 12px'}}
-              onClick={()=>router.push('/games/'+encodeURIComponent(id)+'/share?type=results')}>
+              onClick={()=>router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id))}>
               📱 Share group-safe results
             </button>}
           </div>

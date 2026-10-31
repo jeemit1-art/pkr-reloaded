@@ -274,34 +274,25 @@ async function run(){
     await page.locator('.pkr-game-metrics .pkr-metric-trigger').nth(0).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),8);await closeSheet(page);
     await page.locator('.pkr-game-metrics .pkr-metric-trigger').nth(2).click();await loaded(page);assert.equal(await page.locator('.pkr-record-row').count(),1);await closeSheet(page);
     if(engine==='chromium'&&name==='phone'){
-      // Synthetic end-to-end smoke of the new host WhatsApp Sharing Centre.
+      // The host uses PKR for up-to-date game information, not an editable
+      // WhatsApp message composer. No real WhatsApp/network calls are needed.
+      await page.goto(BASE+'/events/test-room?tab=night&game=test-game',{waitUntil:'domcontentloaded'});
+      await page.getByTestId('game-night-hub').waitFor();
+      await page.getByRole('heading',{name:'Game Night',exact:true}).waitFor();
+      await page.getByRole('heading',{name:'Share once. Always up to date.'}).waitFor();
+      await page.getByRole('button',{name:/View live RSVP board/}).waitFor();
+      assert.equal(await page.locator('#pkr-share-text').count(),0,'Message composer must be removed');
+      assert.equal(await page.getByRole('button',{name:/Share current RSVP update/}).isEnabled(),true);
+      assert.equal(await page.locator('.pkr-night-stats strong').count(),4,'RSVP totals must come from PKR');
+      await page.screenshot({path:path.join(output,'chromium-phone-game-night.png'),fullPage:false});
+      await page.goto(BASE+'/events/test-room?tab=night&game=test-finished',{waitUntil:'domcontentloaded'});
+      await page.getByRole('heading',{name:'Results and private settlements'}).waitFor();
+      await page.getByRole('heading',{name:'Outstanding private payments (1)'}).waitFor();
+      assert.equal(await page.getByRole('button',{name:/Share group-safe results/}).count(),1);
+      assert.equal(await page.getByRole('checkbox',{name:/Include each player/}).isChecked(),false);
       await page.goto(BASE+'/games/test-game/share',{waitUntil:'domcontentloaded'});
-      await page.getByRole('heading',{name:'WhatsApp Sharing Centre'}).waitFor();
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('RSVP'));
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/Friday Night Poker/);
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/games\/test-game\/rsvp/);
-      await page.getByRole('button',{name:/Host announcement/}).click();
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('Message from your host:'));
-      const openWhatsApp=page.getByRole('button',{name:/Open WhatsApp/});
-      assert.equal(await openWhatsApp.isDisabled(),true,'Blank announcements must not be shareable');
-      await page.locator('#pkr-share-text').fill((await page.locator('#pkr-share-text').inputValue())+'\nGame moves to 8 pm.');
-      assert.equal(await openWhatsApp.isEnabled(),true,'An edited announcement must be shareable');
-      await page.getByRole('button',{name:/RSVP update/}).click();
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('Confirmed:'));
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/Jordan Lee/);
-      await page.goto(BASE+'/games/test-finished/share?type=results',{waitUntil:'domcontentloaded'});
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('GAME RESULTS'));
-      assert.doesNotMatch(await page.locator('#pkr-share-text').inputValue(),/Transfers:/);
-      assert.doesNotMatch(await page.locator('#pkr-share-text').inputValue(),/\$75/);
-      await page.getByRole('checkbox',{name:/Include player net amounts/}).check();
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('$75'));
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/\$75/);
-      await page.getByRole('button',{name:/Private payment reminder/}).click();
-      await page.waitForFunction(()=>document.querySelector('#pkr-share-text')?.value.includes('outstanding payment'));
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/Hi Jordan Lee/);
-      assert.match(await page.locator('#pkr-share-text').inputValue(),/\$75/);
-      assert.equal(await page.getByRole('button',{name:'Phone share'}).count(),0,'Private financial details must not have group share actions');
-      await page.screenshot({path:path.join(output,'chromium-phone-whatsapp-sharing.png'),fullPage:false});
+      await page.getByTestId('game-night-hub').waitFor();
+      assert.match(page.url(),/tab=night/,'Old sharing URLs must redirect to Game Night');
       await page.goto(BASE+'/games/test-game',{waitUntil:'domcontentloaded'});
       await page.locator('.pkr-game-metrics .pkr-metric-trigger').first().waitFor();
     }

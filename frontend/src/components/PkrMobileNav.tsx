@@ -1,6 +1,6 @@
 'use client';
 
-type IconName = 'home' | 'rooms' | 'scan' | 'plus' | 'games' | 'standings' | 'history' | 'members';
+type IconName = 'home' | 'rooms' | 'scan' | 'plus' | 'games' | 'standings' | 'history' | 'members' | 'night';
 
 export type PkrNavItem = {
   id: string;
@@ -32,6 +32,8 @@ function PkrNavIcon({ icon }: { icon: IconName }) {
       return <svg {...common}><path d="M8 21V12H4v9m12 0V9h4v12M12 21V4h4v17M3 21h18"/></svg>;
     case 'history':
       return <svg {...common}><path d="M3 12a9 9 0 1 0 3-6.7M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>;
+    case 'night':
+      return <svg {...common}><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 2v4m10-4v4M3 9h18m-14 5 3 3 6-6"/></svg>;
     case 'members':
       return <svg {...common}><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 5v1"/></svg>;
   }
