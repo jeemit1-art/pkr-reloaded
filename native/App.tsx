@@ -298,7 +298,7 @@ export default function App(){
   const refresh=()=>{setRefreshing(true);void loadRoom(selected,true).finally(()=>setRefreshing(false));};
 
   return <View style={styles.page}>
-    <StatusBar barStyle="light-content" backgroundColor={BG}/>
+    <StatusBar barStyle="light-content"/>
     <View style={styles.header}>
       <Text style={styles.brand}><Text style={styles.spade}>♠</Text> PKR</Text>
       <Text style={styles.headerRight}>NATIVE · PRIVATE GROUPS</Text>

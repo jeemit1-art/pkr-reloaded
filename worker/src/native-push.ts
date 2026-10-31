@@ -56,7 +56,7 @@ async function recipients(env:Env,eventId:string,userId?:string,roles?:readonly 
   const results:Recipient[]=[];
   let cursor:undefined|string=undefined;
   do{
-    const page=await env.KV.list({prefix:PREFIX+eventId+':',limit:1000,...(cursor?{cursor}:{})});
+    const page:{keys:Array<{name:string}>;list_complete:boolean;cursor?:string}=await env.KV.list({prefix:PREFIX+eventId+':',limit:1000,...(cursor?{cursor}:{})});
     for(const key of page.keys){
       if(results.length>=MAX_PER_ROOM)break;
       const raw=await env.KV.get(key.name);
@@ -162,7 +162,7 @@ export async function reconcileNativeReceipts(env:Env):Promise<void>{
   let cursor:undefined|string=undefined;
   const due:PushReceipt[]=[];
   do{
-    const page=await env.KV.list({prefix:RECEIPT_PREFIX,limit:1000,...(cursor?{cursor}:{})});
+    const page:{keys:Array<{name:string}>;list_complete:boolean;cursor?:string}=await env.KV.list({prefix:RECEIPT_PREFIX,limit:1000,...(cursor?{cursor}:{})});
     for(const item of page.keys){
       if(due.length>=800)break;
       const raw=await env.KV.get(item.name);
