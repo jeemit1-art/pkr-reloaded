@@ -279,10 +279,19 @@ async function test(){
            await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
            await page.locator('[data-testid="live-results-stage"]').waitFor({state:'visible'});
            await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
+           await page.locator('.pkr-results-live-player').first().waitFor({state:'visible',timeout:15000});
+           if(await page.locator('.pkr-results-live-player').count()!==leaders.length)
+             errors.push(size.name+' Live Poker lost ranked players');
+           if(await page.locator('.pkr-results-ledger-row').count()!==0)
+             errors.push(size.name+' Live Poker is still rendering the Command Centre ledger');
+           if(!await page.locator('.pkr-results-live-table').isVisible())
+             errors.push(size.name+' Live Poker top player felt is missing');
            const photo=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>
              getComputedStyle(node).backgroundImage);
            if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
              errors.push(size.name+' Live Poker artwork not applied to Results page');
+            await page.screenshot({path:path.join(output,size.name+'-results-live-first-screen.png'),fullPage:false});
+            await page.screenshot({path:path.join(output,size.name+'-results-live.png'),fullPage:true});
            await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
            await page.locator('[data-testid="dual-dashboard"][data-layout="live"]').waitFor();
          }
@@ -762,7 +771,35 @@ async function test(){
        }
        await nav.getByRole('button',{name:'Results',exact:true}).click();
        await page.getByRole('heading',{name:'Results',exact:true}).waitFor({state:'visible',timeout:12000});
-       if(!await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).isVisible())
+       await page.locator('.pkr-results-ledger-row').first().waitFor({state:'visible',timeout:15000});
+        await page.waitForTimeout(180);
+        const landingScroll=await page.evaluate(()=>window.scrollY);
+        if(landingScroll>24)errors.push(size.name+' Results opened mid-page instead of at the header: '+landingScroll);
+
+        if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
+          errors.push(size.name+' Command Centre lost ledger players');
+        if(await page.locator('.pkr-results-live-player').count()!==0)
+          errors.push(size.name+' Command Centre is still rendering the Live Poker board');
+         await page.screenshot({path:path.join(output,size.name+'-results-command-first-screen.png'),fullPage:false});
+         await page.screenshot({path:path.join(output,size.name+'-results-command.png'),fullPage:true});
+        if(size.width<1100){
+          await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+          await page.waitForTimeout(120);
+          const spacing=await page.evaluate(()=>{
+            const nav=document.querySelector('.pkr-primary-bottom-nav');
+            const last=document.querySelector('.pkr-results-ledger-row:last-child');
+            if(!nav||!last)return null;
+            const nr=nav.getBoundingClientRect(),rr=last.getBoundingClientRect();
+            return {navTop:nr.top,rowBottom:rr.bottom,
+             scrollWidth:document.documentElement.scrollWidth,viewportWidth:document.documentElement.clientWidth};
+          });
+          if(!spacing||spacing.rowBottom>spacing.navTop-5)
+            errors.push(size.name+' last Results row obscured by bottom tabs: '+JSON.stringify(spacing));
+          if(spacing&&spacing.scrollWidth>spacing.viewportWidth+4)
+            errors.push(size.name+' Results standings overflow horizontally');
+           await page.screenshot({path:path.join(output,size.name+'-results-command-last-row.png'),fullPage:false});
+        }
+        if(!await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).isVisible())
          errors.push(size.name+' Results is missing History');
        await nav.getByRole('button',{name:'Payments',exact:true}).click();
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});

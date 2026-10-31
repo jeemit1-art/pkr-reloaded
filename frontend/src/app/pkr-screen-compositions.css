@@ -1,0 +1,229 @@
+/* Original PKR screen compositions. Loaded after prior theme rules.
+   Command Centre is a restrained performance console; Live Poker is a felt board.
+   Navigation, gameplay, payment data and role rules are unchanged. */
+.pkr-results-page .pkr-results-room-bar{display:none!important}
+.pkr-results-page .pkr-results-command-hero{
+ min-height:142px;padding:18px 23px;
+ background:linear-gradient(96deg,#071c17f6 0%,#0a2920ed 61%,#0a1d18cb),
+ url('/images/pkr-approved-hero-desktop.webp') right center/cover no-repeat!important}
+.pkr-results-page .pkr-results-command-title h1{font-size:clamp(27px,3.8vw,39px);margin:6px 0 3px}
+.pkr-results-page .pkr-results-command-title p{font-size:11px;max-width:340px}
+.pkr-results-page .pkr-results-command-stats{flex-basis:48%}
+.pkr-results-page .pkr-results-command-stats>div{background:#081b16e8}
+.pkr-results-page .pkr-results-live-hero{
+ min-height:192px;gap:15px;
+ background:linear-gradient(103deg,#092c1eea 0%,#0a3c29e3 58%,#082818ba),
+ url('/images/casino/real-casino-props.webp') right center/cover no-repeat!important}
+.pkr-results-page .pkr-section-tabs{margin:10px 0 12px!important}
+.pkr-results-page .pkr-results-board-top{margin:3px 0 10px}
+.pkr-results-page .pkr-results-board-top h2{margin:4px 0 0}
+.pkr-results-board-heading{display:flex;justify-content:space-between;align-items:center;gap:9px;margin-bottom:12px}
+.pkr-results-board-heading h3{font-size:16px;line-height:1.15;color:#f4f1dc;margin:4px 0 0}
+.pkr-results-board-heading>small{font-size:10px;color:#b2c4b7;text-align:right}
+.pkr-results-standings-layout{min-width:0;align-items:start}
+.pkr-results-layout-command{display:grid;grid-template-columns:minmax(230px,.37fr) minmax(0,1fr);gap:13px}
+.pkr-results-layout-live{display:block}
+.pkr-results-page .pkr-results-board{margin:0 0 11px;padding:14px 16px;min-width:0}
+.pkr-results-page .pkr-results-board-command{
+ background:linear-gradient(155deg,#132b22,#0b1e1a)!important;border:1px solid #55664c;
+ box-shadow:0 9px 26px #0003}
+.pkr-results-page .pkr-results-board-live{
+ border:1px solid #3c8b62;background:
+ radial-gradient(ellipse at 50% 0%,#16573c 0%,#0a2e22 55%,#091f1a 100%)!important;
+ box-shadow:inset 0 0 0 1px #77bc8230,0 10px 28px #0004;
+ border-radius:18px;padding:15px 17px}
+.pkr-results-command-leaders{border:1px solid #63704f;background:linear-gradient(160deg,#173c2c,#0a201b 85%);
+ border-radius:14px;padding:16px 13px;min-width:0;box-shadow:0 8px 24px #0003}
+.pkr-results-command-leaders>h3{font-size:21px;letter-spacing:-.04em;line-height:1.2;color:#f7edc9;margin:5px 0 3px}
+.pkr-results-command-leaders>p{font-size:11px;line-height:1.5;color:#b6c6b7;margin:0 0 13px}
+.pkr-results-command-podium{display:grid;gap:7px}
+.pkr-results-page .pkr-results-command-leader{
+ display:grid!important;grid-template-columns:29px minmax(0,1fr);align-items:center;gap:3px 8px;
+ text-align:left;min-width:0;min-height:67px;margin:0;padding:9px 10px;
+ border-radius:10px;border:1px solid #52684b;background:linear-gradient(125deg,#0f3225,#091d19);
+ cursor:pointer;box-shadow:inset 0 1px 0 #f7d79312}
+.pkr-results-page .pkr-results-command-leader:hover{border-color:#e1c383;background:#163a2c}
+.pkr-results-command-place{width:28px;height:28px;display:grid;place-items:center;grid-row:span 2;
+ color:#edd28c;border:1px solid #857046;border-radius:8px;background:#332f1e;font:750 14px Georgia,serif}
+.pkr-results-command-person{min-width:0;display:grid;gap:3px}
+.pkr-results-command-person strong{font-size:12px;color:#f5ecd7;overflow-wrap:anywhere}
+.pkr-results-command-person small{font-size:10px;color:#a9bfb1;line-height:1.25}
+.pkr-results-command-leader>b{grid-column:2;white-space:nowrap;font-size:15px}
+.pkr-results-command-foot{border-top:1px solid #61734a55;margin-top:15px;padding-top:12px;
+ display:flex;align-items:center;gap:9px;color:#b9cbb5;font-size:10px;line-height:1.5}
+.pkr-results-command-foot span{font-size:20px;color:#d5bb77}
+.pkr-results-page .pkr-results-filters{margin:0 0 8px;gap:8px}
+.pkr-results-page .pkr-results-filters input,.pkr-results-page .pkr-results-filters select{
+ min-height:36px!important;height:36px!important;font-size:12px;padding:7px 10px}
+.pkr-results-ledger-columns,.pkr-results-page .pkr-results-ledger-row{
+ display:grid!important;grid-template-columns:38px minmax(0,1fr) 46px minmax(78px,max-content) 12px;
+ gap:7px;align-items:center}
+.pkr-results-ledger-columns{min-height:25px;border-bottom:1px solid #69806566;
+ color:#a8b8a7;font:800 9px var(--font-body),sans-serif;letter-spacing:.1em;text-align:left}
+.pkr-results-ledger-columns span:nth-child(3){text-align:center}
+.pkr-results-ledger-columns span:nth-child(4){text-align:right}
+.pkr-results-page .pkr-results-ledger-row{
+ width:100%;min-height:60px;text-align:left;background:transparent;
+ padding:9px 0;color:#f3edda;border:0;border-bottom:1px solid #68806755;
+ border-radius:0;cursor:pointer;box-shadow:none}
+.pkr-results-page .pkr-results-ledger-row:last-child{border-bottom:0}
+.pkr-results-page .pkr-results-ledger-row:hover{background:#26523b55}
+.pkr-results-ledger-position{width:31px;height:31px;display:grid;place-items:center;border:1px solid #6c7753;
+ border-radius:8px;background:#253a2c;color:#e8cc8e;font:750 13px Georgia,serif}
+.pkr-results-ledger-person{min-width:0;display:grid;gap:3px}
+.pkr-results-ledger-person strong{font-size:12px;line-height:1.25;color:#f4f2e8;overflow-wrap:anywhere}
+.pkr-results-ledger-person small{color:#afc4b3;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
+.pkr-results-ledger-games{color:#e7d6ae;font-size:13px;font-weight:750;text-align:center}
+.pkr-results-ledger-games small{display:block;color:#aec1ae;font-size:9px;font-weight:500}
+.pkr-results-ledger-net{text-align:right;display:grid;gap:2px;justify-items:end;min-width:0}
+.pkr-results-ledger-net b{font:800 13px var(--font-num),monospace;white-space:nowrap}
+.pkr-results-ledger-net small{font-size:8px;letter-spacing:.07em;color:#a6b5a5;white-space:nowrap}
+.pkr-results-ledger-arrow{font-size:18px;color:#a7a66a;text-align:right}
+.pkr-results-live-ranking{display:grid;gap:7px}
+.pkr-results-page .pkr-results-live-player{
+ display:grid!important;grid-template-columns:37px minmax(0,1fr) minmax(80px,max-content) 10px;
+ align-items:center;gap:10px;min-height:63px;padding:10px 13px;
+ width:100%;border-radius:12px;border:1px solid #386a4e;
+ background:linear-gradient(115deg,#0b2c20,#10442e 58%,#0b2c20);
+ color:#f4f8ed;text-align:left;box-shadow:inset 0 1px 0 #95e6a019;cursor:pointer}
+.pkr-results-page .pkr-results-live-player:nth-child(-n+3){border-color:#5a9d6d}
+.pkr-results-page .pkr-results-live-player:hover{border-color:#9ed6a7;background:#164d34}
+.pkr-results-live-chip{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;
+ background:#a93f44;border:3px dashed #f6d8ab;box-shadow:0 2px 7px #0008;
+ color:#fff7df;font:800 13px Georgia,serif}
+.pkr-results-live-chip-1{background:#244b8a}
+.pkr-results-live-chip-2{background:#d0c7ac;color:#27392c;border-color:#907c56}
+.pkr-results-live-person{min-width:0;display:grid;gap:4px}
+.pkr-results-live-person strong{color:#f0faef;font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+.pkr-results-live-person small{font-size:10px;line-height:1.35;color:#add3b4;overflow-wrap:anywhere}
+.pkr-results-live-net{display:grid;justify-items:end;gap:4px;min-width:0}
+.pkr-results-live-net b{white-space:nowrap;font:800 14px var(--font-num),monospace}
+.pkr-results-live-net small{font-size:8px;color:#acd0b2;letter-spacing:.08em;white-space:nowrap}
+.pkr-results-live-arrow{color:#7de6a3;font-size:18px}
+
+/* Rework saved history and insights to match the chosen experience. */
+.pkr-results-experience-command .pkr-primary-panel{background:linear-gradient(155deg,#122b22,#091e19);
+ border-color:#5c715a;border-radius:13px}
+.pkr-results-experience-command .pkr-primary-metric{background:#142f26;border-color:#617157}
+.pkr-results-experience-command .pkr-primary-metric strong{color:#eaca85}
+.pkr-results-experience-live .pkr-primary-panel{background:radial-gradient(ellipse at 50% 0%,#144a31,#09251d);
+ border-color:#478967;border-radius:18px}
+.pkr-results-experience-live .pkr-primary-metric{background:linear-gradient(110deg,#0c3f2b,#0b2c21);
+ border-color:#50a173;border-radius:14px}
+.pkr-results-experience-live .pkr-primary-metric strong{color:#a8f3c1}
+.pkr-results-experience-command .pkr-results-history-title{border-bottom:1px solid #50644b;padding-bottom:14px}
+.pkr-results-experience-live .pkr-results-history-title{border-bottom:1px solid #4d8f65;padding-bottom:12px}
+.pkr-results-experience-command .pkr-results-history-panel .pkr-primary-row{border-bottom:1px solid #516c57;padding:14px 5px}
+.pkr-results-experience-live .pkr-results-history-panel .pkr-primary-row{
+ background:#103e2bc9;border:1px solid #3d7e55;padding:12px 13px;margin-bottom:8px;border-radius:11px}
+.pkr-results-experience-live .pkr-results-trend-col>div>span{background:linear-gradient(#b5f4ae,#248e59)}
+.pkr-results-page :is(.pkr-results-live-player,.pkr-results-ledger-row,.pkr-results-command-leader):focus-visible{
+ outline:3px solid #f4d28c;outline-offset:2px}
+
+/* AppExperience measures the real fixed-nav height including safe-area.
+   Reserve that much scroll space ONCE; never double count the iPhone inset. */
+@media(max-width:1099px){
+ :is(.pkr-primary-page,.pkr-app.pkr-dashboard,.pkr-app.pkr-event,
+     .pkr-app.pkr-game-detail,.pkr-vnext-insights,.pkr-schedule-page,
+     .pkr-install-vnext,.pkr-account-page){
+  padding-bottom:calc(var(--pkr-navigation-height,85px) + 22px)!important;
+  scroll-padding-bottom:calc(var(--pkr-navigation-height,85px) + 18px)}
+ html:has(.pkr-primary-bottom-nav){scroll-padding-bottom:calc(var(--pkr-navigation-height,85px) + 18px)}
+ .pkr-results-page .pkr-results-board{margin-bottom:0}
+}
+@media(max-width:900px){
+ .pkr-results-layout-command{grid-template-columns:1fr}
+ .pkr-results-command-leaders{display:none}
+ .pkr-results-page .pkr-results-board{padding:12px}
+}
+@media(max-width:740px){
+ .pkr-results-page{padding-top:10px!important}
+ .pkr-results-page .pkr-results-command-hero{min-height:117px;padding:12px 13px}
+ .pkr-results-page .pkr-results-command-title h1{font-size:26px;margin:2px 0}
+ .pkr-results-page .pkr-results-command-title .pkr-results-command-tagline{font-size:11px;margin:0}
+ .pkr-results-page .pkr-results-command-title p{font-size:10px}
+ .pkr-results-page .pkr-results-command-stats{flex-basis:43%;gap:4px}
+ .pkr-results-page .pkr-results-command-stats>div{padding:7px}
+ .pkr-results-page .pkr-results-live-hero{gap:0;padding:11px 13px;min-height:0}
+ .pkr-results-page .pkr-results-live-intro h1{font-size:24px}
+ .pkr-results-page .pkr-results-live-table{height:120px;width:min(100%,286px);margin:8px auto 5px}
+ .pkr-results-page .pkr-section-tabs{margin:9px 0!important}
+ .pkr-results-page .pkr-results-board-top{margin:7px 0 8px}
+ .pkr-results-page .pkr-results-board-top h2{font-size:19px}
+ .pkr-results-board-heading{margin-bottom:9px}
+ .pkr-results-board-heading h3{font-size:14px}
+ .pkr-results-page .pkr-results-filters{gap:6px}
+ .pkr-results-page .pkr-results-filters .pkr-results-min-games{margin-top:1px}
+ .pkr-results-ledger-columns,.pkr-results-page .pkr-results-ledger-row{
+   grid-template-columns:32px minmax(0,1fr) minmax(78px,max-content) 9px;gap:6px}
+ .pkr-results-ledger-columns span:nth-child(3),.pkr-results-ledger-games{display:none}
+ .pkr-results-page .pkr-results-ledger-row{min-height:58px;padding:7px 0}
+ .pkr-results-ledger-net b{font-size:12px}
+ .pkr-results-page .pkr-results-live-player{
+   grid-template-columns:32px minmax(0,1fr) minmax(75px,max-content) 9px;
+   padding:9px;gap:7px;min-height:59px}
+ .pkr-results-live-chip{width:30px;height:30px;font-size:12px}
+ .pkr-results-live-person strong{font-size:12px}
+ .pkr-results-live-net b{font-size:12px}
+ .pkr-results-live-net small{font-size:7px}
+ .pkr-results-page .pkr-primary-panel{padding:13px}
+ .pkr-results-page .pkr-primary-grid{gap:8px}
+ .pkr-results-page .pkr-primary-metric{padding:12px}
+}
+@media(max-width:365px){
+ .pkr-results-page .pkr-results-command-hero{display:flex;gap:8px}
+ .pkr-results-page .pkr-results-command-stats{flex-basis:43%;width:auto;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-results-page .pkr-results-command-stats>div:nth-child(3){grid-column:1/-1;display:flex}
+ .pkr-results-page .pkr-results-command-title{min-width:0}
+ .pkr-results-page .pkr-results-command-title h1{font-size:24px}
+ .pkr-results-page .pkr-results-command-title p{display:none}
+ .pkr-results-page .pkr-results-filters input,.pkr-results-page .pkr-results-filters select{font-size:11px}
+ .pkr-results-ledger-net b,.pkr-results-live-net b{font-size:11px}
+ .pkr-results-ledger-position{width:27px;height:27px;font-size:12px}
+ .pkr-results-page .pkr-results-live-player{gap:5px;padding:8px 6px}
+ .pkr-results-page .pkr-results-live-table{width:min(100%,268px)}
+ .pkr-results-page .pkr-results-live-person small{font-size:9px}
+}
+
+/* Final narrow-screen pass from real Chromium captures: rankings, not forms,
+   must occupy the first viewport. Keep search/sort accessible side by side. */
+.pkr-results-layout-command>.pkr-results-board:only-child{grid-column:1/-1}
+@media(max-width:740px){
+ .pkr-results-page .pkr-results-board-top .pkr-results-board-eyebrow{display:none!important}
+ .pkr-results-page .pkr-results-board-top h2{margin:0;font-size:17px}
+ .pkr-results-page .pkr-results-board-top{margin:3px 0 8px;gap:6px}
+ .pkr-results-page .pkr-results-board-counter{font-size:10px;white-space:nowrap}
+ .pkr-results-page .pkr-results-board-heading{display:none!important}
+ .pkr-results-page .pkr-results-board{padding:10px 11px}
+ .pkr-results-page .pkr-results-filters{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:6px 8px!important;align-items:end;margin:0 0 7px!important;
+ }
+ .pkr-results-page .pkr-results-filters label:not(.pkr-results-min-games){
+  min-width:0!important;max-width:none!important;width:auto!important;
+  grid-column:auto!important;flex:none!important;font-size:10px;
+ }
+ .pkr-results-page .pkr-results-filters label:not(.pkr-results-min-games) :is(input,select){
+  min-width:0!important;width:100%!important;min-height:33px!important;
+  height:33px!important;padding:6px 8px!important;font-size:11px!important;
+ }
+ .pkr-results-page .pkr-results-filters .pkr-results-min-games{
+  grid-column:1/-1!important;min-height:22px!important;gap:6px!important;
+  padding:0!important;margin:0!important;font-size:10px!important;
+  align-items:center!important;
+ }
+ .pkr-results-page .pkr-results-filters input[type=checkbox]{
+  width:15px!important;min-width:15px!important;height:15px!important;
+  min-height:15px!important;margin:0!important;
+ }
+ .pkr-results-page .pkr-results-live-net small{font-size:9px}
+ .pkr-results-page .pkr-results-ledger-net small{font-size:9px}
+}
+@media(max-width:365px){
+ .pkr-results-page .pkr-results-command-stats>div:nth-child(3){display:none!important}
+ .pkr-results-page .pkr-results-command-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pkr-results-page .pkr-results-live-net b{font-size:12px}
+}
+
+/* Keep the empty-club state full width when the leader sidebar is absent. */
+.pkr-results-layout-command>.pkr-results-board:only-child{grid-column:1/-1}

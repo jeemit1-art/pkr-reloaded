@@ -323,10 +323,10 @@ async function run(){
       await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'All-time standings'}).waitFor();
       await page.getByLabel('Search results by player').fill('Jordan');
-      assert.equal(await page.locator('.pkr-results-rank').count(),1,'Results search must filter recorded players');
+      assert.equal(await page.locator('.pkr-results-ledger-row').count(),1,'Results search must filter recorded players');
       await page.getByLabel('Search results by player').fill('');
       await page.getByLabel('Sort results standings').selectOption('games');
-      assert.equal(await page.locator('.pkr-results-podium-card').count(),2,'Results retains the top-player podium');
+      assert.equal(await page.locator('.pkr-results-command-leader').count(),2,'Command Centre retains interactive club leaders');
       await page.goto(BASE+'/results?room=test-room&view=history',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Completed games'}).waitFor();
       const whatsappShare=page.getByRole('button',{name:/Share in WhatsApp/}).first();

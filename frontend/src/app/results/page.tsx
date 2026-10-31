@@ -31,6 +31,14 @@ export default function ResultsPage(){
  const [sort,setSort]=useState<'net'|'average'|'profitable'|'games'>('net');
  const [minGames,setMinGames]=useState(false);
 
+ // Open the Results main tab at its heading, never at the old page scroll offset.
+ useEffect(()=>{
+  const reset=()=>window.scrollTo({top:0,behavior:'instant'});
+  reset();
+  const frame=window.requestAnimationFrame(reset);
+  return()=>window.cancelAnimationFrame(frame);
+ },[]);
+
  useEffect(()=>{
   const query=new URLSearchParams(window.location.search);
   setView(allowView(query.get('view')));
@@ -81,6 +89,7 @@ export default function ResultsPage(){
 
  function setSection(next:View){
   setView(next);setHistoryCount(15);setNotice('');
+  window.scrollTo({top:0,behavior:'instant'});
   const url=new URL(window.location.href);url.searchParams.set('view',next);
   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
  }
@@ -185,60 +194,94 @@ export default function ResultsPage(){
   <>
   {view==='standings'&&<>
     <div className="pkr-results-board-top">
-     <div><span className="pkr-results-board-eyebrow">
-       {experience==='command'?'CLUB PERFORMANCE':'♠ PLAYER BOARD'}</span>
-       <h2>{experience==='command'?'All-time standings':'Players at the felt'}</h2></div>
-     <span className="pkr-results-board-counter">{ordered.length} ranked players</span>
+      <div><span className="pkr-results-board-eyebrow">
+        {experience==='command'?'COMMAND CENTRE / CLUB PERFORMANCE':'LIVE POKER / FELT RANKINGS'}</span>
+        <h2>{experience==='command'?'All-time standings':'Players at the felt'}</h2></div>
+      <span className="pkr-results-board-counter">{ordered.length} ranked players</span>
     </div>
-    {experience==='command'&&ordered.length>0&&
-      <div className="pkr-results-podium" aria-label="Top three players by net result">
-       {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
-        className="pkr-results-podium-card"
-        request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
-         playerId:p.user_id,playerName:p.display_name}}>
-        <span className="pkr-results-podium-medal">{['♛','♠','♣'][i]} #{i+1} ALL TIME</span>
-        <strong>{p.display_name}</strong>
-        <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
-        <small>{p.games_played} games · {p.games_won} profitable</small>
-       </RecordMetric>)}
-      </div>}
-    <section className="pkr-results-board">
-     <div className="pkr-results-filters">
-      <label>Find player
-       <input type="search" aria-label="Search results by player" placeholder="Search names…"
-        value={search} onChange={e=>setSearch(e.target.value)}/></label>
-      <label>Rank by
-       <select aria-label="Sort results standings" value={sort}
-        onChange={e=>setSort(e.target.value as 'net'|'average'|'profitable'|'games')}>
-        <option value="net">Total net</option>
-        <option value="average">Average per game</option>
-        <option value="profitable">Profitable games</option>
-        <option value="games">Games played</option>
-       </select></label>
-      <label className="pkr-results-min-games"><input type="checkbox" checked={minGames}
-       onChange={e=>setMinGames(e.target.checked)}/> 3+ games</label>
-     </div>
-     {visibleStandings.length?<div className="pkr-results-ranking" aria-label="Player rankings">
-      {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
-       className="pkr-results-rank" request={{
-        kind:'player',title:player.display_name+' — game history',roomId:selected,
-        playerId:player.user_id,playerName:player.display_name
-       }}>
-       <span className="pkr-results-rank-number">{i+1}</span>
-       <span className="pkr-results-rank-name"><strong>{player.display_name}</strong>
-        <small>{player.games_played} games · {player.games_won} profitable
-         {player.identity_review_required?' · Identity review':''}</small></span>
-       <span className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
-        {sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}
-       </span>
-       <span aria-hidden="true">›</span>
-      </RecordMetric>)}
-     </div>:<div className="pkr-primary-empty">
-      {ordered.length?'No players match your search or filters.':'Standings appear after the first settled game.'}
-     </div>}
-    </section>
+    <div className={'pkr-results-standings-layout pkr-results-layout-'+experience}>
+      {experience==='command'&&ordered.length>0&&
+       <aside className="pkr-results-command-leaders" aria-label="Top three club performers">
+        <span className="pkr-results-board-eyebrow">◆ THE PERFORMANCE DESK</span>
+        <h3>Club leaders</h3>
+        <p>Lifetime net results from completed games.</p>
+        <div className="pkr-results-command-podium">
+          {ordered.slice(0,3).map((player,i)=><RecordMetric key={player.user_id||player.display_name}
+            className={'pkr-results-command-leader pkr-results-command-leader-'+i}
+            request={{kind:'player',title:player.display_name+' — game history',roomId:selected,
+              playerId:player.user_id,playerName:player.display_name}}>
+            <span className="pkr-results-command-place">{i===0?'♛':'0'+(i+1)}</span>
+            <span className="pkr-results-command-person"><strong>{player.display_name}</strong>
+              <small>{player.games_played} games · {player.games_won} profitable</small></span>
+            <b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(player.total_net)}</b>
+          </RecordMetric>)}
+        </div>
+        <div className="pkr-results-command-foot"><span aria-hidden="true">♠</span>
+         Tap a player to inspect their saved results</div>
+       </aside>}
+      <section className={'pkr-results-board pkr-results-board-'+experience} aria-label="Club player standings">
+       <div className="pkr-results-board-heading">
+        <div><span className="pkr-results-board-eyebrow">{experience==='command'?'PLAYER RECORDS':'♠ ON THE FELT'}</span>
+          <h3>{experience==='command'?'Player ledger':'The player board'}</h3></div>
+        <small>Tap a name for game history</small>
+       </div>
+       <div className="pkr-results-filters">
+        <label>Find player
+         <input type="search" aria-label="Search results by player" placeholder="Search names…"
+          value={search} onChange={e=>setSearch(e.target.value)}/></label>
+        <label>Rank by
+         <select aria-label="Sort results standings" value={sort}
+           onChange={e=>setSort(e.target.value as 'net'|'average'|'profitable'|'games')}>
+          <option value="net">Total net</option>
+          <option value="average">Average per game</option>
+          <option value="profitable">Profitable games</option>
+          <option value="games">Games played</option>
+         </select></label>
+        <label className="pkr-results-min-games"><input type="checkbox" checked={minGames}
+          onChange={e=>setMinGames(e.target.checked)}/> 3+ games</label>
+       </div>
+       {visibleStandings.length?
+        experience==='command'?
+        <div className="pkr-results-command-ranking" aria-label="Ranked player ledger">
+          <div className="pkr-results-ledger-columns" aria-hidden="true">
+            <span>RANK</span><span>PLAYER</span><span>GAMES</span><span>RESULT</span><span/>
+          </div>
+          {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
+            className="pkr-results-ledger-row" request={{
+              kind:'player',title:player.display_name+' — game history',roomId:selected,
+              playerId:player.user_id,playerName:player.display_name}}>
+            <span className="pkr-results-ledger-position">{String(i+1).padStart(2,'0')}</span>
+            <span className="pkr-results-ledger-person"><strong>{player.display_name}</strong>
+             <small>{player.games_won} profitable games{player.identity_review_required?' · Identity review':''}</small></span>
+            <span className="pkr-results-ledger-games">{player.games_played}<small>played</small></span>
+            <span className="pkr-results-ledger-net"><b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
+             {sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}
+             </b><small>{sort==='average'?'AVG / GAME':'NET RESULT'}</small></span>
+            <span className="pkr-results-ledger-arrow" aria-hidden="true">›</span>
+           </RecordMetric>)}
+        </div>:
+        <div className="pkr-results-live-ranking" aria-label="Players ranked at the poker table">
+          {visibleStandings.map((player,i)=><RecordMetric key={player.user_id||player.display_name}
+            className="pkr-results-live-player" request={{
+             kind:'player',title:player.display_name+' — game history',roomId:selected,
+             playerId:player.user_id,playerName:player.display_name}}>
+            <span className={'pkr-results-live-chip pkr-results-live-chip-'+(i%3)}>{i+1}</span>
+            <span className="pkr-results-live-person"><strong>{player.display_name}</strong>
+             <small>{player.games_played} games · {player.games_won} profitable
+               {player.identity_review_required?' · Identity review':''}</small></span>
+            <span className="pkr-results-live-net"><b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
+             {sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}
+             </b><small>{sort==='average'?'AVG / GAME':'ALL-TIME NET'}</small></span>
+            <span className="pkr-results-live-arrow" aria-hidden="true">›</span>
+           </RecordMetric>)}
+        </div>:
+        <div className="pkr-primary-empty">
+         {ordered.length?'No players match your search or filters.':'Standings appear after the first settled game.'}
+        </div>}
+      </section>
+    </div>
    </>}
-  {view==='history'&&<section className="pkr-primary-panel">
+  {view==='history'&&<section className="pkr-primary-panel pkr-results-history-panel">
    <div className="pkr-results-history-title"><div><h2>Completed games</h2><p>{settled.length} settled sessions saved in this club.</p></div>
     {canShare&&<label className="pkr-results-amount-option"><input type="checkbox"
       checked={includeAmounts} onChange={e=>setIncludeAmounts(e.target.checked)}/>Include player net amounts in group results</label>}
