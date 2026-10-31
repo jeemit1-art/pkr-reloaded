@@ -20,6 +20,7 @@ import RoomDashboardDual from '@/components/RoomDashboardDual';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './command-centre.css';
 import {playPkrSound} from '@/lib/sounds';
+import {isPWAInstalled} from '@/lib/push';
 import {isCurrentGame,isUnfinishedGame,isLiveGame} from '@/lib/game-status';
 
 function DashboardInner() {
@@ -116,7 +117,10 @@ function DashboardInner() {
         } catch(e) { console.error('Token exchange failed', e); router.push('/'); return; }
         window.history.replaceState({},'','/dashboard');
       } else if (!getToken()) {
-        router.push('/'); return;
+        // A Home Screen app has its own storage on iOS. Take previously
+        // approved players to the secure transfer-code recovery screen,
+        // rather than looping them back to the public marketing page.
+        router.replace(isPWAInstalled()?'/mobile-login':'/'); return;
       }
       try {
         const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);

@@ -2,7 +2,8 @@
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {api,getToken,type Event,type Game,type RsvpBoardData,type User} from '@/lib/api';
+import {api,getToken,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
+import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import './instant.css';
 
 const activeGame=(g:Game)=>['scheduled','lobby','active'].includes(g.status);
@@ -35,6 +36,8 @@ export default function Instant(){
   const [rooms,setRooms]=useState<Event[]>([]);
   const [roomId,setRoomId]=useState('');
   const [games,setGames]=useState<Game[]>([]);
+  const [history,setHistory]=useState<Game[]>([]);
+  const [leaders,setLeaders]=useState<LeaderboardEntry[]>([]);
   const [board,setBoard]=useState<RsvpBoardData|null>(null);
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
@@ -133,10 +136,29 @@ export default function Instant(){
     };
   },[roomId,user?.id,refresh]);
 
+  // Reuse the authenticated per-player performance and settlement data,
+  // rather than making PKR Instant a second, restricted product.
+  useEffect(()=>{
+    if(!roomId||!user)return;
+    let alive=true;
+    setHistory([]);setLeaders([]);
+    void Promise.allSettled([
+      api.events.history(roomId),
+      api.events.leaderboard(roomId)
+    ]).then(results=>{
+      if(!alive)return;
+      if(results[0].status==='fulfilled')setHistory(results[0].value);
+      if(results[1].status==='fulfilled')setLeaders(results[1].value);
+    });
+    return()=>{alive=false;};
+  },[roomId,user?.id]);
+
   function chooseRoom(id:string){
     const found=rooms.find(r=>r.id===id);
     if(!found)return;
     setRoomId(id);setNotice('');
+    try{localStorage.setItem('pkr_preferred_room',id)}catch{}
+    window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:id}));
     const url=new URL(window.location.href);
     url.searchParams.set('room',id);
     window.history.replaceState(window.history.state,'',url.pathname+url.search);
@@ -265,12 +287,22 @@ export default function Instant(){
               <span className="pkr-instant-person-detail">{g.status==='no'?'Not coming':(g.arrival_option==='late'?'Late':g.arrival_option)+(g.seat_number?' · Seat '+g.seat_number:'')}</span>
             </div>)}</div>}
         </section>}
-        {finished&&<section className="pkr-instant-card">
-          <span className="pkr-instant-kicker">AFTER THE GAME</span>
-          <h2>Latest results</h2>
-          <p>{formatDate(finished.scheduled_at)}. View saved game details and private settlements.</p>
-          <button className="pkr-instant-secondary" onClick={()=>router.push('/games/'+finished.id)}>View results →</button>
+        {room&&<section className="pkr-instant-personalised" aria-label="Your full PKR account">
+          <div className="pkr-instant-section-heading">
+            <div><span className="pkr-instant-kicker">PERSONALISED ACCOUNT</span>
+              <h2>Everything in your poker club</h2></div>
+          </div>
+          <p className="pkr-instant-help">Your profile, game history, standings and private settlement payments are part of the same PKR account — no separate installation or sign-in required.</p>
+          <PlayerRoomDashboard room={room} games={games} history={history} leaders={leaders}
+            memberId={user?.id} memberName={user?.name}/>
         </section>}
+        <nav className="pkr-instant-feature-links" aria-label="Full PKR features">
+          <a href="/dashboard">Home</a>
+          <a href={'/events/'+encodeURIComponent(roomId)+'?tab=games'}>Games</a>
+          <a href={'/events/'+encodeURIComponent(roomId)+'?tab=members'}>Players &amp; profile</a>
+          <a href={'/results?room='+encodeURIComponent(roomId)}>Results</a>
+          <a href={'/payments?room='+encodeURIComponent(roomId)}>Payments</a>
+        </nav>
         <div className="pkr-instant-footer">
           <span>{lastUpdated?'Updated '+lastUpdated.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'}):'PKR private group'}</span>
           <a href={'/events/'+encodeURIComponent(roomId)+'?tab=night'}>Open full Game Night →</a>
