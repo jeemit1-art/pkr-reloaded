@@ -9,7 +9,7 @@ vi.mock('../middleware',async(importOriginal)=>{
 vi.mock('../push',()=>({sendPushToEvent:vi.fn(async()=>{})}));
 import board from './rsvp-board';
 
-function fixture(status='scheduled'){
+function fixture(status='scheduled',settings:unknown=['19:00','20:00']){
  const queries:string[]=[];
  const privateNumber='04-PRIVATE-DO-NOT-DISCLOSE';
  const editHash='sensitive-stored-hash';
@@ -25,7 +25,7 @@ function fixture(status='scheduled'){
         if(sql.includes('FROM games g JOIN events e'))return {
           id:'demo',event_id:'group',scheduled_at:1700000000,location:'Demo place',
           seats:6,status,event_name:'Test club'};
-        if(sql.includes('SELECT options_json FROM game_rsvp_arrivals'))return {options_json:'["19:00","20:00"]'};
+        if(sql.includes('SELECT options_json FROM game_rsvp_arrivals'))return {options_json:JSON.stringify(settings)};
         if(sql.includes('SELECT COUNT(*)'))return {total:1};
         if(sql.includes('edit_token_hash=?'))return {id:'r1'};
         return null;
@@ -122,4 +122,80 @@ describe('public live RSVP board v2',()=>{
   },f.env);
   expect(r.status).toBe(400);
  });
+ it('uses backwards-compatible reply defaults for older time-only games',async()=>{
+  const f=fixture();
+  const r=await board.request(base+'/rsvp-board',{},f.env);
+  const data:any=await r.json();
+  expect(data.options).toEqual(['19:00','20:00']);
+  expect(data.responses).toEqual([
+    {value:'late',label:'Running late',status:'yes'},
+    {value:'maybe',label:'Maybe',status:'maybe'},
+    {value:'not-coming',label:'Not coming',status:'no'},
+  ]);
+ });
+ it('accepts custom Maybe and Out responses without falsely reserving seats',async()=>{
+  const settings={
+   times:['19:00','20:00'],
+   answers:[
+    {value:'late',label:'Coming late',status:'yes'},
+    {value:'maybe',label:'Might be there',status:'maybe'},
+    {value:'not-coming',label:'Out tonight',status:'no'},
+    {value:'custom-abc12345',label:'Will decide later',status:'maybe'}
+   ]
+  };
+  const f=fixture('scheduled',settings);
+  for(const [key,expected] of [
+    ['maybe','maybe'],['not-coming','no'],['custom-abc12345','maybe']
+  ] as const){
+   const r=await board.request(base+'/rsvp-board',json({
+     display_name:'Fictional Alice',arrival_option:key,seat_number:4
+   }),f.env,{waitUntil:()=>{}} as any);
+   expect(r.status).toBe(201);
+   const data:any=await r.json();
+   expect(data.status).toBe(expected);
+   expect(data.seat_number).toBeNull();
+  }
+  const response=await board.request(base+'/rsvp-board',json({
+   display_name:'Fictional Alice',arrival_option:'late',seat_number:4
+  }),f.env,{waitUntil:()=>{}} as any);
+  expect((await response.json() as any).status).toBe('yes');
+ });
+ it('allows host free-text labels with explicit attendance type',async()=>{
+  const f=fixture();
+  const responses=[
+    {value:'late',label:'Running behind',status:'yes'},
+    {value:'maybe',label:'May not come',status:'maybe'},
+    {value:'not-coming',label:'Out',status:'no'},
+    {value:'custom-aabbccdd',label:'Coming after work',status:'yes'}
+  ];
+  const r=await board.request(base+'/rsvp-arrivals',{method:'PUT',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({options:['19:00','20:00'],responses})
+  },f.env);
+  expect(r.status).toBe(200);
+  expect((await r.json() as any).responses).toEqual(responses);
+ });
+ it('rejects duplicate, unsafe or misleading custom answers',async()=>{
+  for(const answers of [
+    [{value:'late',label:'Late',status:'no'},...[
+      {value:'maybe',label:'Maybe',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'}
+    ]],
+    [{value:'late',label:'Late',status:'yes'},
+      {value:'maybe',label:'Late',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'}],
+    [{value:'late',label:'Late',status:'yes'},
+      {value:'maybe',label:'Maybe',status:'maybe'},
+      {value:'not-coming',label:'Out',status:'no'},
+      {value:'custom-12345678',label:'<script>',status:'yes'}]
+  ]){
+   const f=fixture();
+   const r=await board.request(base+'/rsvp-arrivals',{method:'PUT',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({options:['19:00'],responses:answers})
+   },f.env);
+   expect(r.status).toBe(400);
+  }
+ });
+
 });
