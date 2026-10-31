@@ -4,6 +4,7 @@ import {useEffect,useState,type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
 import {RecordProvider} from '@/components/RecordMetric';
 import {restoreKnownPushSubscriptions} from '@/lib/push';
+import SetupReminder from '@/components/SetupReminder';
 import RoomExperienceTheme from '@/components/RoomExperienceTheme';
 
 export default function AppExperience({children}:{children:ReactNode}){
@@ -11,7 +12,7 @@ export default function AppExperience({children}:{children:ReactNode}){
   const [online,setOnline]=useState(true);
   const [updateReady,setUpdateReady]=useState(false);
   const inGame=/^\/games\/[^/]+\/(play|tv)\/?$/.test(pathname);
-  const appRoute=/^\/(dashboard|events|games|insights|schedule|install)(\/|$)/.test(pathname);
+  const appRoute=/^\/(instant|dashboard|events|games|results|payments|account|insights|schedule|install)(\/|$)/.test(pathname);
 
   useEffect(()=>{
     const root=document.documentElement;
@@ -107,7 +108,7 @@ export default function AppExperience({children}:{children:ReactNode}){
     };
   },[pathname]);
 
-  return <RecordProvider><RoomExperienceTheme/>{children}
+  return <RecordProvider><RoomExperienceTheme/><SetupReminder/>{children}
     {appRoute&&!online&&<div className="pkr-connection-notice" role="status">You are offline. Changes are not confirmed until PKR reconnects.</div>}
     {appRoute&&online&&updateReady&&!inGame&&<div className="pkr-update-notice" role="status">
       <span>An app update is ready.</span><button type="button" onClick={()=>{

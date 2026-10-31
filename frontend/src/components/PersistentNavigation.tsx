@@ -28,7 +28,7 @@ export default function PersistentNavigation(){
  const [legacyHash,setLegacyHash]=useState('');
 
  const inGameplay=/^\/games\/[^/]+\/(play|tv)\/?$/.test(pathname);
- const allowed=/^\/(dashboard|results|payments|account|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname)
+ const allowed=/^\/(instant|dashboard|results|payments|account|insights|schedule|events\/[^/]+|games\/[^/]+|install)(\/|$)/.test(pathname)
    && !/^\/games\/live\//.test(pathname)&&!inGameplay;
  useEffect(()=>{setHasSession(Boolean(getToken()));},[pathname]);
  useEffect(()=>{
@@ -81,7 +81,7 @@ export default function PersistentNavigation(){
  const roomId=selectedRoom?.id||'';
  const roomChoices=rooms.filter(r=>r.status!=='ended'||r.id===roomId);
  const paymentLegacy=pathname==='/insights'&&legacyHash==='#pkr-settlement';
- const currentArea:Area|''=pathname==='/account'||pathname==='/install'?'':pathname==='/dashboard'?'Home':
+ const currentArea:Area|''=pathname==='/account'||pathname==='/install'?'':(pathname==='/dashboard'||pathname==='/instant')?'Home':
   pathname==='/payments'||paymentLegacy?'Payments':
   pathname==='/results'||pathname.startsWith('/results/')||pathname==='/insights'||
     (pathname.startsWith('/events/')&&['leaderboard','history'].includes(roomTab))||

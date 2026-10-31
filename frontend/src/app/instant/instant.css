@@ -28,3 +28,17 @@
 .pkr-instant-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:#8c9d97;padding:4px 5px}.pkr-instant-footer a{color:#d9b968}
 .pkr-instant-room-chooser{display:grid;gap:8px;margin-bottom:17px}.pkr-instant-message,.pkr-instant-error{margin:12px 0;padding:14px;border-radius:11px;font-size:13px;line-height:1.5}.pkr-instant-message{background:#183a2f;color:#d4f7d9;border:1px solid #3b7751}.pkr-instant-error{background:#422b29;color:#ffd8d3;border:1px solid #96544d}
 @media(max-width:480px){.pkr-instant-header{padding:15px 18px}.pkr-instant-content{padding:27px 14px 50px}.pkr-instant-label{font-size:9px;letter-spacing:.07em}.pkr-instant-card{padding:19px;border-radius:16px}.pkr-instant-actions>*{flex:1}.pkr-instant-intro{margin-bottom:23px}.pkr-instant-person-detail{max-width:45%;font-size:10px}}
+/* PKR Instant uses the same private player dashboard, not a feature-reduced app. */
+.pkr-instant-personalised{margin:23px 0 17px}
+.pkr-instant-personalised>.pkr-instant-section-heading{margin:0 3px 7px}
+.pkr-instant-personalised>.pkr-instant-section-heading h2{font:700 clamp(24px,5vw,32px) var(--font-display),Georgia,serif;color:#f8f1dd;margin:0}
+.pkr-instant-personalised>.pkr-instant-help{padding:0 3px;margin:0 0 16px}
+.pkr-instant-personalised .pkr-player-home{max-width:100%}
+.pkr-instant-personalised .pkr-player-home-header{margin-top:6px}
+.pkr-instant-personalised .pkr-player-feature{margin-bottom:16px}
+.pkr-instant-feature-links{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:22px 0 16px}
+.pkr-instant-feature-links a{display:flex;align-items:center;justify-content:center;min-height:43px;text-align:center;text-decoration:none;font-size:11px;font-weight:750;color:#f5deb1;border:1px solid rgba(227,197,124,.34);background:rgba(25,45,36,.7);padding:7px;border-radius:9px}
+.pkr-instant-feature-links a:focus-visible{outline:2px solid #f6d59a;outline-offset:2px}
+@media(max-width:570px){.pkr-instant-feature-links{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1100px){.pkr-instant{margin-left:218px}}
+@media(max-width:1099px){.pkr-instant{padding-bottom:calc(84px + env(safe-area-inset-bottom))}}
