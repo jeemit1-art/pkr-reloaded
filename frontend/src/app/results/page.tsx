@@ -45,7 +45,7 @@ export default function ResultsPage(){
   return()=>{alive=false};
  },[]);
  useEffect(()=>{
-  if(!selected){setLoading(false);return}
+  if(!selected)return;
   let live=true;setLoading(true);setError('');
   Promise.all([api.games.list(selected),api.events.leaderboard(selected)]).then(([g,l])=>{
    if(live){setGames(g);setLeaders(l)}
@@ -83,7 +83,7 @@ export default function ResultsPage(){
   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
  }
  function changeRoom(id:string){
-  setSelected(id);setHistoryCount(15);setNotice('');
+  setSelected(id);setLoading(true);setGames([]);setLeaders([]);setHistoryCount(15);setNotice('');
   try{localStorage.setItem('pkr_preferred_room',id)}catch{}
   window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:id}));
   const url=new URL(window.location.href);url.searchParams.set('room',id);
@@ -143,8 +143,9 @@ export default function ResultsPage(){
       {key==='history'&&settled.length>0&&<span className="pkr-section-count">{settled.length}</span>}</button>)}
   </nav>
   {error&&<p role="alert" className="pkr-primary-empty">{error}</p>}
-  {busy||loading?<p role="status" className="pkr-primary-empty">Loading saved poker results…</p>:
+  {busy?<p role="status" className="pkr-primary-empty">Loading your poker clubs…</p>:
    rooms.length===0?<div className="pkr-primary-empty">There are no poker clubs yet. <button className="pkr-primary-outline" onClick={()=>router.push('/dashboard')}>Go to Home</button></div>:
+   loading?<p role="status" className="pkr-primary-empty">Loading saved poker results…</p>:
   <>
   {view==='standings'&&<>
    <div className="pkr-primary-grid pkr-results-summary">

@@ -308,7 +308,12 @@ async function run(){
       assert.equal(await page.locator('.pkr-results-podium-card').count(),2,'Results retains the top-player podium');
       await page.goto(BASE+'/results?room=test-room&view=history',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Completed games'}).waitFor();
-      assert.equal(await page.getByRole('button',{name:/Share in WhatsApp/}).count()>0,true);
+      const whatsappShare=page.getByRole('button',{name:/Share in WhatsApp/}).first();
+      try{await whatsappShare.waitFor({state:'visible',timeout:10000})}
+      catch{
+        const details=await page.locator('.pkr-primary-panel').first().innerText();
+        throw new Error('Host results sharing was not ready: '+details.slice(0,400));
+      }
       assert.equal(await page.getByRole('checkbox',{name:/Include player net amounts/}).isChecked(),false);
       await page.goto(BASE+'/payments?room=test-room&payments=outstanding',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Payments',exact:true}).waitFor();
