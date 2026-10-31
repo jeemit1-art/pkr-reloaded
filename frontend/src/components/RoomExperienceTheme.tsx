@@ -15,6 +15,9 @@ import {api,getToken,type RoomDashboardLayout} from '@/lib/api';
 export default function RoomExperienceTheme(){
  const pathname=usePathname()||'';
  useEffect(()=>{
+  // Gameplay has a separate, previously approved table UI and a narrow API
+  // contract. Do not load club themes or fetch /events on play/TV routes.
+  if(/^\/games\/[^/]+\/(play|tv)\/?$/.test(pathname))return;
   const root=document.documentElement;
   if(!getToken()){
    root.removeAttribute('data-pkr-room-experience');
