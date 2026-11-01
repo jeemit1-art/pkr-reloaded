@@ -340,37 +340,66 @@ export default function ResultsPage(){
      onClick={()=>setHistoryCount(n=>n+15)}>Show more games ({settled.length-historyCount} remaining)</button>
    </div>}
   </section>}
-  {view==='insights'&&<>
-   <div className="pkr-primary-grid">
-    <div className="pkr-primary-metric"><small>Completed games</small><strong>{settled.length}</strong><span>From this club</span></div>
-    <div className="pkr-primary-metric"><small>Players with results</small><strong>{ordered.length}</strong><span>In settled games</span></div>
-    <div className="pkr-primary-metric"><small>Recorded player appearances</small><strong>{totalPlayed}</strong><span>Across the leaderboard records</span></div>
+  {view==='insights'&&<section className="pkr-results-insights-view" aria-label="Recorded performance insights">
+   <ResultsSectionHeading
+    eyebrow={experience==='command'?'COMMAND CENTRE / PERFORMANCE ANALYSIS':'LIVE POKER / THE NUMBERS'}
+    title="Club insights"
+    description="Recorded performance from settled games. No estimates, just saved results."
+    aside={<span className="pkr-results-board-counter">All-time statistics</span>}/>
+   <div className="pkr-primary-grid pkr-results-insights-kpis" aria-label="Club performance figures">
+    <div className="pkr-primary-metric pkr-results-insight-kpi">
+     <span className="pkr-results-kpi-icon" aria-hidden="true">♠</span>
+     <small>Completed games</small><strong>{settled.length}</strong><span>Settled sessions</span>
+    </div>
+    <div className="pkr-primary-metric pkr-results-insight-kpi">
+     <span className="pkr-results-kpi-icon" aria-hidden="true">♛</span>
+     <small>Ranked players</small><strong>{ordered.length}</strong><span>With saved results</span>
+    </div>
+    <div className="pkr-primary-metric pkr-results-insight-kpi">
+     <span className="pkr-results-kpi-icon" aria-hidden="true">♟</span>
+     <small>Player appearances</small><strong>{totalPlayed}</strong><span>Across settled game results</span>
+    </div>
    </div>
-   <section className="pkr-primary-panel">
-    <h2>Games completed over six months</h2>
-    <p>Counts of settled sessions, not estimated future sessions.</p>
-    <div className="pkr-results-trend" role="group" aria-label="Settled games by month">
-     {months.map(m=><div className="pkr-results-trend-col" key={m.key}>
-       <strong>{m.count}</strong><div><span style={{height:(m.count/highest*100)+'%'}}/></div><small>{m.label}</small>
-      </div>)}
-    </div>
-   </section>
-   <section className="pkr-primary-panel pkr-results-net-panel" aria-label="Player net results graph">
-    <div className="pkr-results-net-heading">
-     <div><h2>Player net results</h2><p>Lifetime results from settled games. Select a player to review their game history.</p></div>
-     <span className="pkr-results-net-legend"><i className="gain"/> Gain <i className="loss"/> Loss</span>
-    </div>
-    {ordered.length?<div className="pkr-results-net-chart" role="group" aria-label="Red and green player net result bars">
-     {ordered.map(p=><RecordMetric bare key={p.user_id||p.display_name} className="pkr-results-net-row"
-      request={{kind:'player',title:p.display_name+' — game history',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
-      <span className="pkr-results-net-person"><strong>{p.display_name}</strong><small>{p.games_played} games</small></span>
-      <span className="pkr-results-net-track" aria-hidden="true"><i className={p.total_net>0?'gain':p.total_net<0?'loss':'even'}
-       style={{width:Math.max(p.total_net===0?0:3,Math.round(Math.abs(p.total_net)/peakNet*100))+'%'}}/></span>
-      <b className={'pkr-results-net-amount '+(p.total_net>0?'pkr-vnext-positive':p.total_net<0?'pkr-vnext-negative':'')}>{fmtSign(p.total_net)}</b>
-     </RecordMetric>)}
-    </div>:<p>No settled games or player results yet.</p>}
-   </section>
-  </>}
+   <div className="pkr-results-insights-layout">
+    <section className="pkr-primary-panel pkr-results-insight-card pkr-results-net-panel" aria-label="Player net results graph">
+     <header className="pkr-results-insight-card-head pkr-results-net-heading">
+      <div><span className="pkr-results-board-eyebrow">PLAYER PERFORMANCE</span>
+       <h3>Who&apos;s ahead?</h3>
+       <p>All-time net results. Tap a player for their full game history.</p></div>
+      <span className="pkr-results-net-legend"><i className="gain"/> Gain <i className="loss"/> Loss</span>
+     </header>
+     {ordered.length?<div className="pkr-results-net-chart" role="group" aria-label="Red and green player net result bars">
+      {ordered.map(p=>{
+       const width=Math.abs(p.total_net)/peakNet*48;
+       return <RecordMetric bare key={p.user_id||p.display_name} className="pkr-results-net-row"
+        request={{kind:'player',title:p.display_name+' — game history',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
+        <span className="pkr-results-net-person"><strong>{p.display_name}</strong><small>{p.games_played} games</small></span>
+        <span className="pkr-results-net-track" aria-hidden="true"><i
+         className={p.total_net>0?'gain':p.total_net<0?'loss':'even'}
+         style={{left:(p.total_net<0?50-width:50)+'%',
+                 width:p.total_net===0?'2px':Math.max(2,width)+'%'}}/></span>
+        <b className={'pkr-results-net-amount '+(p.total_net>0?'pkr-vnext-positive':p.total_net<0?'pkr-vnext-negative':'')}>
+         {fmtSign(p.total_net)}</b>
+       </RecordMetric>;
+      })}
+     </div>:<div className="pkr-primary-empty pkr-results-empty">
+      <strong>No player results yet</strong><p>Profit and loss appears once a game has settled.</p></div>}
+    </section>
+    <section className="pkr-primary-panel pkr-results-insight-card pkr-results-trend-panel">
+     <header className="pkr-results-insight-card-head">
+      <div><span className="pkr-results-board-eyebrow">GAME ACTIVITY</span>
+       <h3>Six-month trend</h3><p>Settled games recorded each month.</p></div>
+      <span className="pkr-results-trend-total">{months.reduce((n,m)=>n+m.count,0)} games</span>
+     </header>
+     <div className="pkr-results-trend" role="group" aria-label="Settled games by month">
+      {months.map(m=><div className="pkr-results-trend-col" key={m.key}>
+        <strong>{m.count}</strong><div><span style={{height:(m.count/highest*100)+'%'}}/></div><small>{m.label}</small>
+       </div>)}
+     </div>
+     <p className="pkr-results-trend-note">Only completed, settled sessions are included.</p>
+    </section>
+   </div>
+  </section>}
   </>}
   {notice&&<p role="status" className="pkr-account-notice">{notice}</p>}
  </div></main>;
