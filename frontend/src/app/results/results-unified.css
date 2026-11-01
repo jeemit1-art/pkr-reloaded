@@ -858,16 +858,6 @@
  margin:5px 0!important;
  font-size:clamp(29px,3.8vw,46px)!important;
 }
-.pkr-results-v3 .pkr-experience-command-stats{
- max-width:48%;
-}
-.pkr-results-v3 .pkr-experience-command-stat strong{
- font-family:var(--font-num),monospace;
- font-size:22px;
-}
-.pkr-results-v3 .pkr-experience-live-metrics strong{
- font-family:var(--font-num),monospace;
-}
 .pkr-results-v3 .pkr-results-board,
 .pkr-results-v3 .pkr-results-command-leaders,
 .pkr-results-v3 .pkr-primary-row.pkr-results-history-card,
@@ -915,7 +905,7 @@
  .pkr-results-v3 .pkr-primary-page-inner.pkr-results-content{
   width:100%!important;
   max-width:100%!important;
-  padding:15px 12px 36px!important;
+  padding:24px 16px 36px!important;
  }
  .pkr-results-v3 .pkr-results-intro{margin:2px 0 12px!important}
  .pkr-results-v3 .pkr-experience-stage{
@@ -927,5 +917,4 @@
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
  }
  .pkr-results-v3 .pkr-experience-command-stat{min-width:0!important;max-width:none!important}
- .pkr-results-v3 .pkr-experience-command-stat strong{font-size:18px}
 }
