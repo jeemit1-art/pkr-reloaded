@@ -8,6 +8,7 @@ import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
 import {createPkrResultsImage} from '@/lib/pkr-results-image';
 import './results.css';
+import './results-unified.css';
 
 type View='standings'|'history'|'insights';
 const allowView=(s:string|null):View=>s==='history'||s==='insights'?s:'standings';
