@@ -281,15 +281,18 @@ async function test(){
          await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
          if(size.name==='small-phone'||size.name==='desktop'){
            await page.goto(BASE+'/results?room=test-room',{waitUntil:'domcontentloaded'});
-           await page.locator('[data-testid="live-results-stage"]').waitFor({state:'visible'});
+           await page.locator('[data-testid="results-live-stage"]').waitFor({state:'visible'});
            await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
            await page.locator('.pkr-results-live-player').first().waitFor({state:'visible',timeout:15000});
            if(await page.locator('.pkr-results-live-player').count()!==leaders.length)
              errors.push(size.name+' Live Poker lost ranked players');
            if(await page.locator('.pkr-results-ledger-row').count()!==0)
              errors.push(size.name+' Live Poker is still rendering the Command Centre ledger');
-           if(!await page.locator('.pkr-results-live-table').isVisible())
+           if(!await page.locator('.pkr-experience-felt-table').isVisible())
              errors.push(size.name+' Live Poker top player felt is missing');
+           if(!await page.locator('.pkr-results-shared-shell .pkr-results-club-header').isVisible()||
+             !await page.locator('[data-testid="results-live-stage"].pkr-experience-live').isVisible())
+             errors.push(size.name+' Live Results is not using the same room header and Live Poker stage as Games');
            await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
            await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
            if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
@@ -305,7 +308,7 @@ async function test(){
            await page.screenshot({path:path.join(output,size.name+'-results-live-insights.png'),fullPage:false});
            await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Standings'}).click();
            await page.locator('.pkr-results-live-player').first().waitFor({state:'visible'});
-           const photo=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>
+           const photo=await page.locator('[data-testid="results-live-stage"]').evaluate(node=>
              getComputedStyle(node).backgroundImage);
            if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
              errors.push(size.name+' Live Poker artwork not applied to Results page');
@@ -859,15 +862,37 @@ async function test(){
 
         if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
           errors.push(size.name+' Command Centre lost ledger players');
+        // All five destinations must use the actual room header and stage,
+        // not a second visual imitation assembled only for Results.
+        const sharedShell=await page.locator('.pkr-results-shared-shell').evaluate(root=>{
+          const top=root.querySelector(':scope > .pkr-topbar');
+          const content=root.querySelector(':scope > .pkr-content');
+          const stage=root.querySelector('.pkr-results-intro > .pkr-experience-stage');
+          const tab=root.querySelector('nav[aria-label="Results sections"]');
+          if(!top||!content||!stage||!tab)return null;
+          const contentRect=content.getBoundingClientRect();
+          return {topbar:top.classList.contains('pkr-results-club-header'),
+            roomName:top.querySelector('.pkr-results-club-title')?.textContent,
+            sharedStage:stage.classList.contains('pkr-experience-command'),
+            stageWidth:stage.getBoundingClientRect().width,
+            contentWidth:contentRect.width,
+            topbarHeight:top.getBoundingClientRect().height,
+            scrollWidth:document.documentElement.scrollWidth,
+            viewportWidth:document.documentElement.clientWidth};
+        });
+        if(!sharedShell||!sharedShell.topbar||!sharedShell.roomName||
+           !sharedShell.sharedStage||sharedShell.stageWidth<sharedShell.contentWidth*.85||
+           sharedShell.scrollWidth>sharedShell.viewportWidth+4)
+          errors.push(size.name+' Results did not inherit the Games/Players shared room shell: '+JSON.stringify(sharedShell));
         if(size.width<=740){
-          const winner=await page.locator('.pkr-results-command-stats>div:last-child').evaluate(tile=>{
+          const winner=await page.locator('.pkr-experience-command-stats>div:last-child').evaluate(tile=>{
             const value=tile.querySelector('strong');
             return {layout:getComputedStyle(tile).display,
               valueWidth:value?.getBoundingClientRect().width||0,
               tileWidth:tile.getBoundingClientRect().width};
           });
-          if(winner.layout!=='grid'||winner.valueWidth<45)
-            errors.push(size.name+' Command Centre top player label squeezed: '+JSON.stringify(winner));
+          if(winner.layout!=='grid'||winner.valueWidth<40)
+            errors.push(size.name+' Shared Command Centre metric text is squeezed: '+JSON.stringify(winner));
         }
         if(await page.locator('.pkr-results-live-player').count()!==0)
           errors.push(size.name+' Command Centre is still rendering the Live Poker board');
