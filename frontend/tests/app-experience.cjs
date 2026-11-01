@@ -337,13 +337,28 @@ async function run(){
       assert.equal(await page.locator('.pkr-results-command-leader').count(),2,'Command Centre retains interactive club leaders');
       await page.goto(BASE+'/results?room=test-room&view=history',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Completed games'}).waitFor();
-      const whatsappShare=page.getByRole('button',{name:/Share in WhatsApp/}).first();
+      await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
+      assert.equal(await page.locator('.pkr-results-history-card').count(),2,
+        'Each settled game should have its own Results history card');
+      const firstHistory=page.locator('.pkr-results-history-card').first();
+      assert(await firstHistory.getByRole('button',{name:/View results/}).isVisible(),
+        'A finished game must retain its direct results link');
+      await firstHistory.locator('summary').click();
+      const whatsappShare=firstHistory.getByRole('button',{name:/Share in WhatsApp/});
       try{await whatsappShare.waitFor({state:'visible',timeout:10000})}
-      catch{
-        const details=await page.locator('.pkr-results-board').first().innerText();
-        throw new Error('Host results sharing was not ready: '+details.slice(0,400));
-      }
+      catch{throw new Error('Host WhatsApp sharing did not expand from the saved game card');}
+      assert(await firstHistory.getByRole('button',{name:'Results image'}).isVisible(),
+        'The results-image sharing action must remain available');
       assert.equal(await page.getByRole('checkbox',{name:/Include player net amounts/}).isChecked(),false);
+      await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Insights'}).click();
+      await page.getByRole('heading',{name:'Club insights'}).waitFor();
+      assert.equal(await page.locator('.pkr-results-insight-kpi').count(),3,
+        'Insights should retain the three recorded statistical totals');
+      assert(await page.getByRole('group',{name:'Red and green player net result bars'}).isVisible(),
+        'Player gain/loss chart must remain visible');
+      assert(await page.getByRole('group',{name:'Settled games by month'}).isVisible(),
+        'Saved game activity trend must remain visible');
+      await page.screenshot({path:path.join(output,'chromium-phone-results-insights-unified.png'),fullPage:false});
       await page.goto(BASE+'/payments?room=test-room&payments=outstanding',{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:'Payments',exact:true}).waitFor();
       await page.getByRole('button',{name:/Private reminder/}).first().waitFor();

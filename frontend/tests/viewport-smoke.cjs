@@ -290,6 +290,21 @@ async function test(){
              errors.push(size.name+' Live Poker is still rendering the Command Centre ledger');
            if(!await page.locator('.pkr-results-live-table').isVisible())
              errors.push(size.name+' Live Poker top player felt is missing');
+           await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
+           await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
+           if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
+             errors.push(size.name+' Live Poker History lost shared section heading');
+           if(!await page.locator('.pkr-results-history-marker').first().isVisible())
+             errors.push(size.name+' Live Poker History lost poker-themed session marker');
+           await page.screenshot({path:path.join(output,size.name+'-results-live-history.png'),fullPage:false});
+           await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Insights'}).click();
+           await page.locator('.pkr-results-net-row').first().waitFor({state:'visible'});
+           if(!await page.locator('.pkr-results-insights-layout').isVisible()||
+             await page.locator('.pkr-results-insight-kpi').count()!==3)
+             errors.push(size.name+' Live Poker Insights is missing redesigned analytics cards');
+           await page.screenshot({path:path.join(output,size.name+'-results-live-insights.png'),fullPage:false});
+           await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Standings'}).click();
+           await page.locator('.pkr-results-live-player').first().waitFor({state:'visible'});
            const photo=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>
              getComputedStyle(node).backgroundImage);
            if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
@@ -867,9 +882,42 @@ async function test(){
         }
         if(!await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).isVisible())
          errors.push(size.name+' Results is missing History');
+       await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
+       await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
+       if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
+         errors.push(size.name+' History uses a different heading structure');
+       const sessionCards=await page.locator('.pkr-results-history-card').count();
+       if(sessionCards!==1)errors.push(size.name+' settled session history cards missing: '+sessionCards);
+       const historyCard=page.locator('.pkr-results-history-card').first();
+       if(!await historyCard.getByRole('button',{name:/View results/}).isVisible())
+         errors.push(size.name+' History lost saved results deep link');
+       await historyCard.locator('summary').click();
+       if(!await historyCard.getByRole('button',{name:/Share in WhatsApp/}).isVisible()||
+          !await historyCard.getByRole('button',{name:'Results image'}).isVisible())
+         errors.push(size.name+' History sharing and image actions not visible');
+       const historyGeometry=await historyCard.evaluate(card=>{
+         const r=card.getBoundingClientRect();
+         return {left:r.left,right:r.right,scroll:document.documentElement.scrollWidth,
+           viewport:document.documentElement.clientWidth};
+       });
+       if(historyGeometry.left<0||historyGeometry.right>historyGeometry.viewport+4||
+          historyGeometry.scroll>historyGeometry.viewport+4)
+         errors.push(size.name+' Results History card clipped: '+JSON.stringify(historyGeometry));
+       await page.screenshot({path:path.join(output,size.name+'-results-command-history.png'),fullPage:false});
        await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Insights'}).click();
        await page.locator('.pkr-results-net-row').first().waitFor({state:'visible',timeout:10000});
        const bars=await page.locator('.pkr-results-net-row').count();
+       if(!await page.locator('.pkr-results-insights-view .pkr-results-section-head').isVisible()||
+          await page.locator('.pkr-results-insight-kpi').count()!==3||
+          !await page.locator('.pkr-results-trend-panel').isVisible())
+         errors.push(size.name+' Results Insights does not match shared dashboard');
+       const zeroLine=await page.locator('.pkr-results-net-track').first().evaluate(node=>{
+         const style=getComputedStyle(node,'::after');
+         return {content:style.content,left:style.left};
+       });
+       if(zeroLine.content==='none'||!zeroLine.left)
+         errors.push(size.name+' Insights graph lost the central zero axis');
+       await page.screenshot({path:path.join(output,size.name+'-results-command-insights.png'),fullPage:false});
        const gains=await page.locator('.pkr-results-net-track i.gain').count();
        const losses=await page.locator('.pkr-results-net-track i.loss').count();
        if(bars!==leaders.length||!gains||!losses)
