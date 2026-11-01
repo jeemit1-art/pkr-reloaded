@@ -602,13 +602,21 @@
   gap:7px!important;
  }
  .pkr-results-v3 .pkr-results-command-stats>div{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  align-content:center!important;
   padding:8px;
   min-width:0;
   grid-column:auto!important;
  }
  .pkr-results-v3 .pkr-results-command-stats strong{font-size:19px}
  .pkr-results-v3 .pkr-results-command-stats .pkr-results-command-winner{
+  display:block!important;
   font-size:12px;
+  line-height:1.25;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
  }
  .pkr-results-v3 .pkr-results-history-card{
   grid-template-columns:42px minmax(0,1fr) minmax(130px,max-content);
@@ -736,4 +744,24 @@
   gap:5px;
  }
  .pkr-results-v3 .pkr-results-history-actions{grid-template-columns:1fr 1fr}
+}
+
+/* Small-screen final visual QA: leave room for real game history in the
+   first viewport and keep the performance names on intact word boundaries. */
+@media(max-width:620px){
+ .pkr-results-v3 .pkr-results-history-toolbar{padding:9px 11px;gap:4px}
+ .pkr-results-v3 .pkr-results-history-toolbar-note{display:none}
+ .pkr-results-v3 .pkr-results-history-toolbar .pkr-results-amount-option{
+  margin:0;line-height:1.35;font-size:11px;
+ }
+}
+.pkr-results-v3 .pkr-results-history-card:has(.pkr-results-history-share[open]) .pkr-results-history-marker,
+.pkr-results-v3 .pkr-results-history-card:has(.pkr-results-history-share[open]) .pkr-results-history-record{
+ align-self:start;
+}
+@media(max-width:860px){
+ .pkr-results-v3 .pkr-results-command-stats .pkr-results-command-winner{
+  overflow-wrap:break-word!important;
+  hyphens:none;
+ }
 }

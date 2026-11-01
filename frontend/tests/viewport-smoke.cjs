@@ -859,6 +859,16 @@ async function test(){
 
         if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
           errors.push(size.name+' Command Centre lost ledger players');
+        if(size.width<=740){
+          const winner=await page.locator('.pkr-results-command-stats>div:last-child').evaluate(tile=>{
+            const value=tile.querySelector('strong');
+            return {layout:getComputedStyle(tile).display,
+              valueWidth:value?.getBoundingClientRect().width||0,
+              tileWidth:tile.getBoundingClientRect().width};
+          });
+          if(winner.layout!=='grid'||winner.valueWidth<45)
+            errors.push(size.name+' Command Centre top player label squeezed: '+JSON.stringify(winner));
+        }
         if(await page.locator('.pkr-results-live-player').count()!==0)
           errors.push(size.name+' Command Centre is still rendering the Live Poker board');
          await page.screenshot({path:path.join(output,size.name+'-results-command-first-screen.png'),fullPage:false});

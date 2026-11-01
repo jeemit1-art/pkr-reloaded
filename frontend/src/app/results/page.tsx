@@ -88,6 +88,7 @@ export default function ResultsPage(){
   });
  },[games]);
  const highest=Math.max(1,...months.map(x=>x.count));
+ const sixMonthTotal=months.reduce((count,month)=>count+month.count,0);
  const peakNet=Math.max(1,...ordered.map(p=>Math.abs(p.total_net)));
  const totalPlayed=leaders.reduce((sum,p)=>sum+p.games_played,0);
  const visibleStandings=useMemo(()=>{
@@ -390,7 +391,7 @@ export default function ResultsPage(){
      <header className="pkr-results-insight-card-head">
       <div><span className="pkr-results-board-eyebrow">GAME ACTIVITY</span>
        <h3>Six-month trend</h3><p>Settled games recorded each month.</p></div>
-      <span className="pkr-results-trend-total">{months.reduce((n,m)=>n+m.count,0)} games</span>
+      <span className="pkr-results-trend-total">{sixMonthTotal} {sixMonthTotal===1?'game':'games'}</span>
      </header>
      <div className="pkr-results-trend" role="group" aria-label="Settled games by month">
       {months.map(m=><div className="pkr-results-trend-col" key={m.key}>
