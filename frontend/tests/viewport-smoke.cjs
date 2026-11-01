@@ -288,8 +288,15 @@ async function test(){
              errors.push(size.name+' Live Poker lost ranked players');
            if(await page.locator('.pkr-results-ledger-row').count()!==0)
              errors.push(size.name+' Live Poker is still rendering the Command Centre ledger');
-           if(!await page.locator('.pkr-experience-felt-table').isVisible())
-             errors.push(size.name+' Live Poker top player felt is missing');
+           // Games/Players deliberately hide the decorative felt table on
+           // narrow phones; Results must follow the same shared behaviour.
+           if(size.width>600&&!await page.locator('.pkr-experience-felt-table').isVisible())
+             errors.push(size.name+' Live Poker shared felt artwork is missing on desktop');
+           if(size.width<=600){
+             const metrics=page.locator('[data-testid="results-live-stage"] .pkr-experience-live-metrics>span');
+             if(await metrics.count()!==3||!await metrics.first().isVisible())
+               errors.push(size.name+' Live Poker shared mobile result metrics are missing');
+           }
            if(!await page.locator('.pkr-results-shared-shell .pkr-results-club-header').isVisible()||
              !await page.locator('[data-testid="results-live-stage"].pkr-experience-live').isVisible())
              errors.push(size.name+' Live Results is not using the same room header and Live Poker stage as Games');
