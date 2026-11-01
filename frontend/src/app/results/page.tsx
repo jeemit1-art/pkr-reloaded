@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useState,type ReactNode} from 'react';
 import {useRouter} from 'next/navigation';
 import RecordMetric from '@/components/RecordMetric';
-import {useRoomExperience} from '@/components/PokerClubStage';
+import {PokerClubStage,useRoomExperience} from '@/components/PokerClubStage';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -150,50 +150,32 @@ export default function ResultsPage(){
   }catch(e){setNotice(e instanceof Error?e.message:'Unable to create image.')}
   finally{setSharing('')}
  }
- return <main className={'pkr-primary-page pkr-results-page pkr-results-v3 pkr-results-experience-'+experience}>
-  <div className="pkr-primary-page-inner">
-   <div className="pkr-results-room-bar">
-    <span className="pkr-results-room-identity"><span aria-hidden="true">♠</span> PKR <small>/ RESULTS</small></span>
-    {rooms.length>1&&<label>Club
+ return <main className={'pkr-app pkr-event pkr-casino pkr-primary-page pkr-results-page pkr-results-v3 pkr-results-shared-shell pkr-results-experience-'+experience}>
+  <div className="pkr-topbar pkr-results-club-header">
+   <div className="pkr-results-club-header-inner">
+    <button type="button" className="pkr-results-club-back" aria-label="Back to poker rooms"
+     onClick={()=>router.push('/dashboard')}>‹</button>
+    <div className="display pkr-results-club-title">{room?.name||'Your poker club'}</div>
+    {rooms.length>1&&<label className="pkr-results-club-select">
+     <span>Club</span>
      <select aria-label="Results poker club" value={selected} onChange={e=>changeRoom(e.target.value)}>
       {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
-     </select></label>}
+     </select>
+    </label>}
    </div>
-   {experience==='command'?
-    <header className="pkr-results-command-hero" data-testid="command-results-stage"
-     aria-label="Command Centre results overview">
-     <div className="pkr-results-command-title">
-       <span className="pkr-results-hero-eyebrow">◆ COMMAND CENTRE · PERFORMANCE</span>
-       <h1>Results</h1><span className="pkr-results-command-tagline">At a glance.</span>
-       <p>{room?.name||'Your private poker club'} · Player rankings, settled sessions and history.</p>
-     </div>
-     <div className="pkr-results-command-stats">
-       <div><small>Ranked players</small><strong>{ordered.length}</strong></div>
-       <div><small>Completed games</small><strong>{settled.length}</strong></div>
-       <div><small>Top performer</small><strong className="pkr-results-command-winner">{ordered[0]?.display_name||'—'}</strong></div>
-     </div>
-    </header>:
-    <header className="pkr-results-live-hero" data-testid="live-results-stage"
-     aria-label="Live Poker results table">
-     <div className="pkr-results-live-intro">
-       <span className="pkr-results-hero-eyebrow">♠ LIVE POKER · {room?.name||'YOUR CLUB'}</span>
-       <h1>Results</h1>
-       <p>Real results. Real rivalries.</p>
-       <span className="pkr-results-live-count">{settled.length} settled games · {ordered.length} players</span>
-     </div>
-     <div className="pkr-results-live-table" aria-label="Top three players at the felt">
-       <span className="pkr-results-table-brand">PKR <small>ALL TIME</small></span>
-       {ordered.slice(0,3).map((p,i)=><RecordMetric key={p.user_id||p.display_name}
-        className={'pkr-results-felt-seat pkr-results-felt-seat-'+i}
-        request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
-         playerId:p.user_id,playerName:p.display_name}}>
-         <span className="pkr-results-seat-chip">#{i+1}</span>
-         <span className="pkr-results-seat-player">{p.display_name}</span>
-         <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
-       </RecordMetric>)}
-       {!ordered.length&&<span className="pkr-results-felt-empty">Results appear after your first settled game</span>}
-     </div>
-    </header>}
+  </div>
+  <div className="pkr-primary-page-inner pkr-content pkr-results-content">
+   <div className="pkr-room-games-intro pkr-room-games-intro-experience pkr-results-intro">
+    <PokerClubStage kind="results" title="Results"
+     subtitle="Standings, completed games and player performance."
+     club={room?.name||'Your poker club'}
+     metrics={[
+       {label:'Ranked players',value:ordered.length},
+       {label:'Settled games',value:settled.length},
+       {label:'Player appearances',value:totalPlayed},
+     ]}
+     players={ordered.slice(0,4).map(p=>p.display_name)}/>
+   </div>
   <nav className="pkr-section-tabs" aria-label="Results sections">
    {([['standings','Standings'],['history','History'],['insights','Insights']] as const).map(([key,title])=>
     <button type="button" key={key} onClick={()=>setSection(key)}
@@ -207,7 +189,7 @@ export default function ResultsPage(){
   <>
   {view==='standings'&&<>
     <ResultsSectionHeading
-       eyebrow={experience==='command'?'COMMAND CENTRE / CLUB PERFORMANCE':'LIVE POKER / FELT RANKINGS'}
+       eyebrow="PLAYER PERFORMANCE"
        title={experience==='command'?'All-time standings':'Players at the felt'}
        description="Lifetime results from settled games. Select a player to review their saved history."
        aside={<span className="pkr-results-board-counter">{ordered.length} ranked players</span>}/>
@@ -295,7 +277,7 @@ export default function ResultsPage(){
    </>}
   {view==='history'&&<section className="pkr-results-history-view" aria-label="Completed game history">
    <ResultsSectionHeading
-     eyebrow={experience==='command'?'COMMAND CENTRE / SESSION ARCHIVE':'LIVE POKER / FINISHED NIGHTS'}
+     eyebrow="SAVED GAME HISTORY"
      title="Completed games"
      description="Every settled session in this club, with its saved results and sharing options."
      aside={<span className="pkr-results-board-counter">{settled.length} settled sessions</span>}/>
@@ -344,7 +326,7 @@ export default function ResultsPage(){
   </section>}
   {view==='insights'&&<section className="pkr-results-insights-view" aria-label="Recorded performance insights">
    <ResultsSectionHeading
-    eyebrow={experience==='command'?'COMMAND CENTRE / PERFORMANCE ANALYSIS':'LIVE POKER / THE NUMBERS'}
+    eyebrow="CLUB PERFORMANCE"
     title="Club insights"
     description="Recorded performance from settled games. No estimates, just saved results."
     aside={<span className="pkr-results-board-counter">All-time statistics</span>}/>
