@@ -900,10 +900,17 @@
  border-color:var(--rv-border)!important;
 }
 @media(max-width:1099px){
+ .pkr-results-v3.pkr-results-shared-shell{
+  padding-bottom:calc(var(--pkr-navigation-height,85px) + 30px)!important;
+  scroll-padding-bottom:calc(var(--pkr-navigation-height,85px) + 18px);
+ }
  .pkr-results-v3 .pkr-results-club-select{display:none}
 }
 @media(max-width:740px){
- .pkr-results-v3.pkr-results-shared-shell{padding:0!important}
+ .pkr-results-v3.pkr-results-shared-shell{
+  padding:0!important;
+  padding-bottom:calc(var(--pkr-navigation-height,85px) + 30px)!important;
+ }
  .pkr-results-v3 .pkr-results-club-header-inner{height:56px;padding:0 12px;gap:8px}
  .pkr-results-v3 .pkr-primary-page-inner.pkr-results-content{
   width:100%!important;
