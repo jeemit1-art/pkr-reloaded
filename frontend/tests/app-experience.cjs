@@ -227,7 +227,7 @@ async function run(){
       // The saved Live Poker appearance must apply across all five destinations
       // and Account; navigation must never reset the selected room's design.
       for(const [route,surface] of [
-        ['/results?room=test-room','[data-testid="live-results-stage"]'],
+        ['/results?room=test-room','[data-testid="results-live-stage"]'],
         ['/payments?room=test-room','.pkr-vnext-insights'],
         ['/events/test-room?tab=games','.pkr-room-games-intro'],
         ['/events/test-room?tab=members','.pkr-member-summary'],

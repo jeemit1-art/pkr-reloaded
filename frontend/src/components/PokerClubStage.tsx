@@ -21,7 +21,7 @@ export function useRoomExperience():RoomDashboardLayout{
 
 type StageMetric={label:string;value:string|number};
 type StageProps={
- kind:'games'|'players'|'payments';
+ kind:'games'|'players'|'payments'|'results';
  title:string;
  subtitle:string;
  club:string;
@@ -52,7 +52,7 @@ export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],chil
       <span className="pkr-experience-chip chip-a">♠</span>
       <span className="pkr-experience-chip chip-b">♣</span>
       <span className="pkr-experience-chip chip-c">♦</span>
-      <div className="pkr-experience-felt-table"><strong>PKR</strong><small>{kind==='games'?'GAME NIGHT':kind==='payments'?'SETTLE UP':'PLAYERS CLUB'}</small></div>
+      <div className="pkr-experience-felt-table"><strong>PKR</strong><small>{kind==='games'?'GAME NIGHT':kind==='payments'?'SETTLE UP':kind==='results'?'RESULTS':'PLAYERS CLUB'}</small></div>
       {players.slice(0,4).map((name,i)=><span className={'pkr-experience-felt-seat seat-'+i} key={name+i}
         title={name}>{name.split(' ')[0]}</span>)}
     </div>
