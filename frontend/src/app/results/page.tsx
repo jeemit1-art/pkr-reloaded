@@ -291,25 +291,54 @@ export default function ResultsPage(){
       </section>
     </div>
    </>}
-  {view==='history'&&<section className="pkr-primary-panel pkr-results-history-panel">
-   <div className="pkr-results-history-title"><div><h2>Completed games</h2><p>{settled.length} settled sessions saved in this club.</p></div>
-    {canShare&&<label className="pkr-results-amount-option"><input type="checkbox"
-      checked={includeAmounts} onChange={e=>setIncludeAmounts(e.target.checked)}/>Include player net amounts in group results</label>}
+  {view==='history'&&<section className="pkr-results-history-view" aria-label="Completed game history">
+   <ResultsSectionHeading
+     eyebrow={experience==='command'?'COMMAND CENTRE / SESSION ARCHIVE':'LIVE POKER / FINISHED NIGHTS'}
+     title="Completed games"
+     description="Every settled session in this club, with its saved results and sharing options."
+     aside={<span className="pkr-results-board-counter">{settled.length} settled sessions</span>}/>
+   {canShare&&<div className="pkr-results-history-toolbar">
+    <span className="pkr-results-history-toolbar-note">♠ Private results sharing · choose who receives the message</span>
+    <label className="pkr-results-amount-option"><input type="checkbox"
+     checked={includeAmounts} onChange={e=>setIncludeAmounts(e.target.checked)}/>
+     Include player net amounts in group results</label>
+   </div>}
+   <div className="pkr-results-history-list" aria-label="Saved settled games">
+    {displayHistory.length?displayHistory.map((game,i)=>
+     <article className="pkr-primary-row pkr-results-history-card" key={game.id}>
+      <span className="pkr-results-history-marker" aria-hidden="true">
+       {experience==='live'?'♠':String(i+1).padStart(2,'0')}</span>
+      <div className="pkr-results-history-record">
+       <span className="pkr-results-history-kicker">SETTLED · RESULTS RECORDED</span>
+       <h3>{fmtDate(game.scheduled_at)}</h3>
+       <p>{game.location||room?.name||'Poker game'}</p>
+       <span className="pkr-results-history-players">♟ {playerCountLabel(game.player_count)}</span>
+      </div>
+      <div className="pkr-results-history-actions">
+       <button className="pkr-primary-action pkr-results-history-open" type="button"
+        onClick={()=>router.push(game.results_token?'/games/results/'+encodeURIComponent(game.results_token):'/games/'+encodeURIComponent(game.id))}>
+        View results <span aria-hidden="true">›</span></button>
+       {canShare&&game.results_token&&<details className="pkr-results-history-share">
+        <summary aria-label={'Share results for '+fmtDate(game.scheduled_at)}>
+         Share options <span aria-hidden="true">⌄</span></summary>
+        <div className="pkr-results-history-share-actions">
+         <button className="pkr-primary-outline" type="button" disabled={!!sharing}
+          onClick={()=>void shareResults(game)}>{sharing===game.id?'Preparing…':'Share in WhatsApp'}</button>
+         <button className="pkr-primary-outline" type="button" disabled={!!sharing}
+          onClick={()=>void resultsImage(game)}>Results image</button>
+        </div>
+       </details>}
+      </div>
+     </article>):
+     <div className="pkr-primary-empty pkr-results-empty">
+      <strong>No completed games yet</strong>
+      <p>When a game is settled, its saved results will appear here.</p>
+     </div>}
    </div>
-   {displayHistory.length?displayHistory.map(game=><div className="pkr-primary-row" key={game.id}>
-    <div><strong>{fmtDate(game.scheduled_at)}</strong>
-     <small>{game.location||room?.name||'Game'} · {playerCountLabel(game.player_count)}</small></div>
-    <div className="pkr-primary-row-actions">
-     <button className="pkr-primary-outline" type="button"
-       onClick={()=>router.push(game.results_token?'/games/results/'+encodeURIComponent(game.results_token):'/games/'+encodeURIComponent(game.id))}>View results →</button>
-     {canShare&&game.results_token&&<button className="pkr-primary-outline" type="button" disabled={!!sharing}
-       onClick={()=>void shareResults(game)}>{sharing===game.id?'Preparing…':'Share in WhatsApp'}</button>}
-     {canShare&&game.results_token&&<button className="pkr-primary-outline" type="button" disabled={!!sharing}
-       onClick={()=>void resultsImage(game)}>Results image</button>}
-    </div>
-   </div>):<div className="pkr-primary-empty">No games have been settled yet. When a game finishes, it will appear here.</div>}
-   {settled.length>historyCount&&<button type="button" className="pkr-primary-outline"
-     onClick={()=>setHistoryCount(n=>n+15)} style={{marginTop:16}}>Show more games ({settled.length-historyCount} remaining)</button>}
+   {settled.length>historyCount&&<div className="pkr-results-history-footer">
+    <button type="button" className="pkr-primary-outline"
+     onClick={()=>setHistoryCount(n=>n+15)}>Show more games ({settled.length-historyCount} remaining)</button>
+   </div>}
   </section>}
   {view==='insights'&&<>
    <div className="pkr-primary-grid">
