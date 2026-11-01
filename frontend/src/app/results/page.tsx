@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useState,type ReactNode} from 'react';
 import {useRouter} from 'next/navigation';
 import RecordMetric from '@/components/RecordMetric';
 import {useRoomExperience} from '@/components/PokerClubStage';
@@ -12,6 +12,16 @@ import './results.css';
 type View='standings'|'history'|'insights';
 const allowView=(s:string|null):View=>s==='history'||s==='insights'?s:'standings';
 const ranks=(data:LeaderboardEntry[])=>[...data].sort((a,b)=>b.total_net-a.total_net||b.games_won-a.games_won);
+
+function ResultsSectionHeading({eyebrow,title,description,aside}:{
+ eyebrow:string;title:string;description:string;aside?:ReactNode
+}){
+ return <header className="pkr-results-board-top pkr-results-section-head">
+  <div><span className="pkr-results-board-eyebrow">{eyebrow}</span>
+   <h2>{title}</h2><p>{description}</p></div>
+  {aside&&<div className="pkr-results-section-aside">{aside}</div>}
+ </header>;
+}
 export default function ResultsPage(){
  const router=useRouter();
  const experience=useRoomExperience();
@@ -138,7 +148,7 @@ export default function ResultsPage(){
   }catch(e){setNotice(e instanceof Error?e.message:'Unable to create image.')}
   finally{setSharing('')}
  }
- return <main className={'pkr-primary-page pkr-results-page pkr-results-experience-'+experience}>
+ return <main className={'pkr-primary-page pkr-results-page pkr-results-v3 pkr-results-experience-'+experience}>
   <div className="pkr-primary-page-inner">
    <div className="pkr-results-room-bar">
     <span className="pkr-results-room-identity"><span aria-hidden="true">♠</span> PKR <small>/ RESULTS</small></span>
@@ -194,12 +204,11 @@ export default function ResultsPage(){
    loading?<p role="status" className="pkr-primary-empty">Loading saved poker results…</p>:
   <>
   {view==='standings'&&<>
-    <div className="pkr-results-board-top">
-      <div><span className="pkr-results-board-eyebrow">
-        {experience==='command'?'COMMAND CENTRE / CLUB PERFORMANCE':'LIVE POKER / FELT RANKINGS'}</span>
-        <h2>{experience==='command'?'All-time standings':'Players at the felt'}</h2></div>
-      <span className="pkr-results-board-counter">{ordered.length} ranked players</span>
-    </div>
+    <ResultsSectionHeading
+       eyebrow={experience==='command'?'COMMAND CENTRE / CLUB PERFORMANCE':'LIVE POKER / FELT RANKINGS'}
+       title={experience==='command'?'All-time standings':'Players at the felt'}
+       description="Lifetime results from settled games. Select a player to review their saved history."
+       aside={<span className="pkr-results-board-counter">{ordered.length} ranked players</span>}/>
     <div className={'pkr-results-standings-layout pkr-results-layout-'+experience}>
       {experience==='command'&&ordered.length>0&&
        <aside className="pkr-results-command-leaders" aria-label="Top three club performers">
@@ -253,7 +262,7 @@ export default function ResultsPage(){
               playerId:player.user_id,playerName:player.display_name}}>
             <span className="pkr-results-ledger-position">{String(i+1).padStart(2,'0')}</span>
             <span className="pkr-results-ledger-person"><strong>{player.display_name}</strong>
-             <small>{player.games_won} profitable games{player.identity_review_required?' · Identity review':''}</small></span>
+             <small>{player.games_played} played · {player.games_won} profitable{player.identity_review_required?' · Identity review':''}</small></span>
             <span className="pkr-results-ledger-games">{player.games_played}<small>played</small></span>
             <span className="pkr-results-ledger-net"><b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
              {sort==='average'?fmtSign(player.games_played?Math.round(player.total_net/player.games_played):0):fmtSign(player.total_net)}
