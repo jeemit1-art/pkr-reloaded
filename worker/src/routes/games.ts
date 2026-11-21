@@ -773,7 +773,7 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
       title:event?.name||'PKR',body:message,
       data:{gameId,eventId:game.event_id,type:'buyin',
         notificationId:'buyin:'+gameId+':'+current.user_id+':'+count+':'+total},
-    },current.user_id).catch(error=>{console.warn('Buy-in push dispatch failed',String(error));})));
+    },current.user_id).catch(error=>{console.warn('Buy-in push dispatch failed',String(error));}));
   }
   return c.json({ok:true,buy_ins:count,buy_in_total:total,
     ...(enabled?{revision:version?.revision}:{})});
