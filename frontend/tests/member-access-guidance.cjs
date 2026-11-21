@@ -12,7 +12,7 @@ async function run(engine){
     for(const variant of ['not-signed-in','previously-working','expired','transfer']){
       const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
       const errors=[],requests=[];
-      if(variant!=='not-signed-in')await context.addInitScript(token=>localStorage.setItem('pkr_token',token),keys.valid);
+      if(variant==='previously-working'||variant==='expired')await context.addInitScript(token=>localStorage.setItem('pkr_token',token),keys.valid);
       const page=await context.newPage();
       page.setDefaultTimeout(16000);
       page.on('pageerror',error=>errors.push(error.message));
