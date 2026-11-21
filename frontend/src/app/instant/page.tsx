@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {api,getToken,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
+import {api,getToken,renewApprovedDevice,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import {rsvpChoices,rsvpChoiceLabel,rsvpChoiceStatus} from '@/lib/rsvp-choices';
 import './instant.css';
@@ -73,8 +73,12 @@ export default function Instant(){
 
   useEffect(()=>{
     let alive=true;
-    if(!getToken()){setNotSignedIn(true);setLoading(false);return;}
-    Promise.all([api.auth.me(),api.events.list()]).then(([me,list])=>{
+    async function begin(){
+      if(!getToken()&&!(await renewApprovedDevice())){
+        if(alive){setNotSignedIn(true);setLoading(false);}return;
+      }
+      if(!alive)return;
+      Promise.all([api.auth.me(),api.events.list()]).then(([me,list])=>{
       if(!alive)return;
       setUser(me);
       const eligible=list.filter(r=>r.status!=='ended');
@@ -89,6 +93,8 @@ export default function Instant(){
       setNotSignedIn(true);
       setLoading(false);
     });
+    }
+    void begin();
     return()=>{alive=false};
   },[]);
 
