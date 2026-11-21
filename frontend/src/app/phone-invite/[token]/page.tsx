@@ -45,7 +45,7 @@ export default function PhoneInvite(){
        saveToken(result.token);
        // A successful membership claim is also a verified account login.
        // Remember this approved browser so returning players need not be re-approved.
-       await rememberApprovedDevice();
+       void rememberApprovedDevice().catch(()=>{});
        try{localStorage.removeItem('pkr:join-claim:'+token);}catch{}
        playPkrSound('approved');
        // Joining must succeed before any optional app installation. The
