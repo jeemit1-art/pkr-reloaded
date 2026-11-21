@@ -28,6 +28,8 @@ const fixture=(pathname,method,body)=>{
     savedPreviewLayout=input.layout;layoutWrites++;
     return {event_id:'test-room',layout:savedPreviewLayout,updated_at:future};
   }
+  if(pathname==='/auth/device-session/start'&&method==='POST')
+    return {refresh_token:'a'.repeat(64),expires_in:45*86400}; // synthetic approved account
   if(method==='OPTIONS')return {};
   if(pathname==='/auth/me')return user;
   if(pathname==='/events')return [room,archivedRoom];

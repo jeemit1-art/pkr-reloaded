@@ -25,6 +25,8 @@ function fixture(url,method,body){
   layoutWrites++;selectedLayout=data.layout;
   return {event_id:'test-room',layout:selectedLayout,updated_at:now};
  }
+ if(method==='POST'&&url.pathname==='/auth/device-session/start')
+   return {refresh_token:'a'.repeat(64),expires_in:45*86400}; // synthetic old-member enrolment
  if(method!=='GET')throw new Error('Unexpected API write: '+method+' '+url.pathname);
  const p=url.pathname;
  if(p==='/auth/me')return user;

@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {api,getToken,renewApprovedDevice,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
+import {api,getToken,renewApprovedDevice,ensureApprovedDevice,type Event,type Game,type RsvpBoardData,type User,type LeaderboardEntry} from '@/lib/api';
 import PlayerRoomDashboard from '@/components/PlayerRoomDashboard';
 import {rsvpChoices,rsvpChoiceLabel,rsvpChoiceStatus} from '@/lib/rsvp-choices';
 import './instant.css';
@@ -81,6 +81,8 @@ export default function Instant(){
       Promise.all([api.auth.me(),api.events.list()]).then(([me,list])=>{
       if(!alive)return;
       setUser(me);
+      // Safely enrol older signed-in members for the new 45-day device renewal.
+      void ensureApprovedDevice().catch(()=>{});
       const eligible=list.filter(r=>r.status!=='ended');
       setRooms(eligible);
       const q=new URLSearchParams(window.location.search).get('room');

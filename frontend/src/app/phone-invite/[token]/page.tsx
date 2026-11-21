@@ -16,6 +16,7 @@ export default function PhoneInvite(){
  const [busy,setBusy]=useState(false);
  const [checking,setChecking]=useState(false);
  const [error,setError]=useState('');
+ const [needsHelp,setNeedsHelp]=useState(false);
  const checkingRef=useRef(false),completedRef=useRef(false);
 
  useEffect(()=>{
@@ -56,9 +57,15 @@ export default function PhoneInvite(){
        setStatus('Still waiting for your host. PKR will check again automatically.');
      }
    }catch(e:any){
-     // Silent polling previously hid approval/registration errors indefinitely.
-     // Keep a visible, actionable message without leaking the private claim.
-     setError(e.message||'Could not complete joining. Retry Check approval now, or contact the host.');
+     const reason=e?.message||'Could not complete joining. Retry Check approval now, or contact the host.';
+     // A declined, expired or consumed claim cannot be fixed by endlessly
+     // polling. Offer the returning-member recovery guide instead.
+     if(/declin|no longer valid|expired|already redeemed/i.test(reason)){
+       completedRef.current=true;
+       setNeedsHelp(true);
+       setStatus('This invitation cannot be completed. Your existing PKR account has not been deleted.');
+     }
+     setError(reason);
    }
    finally{checkingRef.current=false;if(!silent)setChecking(false);}
  }
@@ -80,6 +87,9 @@ export default function PhoneInvite(){
        {data?data.event_name:'Your private invitation'}
      </h1>
      <p>One private invitation, one host approval — then you can RSVP and view your game straight from WhatsApp. No download needed.</p>
+     <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6}}>
+       Played in this group before? Your host should choose <strong>Recover access</strong> for your existing account, not invite you as a new player.
+     </p>
      <div className="pkr-onboard-steps" aria-label="Joining progress">
        <span className="complete">✓ QR or link opened</span>
        <span className={claim?'complete':'current'}>{claim?'✓ Request sent':'2 · Request access'}</span>
@@ -91,7 +101,14 @@ export default function PhoneInvite(){
        You can join and RSVP now — no installation needed. Once you're in,
        you can add PKR to your phone if you want to.
      </p>}
-     {!claim?
+     {needsHelp?
+       <div className="pkr-pending-actions">
+         <p>This private request is no longer active. Return to a signed-in browser if you have one,
+           or ask your host to send a new recovery link for your original member account.</p>
+         <a className="btn btn-primary" href="/mobile-login?help=recover"
+           style={{display:'block',padding:13,textAlign:'center',textDecoration:'none'}}>Help me regain access to PKR</a>
+       </div>
+     :!claim?
        <form onSubmit={e=>{e.preventDefault();void ask();}} className="pkr-pending-actions">
          <label htmlFor="join-name" style={{color:'var(--ivory)',fontSize:13,fontWeight:600}}>What name will your host recognise?</label>
          <input id="join-name" value={name} maxLength={60} autoComplete="name"
@@ -121,6 +138,7 @@ export default function PhoneInvite(){
      {error&&<p role="alert" style={{color:'var(--red)',marginTop:14,fontSize:12}}>{error}</p>}
      <div style={{marginTop:14,display:'flex',gap:12,flexWrap:'wrap'}}>
        <a href="/instant" style={{fontSize:13,color:'var(--gold)'}}>Already approved? Open PKR Instant →</a>
+       <a href="/mobile-login?help=recover" style={{fontSize:13,color:'var(--gold)'}}>Invitation not working? Recovery guide →</a>
      </div>
      <p style={{fontSize:11,color:'var(--muted)',marginTop:22,lineHeight:1.7}}>
        Your invitation expires after 48 hours and is single-use. A forwarded link does not prove phone ownership.
