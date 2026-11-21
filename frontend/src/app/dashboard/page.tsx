@@ -11,7 +11,7 @@ import AppDialog from '@/components/AppDialog';
 //  - create() error handling now distinguishes 402 (modal handles it) vs other errors
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken, rememberApprovedDevice, renewApprovedDevice } from '@/lib/api';
+import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken, rememberApprovedDevice, renewApprovedDevice, ensureApprovedDevice, hasApprovedDeviceCredential } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
@@ -29,6 +29,7 @@ function DashboardInner() {
   const [user, setUser]   = useState<User|null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessError, setAccessError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm]   = useState({name:'',description:'',buy_in:'',master_password:''});
   const [saving, setSaving] = useState(false);
@@ -120,12 +121,20 @@ function DashboardInner() {
         // A Home Screen app has its own storage on iOS. Take previously
         // approved players to the secure transfer-code recovery screen,
         // rather than looping them back to the public marketing page.
-        router.replace(isPWAInstalled()?'/mobile-login':'/'); return;
+        router.replace('/mobile-login?help=recover'); return;
       }
       try {
         const [u,e] = await Promise.all([api.auth.me(), api.events.list()]);
         setUser(u); setEvents(e.sort((a:any,b:any) => (a.status==='ended'?1:-1) - (b.status==='ended'?1:-1)));
-      } catch { router.push('/'); }
+        // Existing signed-in members predate renewable device sessions.
+        // Register the approved account after authentication succeeds, without
+        // asking them to join the poker room again or blocking their dashboard.
+        void ensureApprovedDevice().catch(()=>{});
+      } catch (error) {
+        if(!getToken()&&!hasApprovedDeviceCredential())
+          router.replace('/mobile-login?help=recover');
+        else setAccessError(error instanceof Error?error.message:'Unable to reach PKR. Please try again.');
+      }
       finally { setLoading(false); }
     }
     init();
@@ -414,6 +423,18 @@ function DashboardInner() {
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div className="display" style={{fontSize:48,color:'var(--gold)',opacity:0.6}}>PKR</div>
     </div>
+  );
+
+  if (!user && accessError) return (
+    <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:22,background:'var(--bg)'}}>
+      <section role="alert" style={{maxWidth:450,width:'100%',border:'1px solid var(--border-hi)',borderRadius:12,padding:24,background:'var(--bg2)',color:'var(--ivory)'}}>
+        <h1 style={{fontSize:25,color:'var(--gold)'}}>PKR could not open your account</h1>
+        <p>{accessError}</p>
+        <p>Your existing membership, games and payments have not been removed.</p>
+        <button type="button" className="btn btn-primary" onClick={()=>window.location.reload()}>Try again</button>
+        <a href="/mobile-login?help=recover" style={{display:'block',marginTop:16,color:'var(--gold)'}}>Help me get back into PKR</a>
+      </section>
+    </main>
   );
 
   return (
