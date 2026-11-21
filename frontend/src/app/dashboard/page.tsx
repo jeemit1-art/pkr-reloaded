@@ -112,7 +112,7 @@ function DashboardInner() {
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
           const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
-          if (res.ok) { const { token } = await res.json(); if (token) { saveToken(token); await rememberApprovedDevice(); } }
+          if (res.ok) { const { token } = await res.json(); if (token) { saveToken(token); void rememberApprovedDevice().catch(()=>{}); } }
           else { router.push('/'); return; }
         } catch(e) { console.error('Token exchange failed', e); router.push('/'); return; }
         window.history.replaceState({},'','/dashboard');
