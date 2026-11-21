@@ -19,6 +19,7 @@ type BoardRsvp={id:string;display_name:string;status:'yes'|'no';seat_number:numb
 function fixture(options?:{
   existing?:Player[];rsvps?:Rsvp[];capacity?:number;password?:string|null;
   failBatch?:boolean;lateSeatClaim?:boolean;unpaidHost?:boolean;v2Responses?:BoardRsvp[];
+  approvedMembers?:Array<{id:string;name:string}>;
 }){
   const game={id:'g',event_id:'e',status:'scheduled',
     seats:options?.capacity??3,game_password:options?.password??null};
@@ -41,6 +42,11 @@ function fixture(options?:{
               return null;
             },
             async all():Promise<any>{
+              if(sql.includes('JOIN users u ON u.id=em.user_id')){
+                const matching=(options?.approvedMembers||[]).filter(m=>
+                  m.name.toLowerCase()===String(args[1]).trim().toLowerCase());
+                return {results:matching.slice(0,2).map(m=>({user_id:m.id}))};
+              }
               if(sql.includes('FROM game_rsvp_guests WHERE game_id=?'))
                 return {results:(options?.v2Responses||[]).map(r=>({...r}))};
               if(sql.includes('FROM game_rsvps WHERE game_id=?'))
@@ -158,6 +164,21 @@ describe('transactional game start and RSVP registration',()=>{
     expect(f.players.find(p=>p.display_name==='Ben')?.seat_number).toBeNull();
     expect(await response.json()).toMatchObject({unseated:['Ben']});
     expect(f.batchCount()).toBe(1);
+  });
+
+  it('links an RSVP seat to the unique approved member account for private buy-in alerts',async()=>{
+    const f=fixture({rsvps:[{id:'r1',display_name:'Approved Player',whatsapp:null}],
+      approvedMembers:[{id:'approved-user',name:'Approved Player'}]});
+    const response=await games.request(url,post(),f.env,exec);
+    expect(response.status).toBe(200);
+    expect(f.players[0].user_id).toBe('approved-user');
+  });
+  it('does not guess the account when two approved members have the same name',async()=>{
+    const f=fixture({rsvps:[{id:'r2',display_name:'Shared Name',whatsapp:null}],
+      approvedMembers:[{id:'member-one',name:'Shared Name'},{id:'member-two',name:'Shared Name'}]});
+    const response=await games.request(url,post(),f.env,exec);
+    expect(response.status).toBe(200);
+    expect(f.players[0].user_id).toBe('rsvp_r2');
   });
 
   it('never creates a duplicate player or resets money for an existing RSVP',async()=>{
