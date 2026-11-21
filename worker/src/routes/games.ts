@@ -372,6 +372,27 @@ games.get('/games/results/:token', optionalAuth, async (c) => {
   return c.json({ game, event, players:players.results, transfers:transfers.results });
 });
 
+// Link a newly seated player to the one unambiguous approved room account.
+// Never resolve a private financial notification from a fuzzy name search.
+// Exact matching is only used while a seat is first created; historical money
+// and already-seated account identities are not rewritten.
+async function verifiedRoomPlayerId(db:D1Database,eventId:string,name:string):Promise<string|null>{
+  const rows=await db.prepare(
+    'SELECT DISTINCT em.user_id FROM event_members em '+
+    'JOIN users u ON u.id=em.user_id '+
+    'WHERE em.event_id=? AND LOWER(TRIM(u.name))=LOWER(TRIM(?)) LIMIT 2'
+  ).bind(eventId,name).all<{user_id:string}>();
+  return rows.results.length===1?rows.results[0].user_id:null;
+}
+async function existingApprovedPlayerId(db:D1Database,eventId:string,name:string):Promise<string|null>{
+  const known=await db.prepare(
+    'SELECT ep.user_id FROM event_players ep '+
+    'JOIN event_members em ON em.event_id=ep.event_id AND em.user_id=ep.user_id '+
+    'WHERE ep.event_id=? AND ep.display_name=? AND ep.user_id IS NOT NULL'
+  ).bind(eventId,name).first<{user_id:string}>();
+  return known?.user_id||null;
+}
+
 /* ═══════════════════════════════════════════
    RSVP
 ═══════════════════════════════════════════ */
@@ -451,10 +472,9 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
       ).bind(move.seat_number,gameId,move.user_id,gameId,move.seat_number,gameId));
     }
     for(const player of plan.newPlayers){
-      const known=await c.env.DB.prepare(
-        'SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL'
-      ).bind(game.event_id,player.display_name).first<{user_id:string}>();
-      const userId=known?.user_id||'rsvp_'+player.id;
+      const approvedId=(await existingApprovedPlayerId(c.env.DB,game.event_id,player.display_name))
+        ||(await verifiedRoomPlayerId(c.env.DB,game.event_id,player.display_name));
+      const userId=approvedId||'rsvp_'+player.id;
       // A late seat collision retains the RSVP with NULL seat, never displacing another player.
       statements.push(c.env.DB.prepare(
         "INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at) SELECT ?,?,?,?,CASE WHEN ? IS NULL OR EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?) THEN NULL ELSE ? END,0,unixepoch() WHERE EXISTS (SELECT 1 FROM games WHERE id=? AND status NOT IN ('active','settled','cancelled')) AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND (user_id=? OR display_name=? COLLATE NOCASE)) ON CONFLICT DO NOTHING"
@@ -497,6 +517,7 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
 
   const body=await c.req.json().catch(()=>null) as {
     display_name?:unknown;whatsapp?:unknown;seat_number?:unknown;expected_seat_number?:unknown;
+    user_id?:unknown;
   }|null;
   const name=typeof body?.display_name==='string'?body.display_name.trim():'';
   if (!name||name.length>160) return c.json({error:'Valid player name required'},400);
@@ -516,6 +537,15 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
         code:'RSVP_SEAT_RESERVED'},409);
   }
   const phone=typeof body?.whatsapp==='string'&&body.whatsapp.trim()?body.whatsapp.trim():null;
+  // Hosts may select a real room member from the seating UI.
+  // The explicit member ID was previously ignored by the API.
+  const requestedUserId=typeof body?.user_id==='string'?body.user_id.trim():'';
+  if(requestedUserId){
+    const member=await c.env.DB.prepare(
+      'SELECT user_id FROM event_members WHERE event_id=? AND user_id=?'
+    ).bind(game.event_id,requestedUserId).first();
+    if(!member)return c.json({error:'Selected player is not an approved member of this poker room'},403);
+  }
   const hasExpected=!!body&&Object.prototype.hasOwnProperty.call(body,'expected_seat_number');
   const expected=body?.expected_seat_number;
   if (hasExpected&&expected!==null&&(!Number.isSafeInteger(expected)||Number(expected)<1))
@@ -535,6 +565,8 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
     return c.json({error:'Finish or void the current hand before changing seats.',
       code:'HAND_ACTIVE'},409);
   if (existing) {
+    if(requestedUserId && existing.user_id!==requestedUserId)
+      return c.json({error:'Seat already belongs to another account. Use Link Account explicitly to correct it.'},409);
     if (existing.seat_number===desired) {
       const players=await list();
       return c.json({ok:true,already_seated:true,players:players.results});
@@ -572,10 +604,10 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
   }
 
   // Single D1 statement checks that game is open and target seat vacant.
-  const known=await c.env.DB.prepare(
-    'SELECT user_id FROM event_players WHERE event_id=? AND display_name=? AND user_id IS NOT NULL'
-  ).bind(game.event_id,name).first<{user_id:string}>();
-  const userId=known?.user_id||'manual_'+generateId();
+  const approvedId=requestedUserId
+    ||(await existingApprovedPlayerId(c.env.DB,game.event_id,name))
+    ||(await verifiedRoomPlayerId(c.env.DB,game.event_id,name));
+  const userId=approvedId||'manual_'+generateId();
   const inserted=await c.env.DB.prepare(`
     INSERT INTO game_players(game_id,user_id,display_name,whatsapp,seat_number,buy_ins,created_at)
     SELECT ?,?,?,?,?,0,unixepoch()
