@@ -43,6 +43,10 @@ export function renewApprovedDevice():Promise<boolean>{
   renewingDevice=performDeviceRenewal().finally(()=>{renewingDevice=null;});
   return renewingDevice;
 }
+export function hasApprovedDeviceCredential():boolean{
+  if(typeof window==='undefined')return false;
+  try{return !!localStorage.getItem(deviceKey);}catch{return false;}
+}
 export async function ensureApprovedDevice():Promise<boolean>{
   if(typeof window==='undefined')return false;
   if(localStorage.getItem(deviceKey))return true;
@@ -95,9 +99,14 @@ async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<
   // Do not redirect while a valid device can still renew its session.
   if(res.status===401&&!isRetry&&getToken()){
     if(await renewApprovedDevice())return req<T>(path,opts,true);
+    // A temporary network or Worker error must not revoke a valid device
+    // session. Preserve credentials and let the member retry later.
+    if(hasApprovedDeviceCredential())
+      throw new Error('PKR could not verify your saved sign-in. Check your connection and retry; do not reinstall the app.');
     clearToken();
-    if(typeof window!=='undefined')window.location.href='/mobile-login';
-    throw new Error('Session expired. Please restore your PKR account.');
+    if(typeof window!=='undefined'&&!window.location.pathname.startsWith('/mobile-login'))
+      window.location.assign('/mobile-login?help=recover');
+    throw new Error('Your PKR session expired. Use the member access guide to return to your existing account.');
   }
 
   // 402 Payment Required — fire global upgrade event so any component can show the modal
