@@ -4,6 +4,7 @@ import {useEffect,useState,type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
 import {RecordProvider} from '@/components/RecordMetric';
 import {restoreKnownPushSubscriptions} from '@/lib/push';
+import {ensureApprovedDevice,getToken} from '@/lib/api';
 import SetupReminder from '@/components/SetupReminder';
 import RoomExperienceTheme from '@/components/RoomExperienceTheme';
 
@@ -92,6 +93,14 @@ export default function AppExperience({children}:{children:ReactNode}){
     document.addEventListener('visibilitychange',check);
     return()=>{stopped=true;registration?.removeEventListener('updatefound',observe);document.removeEventListener('visibilitychange',check);};
   },[]);
+
+  // Remember approved returning players without changing the access model.
+  // Only existing valid sessions may register a device; no guest is silently
+  // authenticated and no notification consent is requested here.
+  useEffect(()=>{
+    if(!appRoute||!getToken())return;
+    void ensureApprovedDevice().catch(()=>{});
+  },[pathname,appRoute]);
 
   // A service-worker update must not silently remove a previous opt-in.
   // Reconcile known room/device registrations on foreground resume. Never
