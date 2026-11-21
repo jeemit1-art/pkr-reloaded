@@ -293,10 +293,10 @@ router.get('/events/:id/join-requests',authMiddleware,async c=>{
     const contact=await c.env.DB.prepare(
       'SELECT display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
     ).bind(r.contact_id,id).first<{display_name:string;phone_cipher:string;user_id:string|null}>();
-    if(!contact||contact.user_id)return null;
+    if(!contact)return null; // Recovery requests for already-linked members must be visible to their host.
     return {id:k.name.slice(('join-request:'+id+':').length),name:r.display_name,
       expected_member:contact.display_name,phone:maskMobile(await decryptPhone(c.env,contact.phone_cipher)),
-      requested_at:r.requested_at};
+      requested_at:r.requested_at,recovery:!!contact.user_id};
   }));
   privateHeaders(c);
   return c.json({requests:requests.filter(Boolean)});
@@ -323,6 +323,11 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
     // Read-only visibility for the room host; this is not membership.
     await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:approvalTtl});
   }
+  if(body?.approve!==true){
+    // Do not leave rejected claimants polling indefinitely as if waiting for approval.
+    const ttl=3600;
+    await c.env.KV.put('rejected-join:'+state.claim_hash,'1',{expirationTtl:ttl});
+  }
   await c.env.KV.delete(key);
   return c.json({ok:true,approved:body?.approve===true,contact_id:state.contact_id});
 });
@@ -333,7 +338,11 @@ router.post('/phone-invites/complete-approval',async c=>{
   if(!/^[a-f0-9]{64}$/.test(claim))return c.json({error:'Invalid request'},400);
   const hash=await phoneLookup(c.env,'claim',claim);
   const raw=await c.env.KV.get('approved-join:'+hash);
-  if(!raw)return c.json({status:'pending'},202);
+  if(!raw){
+    if(await c.env.KV.get('rejected-join:'+hash))
+      return c.json({status:'rejected',error:'The host declined this request. Ask for a new invitation.'},403);
+    return c.json({status:'pending'},202);
+  }
   const state=JSON.parse(raw);
   const invite=await c.env.DB.prepare(
     'SELECT id FROM group_phone_invites WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'

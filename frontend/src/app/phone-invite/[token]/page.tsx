@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {useParams,useRouter} from 'next/navigation';
-import {api,saveToken} from '@/lib/api';
+import {api,saveToken,rememberApprovedDevice} from '@/lib/api';
 import {playPkrSound} from '@/lib/sounds';
 
 type Preview={event_name:string;masked_phone:string;role:string;expires_at:number};
@@ -43,6 +43,9 @@ export default function PhoneInvite(){
      if(result.ok&&result.token){
        completedRef.current=true;
        saveToken(result.token);
+       // A successful membership claim is also a verified account login.
+       // Remember this approved browser so returning players need not be re-approved.
+       void rememberApprovedDevice().catch(()=>{});
        try{localStorage.removeItem('pkr:join-claim:'+token);}catch{}
        playPkrSound('approved');
        // Joining must succeed before any optional app installation. The

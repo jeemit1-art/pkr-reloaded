@@ -11,7 +11,7 @@ import AppDialog from '@/components/AppDialog';
 //  - create() error handling now distinguishes 402 (modal handles it) vs other errors
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken } from '@/lib/api';
+import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken, rememberApprovedDevice, renewApprovedDevice } from '@/lib/api';
 import UpgradeModal from '@/components/UpgradeModal';
 import PkrMobileNav from '@/components/PkrMobileNav';
 import CasinoArtwork from '@/components/CasinoArtwork';
@@ -112,11 +112,11 @@ function DashboardInner() {
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
           const res = await fetch(`${apiUrl}/auth/token?code=${code}`, { credentials:'include' });
-          if (res.ok) { const { token } = await res.json(); if (token) saveToken(token); }
+          if (res.ok) { const { token } = await res.json(); if (token) { saveToken(token); void rememberApprovedDevice().catch(()=>{}); } }
           else { router.push('/'); return; }
         } catch(e) { console.error('Token exchange failed', e); router.push('/'); return; }
         window.history.replaceState({},'','/dashboard');
-      } else if (!getToken()) {
+      } else if (!getToken() && !(await renewApprovedDevice())) {
         // A Home Screen app has its own storage on iOS. Take previously
         // approved players to the secure transfer-code recovery screen,
         // rather than looping them back to the public marketing page.

@@ -117,7 +117,9 @@ describe('free private WhatsApp membership host approval contract',()=>{
   expect(rejected.status).toBe(200);
   expect((await rejected.json() as any).approved).toBe(false);
   const complete=await router.request(base+'/phone-invites/complete-approval',jsonPost({claim:pending.claim}),env);
-  expect(complete.status).toBe(202);
+  // Rejected applicants must receive a terminal status, not an endless pending screen.
+  expect(complete.status).toBe(403);
+  expect((await complete.json() as any).status).toBe('rejected');
   expect(dbState.users).toBe(0);
   expect(dbState.members).toHaveLength(0);
  });

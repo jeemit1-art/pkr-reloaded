@@ -100,6 +100,40 @@ describe('VAPID signing and push dispatch (synthetic keys and subscribers only)'
       title:'No staging push',body:'Never delivered'
     })).toBe(0);
   });
+  it('targets the approved account even when the displayed poker name differs',async()=>{
+    const keys=await fixture();
+    const receiver=await crypto.subtle.generateKey(
+      {name:'ECDH',namedCurve:'P-256'},true,['deriveBits']) as CryptoKeyPair;
+    const p256dh=b64url(new Uint8Array(await crypto.subtle.exportKey('raw',receiver.publicKey) as ArrayBuffer));
+    const auth=b64url(crypto.getRandomValues(new Uint8Array(16)));
+    let query='',parameters:any[]=[];
+    const db={prepare:(sql:string)=>{
+      query=sql;
+      return {bind:(...args:any[])=>{
+        parameters=args;
+        return {all:async()=>({results:[{
+          endpoint:'https://push.example.invalid/account-device',p256dh,auth_key:auth
+        }]})};
+      }};
+    }};
+    const sender=vi.fn(async()=>new Response('',{status:201}));
+    vi.stubGlobal('fetch',sender);
+    const env:any={DB:db,PKR_ENV:'production',
+      PKR_PHONE_MEMBERS_V1:'1',PKR_PUSH_ROOMS_V2:'1',
+      VAPID_PRIVATE_KEY:keys.privateRaw,VAPID_PUBLIC_KEY:keys.publicRaw,
+      VAPID_EMAIL:'test@example.invalid'};
+    const accepted=await sendPushToPlayer(env,'room','Table Nickname',{
+      title:'Buy-in recorded',body:'Synthetic $50 buy-in',data:{
+        type:'buyin',notificationId:'buyin:test:2:5000',
+      },
+    },'verified-account-id');
+    expect(accepted).toBe(1);
+    expect(query).toContain('JOIN event_members');
+    expect(query).toContain('push_room_subscriptions');
+    expect(query).toContain('s.user_id=?');
+    expect(parameters).toEqual(['room','verified-account-id']);
+    expect(sender).toHaveBeenCalledOnce();
+  });
   it('never sends production push in staging',async()=>{
     const accepted=await sendPushToPlayer(
       {PKR_ENV:'staging'} as any,'r','p',{title:'Synthetic',body:'Test'});

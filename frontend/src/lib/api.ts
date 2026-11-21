@@ -12,8 +12,72 @@ export function getToken(): string | null {
 export function saveToken(token: string) {
   if (typeof window !== 'undefined') localStorage.setItem('pkr_token', token);
 }
+const deviceKey='pkr_approved_device_refresh_v1';
+// The current installation retains an approved device credential for a limited
+// period, independently of the shorter-lived seven-day access JWT.
+let renewingDevice:Promise<boolean>|null=null;
+async function performDeviceRenewal():Promise<boolean>{
+  if(typeof window==='undefined')return false;
+  const credential=localStorage.getItem(deviceKey);
+  if(!credential)return false;
+  try{
+    const result=await fetch(API+'/auth/device-session/renew',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:credential}),
+    });
+    if(!result.ok){
+      if(result.status===401&&localStorage.getItem(deviceKey)===credential)localStorage.removeItem(deviceKey);
+      return false;
+    }
+    const data=await result.json() as {token?:string;refresh_token?:string};
+    if(!data.token||!data.refresh_token)return false;
+    // Replace the old token only after the server confirms both credentials.
+    localStorage.setItem(deviceKey,data.refresh_token);
+    saveToken(data.token);
+    return true;
+  }catch{return false;}
+}
+export function renewApprovedDevice():Promise<boolean>{
+  if(renewingDevice)return renewingDevice;
+  renewingDevice=performDeviceRenewal().finally(()=>{renewingDevice=null;});
+  return renewingDevice;
+}
+export async function ensureApprovedDevice():Promise<boolean>{
+  if(typeof window==='undefined')return false;
+  if(localStorage.getItem(deviceKey))return true;
+  return rememberApprovedDevice();
+}
+export async function rememberApprovedDevice():Promise<boolean>{
+  if(typeof window==='undefined'||!getToken())return false;
+  const previous=localStorage.getItem(deviceKey);
+  try{
+    const res=await fetch(API+'/auth/device-session/start',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},
+    });
+    if(!res.ok)return false;
+    const data=await res.json() as {refresh_token?:string};
+    if(!data.refresh_token)return false;
+    localStorage.setItem(deviceKey,data.refresh_token);
+    if(previous&&previous!==data.refresh_token){
+      void fetch(API+'/auth/device-session/revoke',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:previous}),
+      }).catch(()=>{});
+    }
+    return true;
+  }catch{return false;}
+}
 export function clearToken() {
-  if (typeof window !== 'undefined') localStorage.removeItem('pkr_token');
+  if (typeof window === 'undefined')return;
+  localStorage.removeItem('pkr_token');
+  const credential=localStorage.getItem(deviceKey);
+  localStorage.removeItem(deviceKey);
+  if(credential)void fetch(API+'/auth/device-session/revoke',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:credential}),
+  }).catch(()=>{});
 }
 
 async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<T> {
@@ -27,16 +91,13 @@ async function req<T>(path: string, opts?: RequestInit, isRetry=false): Promise<
     },
   });
 
-  // Auto-refresh once on 401
-  if (res.status === 401 && !isRetry && getToken()) {
-    try {
-      const rr = await fetch(`${API}/auth/refresh`, { method:'POST', credentials:'include',
-        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${getToken()}` } });
-      if (rr.ok) { const { token: newToken } = await rr.json(); saveToken(newToken); return req<T>(path, opts, true); }
-    } catch {}
+  // If the access JWT has expired, use the approved device credential once.
+  // Do not redirect while a valid device can still renew its session.
+  if(res.status===401&&!isRetry&&getToken()){
+    if(await renewApprovedDevice())return req<T>(path,opts,true);
     clearToken();
-    if (typeof window !== 'undefined') window.location.href = '/';
-    throw new Error('Session expired');
+    if(typeof window!=='undefined')window.location.href='/mobile-login';
+    throw new Error('Session expired. Please restore your PKR account.');
   }
 
   // 402 Payment Required — fire global upgrade event so any component can show the modal
@@ -106,7 +167,7 @@ export const api = {
     reopen:         (id:string)      => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
     recoverContact:(id:string,contactId:string)=>req<{ok:boolean;url:string;whatsapp_url:string}>(`/events/${id}/phone-contacts/${contactId}/recovery`,{method:'POST'}),
-    joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>}>(`/events/${id}/join-requests`),
+    joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number;recovery?:boolean}>}>(`/events/${id}/join-requests`),
     decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean;contact_id?:string}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
     phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
     inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>

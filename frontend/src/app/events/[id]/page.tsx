@@ -65,7 +65,7 @@ export default function EventPage() {
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [isGroupOwner,setIsGroupOwner]=useState(false);
-  const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number}>);
+  const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number;recovery?:boolean}>);
   const previousRequestCount=useRef<number|null>(null);
   const [joinDecisionNotice,setJoinDecisionNotice]=useState('');
   const memberDeepLinkScroll=useRef(false);
@@ -230,16 +230,19 @@ export default function EventPage() {
   },[tab,event]);
   async function decideJoin(requestId:string,approve:boolean){
     setJoinDecisionNotice('');
-    const name=joinRequests.find(r=>r.id===requestId)?.name||'Player';
+    const request=joinRequests.find(r=>r.id===requestId);
+    const name=request?.name||'Player';
     try{
       const result=await api.events.decideJoin(id,requestId,approve);
       setJoinRequests(v=>v.filter(r=>r.id!==requestId));
-      if(approve&&result.contact_id){
+      if(approve&&!request?.recovery&&result.contact_id){
         setPhoneContacts(v=>v.map(contact=>contact.id===result.contact_id
           ?{...contact,status:'approved_awaiting_member'}:contact));
       }
       setJoinDecisionNotice(approve
-        ?name+' approved. They must return to their original PKR invitation on the same device, then tap “Check approval now” to finish joining. The member list will update after that.'
+        ?request?.recovery
+          ?name+' recovery approved. They can complete the original private recovery link to sign back into their existing PKR account. Membership, game history and settlements remain unchanged.'
+          :name+' approved. They must return to their original PKR invitation on the same device, then tap “Check approval now” to finish joining. The member list will update after that.'
         :name+' request rejected.');
       // Cloudflare KV may be eventually consistent across regions. Keep the
       // confirmed host-side state visible until the normal refresh completes.
@@ -619,7 +622,7 @@ export default function EventPage() {
             <div role="status" style={{padding:'13px 15px',marginBottom:15,border:'1px solid var(--border-hi)',borderRadius:10,background:'var(--bg2)',fontSize:13,lineHeight:1.55}}>
               {joinDecisionNotice}
             </div>}
-           {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong><p>Invited as {r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
+           {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong>{r.recovery&&<span style={{marginLeft:8,color:'var(--gold)',fontSize:12}}>Account recovery</span>}<p>{r.recovery?'Returning member':'Invited as '+r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
            </div>
            <div className="pkr-member-subpage" hidden={memberSection!=='invite'}>
             <div id="pkr-members-invite" className="pkr-members-anchor" />
