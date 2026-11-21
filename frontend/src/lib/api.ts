@@ -52,7 +52,13 @@ export async function ensureApprovedDevice():Promise<boolean>{
   if(localStorage.getItem(deviceKey))return true;
   return rememberApprovedDevice();
 }
-export async function rememberApprovedDevice():Promise<boolean>{
+let rememberingDevice:Promise<boolean>|null=null;
+export function rememberApprovedDevice():Promise<boolean>{
+  if(rememberingDevice)return rememberingDevice;
+  rememberingDevice=performRememberApprovedDevice().finally(()=>{rememberingDevice=null;});
+  return rememberingDevice;
+}
+async function performRememberApprovedDevice():Promise<boolean>{
   if(typeof window==='undefined'||!getToken())return false;
   const previous=localStorage.getItem(deviceKey);
   try{
