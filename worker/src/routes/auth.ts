@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { Env, User } from '../types';
 import { authMiddleware, generateId } from '../middleware';
 import { signJWT, verifyJWT } from '../jwt';
+import {issueDeviceSession,renewDeviceSession,revokeDeviceSession} from '../device-session';
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -213,6 +214,42 @@ auth.post('/transfer/redeem',async c=>{
   c.header('Cache-Control','no-store, private');
   c.header('Referrer-Policy','no-referrer');
   return c.json({token});
+});
+
+// Optional, device-scoped renewal for already approved accounts. A refresh
+// token is never included in URLs, logs, WhatsApp links or push payloads.
+// Existing accounts and room permissions are looked up on every renewal.
+auth.post('/device-session/start',authMiddleware,async c=>{
+  const user=await c.env.DB.prepare('SELECT id FROM users WHERE id=?')
+    .bind(c.get('userId')).first<{id:string}>();
+  if(!user)return c.json({error:'Account no longer available'},401);
+  const session=await issueDeviceSession(c.env,user.id);
+  c.header('Cache-Control','no-store, private');
+  return c.json(session);
+});
+auth.post('/device-session/renew',async c=>{
+  const body=await c.req.json().catch(()=>null) as {refresh_token?:unknown}|null;
+  const provided=typeof body?.refresh_token==='string'?body.refresh_token:'';
+  const renewed=await renewDeviceSession(c.env,provided);
+  if(!renewed)return c.json({error:'Your device session expired. Sign in to restore access.'},401);
+  const user=await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?')
+    .bind(renewed.user_id).first<{id:string;email:string;name:string}>();
+  if(!user){
+    await revokeDeviceSession(c.env,renewed.refresh_token);
+    return c.json({error:'Account no longer available'},401);
+  }
+  // Confirm the account still exists before returning any authenticated token.
+  c.header('Cache-Control','no-store, private');
+  return c.json({
+    token:await signJWT({sub:user.id,email:user.email,name:user.name},c.env.JWT_SECRET),
+    refresh_token:renewed.refresh_token,expires_in:renewed.expires_in
+  });
+});
+auth.post('/device-session/revoke',async c=>{
+  const body=await c.req.json().catch(()=>null) as {refresh_token?:unknown}|null;
+  await revokeDeviceSession(c.env,typeof body?.refresh_token==='string'?body.refresh_token:'');
+  c.header('Cache-Control','no-store, private');
+  return c.json({ok:true});
 });
 
 // /me — returns user + plan status
