@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
+import {hasApprovedDeviceCredential,renewApprovedDevice} from '@/lib/api';
 import {ProductTour,MobileProductShowcase} from '@/components/ProductShowcase';
 
 const steps = [
@@ -52,6 +53,14 @@ export default function HomePage() {
       }
       if (localStorage.getItem('pkr_token')) {
         router.replace(desired?'/dashboard?subscribe='+desired:'/dashboard');
+      }else if(hasApprovedDeviceCredential()){
+        // A returning browser may have lost its short-lived JWT while its
+        // approved device session is still valid. Recover it before showing
+        // the marketing screen; never create another account automatically.
+        void renewApprovedDevice().then(ok=>{
+          if(ok)router.replace(desired?'/dashboard?subscribe='+desired:'/dashboard');
+          else if(desired)setLoginOpen(true);
+        }).catch(()=>{if(desired)setLoginOpen(true);});
       }else if(desired){
         setLoginOpen(true);
       }
