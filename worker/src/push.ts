@@ -229,11 +229,13 @@ export async function sendPushToEvent(env: Env, eventId: string, payload: PushPa
 export async function sendPushToAccount(
   env:Env,eventId:string,userId:string,payload:PushPayload
 ):Promise<number>{
-  if(env.PKR_ENV==='staging'||env.PKR_PHONE_MEMBERS_V1!=='1'||
-     env.PKR_PUSH_ROOMS_V2!=='1'||!userId)return 0;
+  if(env.PKR_ENV==='staging'||env.PKR_PHONE_MEMBERS_V1!=='1'||!userId)return 0;
   const nativeAccepted=await sendNativePushToAccount(env,eventId,userId,payload);
+  const table=env.PKR_PUSH_ROOMS_V2==='1'?'push_room_subscriptions':'push_subscriptions';
+  // Both modern and legacy opt-in devices must be tied to the authenticated
+  // member ID. Never route private financial alerts by screen name or phone.
   const rows=await env.DB.prepare(
-    'SELECT s.endpoint,s.p256dh,s.auth_key FROM push_room_subscriptions s '+
+    'SELECT s.endpoint,s.p256dh,s.auth_key FROM '+table+' s '+
     'JOIN event_members em ON em.event_id=s.event_id AND em.user_id=s.user_id '+
     'WHERE s.event_id=? AND s.user_id=?'
   ).bind(eventId,userId).all<{endpoint:string;p256dh:string;auth_key:string}>();
@@ -248,8 +250,13 @@ export async function sendPushToAccount(
 }
 
 /** Send push to a specific player by display_name within an event */
-export async function sendPushToPlayer(env: Env, eventId: string, displayName: string, payload: PushPayload): Promise<number> {
-  if (env.PKR_ENV === 'staging') return 0;
+export async function sendPushToPlayer(
+  env:Env,eventId:string,displayName:string,payload:PushPayload,verifiedUserId?:string
+):Promise<number>{
+  if(env.PKR_ENV==='staging')return 0;
+  // Financial transaction routes supply the verified game-player user ID.
+  // No name fallback is permitted when a specific recipient was supplied.
+  if(verifiedUserId)return sendPushToAccount(env,eventId,verifiedUserId,payload);
   const name = displayName.toLowerCase().trim();
   const firstName = name.split(/\s+/)[0];
 
