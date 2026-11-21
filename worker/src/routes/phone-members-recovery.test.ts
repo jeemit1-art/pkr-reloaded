@@ -94,7 +94,7 @@ describe('member approval and same-account recovery',()=>{
     const payload=JSON.parse(atob(body.token.split('.')[1]));
     expect(payload.sub).toBe('existing-member');
     expect(f.queries.some(q=>q.includes('INSERT INTO users'))).toBe(false);
-    expect(f.queries.some(q=>q.includes('INSERT INTO event_members'))).toBe(false);
+    expect(f.queries.some(q=>q.includes('INSERT INTO event_members'))).toBe(true);
   });
   it('tells rejected applicants that they were declined rather than waiting indefinitely',async()=>{
     const f=fixture();
