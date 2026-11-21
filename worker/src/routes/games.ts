@@ -739,8 +739,9 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
       : "Buy-in recorded — you're in for "+added;
     c.executionCtx.waitUntil(sendPushToPlayer(c.env,game.event_id,current.display_name,{
       title:event?.name||'PKR',body:message,
-      data:{gameId,eventId:game.event_id,type:'buyin'},
-    }));
+      data:{gameId,eventId:game.event_id,type:'buyin',
+        notificationId:'buyin:'+gameId+':'+current.user_id+':'+count+':'+total},
+    },current.user_id).catch(error=>{console.warn('Buy-in push dispatch failed',String(error));})));
   }
   return c.json({ok:true,buy_ins:count,buy_in_total:total,
     ...(enabled?{revision:version?.revision}:{})});
@@ -824,8 +825,9 @@ games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
       c.executionCtx.waitUntil(sendPushToPlayer(c.env,game.event_id,player.display_name,{
         title:'Cash-out '+(expected_cashout===null?'recorded':'updated')+' — '+formatCents(cashout),
         body:'Saved in PKR. Net: '+balanceText+'. This is not payment confirmation.',
-        data:{gameId,eventId:game.event_id,type:'cashout'},
-      }).catch((error)=>{console.warn('Cash-out notification failed',String(error));}));
+        data:{gameId,eventId:game.event_id,type:'cashout',
+          notificationId:'cashout:'+gameId+':'+userId+':'+cashout},
+      },userId).catch((error)=>{console.warn('Cash-out notification failed',String(error));}));
     }
   }
   return c.json({ok:true,cashout,
@@ -883,8 +885,9 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
     c.executionCtx.waitUntil(sendPushToPlayer(c.env, game.event_id, player.display_name, {
       title: `Cashed out $${(cashout/100).toFixed(0)} — ${evData2?.name||'PKR'}`,
       body: `Net: ${netStr} (bought in $${(totalBuyIn/100).toFixed(0)})`,
-      data: { gameId, eventId: game.event_id, type: 'cashout' },
-    }));
+      data: { gameId, eventId: game.event_id, type: 'cashout',
+        notificationId:'cashout:'+gameId+':'+userId+':'+cashout },
+    },userId).catch((error)=>{console.warn('Cash-out notification failed',String(error));}));
   }
   return c.json({ok:true, players:players.results});
 });
@@ -912,7 +915,14 @@ games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
     return c.json({error:'Cannot change player identity in a closed game'},409);
   }
   if (!await requireEventRole(c,game.event_id,'cohost')) return c.json({error:'Forbidden'},403);
-  await c.env.DB.prepare('UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=?').bind(real_user_id,gameId,userId).run();
+  const verified=await c.env.DB.prepare(
+    'SELECT user_id FROM event_members WHERE event_id=? AND user_id=?'
+  ).bind(game.event_id,real_user_id).first();
+  if(!verified)return c.json({error:'Select an approved member of this room'},403);
+  const linked=await c.env.DB.prepare(
+    'UPDATE game_players SET user_id=? WHERE game_id=? AND user_id=? AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_id=? AND user_id=?)'
+  ).bind(real_user_id,gameId,userId,gameId,real_user_id).run();
+  if(linked.meta.changes!==1)return c.json({error:'Player no longer matches this seat or member already seated'},409);
   const player = await c.env.DB.prepare('SELECT display_name FROM game_players WHERE game_id=? AND user_id=?').bind(gameId,real_user_id).first<any>();
   if (player?.display_name) {
     await c.env.DB.prepare('UPDATE event_players SET user_id=? WHERE event_id=? AND display_name=?').bind(real_user_id,game.event_id,player.display_name).run();
