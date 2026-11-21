@@ -632,6 +632,21 @@ export default function EventPage() {
                 Private members · Mobile first
               </div>
               <h2 style={{fontFamily:'var(--font-display),serif',fontSize:21,marginBottom:6}}>Invite a player by QR or WhatsApp</h2>
+              <details style={{marginBottom:14,padding:'12px 14px',borderRadius:9,background:'var(--bg3)',border:'1px solid var(--border-hi)'}}>
+                <summary style={{fontWeight:700,color:'var(--gold)',fontSize:13,cursor:'pointer'}}>
+                  Existing player unable to log in?
+                </summary>
+                <p style={{fontSize:12,color:'var(--ivory)',lineHeight:1.65,marginTop:10}}>
+                  Find their existing entry in <strong>Your private contacts</strong> below and select <strong>Recover access</strong>.
+                  Send their personal WhatsApp recovery link and approve their request in the Members requests area.
+                  This restores their original PKR account, history and settlements.
+                </p>
+                <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.65}}>
+                  If the contact is not yet linked to their existing room membership, use <strong>Match existing member</strong> first.
+                  Do not create a separate member account to fix a sign-in problem.
+                  The player can also open the <a href="/mobile-login?help=recover" style={{color:'var(--gold)'}}>member recovery guide</a>.
+                </p>
+              </details>
               <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:15}}>
                 Enter the player's name and mobile number to generate a personal QR code and WhatsApp link. The player scans the QR with their phone camera, requests to join, and waits for your approval. A personal QR cannot be reused to admit other players. Free invitations do not verify phone ownership.
                 Other groups cannot see your contacts.
