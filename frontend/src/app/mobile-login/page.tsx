@@ -148,6 +148,9 @@ export default function MobileLogin(){
             <br/>4. Return to the <strong>same browser</strong> and tap <strong>Check approval now</strong>.
           </p>
           <p style={{fontSize:12,lineHeight:1.65}}>
+            If you originally signed in using Google, select the same Google account below instead of requesting a new invitation.
+          </p>
+          <p style={{fontSize:12,lineHeight:1.65}}>
             If you were approved but are stuck on Pending, reopen the original WhatsApp invitation in the same browser.
             If that browser or the private request is lost, ask the host for a fresh recovery link.
             Do not sign up as a different person.
@@ -175,8 +178,11 @@ export default function MobileLogin(){
           PKR never verifies phone ownership solely from a forwarded WhatsApp link.
         </p>
         <a href={api.auth.loginUrl()} style={{...linkStyle,fontSize:12}}>
-          Registered host? Continue with your original Google account
+          Originally signed in with Google? Use the same Google account
         </a>
+        <p style={{fontSize:11,color:'var(--muted)',lineHeight:1.5,marginTop:6}}>
+          Choosing a different Google account may open a separate PKR profile.
+        </p>
       </section>
     </main>
   );
