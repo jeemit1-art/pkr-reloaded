@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {api,saveToken} from '@/lib/api';
+import {api,saveToken,rememberApprovedDevice} from '@/lib/api';
 
 export default function MobileLogin(){
   const router=useRouter();
@@ -17,6 +17,7 @@ export default function MobileLogin(){
     try{
       const result=await api.auth.transferRedeem(normalised);
       saveToken(result.token);
+      await rememberApprovedDevice();
       router.replace('/dashboard');
     }catch(e:any){setMessage(e?.message||'Could not restore access. Generate a new code and retry.');}
     finally{setBusy(false);}
