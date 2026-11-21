@@ -15,7 +15,8 @@ export function saveToken(token: string) {
 const deviceKey='pkr_approved_device_refresh_v1';
 // The current installation retains an approved device credential for a limited
 // period, independently of the shorter-lived seven-day access JWT.
-export async function renewApprovedDevice():Promise<boolean>{
+let renewingDevice:Promise<boolean>|null=null;
+async function performDeviceRenewal():Promise<boolean>{
   if(typeof window==='undefined')return false;
   const credential=localStorage.getItem(deviceKey);
   if(!credential)return false;
@@ -26,7 +27,7 @@ export async function renewApprovedDevice():Promise<boolean>{
       body:JSON.stringify({refresh_token:credential}),
     });
     if(!result.ok){
-      if(result.status===401)localStorage.removeItem(deviceKey);
+      if(result.status===401&&localStorage.getItem(deviceKey)===credential)localStorage.removeItem(deviceKey);
       return false;
     }
     const data=await result.json() as {token?:string;refresh_token?:string};
@@ -36,6 +37,16 @@ export async function renewApprovedDevice():Promise<boolean>{
     saveToken(data.token);
     return true;
   }catch{return false;}
+}
+export function renewApprovedDevice():Promise<boolean>{
+  if(renewingDevice)return renewingDevice;
+  renewingDevice=performDeviceRenewal().finally(()=>{renewingDevice=null;});
+  return renewingDevice;
+}
+export async function ensureApprovedDevice():Promise<boolean>{
+  if(typeof window==='undefined')return false;
+  if(localStorage.getItem(deviceKey))return true;
+  return rememberApprovedDevice();
 }
 export async function rememberApprovedDevice():Promise<boolean>{
   if(typeof window==='undefined'||!getToken())return false;
