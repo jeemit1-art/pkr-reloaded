@@ -17,7 +17,7 @@ export default function MobileLogin(){
     try{
       const result=await api.auth.transferRedeem(normalised);
       saveToken(result.token);
-      await rememberApprovedDevice();
+      void rememberApprovedDevice().catch(()=>{});
       router.replace('/dashboard');
     }catch(e:any){setMessage(e?.message||'Could not restore access. Generate a new code and retry.');}
     finally{setBusy(false);}
