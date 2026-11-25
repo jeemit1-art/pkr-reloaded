@@ -32,7 +32,7 @@ function validLink(value:unknown):value is RoomPlayerMerge{
   return validId(link.from_user_id)&&validId(link.to_user_id)&&
     link.from_user_id!==link.to_user_id&&
     validName(link.from_name)&&validName(link.to_name)&&
-    validId(link.created_by)&&Number.isSafeInteger(link.created_at)&&Number(link.created_at)>0;
+    validId(link.created_by)&&typeof link.created_at==='number'&&Number.isSafeInteger(link.created_at)&&link.created_at>0;
 }
 export async function listRoomPlayerMerges(kv:KVNamespace,roomId:string):Promise<RoomPlayerMerge[]>{
   const prefix=PREFIX+roomId+':';
