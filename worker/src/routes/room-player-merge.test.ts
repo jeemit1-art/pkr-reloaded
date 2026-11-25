@@ -38,7 +38,7 @@ function fixture(overlapping=false){
           results:rows.filter(x=>args[0]==='room-one')
         };
         if(sql.includes('SELECT DISTINCT u.id'))return {results:[]};
-        if(sql.includes('FROM event_players')||sql.includes('FROM event_members')||
+        if(sql.includes('FROM event_players')||sql.includes('FROM event_members')||sql.includes('JOIN event_members')||
            sql.includes('FROM room_player_profiles'))return {results:[]};
         throw Error('Unexpected query '+sql);
       }};
