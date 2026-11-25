@@ -227,7 +227,7 @@ export const api = {
           from_net:from.total_net,to_net:to.total_net,confirm_same_person:true,
         })}),
     undoPlayerMerge: (id:string,fromUserId:string) =>
-      req<{ok:boolean}>(`/events/${id}/players/merge/${encodeURIComponent(fromUserId)}`,{
+      req<{ok:boolean;leaders:LeaderboardEntry[]}>(`/events/${id}/players/merge/${encodeURIComponent(fromUserId)}`,{
         method:'DELETE',
       }),
   removeMember: (id:string, userId:string) => req(`/events/${id}/members/${userId}`,{method:'DELETE'}),
