@@ -62,6 +62,15 @@ export default function EventPage() {
   const [mergeTo, setMergeTo] = useState('');
   const [merging, setMerging] = useState(false);
   const [mergeMsg, setMergeMsg] = useState('');
+  const [mergeConfirmed,setMergeConfirmed]=useState(false);
+  const [mergeLinks,setMergeLinks]=useState([] as import('@/lib/api').RoomPlayerMerge[]);
+  const mergeSource=leaders.find((p:any)=>p.user_id===mergeFrom);
+  const mergeTarget=leaders.find((p:any)=>p.user_id===mergeTo);
+  const mergeOverlaps=!!mergeSource&&!!mergeTarget&&
+    (mergeSource.source_game_players||[]).some((p:{game_id:string})=>
+      (mergeTarget.source_game_players||[]).some((q:{game_id:string})=>q.game_id===p.game_id));
+  const mergeBlocked=mergeOverlaps||!!mergeSource?.identity_review_required||
+    !!mergeTarget?.identity_review_required;
   const [inviteUrl, setInviteUrl]   = useState('');
   const [inviteRole, setInviteRole] = useState('cohost');
   const [isGroupOwner,setIsGroupOwner]=useState(false);
@@ -796,6 +805,26 @@ export default function EventPage() {
                       {removingMember ? 'Removing…' : 'Remove'}
                     </button>
                   </div>
+                  {mergeLinks.length>0&&<details style={{marginTop:14,color:'var(--muted)',fontSize:12}}>
+                    <summary style={{color:'var(--gold)',cursor:'pointer'}}>Previous combined histories ({mergeLinks.length}) · Undo</summary>
+                    <p>Undo only separates the displayed histories. Saved games, payments and accounts are unchanged.</p>
+                    {mergeLinks.map(link=><div key={link.from_user_id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border-sub)'}}>
+                      <span>{link.from_name} → {link.to_name}</span>
+                      <button type="button" className="btn btn-ghost" disabled={merging} style={{fontSize:11,padding:'7px 10px'}}
+                        onClick={async()=>{
+                          if(!confirm('Undo this display history link? Saved games and payments will not be changed.'))return;
+                          setMerging(true);setMergeMsg('');
+                          try{
+                            const result=await api.events.undoPlayerMerge(id,link.from_user_id);
+                            setLeaders(result.leaders);
+                            setMergeLinks(prev=>prev.filter(p=>p.from_user_id!==link.from_user_id));
+                            setMergeMsg('✅ History link undone. Original results remain unchanged.');
+                            setMergeFrom('');setMergeTo('');setMergeConfirmed(false);
+                          }catch(error){setMergeMsg('❌ '+(error instanceof Error?error.message:'Could not undo the link.'));}
+                          finally{setMerging(false);}
+                        }}>Undo</button>
+                    </div>)}
+                  </details>}
                 </div>
               </AppDialog>
             )}
@@ -923,66 +952,84 @@ export default function EventPage() {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Invite Member by Mobile</button>
                 <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('cohost');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Co-host by Mobile</button>
-                {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}} onClick={()=>{setMergeFrom('');setMergeTo('');setMergeMsg('');setShowMerge(true);}}>⟳ Merge Duplicate Players</button>}
+                {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}} onClick={()=>{
+                    setMergeFrom('');setMergeTo('');setMergeConfirmed(false);setMergeMsg('');
+                    setMergeLinks([]);setShowMerge(true);
+                    void api.events.playerMerges(id).then(({merges})=>setMergeLinks(merges))
+                      .catch(()=>setMergeMsg('❌ Unable to load existing player links. Please retry.'));
+                  }}>⟳ Merge Duplicate Players</button>}
               </div>
             )}
 
             {/* Merge Players Modal */}
             {showMerge && (
-              <AppDialog className="modal-overlay" onClick={()=>setShowMerge(false)}>
-                <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
+              <AppDialog className="modal-overlay" onClick={()=>!merging&&setShowMerge(false)}>
+                <div className="modal animate-up" onClick={e=>e.stopPropagation()} style={{maxWidth:445,maxHeight:'min(85dvh,750px)',overflowY:'auto'}}>
                   <div style={{fontSize:16,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500,marginBottom:6}}>⟳ Merge Duplicate Players</div>
                   <div style={{fontSize:12,color:'var(--muted)',marginBottom:16,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
-                    Select the duplicate name to remove and the correct name to keep. All stats will be combined into the kept name.
+                    Confirm both entries are the same person. PKR combines their standings and history view without changing original games, payments, or login accounts. You can undo this link.
                   </div>
                   <div style={{marginBottom:12}}>
                     <div style={{fontSize:11,color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6,fontFamily:'var(--font-body),sans-serif'}}>Remove this duplicate</div>
-                    <select value={mergeFrom} onChange={e=>setMergeFrom(e.target.value)}
+                    <select value={mergeFrom} onChange={e=>{setMergeFrom(e.target.value);setMergeConfirmed(false);setMergeMsg('');}}
                       style={{width:'100%',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-sub)',borderRadius:4,padding:'10px 12px',fontSize:13,fontFamily:'var(--font-body),sans-serif'}}>
                       <option value="">Select player...</option>
-                      {leaders.filter((l:any)=>l.display_name!==mergeTo).map((l:any)=>(
-                        <option key={l.user_id} value={l.display_name}>{l.display_name} ({l.games_played} games, {l.total_net>0?'+':''}${(l.total_net/100).toFixed(0)})</option>
+                      {leaders.filter((l:any)=>l.user_id!==mergeTo).map((l:any)=>(
+                        <option key={l.user_id} value={l.user_id}>{l.display_name} ({l.games_played} games, {l.total_net>0?'+':''}${(l.total_net/100).toFixed(0)})</option>
                       ))}
                     </select>
                   </div>
                   <div style={{marginBottom:16}}>
                     <div style={{fontSize:11,color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6,fontFamily:'var(--font-body),sans-serif'}}>Keep this name</div>
-                    <select value={mergeTo} onChange={e=>setMergeTo(e.target.value)}
+                    <select value={mergeTo} onChange={e=>{setMergeTo(e.target.value);setMergeConfirmed(false);setMergeMsg('');}}
                       style={{width:'100%',background:'var(--bg3)',color:'var(--white)',border:'1px solid var(--border-sub)',borderRadius:4,padding:'10px 12px',fontSize:13,fontFamily:'var(--font-body),sans-serif'}}>
                       <option value="">Select player...</option>
-                      {leaders.filter((l:any)=>l.display_name!==mergeFrom).map((l:any)=>(
-                        <option key={l.user_id} value={l.display_name}>{l.display_name} ({l.games_played} games, {l.total_net>0?'+':''}${(l.total_net/100).toFixed(0)})</option>
+                      {leaders.filter((l:any)=>l.user_id!==mergeFrom).map((l:any)=>(
+                        <option key={l.user_id} value={l.user_id}>{l.display_name} ({l.games_played} games, {l.total_net>0?'+':''}${(l.total_net/100).toFixed(0)})</option>
                       ))}
                     </select>
                   </div>
-                  {mergeMsg&&<div style={{fontSize:12,color:mergeMsg.startsWith('✅')?'var(--green)':'var(--red)',marginBottom:12,fontFamily:'var(--font-body),sans-serif'}}>{mergeMsg}</div>}
+                  {mergeSource&&mergeTarget&&<div style={{padding:13,marginBottom:12,borderRadius:9,background:'var(--bg3)',border:'1px solid var(--border-hi)'}}>
+                    <strong style={{fontSize:13}}>Preview: {mergeTarget.display_name}</strong>
+                    <div style={{display:'flex',justifyContent:'space-between',gap:8,marginTop:8,fontSize:13}}>
+                      <span>{mergeSource.games_played+mergeTarget.games_played} recorded games</span>
+                      <strong style={{color:mergeSource.total_net+mergeTarget.total_net<0?'var(--red)':'var(--green)'}}>
+                        {fmt(mergeSource.total_net+mergeTarget.total_net)} net
+                      </strong>
+                    </div>
+                    <p style={{fontSize:11,color:'var(--muted)',marginTop:9,marginBottom:0}}>
+                      Game results, buy-ins, cash-outs and payment acknowledgements will remain unchanged.
+                    </p>
+                  </div>}
+                  {mergeBlocked&&<p role="alert" style={{fontSize:12,color:'var(--red)',lineHeight:1.5}}>
+                    Cannot safely combine: {mergeOverlaps
+                      ?'two separate player seats were recorded in the same game.'
+                      :'a player has an unresolved identity conflict.'} No records will be changed.
+                  </p>}
+                  {mergeSource&&mergeTarget&&!mergeBlocked&&<label style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:12,fontSize:12,lineHeight:1.5}}>
+                    <input type="checkbox" checked={mergeConfirmed} onChange={e=>setMergeConfirmed(e.target.checked)}
+                      style={{marginTop:3,accentColor:'var(--gold)'}}/>
+                    <span>I confirm these are the same person. Display their combined history under <strong>{mergeTarget.display_name}</strong>.</span>
+                  </label>}
+                  {mergeMsg&&<div role="status" style={{fontSize:12,color:mergeMsg.startsWith('✅')?'var(--green)':'var(--red)',marginBottom:12,fontFamily:'var(--font-body),sans-serif'}}>{mergeMsg}</div>}
                   <div style={{display:'flex',gap:8}}>
                     <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowMerge(false)}>Cancel</button>
-                    <button className="btn btn-primary" style={{flex:1}} disabled={!mergeFrom||!mergeTo||mergeFrom===mergeTo||merging}
+                    <button className="btn btn-primary" style={{flex:1}} disabled={!mergeSource||!mergeTarget||mergeBlocked||!mergeConfirmed||merging}
                       onClick={async()=>{
-                        if(!confirm(`Merge "${mergeFrom}" into "${mergeTo}"? This cannot be undone.`)) return;
-                        setMerging(true); setMergeMsg('');
-                        try {
-                          await api.events.mergePlayers(id, mergeFrom, mergeTo);
-                          setMergeMsg('✅ Merged successfully!');
-                          setLeaders((prev:any[])=>{
-                            const from = prev.find(l=>l.display_name===mergeFrom);
-                            const to = prev.find(l=>l.display_name===mergeTo);
-                            if(!from||!to) return prev;
-                            const merged = {...to,
-                              total_net: to.total_net+from.total_net,
-                              games_played: to.games_played+from.games_played,
-                              games_won: to.games_won+from.games_won,
-                              biggest_win: Math.max(to.biggest_win,from.biggest_win),
-                              biggest_loss: Math.max(to.biggest_loss,from.biggest_loss),
-                            };
-                            return prev.filter(l=>l.display_name!==mergeFrom).map(l=>l.display_name===mergeTo?merged:l);
-                          });
-                          setMergeFrom(''); setMergeTo('');
-                        } catch(e:any){ setMergeMsg('❌ '+e.message); }
+                        if(!mergeSource||!mergeTarget)return;
+                        setMerging(true);setMergeMsg('');
+                        try{
+                          const result=await api.events.mergePlayers(id,mergeSource,mergeTarget);
+                          setLeaders(result.leaders);
+                          setMergeLinks(old=>[...old,result.merge]);
+                          setMergeMsg('✅ Combined successfully. Original financial and game records are unchanged.');
+                          setMergeFrom('');setMergeTo('');setMergeConfirmed(false);setSelectedPlayer(null);
+                        }catch(error){
+                          setMergeMsg('❌ '+(error instanceof Error?error.message:'Unable to combine these histories.'));
+                        }
                         finally{ setMerging(false); }
                       }}>
-                      {merging?'Merging…':'Merge'}
+                      {merging?'Combining…':'Combine histories'}
                     </button>
                   </div>
                 </div>
