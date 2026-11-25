@@ -78,7 +78,7 @@ async function test(){
     await selects.nth(0).selectOption('member-guest');
     await selects.nth(1).selectOption('member-main');
     await modal.getByText('9 recorded games').waitFor();
-    await modal.getByText(/-\\$1,?365/).waitFor();
+    await modal.getByText(/-\$1,?365/).waitFor();
     const combine=modal.getByRole('button',{name:'Combine histories'});
     assert.equal(await combine.isDisabled(),true,'Host must confirm same person');
     await modal.getByRole('checkbox').check();
