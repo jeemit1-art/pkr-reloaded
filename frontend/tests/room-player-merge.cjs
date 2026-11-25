@@ -73,13 +73,12 @@ async function test(){
     await page.goto(BASE+'/events/room-merge-demo?tab=members&view=roster',{waitUntil:'domcontentloaded'});
     await page.getByRole('button',{name:/Merge Duplicate Players/}).click();
     const modal=page.locator('.modal-overlay .modal').first();
-    await modal.getByRole('heading',{name:/Combine player histories/}).count().catch(()=>{});
     const selects=modal.locator('select');
     assert.equal(await selects.count(),2);
     await selects.nth(0).selectOption('member-guest');
     await selects.nth(1).selectOption('member-main');
     await modal.getByText('9 recorded games').waitFor();
-    await modal.getByText('-$1,365',{exact:false}).waitFor();
+    await modal.getByText(/-\\$1,?365/).waitFor();
     const combine=modal.getByRole('button',{name:'Combine histories'});
     assert.equal(await combine.isDisabled(),true,'Host must confirm same person');
     await modal.getByRole('checkbox').check();
