@@ -424,6 +424,8 @@ events.post('/:id/players/merge',authMiddleware,async c=>{
      !body.from_user_id||!body.to_user_id||
      body.from_user_id===body.to_user_id||
      body.from_user_id.length>128||body.to_user_id.length>128||
+     typeof body.from_games!=='number'||typeof body.to_games!=='number'||
+     typeof body.from_net!=='number'||typeof body.to_net!=='number'||
      !Number.isSafeInteger(body.from_games)||!Number.isSafeInteger(body.to_games)||
      !Number.isSafeInteger(body.from_net)||!Number.isSafeInteger(body.to_net)||
      body.confirm_same_person!==true)
