@@ -3,6 +3,10 @@ import { Env } from '../types';
 import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
 import { clientSafeEvent, clientSafeGame } from '../public-data';
 import { computeRoomLeaderboard } from '../player-leaderboard';
+import {
+  listRoomPlayerMerges,saveRoomPlayerMerge,removeRoomPlayerMerge,
+  combineRoomPlayerLeaders,mergePairIsSafe,type RoomPlayerMerge
+} from '../room-player-merges';
 import {archivedHistoricalNames,normaliseHistoricalName} from './historical-visibility';
 import {sendPushTestToDevice} from '../push';
 import {nativePushReady,validNativeToken,registerNativeDevice,unregisterNativeDevice,
@@ -394,13 +398,104 @@ events.post('/:id/unsubscribe', optionalAuth, async (c) => {
   return c.json({ok:true});
 });
 
+// A host may reconcile two *display identities* that are confirmed to be
+// the same player. The saved game_player and settlement rows are immutable.
+// A preview must match the current settled ledger before the action is saved.
+events.get('/:id/players/merges',authMiddleware,async c=>{
+  const roomId=c.req.param('id');
+  if(!await requireEventRole(c,roomId,'host'))return c.json({error:'Only the room host may review combined player histories'},403);
+  try{
+    const merges=await listRoomPlayerMerges(c.env.KV,roomId);
+    c.header('Cache-Control','private, no-store');
+    return c.json({merges});
+  }catch(error){
+    return c.json({error:error instanceof Error?error.message:'Could not check player history links'},503);
+  }
+});
+
+events.post('/:id/players/merge',authMiddleware,async c=>{
+  const roomId=c.req.param('id');
+  if(!await requireEventRole(c,roomId,'host'))
+    return c.json({error:'Only the room host can combine player histories'},403);
+  const body=await c.req.json().catch(()=>null) as Record<string,unknown>|null;
+  const keys=['from_user_id','to_user_id','from_games','to_games','from_net','to_net','confirm_same_person'];
+  if(!body||Object.keys(body).some(k=>!keys.includes(k))||
+     typeof body.from_user_id!=='string'||typeof body.to_user_id!=='string'||
+     !body.from_user_id||!body.to_user_id||
+     body.from_user_id===body.to_user_id||
+     body.from_user_id.length>128||body.to_user_id.length>128||
+     typeof body.from_games!=='number'||typeof body.to_games!=='number'||
+     typeof body.from_net!=='number'||typeof body.to_net!=='number'||
+     !Number.isSafeInteger(body.from_games)||!Number.isSafeInteger(body.to_games)||
+     !Number.isSafeInteger(body.from_net)||!Number.isSafeInteger(body.to_net)||
+     body.confirm_same_person!==true)
+    return c.json({error:'Choose two different players and confirm their current totals and identity'},400);
+  try{
+    const existing=await listRoomPlayerMerges(c.env.KV,roomId);
+    if(existing.length>=80)return c.json({error:'This room has reached its player history link limit'},409);
+    if(existing.some(link=>link.from_user_id===body.from_user_id))
+      return c.json({error:'This duplicate history has already been combined. Refresh the standings.'},409);
+    const current=await computeRoomLeaderboard(c.env.DB,roomId,c.env.KV);
+    if('merge_warnings' in current && current.merge_warnings?.length)
+      return c.json({error:'Existing identity links need review before another merge. No records changed.'},409);
+    const from=current.leaders.find(row=>row.user_id===body.from_user_id);
+    const to=current.leaders.find(row=>row.user_id===body.to_user_id);
+    if(!from||!to)return c.json({error:'Player histories changed. Refresh the page and try again.'},409);
+    if(from.games_played!==body.from_games||to.games_played!==body.to_games||
+       from.total_net!==body.from_net||to.total_net!==body.to_net)
+      return c.json({error:'Player game counts or net amounts have changed. Refresh before combining.'},409);
+    const reason=mergePairIsSafe(from,to);
+    if(reason)return c.json({error:reason},409);
+    const link:RoomPlayerMerge={
+      from_user_id:from.user_id,to_user_id:to.user_id,
+      from_name:from.display_name,to_name:to.display_name,
+      created_at:Date.now(),created_by:c.get('userId')
+    };
+    // Compute and reconcile the exact response before persisting the link.
+    const preview=combineRoomPlayerLeaders(current.leaders,[link]);
+    if(preview.applied!==1||preview.warnings.length)
+      return c.json({error:'Unable to reconcile these histories safely. No changes made.'},409);
+    await saveRoomPlayerMerge(c.env.KV,roomId,link);
+    c.header('Cache-Control','private, no-store');
+    return c.json({ok:true,merge:link,leaders:preview.leaders,
+      note:'Combined standings only. Saved game, buy-in, cash-out, payment and account records are unchanged.'});
+  }catch(error){
+    console.warn('Player history alias merge failed',error instanceof Error?error.message:'unknown');
+    return c.json({error:'Could not safely combine these histories. No financial records were changed.'},503);
+  }
+});
+
+events.delete('/:id/players/merge/:fromId',authMiddleware,async c=>{
+  const roomId=c.req.param('id'),fromId=c.req.param('fromId');
+  if(!await requireEventRole(c,roomId,'host'))
+    return c.json({error:'Only the room host can undo a player history link'},403);
+  try{
+    const links=await listRoomPlayerMerges(c.env.KV,roomId);
+    const link=links.find(x=>x.from_user_id===fromId);
+    if(!link)return c.json({error:'This player history link was not found'},404);
+    if(links.some(x=>x.from_user_id!==fromId&&x.to_user_id===fromId))
+      return c.json({error:'Undo the histories linked into this player first'},409);
+    // Calculate the authoritative post-undo view before writing. KV reads
+    // may be eventually consistent immediately after the deletion.
+    const base=await computeRoomLeaderboard(c.env.DB,roomId);
+    const projected=combineRoomPlayerLeaders(base.leaders,links.filter(x=>x.from_user_id!==fromId));
+    if(projected.warnings.length)return c.json({error:'Another identity link requires review before undo'},409);
+    await removeRoomPlayerMerge(c.env.KV,roomId,link,c.get('userId'));
+    c.header('Cache-Control','private, no-store');
+    return c.json({ok:true,undo:link,leaders:projected.leaders,
+      note:'Only the room standings link was removed. Saved game and financial records were unchanged.'});
+  }catch(error){
+    return c.json({error:'Could not undo this link. Please retry without deleting player records.'},503);
+  }
+});
+
 events.get('/:id/leaderboard', authMiddleware, async (c) => {
   const eventId = c.req.param('id');
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   // Calculate directly from immutable settled-game rows. The older cached
   // leaderboard grouped by name; a renamed player could appear twice while
   // their history selected overlapping rows by ID.
-  const {leaders}=await computeRoomLeaderboard(c.env.DB,eventId);
+  const {leaders}=await computeRoomLeaderboard(c.env.DB,eventId,c.env.KV);
   return c.json(leaders);
 });
 

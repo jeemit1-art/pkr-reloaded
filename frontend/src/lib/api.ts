@@ -217,8 +217,19 @@ export const api = {
       req<{ok:boolean;profile:RoomPlayerProfile}>(`/events/${id}/profiles`,{method:'PUT',body:JSON.stringify(profile)}),
     verifyPassword: (id:string,password:string) =>
       req<{ok:boolean;required:boolean}>(`/events/${id}/verify-password`,{method:'POST',body:JSON.stringify({password})}),
-    mergePlayers: (id:string, from_name:string, to_name:string) =>
-      req(`/events/${id}/players/merge`, {method:'POST', body:JSON.stringify({from_name, to_name})}),
+    playerMerges: (id:string) =>
+      req<{merges:RoomPlayerMerge[]}>(`/events/${id}/players/merges`),
+    mergePlayers: (id:string,from:LeaderboardEntry,to:LeaderboardEntry) =>
+      req<{ok:boolean;merge:RoomPlayerMerge;leaders:LeaderboardEntry[]}>(
+        `/events/${id}/players/merge`,{method:'POST',body:JSON.stringify({
+          from_user_id:from.user_id,to_user_id:to.user_id,
+          from_games:from.games_played,to_games:to.games_played,
+          from_net:from.total_net,to_net:to.total_net,confirm_same_person:true,
+        })}),
+    undoPlayerMerge: (id:string,fromUserId:string) =>
+      req<{ok:boolean;leaders:LeaderboardEntry[]}>(`/events/${id}/players/merge/${encodeURIComponent(fromUserId)}`,{
+        method:'DELETE',
+      }),
   removeMember: (id:string, userId:string) => req(`/events/${id}/members/${userId}`,{method:'DELETE'}),
   },
   games: {
@@ -336,6 +347,10 @@ export interface GameDetail extends Game { players:GamePlayer[]; rsvps:Rsvp[]; t
 export interface LobbyData { game:Game; event:{id:string;name:string}; rsvps:Rsvp[]; players:GamePlayer[]; }
 export interface LiveData { game:Game; event:{name:string}; players:GamePlayer[]; totalIn:number; totalOut:number; bank:number; }
 export interface ResultsData { game:Game; event:{name:string}; players:GamePlayer[]; transfers:Transfer[]; }
+export interface RoomPlayerMerge {
+  from_user_id:string;to_user_id:string;from_name:string;to_name:string;
+  created_at:number;created_by:string;
+}
 export interface LeaderboardEntry {
   user_id:string; display_name:string; games_played:number; games_won:number;
   total_net:number; biggest_win:number; biggest_loss:number; last_played:number|null;
