@@ -805,26 +805,7 @@ export default function EventPage() {
                       {removingMember ? 'Removing…' : 'Remove'}
                     </button>
                   </div>
-                  {mergeLinks.length>0&&<details style={{marginTop:14,color:'var(--muted)',fontSize:12}}>
-                    <summary style={{color:'var(--gold)',cursor:'pointer'}}>Previous combined histories ({mergeLinks.length}) · Undo</summary>
-                    <p>Undo only separates the displayed histories. Saved games, payments and accounts are unchanged.</p>
-                    {mergeLinks.map(link=><div key={link.from_user_id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border-sub)'}}>
-                      <span>{link.from_name} → {link.to_name}</span>
-                      <button type="button" className="btn btn-ghost" disabled={merging} style={{fontSize:11,padding:'7px 10px'}}
-                        onClick={async()=>{
-                          if(!confirm('Undo this display history link? Saved games and payments will not be changed.'))return;
-                          setMerging(true);setMergeMsg('');
-                          try{
-                            const result=await api.events.undoPlayerMerge(id,link.from_user_id);
-                            setLeaders(result.leaders);
-                            setMergeLinks(prev=>prev.filter(p=>p.from_user_id!==link.from_user_id));
-                            setMergeMsg('✅ History link undone. Original results remain unchanged.');
-                            setMergeFrom('');setMergeTo('');setMergeConfirmed(false);
-                          }catch(error){setMergeMsg('❌ '+(error instanceof Error?error.message:'Could not undo the link.'));}
-                          finally{setMerging(false);}
-                        }}>Undo</button>
-                    </div>)}
-                  </details>}
+
                 </div>
               </AppDialog>
             )}
@@ -1032,6 +1013,26 @@ export default function EventPage() {
                       {merging?'Combining…':'Combine histories'}
                     </button>
                   </div>
+                  {mergeLinks.length>0&&<details style={{marginTop:14,color:'var(--muted)',fontSize:12}}>
+                    <summary style={{color:'var(--gold)',cursor:'pointer'}}>Previous combined histories ({mergeLinks.length}) · Undo</summary>
+                    <p>Undo only separates the displayed histories. Saved games, payments and accounts are unchanged.</p>
+                    {mergeLinks.map(link=><div key={link.from_user_id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border-sub)'}}>
+                      <span>{link.from_name} → {link.to_name}</span>
+                      <button type="button" className="btn btn-ghost" disabled={merging} style={{fontSize:11,padding:'7px 10px'}}
+                        onClick={async()=>{
+                          if(!confirm('Undo this display history link? Saved games and payments will not be changed.'))return;
+                          setMerging(true);setMergeMsg('');
+                          try{
+                            const result=await api.events.undoPlayerMerge(id,link.from_user_id);
+                            setLeaders(result.leaders);
+                            setMergeLinks(prev=>prev.filter(p=>p.from_user_id!==link.from_user_id));
+                            setMergeMsg('✅ History link undone. Original results remain unchanged.');
+                            setMergeFrom('');setMergeTo('');setMergeConfirmed(false);
+                          }catch(error){setMergeMsg('❌ '+(error instanceof Error?error.message:'Could not undo the link.'));}
+                          finally{setMerging(false);}
+                        }}>Undo</button>
+                    </div>)}
+                  </details>}
                 </div>
               </AppDialog>
             )}
