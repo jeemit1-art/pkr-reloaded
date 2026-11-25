@@ -74,6 +74,7 @@ async function test(){
     await page.getByRole('button',{name:/Merge Duplicate Players/}).click();
     const modal=page.locator('.modal-overlay .modal').first();
     const selects=modal.locator('select');
+    await selects.first().waitFor({state:'visible'});
     assert.equal(await selects.count(),2);
     await selects.nth(0).selectOption('member-guest');
     await selects.nth(1).selectOption('member-main');
