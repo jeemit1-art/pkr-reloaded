@@ -473,9 +473,15 @@ events.delete('/:id/players/merge/:fromId',authMiddleware,async c=>{
     if(!link)return c.json({error:'This player history link was not found'},404);
     if(links.some(x=>x.from_user_id!==fromId&&x.to_user_id===fromId))
       return c.json({error:'Undo the histories linked into this player first'},409);
+    // Calculate the authoritative post-undo view before writing. KV reads
+    // may be eventually consistent immediately after the deletion.
+    const base=await computeRoomLeaderboard(c.env.DB,roomId);
+    const projected=combineRoomPlayerLeaders(base.leaders,links.filter(x=>x.from_user_id!==fromId));
+    if(projected.warnings.length)return c.json({error:'Another identity link requires review before undo'},409);
     await removeRoomPlayerMerge(c.env.KV,roomId,link,c.get('userId'));
     c.header('Cache-Control','private, no-store');
-    return c.json({ok:true,undo:link,note:'Only the room standings link was removed. Saved game and financial records were unchanged.'});
+    return c.json({ok:true,undo:link,leaders:projected.leaders,
+      note:'Only the room standings link was removed. Saved game and financial records were unchanged.'});
   }catch(error){
     return c.json({error:'Could not undo this link. Please retry without deleting player records.'},503);
   }
