@@ -1,5 +1,7 @@
 import type {D1Database,KVNamespace} from '@cloudflare/workers-types';
-import {listRoomPlayerMerges,combineRoomPlayerLeaders} from './room-player-merges';
+// The offline production-ledger audit evaluates resolvePlayerLeaderboard in an
+// isolated VM without loading Cloudflare KV modules. Load optional alias
+// projection helpers only when computing a room view with KV enabled.
 
 /**
  * Read-only, per-room player identity resolution using saved settled-game rows.
@@ -237,6 +239,7 @@ export async function computeRoomLeaderboard(db:D1Database,eventId:string,kv?:KV
     ...eventLinks.results,...memberNames.results,...profileNames.results
   ]);
   if(!kv)return base;
+  const {listRoomPlayerMerges,combineRoomPlayerLeaders}=await import('./room-player-merges');
   const links=await listRoomPlayerMerges(kv,eventId);
   if(links.length===0)return base;
   // This is only a presentation projection of the authoritative settled
