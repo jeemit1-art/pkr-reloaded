@@ -1,4 +1,5 @@
-import type {D1Database} from '@cloudflare/workers-types';
+import type {D1Database,KVNamespace} from '@cloudflare/workers-types';
+import {listRoomPlayerMerges,combineRoomPlayerLeaders} from './room-player-merges';
 
 /**
  * Read-only, per-room player identity resolution using saved settled-game rows.
@@ -195,7 +196,7 @@ export function resolvePlayerLeaderboard(
   }};
 }
 
-export async function computeRoomLeaderboard(db:D1Database,eventId:string){
+export async function computeRoomLeaderboard(db:D1Database,eventId:string,kv?:KVNamespace){
   const [saved,registered,eventLinks,memberNames,profileNames]=await Promise.all([
     db.prepare(
       "SELECT gp.game_id,gp.user_id,gp.display_name,gp.net,gp.settled_at,g.scheduled_at "+
@@ -232,7 +233,18 @@ export async function computeRoomLeaderboard(db:D1Database,eventId:string){
     ...memberNames.results.map(u=>u.user_id),
     ...profileNames.results.map(u=>u.user_id),
   ]);
-  return resolvePlayerLeaderboard(saved.results,verifiedIds,[
+  const base=resolvePlayerLeaderboard(saved.results,verifiedIds,[
     ...eventLinks.results,...memberNames.results,...profileNames.results
   ]);
+  if(!kv)return base;
+  const links=await listRoomPlayerMerges(kv,eventId);
+  if(links.length===0)return base;
+  // This is only a presentation projection of the authoritative settled
+  // ledger. Neither this read nor a host-approved alias changes game money,
+  // transfers, account IDs or permissions.
+  const projection=combineRoomPlayerLeaders(base.leaders,links);
+  return {leaders:projection.leaders,audit:{
+    ...base.audit,ranked_rows:projection.leaders.length,
+    multi_name_players:projection.leaders.filter(p=>p.aliases.length>1).length,
+  },merge_warnings:projection.warnings};
 }
