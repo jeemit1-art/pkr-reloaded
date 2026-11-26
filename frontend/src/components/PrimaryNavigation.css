@@ -94,3 +94,71 @@
  .pkr-primary-row-actions{width:100%}
  .pkr-primary-row-actions button{flex:1}
 }
+
+
+/* One responsive club/Account header (dashboard, games, results and payments).
+   The installed iOS status bar owns the safe-area above it; the utility itself
+   reserves that inset once, while remaining in document flow when sticky. */
+@media(max-width:1099px){
+  .pkr-primary-mobile-utility{
+    box-sizing:border-box;
+    position:sticky!important;
+    inset:auto!important;
+    top:0!important;
+    z-index:240!important;
+    width:100%;
+    max-width:100%;
+    min-height:calc(56px + env(safe-area-inset-top))!important;
+    padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+      6px max(12px,env(safe-area-inset-left))!important;
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:clamp(5px,1.6vw,12px);
+    background:#0b2018!important;
+    border-bottom:1px solid #43624e;
+    overflow:visible;
+    isolation:isolate;
+  }
+  .pkr-primary-mobile-mark{flex:0 0 24px;line-height:1;text-align:center}
+  .pkr-primary-mobile-utility select,
+  .pkr-primary-mobile-utility .pkr-primary-club-name{
+    box-sizing:border-box;
+    flex:1 1 auto;
+    width:0;
+    max-width:none;
+    min-width:0;
+    margin:0;
+    min-height:44px;
+    padding:9px 7px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .pkr-primary-mobile-utility select{font-size:clamp(12px,2vw,14px)}
+  .pkr-primary-mobile-utility .pkr-primary-account{
+    flex:0 0 auto;
+    margin-left:auto;
+    min-height:44px;
+    min-width:0;
+    padding:8px clamp(8px,1.7vw,14px);
+    white-space:nowrap;
+  }
+  /* The global header is the sole mobile/tablet chrome. Room-level buttons
+     remain in the Games body and Account, rather than a second sticky banner. */
+  .pkr-app.pkr-event>.pkr-topbar{display:none!important}
+  :is(#pkr-my-payments,#pkr-player-rsvp,#pkr-rooms,
+      .pkr-room-games-intro,.pkr-rsvp-settings){
+    scroll-margin-top:calc(68px + env(safe-area-inset-top));
+  }
+}
+@media(max-width:359px){
+  .pkr-primary-mobile-utility{gap:5px}
+  .pkr-primary-mobile-mark{flex-basis:20px;font-size:22px}
+  .pkr-primary-mobile-utility .pkr-primary-account{padding-inline:7px;font-size:11px}
+  .pkr-primary-mobile-utility .pkr-primary-account span:first-child{font-size:14px}
+}
+@media(min-width:1100px){
+  /* Desktop uses the full persistent sidebar; no duplicate dashboard topbar. */
+  .pkr-primary-mobile-utility{display:none!important}
+}
