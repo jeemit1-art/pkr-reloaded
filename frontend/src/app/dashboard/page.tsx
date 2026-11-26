@@ -2,13 +2,8 @@
 import RecordMetric from '@/components/RecordMetric';
 import AppDialog from '@/components/AppDialog';
 
-// frontend/src/app/dashboard/page.tsx — FULL REPLACEMENT
-// Changes vs original:
-//  - Imports UpgradeModal
-//  - Shows plan badge in nav (Trial X days / Starter / Pro)
-//  - "Upgrade" button in nav when on trial/expired
-//  - <UpgradeModal /> renders at bottom (catches all 402s globally on this page)
-//  - create() error handling now distinguishes 402 (modal handles it) vs other errors
+// Responsive site navigation is provided by PersistentNavigation.
+// Account, subscription management and Sign Out remain available in /account.
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, User, Event, Game, EventMember, fmt, fmtDate, fmtSign, saveToken, clearToken, getToken, rememberApprovedDevice, renewApprovedDevice, ensureApprovedDevice, hasApprovedDeviceCredential } from '@/lib/api';
@@ -281,6 +276,7 @@ function DashboardInner() {
   }
 
   async function openBillingPortal() {
+    if(manageLoading)return;
     setManageLoading(true);
     try {
       const { url } = await api.billing.portal();
@@ -288,52 +284,6 @@ function DashboardInner() {
     } catch(e:any) {
       alert(e.message || 'Could not open billing portal.');
     } finally { setManageLoading(false); }
-  }
-
-  // Plan badge helper
-  function PlanBadge() {
-    if (!user) return null;
-    const plan = user.plan;
-    if(user.free_game_in_progress)return <span style={{fontSize:10,padding:'2px 8px',borderRadius:4,
-      background:'rgba(100,180,100,0.15)',color:'var(--green)',fontWeight:700}}>
-      Free game in progress</span>;
-    if(user.free_game_available)return <span style={{fontSize:10,padding:'2px 8px',borderRadius:4,
-      background:'rgba(100,180,100,0.15)',color:'var(--green)',fontWeight:700}}>
-      One free cash game available</span>;
-    if(!user.is_active)return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,
-        background:'rgba(220,60,60,0.12)',color:'rgba(220,80,80,0.85)',
-        letterSpacing:'0.1em',textTransform:'uppercase'}}>Subscription required</span>
-    );
-    if (plan === 'lifetime') return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
-        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
-        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>⚡ Lifetime</span>
-    );
-    if (plan === 'pro') return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(201,168,76,0.15)',
-        color:'rgba(201,168,76,0.9)',fontFamily:'var(--font-body),sans-serif',
-        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>✦ Pro</span>
-    );
-    if (plan === 'starter') return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(100,180,100,0.12)',
-        color:'rgba(100,200,100,0.8)',fontFamily:'var(--font-body),sans-serif',
-        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>Starter</span>
-    );
-    // Trial
-    if (user.trial_active) return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(255,160,30,0.12)',
-        color:'rgba(255,170,50,0.85)',fontFamily:'var(--font-body),sans-serif',
-        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>
-        Trial · {user.trial_days_left}d left
-      </span>
-    );
-    // Expired trial
-    return (
-      <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,background:'rgba(220,60,60,0.12)',
-        color:'rgba(220,80,80,0.85)',fontFamily:'var(--font-body),sans-serif',
-        letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600}}>Trial Ended</span>
-    );
   }
 
   const needsUpgrade = user && !user.is_active;
@@ -525,50 +475,8 @@ function DashboardInner() {
         </div>
       )}
 
-      {/* Nav */}
-      <nav className="nav pkr-topbar" style={{paddingTop:'env(safe-area-inset-top)'}}>
-        <div style={{maxWidth:960,margin:'0 auto',padding:'0 16px',display:'flex',flexDirection:'column'}}>
-          <div style={{height:52,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-          <div className="pkr-brand"><span className="pkr-brand-mark" aria-hidden="true">♠</span>PKR<span className="pkr-brand-sub">HOME POKER</span></div>
-          <label className="pkr-pro-search"><span>⌕</span><input aria-label="Search poker rooms" placeholder="Search poker rooms…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
-          <div className="pkr-header-controls" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,minWidth:0}}>
-            {playerOnly&&!user?.avatar_url&&<span className="pkr-player-head-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase()||"P"}</span>}
-            {user?.avatar_url && (
-              <img src={user.avatar_url} alt={user.name}
-                style={{width:28,height:28,borderRadius:'50%',border:'1px solid var(--border)'}}/>
-            )}
-            <span className="pkr-user-name" style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',
-              maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const,display:'block'}}>
-              {user?.name?.split(' ')[0]}
-            </span>
-            {!playerOnly&&<PlanBadge />}
-            {isPaid && !playerOnly && (
-              <button
-                className="btn btn-ghost pkr-plan-manage"
-                style={{fontSize:10,padding:'3px 8px'}}
-                onClick={openBillingPortal}
-                disabled={manageLoading}
-              >
-                {manageLoading ? '…' : 'Plan'}
-              </button>
-            )}
-            {(onTrial || needsUpgrade) && !playerOnly && (
-              <button
-                className="btn btn-primary"
-                style={{fontSize:11,padding:'4px 12px',background:'linear-gradient(135deg,rgba(201,168,76,0.9),rgba(160,120,40,0.85))',color:'#000'}}
-                onClick={() => window.dispatchEvent(new CustomEvent('pkr:upgrade_required', {detail:{error:'Start your subscription to keep the game going.'}}))}
-              >
-                Upgrade
-              </button>
-            )}
-            <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 12px'}}
-              onClick={()=>{ clearToken(); api.auth.logout().then(()=>router.push('/')) }}>
-              Sign Out
-            </button>
-          </div>
-          </div>
-        </div>
-      </nav>
+      {/* The global club/Account header is rendered once by PersistentNavigation.
+          The desktop sidebar and accessible /account settings retain all controls. */}
 
       <div className="pkr-content" style={{maxWidth:1600,margin:'0 auto',padding:'22px 22px 45px',position:'relative',zIndex:1}}>
         {totalPending > 0 && (
