@@ -25,10 +25,13 @@ module.exports = {
       '/insights/:path*','/schedule/:path*',
       '/invite/:path*','/phone-invite/:path*','/mobile-login/:path*'
     ];
-    return privateRoutes.map(source=>({
+    const privateHeaders=privateRoutes.map(source=>({
       source,
       headers:[{key:'X-Robots-Tag',value:'noindex, nofollow, noarchive'}]
     }));
+    return [...privateHeaders,...['/app-version.json','/sw.js'].map(source=>({
+      source,headers:[{key:'Cache-Control',value:'no-store, max-age=0'}]
+    }))];
   },
   images: {
     remotePatterns: [{ protocol:'https', hostname:'lh3.googleusercontent.com' }],

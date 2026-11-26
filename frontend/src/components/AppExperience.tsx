@@ -6,11 +6,13 @@ import {RecordProvider} from '@/components/RecordMetric';
 import {restoreKnownPushSubscriptions} from '@/lib/push';
 import SetupReminder from '@/components/SetupReminder';
 import RoomExperienceTheme from '@/components/RoomExperienceTheme';
+import {AppUpdateContext,useAppUpdateState} from '@/components/AppUpdateContext';
 
 export default function AppExperience({children}:{children:ReactNode}){
   const pathname=usePathname();
   const [online,setOnline]=useState(true);
-  const [updateReady,setUpdateReady]=useState(false);
+  const [workerUpdateReady,setWorkerUpdateReady]=useState(false);
+  const updates=useAppUpdateState(workerUpdateReady);
   const inGame=/^\/games\/[^/]+\/(play|tv)\/?$/.test(pathname);
   const appRoute=/^\/(instant|dashboard|events|games|results|payments|account|insights|schedule|install)(\/|$)/.test(pathname);
 
@@ -81,17 +83,19 @@ export default function AppExperience({children}:{children:ReactNode}){
       const worker=registration?.installing;
       if(!worker)return;
       worker.addEventListener('statechange',()=>{
-        if(!stopped&&worker.state==='installed'&&navigator.serviceWorker.controller)setUpdateReady(true);
+        if(!stopped&&worker.state==='installed'&&navigator.serviceWorker.controller){
+          setWorkerUpdateReady(true);void updates.checkForUpdates();
+        }
       });
     };
     void navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(value=>{
       if(stopped)return;registration=value;
-      if(value.waiting&&navigator.serviceWorker.controller)setUpdateReady(true);
+      if(value.waiting&&navigator.serviceWorker.controller)setWorkerUpdateReady(true);
       value.addEventListener('updatefound',observe);observe();check();
     }).catch(()=>{});
     document.addEventListener('visibilitychange',check);
     return()=>{stopped=true;registration?.removeEventListener('updatefound',observe);document.removeEventListener('visibilitychange',check);};
-  },[]);
+  },[updates.checkForUpdates]);
 
   // A service-worker update must not silently remove a previous opt-in.
   // Reconcile known room/device registrations on foreground resume. Never
@@ -108,12 +112,11 @@ export default function AppExperience({children}:{children:ReactNode}){
     };
   },[pathname]);
 
-  return <RecordProvider><RoomExperienceTheme/><SetupReminder/>{children}
+  return <AppUpdateContext.Provider value={updates}><RecordProvider><RoomExperienceTheme/><SetupReminder/>{children}
     {appRoute&&!online&&<div className="pkr-connection-notice" role="status">You are offline. Changes are not confirmed until PKR reconnects.</div>}
-    {appRoute&&online&&updateReady&&!inGame&&<div className="pkr-update-notice" role="status">
-      <span>An app update is ready.</span><button type="button" onClick={()=>{
-        if(window.confirm('Refresh PKR now? Unsaved form entries will be lost. Saved games and payment records are unchanged.'))window.location.reload();
-      }}>Refresh app</button><button type="button" onClick={()=>setUpdateReady(false)} aria-label="Dismiss app update">Later</button>
+    {appRoute&&online&&updates.updateReady&&!inGame&&<div className="pkr-update-notice" role="status">
+      <span>{updates.notice||'An app update is ready.'}</span><button type="button" onClick={updates.refresh}>Refresh app</button>
+      <button type="button" onClick={updates.dismiss} aria-label="Dismiss app update">Later</button>
     </div>}
-  </RecordProvider>;
+  </RecordProvider></AppUpdateContext.Provider>;
 }

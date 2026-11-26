@@ -5,11 +5,14 @@ import {api,clearToken,getToken,type Event,type User} from '@/lib/api';
 import {canUsePush,ensurePushForRoom,isPWAInstalled,subscribePush,unsubscribePush,sendRealTestNotification} from '@/lib/push';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import RoomExperienceChoice from '@/components/RoomExperienceChoice';
+import {useAppUpdate} from '@/components/AppUpdateContext';
+import {collectDisplayDetails} from '@/lib/app-display-details';
 import './account.css';
 
 type Registration={user_id:string;device_count:number};
 export default function AccountSettings(){
  const router=useRouter();
+ const appUpdate=useAppUpdate();
  const [user,setUser]=useState<User|null>(null);
  const [rooms,setRooms]=useState<Event[]>([]);
  const [selected,setSelected]=useState('');
@@ -20,6 +23,8 @@ export default function AccountSettings(){
  const [notice,setNotice]=useState('');
  const [installed,setInstalled]=useState<boolean|null>(null);
  const [permission,setPermission]=useState('unknown');
+ const [displayDetails,setDisplayDetails]=useState('');
+ const [displayNotice,setDisplayNotice]=useState('');
  useEffect(()=>{
   let alive=true;
   if(!getToken()){router.replace('/');return}
@@ -89,6 +94,16 @@ export default function AccountSettings(){
   finally{setBusy(false)}
  }
  async function signOut(){clearToken();try{await api.auth.logout()}catch{}router.replace('/')}
+ async function copyDisplayDetails(){
+  const details=JSON.stringify(collectDisplayDetails(),null,2);
+  try{
+   if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+   await navigator.clipboard.writeText(details);setDisplayDetails('');
+   setDisplayNotice('Display details copied. They contain only the app version and screen layout information.');
+  }catch{
+   setDisplayDetails(details);setDisplayNotice('Select and copy the display details below.');
+  }
+ }
  if(loading)return <main className="pkr-primary-page pkr-account-page"><p role="status">Loading account settings…</p></main>;
  return <main className="pkr-primary-page pkr-account-page"><div className="pkr-primary-page-inner">
   <header className="pkr-primary-page-head">
@@ -144,6 +159,27 @@ export default function AccountSettings(){
     <h2>Sounds & accessibility</h2>
     <ForegroundSoundToggle/>
     <p>In-app sounds work while PKR is open. Background alerts follow your phone's settings; PKR cannot override Silent mode.</p>
+   </section>
+   <section className="pkr-primary-panel">
+    <h2>App version & updates</h2>
+    <div data-testid="app-version-settings">
+     <p>Running version <code data-testid="running-app-version" data-version={appUpdate.runningVersion} title={appUpdate.runningVersion}>{appUpdate.runningVersion.slice(0,12)}</code></p>
+     <p role="status">{appUpdate.status==='checking'?'Checking for an app update…':
+       appUpdate.status==='available'?'An app update is ready.':
+       appUpdate.status==='current'?'You are using the latest app version.':
+       appUpdate.error||'Check whether a newer PKR version is available.'}</p>
+     <div className="pkr-account-actions">
+      <button type="button" className="pkr-primary-outline" disabled={appUpdate.status==='checking'} onClick={()=>void appUpdate.checkForUpdates()}>Check for updates</button>
+      <button type="button" className="pkr-primary-outline" onClick={appUpdate.refresh}>Refresh app</button>
+      <button type="button" className="pkr-primary-outline" onClick={()=>void copyDisplayDetails()}>Copy display details</button>
+     </div>
+     <p>Refreshing keeps your saved games and device sign-in. Save any unfinished form entries first.</p>
+     {appUpdate.notice&&<p role="status">{appUpdate.notice}</p>}
+     {displayNotice&&<p role="status">{displayNotice}</p>}
+     {displayDetails&&<label className="pkr-account-label">Display details
+      <textarea readOnly value={displayDetails} rows={10} onFocus={event=>event.currentTarget.select()}/>
+     </label>}
+    </div>
    </section>
    <section className="pkr-primary-panel">
     <h2>Account actions</h2>

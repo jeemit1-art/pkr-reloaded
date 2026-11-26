@@ -50,16 +50,24 @@ const sizes=[
  {name:'desktop-small',width:1100,height:800},
  {name:'desktop',width:1440,height:900},
 ];
+const installedSizes=[
+ {name:'installed-iphone-dark',width:390,height:844,installed:true},
+ {name:'installed-iphone-dark-safe-area',width:390,height:844,installed:true,safeTop:59,safeBottom:34},
+];
 async function check(engine,size){
  const browser=await engine.launch({headless:true});
  try{
   const context=await browser.newContext({
     viewport:{width:size.width,height:size.height},deviceScaleFactor:1,
     serviceWorkers:'block',
+    ...(size.installed?{colorScheme:'dark'}:{}),
     isMobile:engine===webkit&&size.width<=430,
     hasTouch:engine===webkit&&size.width<=430
   });
-  await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-only-session'));
+  await context.addInitScript(({installed})=>{
+    localStorage.setItem('pkr_token','synthetic-only-session');
+    if(installed)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
+  },{installed:!!size.installed});
   const page=await context.newPage();
   page.setDefaultTimeout(22000);
   const problems=[];
@@ -79,6 +87,28 @@ async function check(engine,size){
   await page.getByTestId('player-dashboard').waitFor({state:'visible'});
   if(size.safeTop)await page.addStyleTag({content:'html.pkr-game-night{--pkr-safe-area-top:'+size.safeTop+'px!important;--pkr-safe-area-bottom:'+size.safeBottom+'px!important}'});
   assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'default','Installed app must request an opaque native status bar');
+  if(size.installed){
+    await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-installed'));
+    const canvas=await page.evaluate(async()=>{
+      const root=getComputedStyle(document.documentElement),body=getComputedStyle(document.body);
+      const manifestLink=document.querySelector('link[rel="manifest"]');
+      const manifest=manifestLink?await fetch(manifestLink.href,{cache:'no-store'}).then(response=>response.json()):null;
+      return {standalone:navigator.standalone,dark:matchMedia('(prefers-color-scheme: dark)').matches,
+        root:root.backgroundColor,body:body.backgroundColor,rootImage:root.backgroundImage,bodyImage:body.backgroundImage,
+        colourScheme:root.colorScheme,metaScheme:document.querySelector('meta[name="color-scheme"]')?.content,
+        themeColours:Array.from(document.querySelectorAll('meta[name="theme-color"]')).map(meta=>meta.content.toLowerCase()),manifest};
+    });
+    assert.equal(canvas.standalone,true,'The installed Safari code path must be exercised');
+    assert.equal(canvas.dark,true,'The phone must request dark system appearance');
+    assert.equal(canvas.root,'rgb(255, 255, 255)','Native status-bar canvas must stay white in an installed dark-mode session');
+    assert.equal(canvas.body,'rgb(255, 255, 255)','The body canvas must match the opaque header');
+    assert.equal(canvas.rootImage,'none');assert.equal(canvas.bodyImage,'none');
+    assert.equal(canvas.colourScheme,'light');assert.equal(canvas.metaScheme,'light');
+    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#ffffff'),'Every native theme-colour hint must be white');
+    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#ffffff');
+    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#ffffff');
+    assert.equal(canvas.manifest?.display,'standalone');
+  }
   // Mobile WebKit includes its native scrollbar in clientWidth, although fixed
   // CSS boxes and hit testing exclude it. Measure the fixed viewport independently
   // of the header, so a narrow header still fails without sampling browser chrome.
@@ -205,5 +235,6 @@ async function check(engine,size){
   for(const size of sizes)await run(chromium,size);
   for(const size of sizes.filter(s=>['small-phone','iphone','iphone-safe-area','phone-landscape','tablet','desktop'].includes(s.name)))
     await run(webkit,size);
+  for(const size of installedSizes)await run(webkit,size);
   assert.deepEqual(failures,[],'Every responsive header must cover its scrolling content');
 })().catch(error=>{console.error(error);process.exitCode=1;});
