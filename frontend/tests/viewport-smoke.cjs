@@ -439,7 +439,7 @@ async function test(){
          }
          if(visual.head.bottom>visual.bank.top+2||visual.bank.bottom>visual.dock.top)
            errors.push(size.name+' gameplay chrome overlaps: '+JSON.stringify(visual));
-         if(visual.theme!=='#3DDC97')errors.push(size.name+' gameplay chrome Theme A missing');
+         if(visual.theme.toLowerCase()!=='#78ddb3')errors.push(size.name+' gameplay chrome Game night accent missing: '+visual.theme);
          if(!visual.chipsLoaded)errors.push(size.name+' real poker chips asset not loaded in bank summary');
          if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
            errors.push(size.name+' gameplay settlement/end-game control missing');
@@ -531,7 +531,8 @@ async function test(){
        });
        if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
          errors.push(size.name+' game detail header lost its retained gradient or geometry: '+JSON.stringify(summary));
-       if(summary.surface.toLowerCase()!=='#ffffff'||!summary.font.toLowerCase().includes('inter'))
+       // Production CSS may shorten white from #ffffff to the equivalent #fff.
+       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
          errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
@@ -624,10 +625,14 @@ async function test(){
      if(item.id==='insights'){
 
        if(size.width<=700){
-        const top=await page.locator('.pkr-vnext-insights-top').evaluate(el=>({
-         top:el.getBoundingClientRect().top,padding:getComputedStyle(document.querySelector('.pkr-insights-refresh')).paddingTop
-        }));
-        if(top.top>75) errors.push(size.name+' unexpected empty gap before Insights heading: '+JSON.stringify(top));
+        const top=await page.locator('.pkr-vnext-insights-top').evaluate(el=>{
+         const header=document.querySelector('.pkr-primary-mobile-utility');
+         return {top:el.getBoundingClientRect().top,headerBottom:header?.getBoundingClientRect().bottom??null,
+           padding:getComputedStyle(document.querySelector('.pkr-insights-refresh')).paddingTop};
+        });
+        // Keep content close to the single header, including its safe-area inset.
+        if(top.headerBottom===null||top.top<top.headerBottom-1||top.top>top.headerBottom+16)
+          errors.push(size.name+' Insights heading overlaps the header or leaves an unexpected gap: '+JSON.stringify(top));
        }
 
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});

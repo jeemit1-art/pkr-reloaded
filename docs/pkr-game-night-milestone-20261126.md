@@ -2,7 +2,7 @@
 
 ## Milestone 1: modern app interface with existing capabilities retained
 
-Implementation is published on the isolated feature branch in [draft PR #84](https://github.com/jeemit1-art/pkr-reloaded/pull/84). Local production build, TypeScript checks, functional regression tests and the recorded browser walkthrough pass. Remote CI has run and follow-up corrections are being verified before this milestone is ready for release. Main and the live deployment have not been replaced.
+Implementation is published on the isolated feature branch in [draft PR #84](https://github.com/jeemit1-art/pkr-reloaded/pull/84). Local production build, TypeScript checks, functional regression tests and the recorded browser walkthrough pass. [The PR checks](https://github.com/jeemit1-art/pkr-reloaded/pull/84/checks) provide the current CI result for each published commit; earlier run findings and corrections are recorded below. Main and the live deployment have not been replaced.
 
 ## Recovery point
 
@@ -77,7 +77,7 @@ The browser walkthrough used a separate local copy of the production components 
 
 ## Remaining release work
 
-1. Pass the full Chromium/WebKit browser matrix and the existing security/staging gates after the CI corrections below. Financial, geometry, role and action assertions are retained.
+1. Confirm that the full Chromium/WebKit browser matrix and existing security/staging gates are green on the exact commit selected for release. Financial, geometry, role and action assertions are retained.
 2. Review the preview and release through the existing deployment process only when authorised. This milestone is not a claim that every device or live production workflow has been tested.
 3. Complete the separate native release scope and device/signing/notification checks documented in [native scope](pkr-game-night-native-scope.md). A Next.js build does not produce an App Store or Play Store binary.
 
@@ -93,4 +93,12 @@ The first remote run passed the production build, TypeScript, all six preliminar
 - [Security run 45889432215](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45889432215): the exact-version guard still expected Next.js 16.4.3. Updated it to the installed patched version, 16.4.6, retaining the exact React versions and security thresholds. Runtime audit found zero vulnerabilities. Three development dependency findings are unchanged from main and are separate maintenance work.
 - [Staging run 45889432316](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45889432316): the offline journal harness omitted the actual lifecycle listener helper when extracting the shipped table script. Corrected source extraction while retaining all 20 financial journal assertions. No Worker runtime or environment-binding change is required.
 
-The browser workflow now runs every existing suite and reports a failing exit code if any suite fails. This exposes all remaining failures in one run without dropping checks. Subsequent CI results must be recorded before claiming that the complete remote matrix passes.
+The browser workflow now runs every existing suite and reports a failing exit code if any suite fails. This exposes all remaining failures in one run without dropping checks. The PR checks record subsequent results against their exact commits.
+
+### Second CI pass — verification at `2d893bd`
+
+The [security gate](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45890020729), [Game Night/sharing checks](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45890020701), [read-only Worker route probe](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45890020893), and [staging/Worker checks](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45890020888) all passed. The latter includes all 416 Worker tests across 72 files. The Vercel preview also reached READY. Main and the latest production deployment remain at `24282989c73793cd97969f889a8aded568cfd649`.
+
+[Browser run 45890020707](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45890020707) passed nine of ten suites. In particular, every reference seat-layout case passed: 14 Chromium cases and four WebKit cases, retaining Full/Compact differences, bank/result values and unchanged transaction data. Gameplay, dense seats, application workflows, member access, player profiles and single-header checks also passed.
+
+The remaining viewport sweep identified a 320px Games Command banner slightly above its existing height limit and three outdated visual expectations. The banner now uses 16px vertical padding at widths up to 360px while retaining all content and 44px action targets. The checks continue to require the approved exact Game night accent, a white surface and Inter, and no header overlap or excessive gap; they now account for lowercase/minified CSS colours and the actual single-header height. No financial or access-rule assertions changed. The browser workflow runs the complete matrix for this correction, with its result attached to the PR.
