@@ -83,7 +83,8 @@ async function check(engine,size){
     const content=document.querySelector('.pkr-dashboard > .pkr-content');
     const acc=document.querySelector('.pkr-primary-account');
     const client=document.documentElement.clientWidth;
-    const rect=node=>node?.getBoundingClientRect()||null;
+    const rect=node=>{if(!node)return null;const r=node.getBoundingClientRect();
+      return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
     return {width:client,scrollWidth:document.documentElement.scrollWidth,
       primaryVisible:visible(primary),primary:rect(primary),position:primary?getComputedStyle(primary).position:'',
       sidebarVisible:visible(sidebar),oldVisible:visible(old),content:rect(content),
