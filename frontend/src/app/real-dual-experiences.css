@@ -253,15 +253,13 @@
    -webkit-backdrop-filter:none!important;
    box-shadow:0 -5px 20px #0009!important;
  }
- html[data-pkr-room-experience="command"] .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
-   background:#101b19!important;
- }
+ /* Navigation always uses a solid charcoal surface, while the page content
+    still follows the host's selected Command Centre / Live Poker room theme. */
+ html[data-pkr-room-experience="command"] .pkr-primary-bottom-nav.pkr-universal-bottom-nav,
  html[data-pkr-room-experience="live"] .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
-   background:#08251a!important;
+   background:#101a1d!important;
  }
- body:has(.pkr-results-page) .pkr-primary-mobile-utility{
-   position:sticky!important;top:env(safe-area-inset-top)!important;z-index:200!important;
- }
+ /* Results header follows the global fixed navigation; no sticky override. */
 }
 @media(max-width:740px){
  .pkr-results-command-hero{padding:14px;min-height:136px;gap:10px}
