@@ -2,7 +2,7 @@
 // Handles Stripe subscription checkout, webhooks, and customer portal
 import { Hono } from 'hono';
 import { Env, User } from '../types';
-import { authMiddleware } from '../middleware';
+import { authMiddleware,freeFirstGameEligible } from '../middleware';
 import {HOST_PRICES,isConfiguredAudPrice,verifiedPaidSubscription,type PaidPlan} from '../billing-entitlement';
 
 const billing = new Hono<{ Bindings: Env }>();
@@ -70,6 +70,7 @@ billing.get('/plan', authMiddleware, async (c) => {
     !!user.stripe_subscription_id?.startsWith('sub_')&&
     Number.isSafeInteger(user.plan_expires_at)&&Number(user.plan_expires_at)>now;
   const isActive=effectivePlan==='lifetime'||paid;
+  const freeAvailable=!isActive&&await freeFirstGameEligible(c.env.DB,user.id,c.env.PKR_FREE_FIRST_GAME_V1==='1');
 
   return c.json({
     plan: effectivePlan,
@@ -77,7 +78,8 @@ billing.get('/plan', authMiddleware, async (c) => {
     trial_days_left: trialDaysLeft,
     trial_end: trialEnd,
     plan_expires_at: user.plan_expires_at,
-    is_active: isActive,
+    is_active: isActive||freeAvailable,
+    free_game_available:freeAvailable,
     has_payment: !!user.stripe_customer_id&&!!user.stripe_subscription_id,
     // What this plan allows:
     max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
