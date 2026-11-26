@@ -1,0 +1,32 @@
+/* Additive private club tools; existing PKR nav, financial screens and colours unchanged. */
+.pkr-club{margin:16px 0 22px;color:var(--ivory,#e9edeb);border:1px solid var(--border-sub,#375447);background:var(--bg2,#10261d);border-radius:16px;padding:16px}
+.pkr-club-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.pkr-club-header small{display:block;color:var(--gold,#e8c77c);letter-spacing:.12em;font-size:10px;font-weight:700}
+.pkr-club-header h3{font-size:20px;line-height:1.2;margin:5px 0 6px}
+.pkr-club-header p{font-size:12px;line-height:1.5;color:var(--muted,#b4c8be);margin:0}
+.pkr-club button{cursor:pointer;border:1px solid #56735e;border-radius:9px;min-height:36px;padding:7px 12px;background:#17352a;color:#f0f5ed;font-size:12px;font-weight:600}
+.pkr-club button:disabled{opacity:.5;cursor:not-allowed}
+.pkr-club button:focus-visible,.pkr-club input:focus-visible,.pkr-club select:focus-visible{outline:2px solid var(--gold,#e8c77c);outline-offset:2px}
+.pkr-club button[aria-pressed="true"]{border-color:var(--gold,#e8c77c);color:#ffdf9f;background:#363120}
+.pkr-club .pkr-club-primary{background:var(--gold,#e8c77c);border-color:var(--gold,#e8c77c);color:#101c16}
+.pkr-club-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pkr-club-card{border:1px solid #355447;background:#132d23;border-radius:13px;overflow:hidden;align-self:start}
+.pkr-club-card summary{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;padding:15px 14px;list-style:none}
+.pkr-club-card summary::-webkit-details-marker{display:none}
+.pkr-club-card summary small{font-size:11px;color:var(--muted,#aec3b5);font-weight:500;text-align:right}
+.pkr-club-card[open] summary{border-bottom:1px solid #315044}
+.pkr-club-body{display:grid;gap:10px;padding:14px}
+.pkr-club-body p{margin:0;color:var(--muted,#bbcec0);line-height:1.5;font-size:12px}
+.pkr-club-body strong{font-size:13px}
+.pkr-club-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #294538;font-size:12px}
+.pkr-club-item>div{display:grid;gap:3px}
+.pkr-club-item small{font-size:11px;color:var(--muted,#b6c4bd)}
+.pkr-club-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.pkr-club-form{display:grid;gap:10px;padding-top:8px;border-top:1px solid #315044}
+.pkr-club label{display:grid;gap:6px;color:var(--muted,#b6c9be);font-size:12px}
+.pkr-club input,.pkr-club select{width:100%;min-width:0;border:1px solid #476654;background:#092218;color:#f3f5ef;border-radius:8px;padding:9px 10px;min-height:38px;font-size:13px}
+.pkr-club-dates,.pkr-club-scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pkr-club-ok,.pkr-club-error{padding:10px 12px;border-radius:8px;font-size:12px;margin:5px 0 12px}
+.pkr-club .pkr-club-ok,.pkr-club-ok{background:#1c4330!important;color:#cef2d5!important;border:1px solid #477c5a}
+.pkr-club .pkr-club-error,.pkr-club-error{background:#4a2929!important;color:#ffe5df!important;border:1px solid #965b53}
+@media(max-width:700px){.pkr-club{padding:12px}.pkr-club-grid{grid-template-columns:1fr}.pkr-club-header h3{font-size:18px}.pkr-club-item{flex-wrap:wrap}.pkr-club-card summary{padding:14px 12px}}
