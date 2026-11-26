@@ -12,6 +12,7 @@ Stacked draft [PR #79](https://github.com/jeemit1-art/pkr-reloaded/pull/79) buil
 
 ## Security and data retention
 - All APIs enforce authenticated room membership. Management actions require host/cohost.
+- The web UI is also disabled unless the build-time public flag `NEXT_PUBLIC_PKR_CLUB_PLANNING_V1=1` is set. Without this, older preview/live Workers receive **no new club feature calls**.
 - The new route set is disabled unless `PKR_CLUB_PLANNING_V1=1`.
 - D1 changes are additive in `worker/migrations/20261126_club_planning.sql`; migration is NOT executed in staging or production.
 - Workers health reports a boolean capability, not readiness or credentials.
@@ -31,6 +32,7 @@ Stacked draft [PR #79](https://github.com/jeemit1-art/pkr-reloaded/pull/79) buil
 1. Verify independently backed-up and restored **isolated staging D1**, confirm account and database IDs. Do not run in production.
 2. Apply the **new additive migration to isolated staging only**, check uniqueness and existing records.
 3. Deploy only to the **isolated staging Worker**, enabling `PKR_CLUB_PLANNING_V1=1` only after migration checks.
+   Set the Vercel preview-only public variable `NEXT_PUBLIC_PKR_CLUB_PLANNING_V1=1` and **rebuild the isolated preview** after Worker migration. Do not set the production variable.
 4. Align staged frontend with the exact preview origin and OAuth redirect. The current staging Worker still uses the retired preview origin, and the connected Cloudflare account in this ChatGPT session does not own PKR's Worker.
 5. Run the full staging smoke suite, new server tests and authenticated end-to-end test on iPhone and Android.
 6. Log actual pass/fail for date vote, poll deadline race, conflicting waitlist offers, opt-in push, RSVP cancellation, host request queue, season tie and member access denial.
