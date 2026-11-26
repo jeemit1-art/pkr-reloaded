@@ -87,10 +87,14 @@ async function check(engine,size){
     const client=document.documentElement.clientWidth;
     const rect=node=>{if(!node)return null;const r=node.getBoundingClientRect();
       return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
+    const footer=document.querySelector('.pkr-primary-bottom-nav');
     return {width:client,scrollWidth:document.documentElement.scrollWidth,
       primaryVisible:visible(primary),primary:rect(primary),position:primary?getComputedStyle(primary).position:'',
+      headerBackground:primary?getComputedStyle(primary).backgroundColor:'',
+      footerBackground:footer?getComputedStyle(footer).backgroundColor:'',
+      bodyPaddingTop:parseFloat(getComputedStyle(document.body).paddingTop),
       sidebarVisible:visible(sidebar),oldVisible:visible(old),content:rect(content),
-      account:rect(acc),bottomVisible:visible(document.querySelector('.pkr-primary-bottom-nav')),
+      account:rect(acc),bottomVisible:visible(footer),
       clubText:primary?.textContent||'',
     };
   });
@@ -100,7 +104,13 @@ async function check(engine,size){
     assert(geometry.primaryVisible,'Club/Account header not visible');
     assert(!geometry.sidebarVisible,'Desktop sidebar visible on phone/tablet');
     assert(geometry.bottomVisible,'Bottom primary navigation was removed');
-    assert.equal(geometry.position,'sticky');
+    assert.equal(geometry.position,'fixed','The header must not scroll under iOS status bar');
+    assert.equal(geometry.headerBackground,'rgb(16, 26, 29)',
+      'Header must match the opaque footer design');
+    assert.equal(geometry.footerBackground,geometry.headerBackground,
+      'Header and footer use different surface colours');
+    assert(Math.abs(geometry.bodyPaddingTop-geometry.primary.height)<2,
+      'Fixed header has not reserved exactly one header height in page flow');
     assert(geometry.primary.left>=-1&&geometry.primary.right<=geometry.width+1,
       'Header extends beyond viewport');
     assert(geometry.primary.top>=-1&&geometry.primary.top<=2,'Header starts outside safe viewport');
@@ -111,9 +121,34 @@ async function check(engine,size){
     await page.evaluate(()=>window.scrollTo({top:480,behavior:'instant'}));
     await page.waitForTimeout(150);
     const scrolled=await page.locator('.pkr-primary-mobile-utility').boundingBox();
-    assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Sticky header overlaps the system status area');
+    assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Fixed header moved during scroll');
     assert(scrolled.x>=-1&&scrolled.x+scrolled.width<=size.width+2,'Scrolled header clipped');
-    await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+    const obscured=await page.evaluate(()=>{
+      const header=document.querySelector('.pkr-primary-mobile-utility');
+      return header?.contains(document.elementFromPoint(6,5));
+    });
+    assert(obscured,'Scrolling content is visible in front of the header');
+    // Simulate a notched PWA device even when CI has no physical safe area.
+    await page.evaluate(()=>document.documentElement.style.setProperty('--pkr-primary-safe-top','46px'));
+    await page.waitForTimeout(60);
+    const safe=await page.evaluate(()=>{
+      const h=document.querySelector('.pkr-primary-mobile-utility');
+      const r=h?.getBoundingClientRect();
+      const account=h?.querySelector('.pkr-primary-account')?.getBoundingClientRect();
+      return {height:r?.height,background:h?getComputedStyle(h).backgroundColor:'',
+        bodyPad:parseFloat(getComputedStyle(document.body).paddingTop),
+        statusCovered:!!h?.contains(document.elementFromPoint(6,5)),
+        accountTop:account?.top};
+    });
+    assert(Math.abs((safe.height||0)-102)<2,'Notched header height does not include safe area');
+    assert(Math.abs(safe.bodyPad-(safe.height||0))<2,'Notched header lost its body offset');
+    assert(safe.statusCovered,'Header does not cover the simulated iOS status bar');
+    assert((safe.accountTop||0)>=46,'Buttons overlap simulated iOS status bar');
+    assert.equal(safe.background,geometry.footerBackground,'The safe area is not opaque');
+    await page.evaluate(()=>{
+      document.documentElement.style.removeProperty('--pkr-primary-safe-top');
+      window.scrollTo({top:0,behavior:'instant'});
+    });
     await page.getByRole('button',{name:'Account, notifications and installation'}).click();
   }else{
     assert(!geometry.primaryVisible,'Desktop still shows extra mobile header');
