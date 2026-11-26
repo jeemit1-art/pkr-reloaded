@@ -358,6 +358,7 @@ export const api = {
 export interface PlanStatus {
   plan: 'trial' | 'starter' | 'pro' | 'lifetime';
   trial_active: boolean;
+  free_game_available?:boolean;
   trial_days_left: number;
   trial_end: number;
   plan_expires_at: number | null;
@@ -377,6 +378,7 @@ export interface User {
   trial_active: boolean;
   trial_days_left: number;
   is_active: boolean;
+  free_game_available?:boolean;
 }
 
 export interface Event {
