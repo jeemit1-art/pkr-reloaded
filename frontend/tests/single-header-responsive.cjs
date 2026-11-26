@@ -54,6 +54,7 @@ async function check(engine,size){
  try{
   const context=await browser.newContext({
     viewport:{width:size.width,height:size.height},deviceScaleFactor:1,
+    serviceWorkers:'block',
     isMobile:engine===webkit&&size.width<=430,
     hasTouch:engine===webkit&&size.width<=430
   });
@@ -121,7 +122,12 @@ async function check(engine,size){
   }
   await page.getByRole('heading',{name:'Account & settings'}).waitFor({state:'visible'});
   await page.getByRole('button',{name:'Sign out',exact:true}).waitFor({state:'visible'});
-  await page.getByText('Plan: LIFETIME',{exact:true}).waitFor({state:'visible'});
+  // Ensure this is the mocked signed-in account, not a stale PWA/API response.
+  assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_token')),
+    'synthetic-only-session','The account navigation lost its approved session');
+  await page.locator('.pkr-account-plan').waitFor({state:'visible'});
+  assert.equal((await page.locator('.pkr-account-plan').innerText()).trim(),
+    'Plan: LIFETIME','Account must retain the member plan');
   assert.deepEqual(problems,[]);
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
   await page.getByTestId('player-dashboard').waitFor({state:'visible'});
