@@ -30,6 +30,8 @@ export default function RoomOutstandingCard({roomId}:Props){
   const owed=outstanding.filter(({transfer})=>transfer.status==='owed').length;
   const reportedAmount=loading||error?'—':incomplete?(outstanding.length?'≥ '+fmt(amount):'—'):fmt(amount);
   const fullUrl='/payments?room='+encodeURIComponent(roomId)+'&payments=outstanding&paymentsScope=club&paymentsView=ledger';
+  const recordsUrl='/payments?room='+encodeURIComponent(roomId)+'&payments=outstanding&paymentsScope=club';
+  const openStatus=(status:'owed'|'payer_claimed'|'not_received')=>router.push(recordsUrl+'&paymentStatus='+status);
   return (
     <section className="pkr-room-outstanding" aria-label="Outstanding room payments" data-testid="room-outstanding">
       <header className="pkr-room-outstanding-heading">
@@ -38,18 +40,26 @@ export default function RoomOutstandingCard({roomId}:Props){
           <h2>Outstanding payments</h2>
           <p>Who owes whom, from settled games in this room.</p>
         </div>
-        <div className="pkr-room-outstanding-total">
+        <button type="button" className="pkr-room-outstanding-total pkr-record-action" disabled={loading}
+          aria-label="View underlying records: outstanding room payments" onClick={()=>router.push(recordsUrl)}
+          style={{border:0,padding:0,minHeight:44}}>
           <strong data-testid="room-outstanding-amount">{loading?'…':reportedAmount}</strong>
           <span>{loading?'Checking records':error?'Unavailable':incomplete
             ?outstanding.length+' recorded pending · total unverified'
             :outstanding.length+' transfer'+(outstanding.length===1?'':'s')+' pending'}</span>
-        </div>
+        </button>
       </header>
       {!loading&&!error&&outstanding.length>0&&
         <div className="pkr-room-outstanding-statuses" aria-label="Payment statuses">
-          {notReceived>0&&<span className="is-alert">{notReceived} not received</span>}
-          {awaiting>0&&<span className="is-warning">{awaiting} awaiting receipt</span>}
-          {owed>0&&<span className="is-pending">{owed} pending</span>}
+          {notReceived>0&&<span className="is-alert"><button type="button" className="pkr-record-action"
+            style={{border:0,padding:'4px 6px',minHeight:44}} onClick={()=>openStatus('not_received')}
+            aria-label="View underlying records: payments not received">{notReceived} not received</button></span>}
+          {awaiting>0&&<span className="is-warning"><button type="button" className="pkr-record-action"
+            style={{border:0,padding:'4px 6px',minHeight:44}} onClick={()=>openStatus('payer_claimed')}
+            aria-label="View underlying records: payments awaiting receipt">{awaiting} awaiting receipt</button></span>}
+          {owed>0&&<span className="is-pending"><button type="button" className="pkr-record-action"
+            style={{border:0,padding:'4px 6px',minHeight:44}} onClick={()=>openStatus('owed')}
+            aria-label="View underlying records: pending payments">{owed} pending</button></span>}
         </div>}
       {error?
         <p role="alert" className="pkr-room-outstanding-notice">Could not load the payment schedule. Open the Settlement Centre to review the saved records.</p>:
@@ -65,13 +75,20 @@ export default function RoomOutstandingCard({roomId}:Props){
                 onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>
                   Game settled · {fmtDate(game.scheduled_at)} · Review payments →
                 </button>)}
-              {snapshot.unavailable.length>4&&<span>+{snapshot.unavailable.length-4} more</span>}
+              {snapshot.unavailable.length>4&&<details><summary>View {snapshot.unavailable.length-4} more games</summary>
+                <div className="pkr-room-outstanding-review-games">{snapshot.unavailable.slice(4).map(game=><button type="button" key={game.id}
+                  onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>Game settled · {fmtDate(game.scheduled_at)} · Review payments →</button>)}</div>
+              </details>}
             </div>
           </div>}
         {snapshot&&!incomplete&&snapshot.gamesWithoutTransfers.length>0&&
           <details className="pkr-room-outstanding-no-transfers">
             <summary>{snapshot.gamesWithoutTransfers.length} settled game{snapshot.gamesWithoutTransfers.length===1?' has':'s have'} no saved payment instructions</summary>
             <p>These games have no transfer entries in the saved ledger. No debts have been estimated.</p>
+            <div className="pkr-room-outstanding-review-games" aria-label="Games without saved payment instructions">
+              {snapshot.gamesWithoutTransfers.map(game=><button type="button" key={game.id}
+                onClick={()=>router.push('/games/'+encodeURIComponent(game.id))}>Game settled · {fmtDate(game.scheduled_at)} · View saved game →</button>)}
+            </div>
           </details>}
         {outstanding.length?
           <div className="pkr-room-outstanding-list" role="list" aria-label="Recent outstanding payments">

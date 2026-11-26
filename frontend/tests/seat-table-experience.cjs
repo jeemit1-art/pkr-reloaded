@@ -101,8 +101,8 @@ async function check(browser,name,width,height){
     display_name:p.display_name,seat_number:p.seat_number,opening_chips:100}))};
   else if(req.method()==='POST'&&url.pathname==='/games/'+game.id+'/hands/hand-one/audit-stacks')
    result={ok:true,persisted_baseline:true,audit:{unsettled_pot_chips:0,
-    stacks:[{display_name:'Test',seat_number:7,closing_chips:winner==='Test'?105:95},
-      {display_name:'Alex',seat_number:3,closing_chips:winner==='Test'?95:105}]}};
+    stacks:[{display_name:'Test',seat_number:7,opening_chips:100,contributed_chips:5,returned_chips:0,won_chips:winner==='Test'?10:0,closing_chips:winner==='Test'?105:95},
+      {display_name:'Alex',seat_number:3,opening_chips:100,contributed_chips:5,returned_chips:0,won_chips:winner==='Test'?0:10,closing_chips:winner==='Test'?95:105}]}};
   else if(req.method()==='GET'&&url.pathname==='/auth/me')
    result={id:'host-test',name:'Test Host'};
   else {errors.push('Unmapped '+req.method()+' '+url.pathname);result={error:'Synthetic API path missing'};}
@@ -142,6 +142,9 @@ async function check(browser,name,width,height){
     assert(await details.evaluate(el=>el.matches(':modal')),'Bank records must appear above the table');
     assert.equal(await details.locator('.pkr-bank-record-row').count(),count,'Bank total must open its matching player records');
     assert.equal(await details.locator('.pkr-bank-record-sheet').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    assert(await details.locator('header').evaluate(el=>parseFloat(getComputedStyle(el).paddingLeft)>=18),'Bank heading must retain readable inset spacing');
+    assert(await details.locator('.pkr-bank-record-sheet').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Bank records must fit the dialog width');
+    if(count)assert(await details.locator('.pkr-bank-record-row').first().evaluate(el=>el.getBoundingClientRect().height>=60),'Bank record rows must remain touch sized');
     if(measure==='table bank'){
      assert.match(await details.locator('header p').innerText(),/50.00.*0.00.*50.00/);
      await page.screenshot({path:path.join(output,name+'-bank-records.png')});
@@ -194,6 +197,26 @@ async function check(browser,name,width,height){
   assert.equal(await page.locator('.pkr-quick-metric.result.pending').count(),1,
     'Uncashed buy-in must not be misrepresented as a final profit or loss');
   assert.match(await page.locator('.pkr-quick-metric.money-in').innerText(),/\$25/);
+  const beforeMetricWrites=writes.length;
+  for(const metric of ['banks','buy-in','result']){
+   await page.getByRole('button',{name:'View underlying records: player '+metric,exact:true}).click();
+   const transactions=page.locator('.side-panel.open .pkr-quick-section .tx-row');
+   await transactions.first().waitFor();
+   assert.equal(await transactions.count(),1,'Player financial totals must open the existing transactions');
+   assert.equal(await transactions.locator('.tx-amt').first().evaluate(el=>el.readOnly),true,'Drill-down must not enter edit mode');
+   await page.locator('.side-panel.open .pkr-quick-back').click();
+  }
+  await page.getByRole('button',{name:'View underlying records: player chip stack',exact:true}).click();
+  await page.getByRole('heading',{name:'Chip stack records',exact:true}).waitFor();
+  const chipRecords=page.locator('.side-panel.open .pkr-chip-records');
+  assert.match(await chipRecords.innerText(),/Verified opening\s+100 chips/);
+  assert.match(await chipRecords.innerText(),/Current stack\s+95 chips/);
+  assert.equal(await chipRecords.locator('.pkr-chip-hand-record').count(),1);
+  await chipRecords.locator('.pkr-chip-hand-record summary').click();
+  assert.match(await chipRecords.locator('.pkr-chip-hand-record').innerText(),/5 chips/);
+  if(width===390)await page.screenshot({path:path.join(output,name+'-chip-records.png')});
+  await page.locator('.side-panel.open .pkr-quick-back').click();
+  assert.equal(writes.length,beforeMetricWrites,'Opening player totals and chip records must not write transactions');
   const playerLinks=page.locator('.side-panel.open .pkr-quick-link');
   await playerLinks.filter({hasText:'Transactions'}).click();
   await page.locator('.side-panel.open .pkr-quick-section .tx-row').first().waitFor();

@@ -85,6 +85,15 @@ function fixture(state,url,method,body){
 }
 
 async function colour(locator,property){return locator.evaluate((element,key)=>getComputedStyle(element)[key],property);}
+async function waitForColour(page,locator,property,expected){
+ const element=await locator.elementHandle();
+ try{
+  // React commits the selected state before the finite CSS colour transition
+  // finishes. Check the exact final paint, without accepting intermediate alpha.
+  await page.waitForFunction(({element,key,value})=>!!element&&getComputedStyle(element)[key]===value,
+   {element,key:property,value:expected},{timeout:3000});
+ }finally{await element?.dispose();}
+}
 async function readable(locator,label){
  const result=await locator.evaluate(element=>{
   const channels=value=>(value.match(/[\d.]+/g)||[]).map(Number);
@@ -129,8 +138,15 @@ async function checkFullDashboards(page,state,label){
   assert.equal(await colour(dashboard,'backgroundColor'),'rgb(244, 246, 248)',name+' root must use porcelain');
   const selected=appearance.getByRole('button',{name:new RegExp(name)});
   assert.equal(await selected.getAttribute('aria-pressed'),'true');
+  await waitForColour(page,selected,'backgroundColor','rgb(255, 240, 235)');
   assert.equal(await colour(selected,'backgroundColor'),'rgb(255, 240, 235)',name+' selected control must use coral tint');
   assert.equal(await colour(selected,'color'),'rgb(163, 61, 40)');
+  const search=dashboard.locator('.pkr-dual-search');
+  if(await search.isVisible()){
+   assert.equal(await colour(search,'backgroundColor'),'rgb(237, 241, 244)',name+' room search must use the app palette');
+   assert.equal(await colour(search.locator('input'),'color'),'rgb(20, 36, 44)');
+   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(163, 61, 40)');
+  }
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
   assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
@@ -144,6 +160,38 @@ async function checkFullDashboards(page,state,label){
  assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
  await appearance.getByRole('button',{name:/Command Centre/}).click();
  await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+}
+
+async function checkOutstandingDashboardRecords(page){
+ const openDashboard=async()=>{
+  await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
+  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+  const card=page.getByTestId('dual-dashboard').getByTestId('room-outstanding');
+  await card.getByRole('button',{name:'View underlying records: outstanding room payments',exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelector('.pkr-room-outstanding-total')?.textContent.includes('$82'));
+  return card;
+ };
+ const card=await openDashboard();
+ const missing=card.locator('.pkr-room-outstanding-no-transfers');
+ await missing.locator('summary').click();
+ assert.equal(await missing.getByRole('button').count(),1,'The no-instructions disclosure lists the actual saved game');
+ assert.match(await missing.getByRole('button').innerText(),/View saved game/);
+ await card.getByRole('button',{name:'View underlying records: outstanding room payments',exact:true}).click();
+ await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ assert.equal(new URL(page.url()).searchParams.get('paymentsScope'),'club');
+ assert.equal(new URL(page.url()).searchParams.get('payments'),'outstanding');
+ assert.deepEqual((await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents()).sort(),['$12','$23','$47']);
+ for(const [label,status,amounts] of [
+  ['pending payments','owed',['$12','$47']],
+  ['payments awaiting receipt','payer_claimed',['$23']],
+ ]){
+  const source=await openDashboard();
+  await source.getByRole('button',{name:'View underlying records: '+label,exact:true}).click();
+  await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+  assert.equal(new URL(page.url()).searchParams.get('paymentsScope'),'club');
+  assert.equal(new URL(page.url()).searchParams.get('paymentStatus'),status);
+  assert.deepEqual((await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents()).sort(),amounts);
+ }
 }
 
 async function checkPlayers(page,label){
@@ -163,6 +211,7 @@ async function checkPlayers(page,label){
  await roster.getByText('🦊',{exact:true}).waitFor();
  assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
  const row=roster.locator(':scope > div').first();await row.hover();
+ await waitForColour(page,row,'backgroundColor','rgb(244, 246, 248)');
  assert.equal(await colour(row,'backgroundColor'),'rgb(244, 246, 248)','Hovered member row must not turn old green');
  await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
  const history=row.locator('.pkr-member-history-link');await history.focus();
@@ -288,6 +337,7 @@ async function run(){
   page.on('pageerror',error=>unexpected.push(error.stack||error.message));
   try{
    await checkFullDashboards(page,state,label);
+   await checkOutstandingDashboardRecords(page);
    await checkPlayers(page,label);
    await checkRsvps(page,state,label);
    await checkPayments(page,state,label);

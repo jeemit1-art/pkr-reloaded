@@ -2347,8 +2347,9 @@ function pkrAssembleQuickPlayerView(sid,body,p){
   if(_pkrPlayerPanelView==='overview'){
     if(summary){summary.classList.add('pkr-quick-hero');root.appendChild(summary);}
     var metrics=node('div','pkr-quick-metrics');
-    function metric(label,value,hint,cls){
-      var c=node('div','pkr-quick-metric '+(cls||''));
+    function metric(label,value,hint,cls,view){
+      var c=button('',function(){go(view||'transactions');},'pkr-quick-metric '+(cls||''));
+      c.setAttribute('aria-label','View underlying records: player '+label.toLowerCase());
       c.append(node('small','',label),node('strong','',value),node('span','',hint));
       metrics.appendChild(c);
     }
@@ -2356,7 +2357,7 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     var recordedBuyins=(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';}).length;
     metric('Buy-in',fmt(bi),recordedBuyins+(recordedBuyins===1?' recorded buy-in':' recorded buy-ins'),'money-in');
     metric('Chip stack',stack&&Number.isSafeInteger(stack.chips)?stack.chips.toLocaleString('en-AU'):'—',
-      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified');
+      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified','','chips');
     metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
       cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
     root.appendChild(metrics);
@@ -2455,6 +2456,57 @@ function pkrAssembleQuickPlayerView(sid,body,p){
         },false);
     });
     root.appendChild(form);
+  }else if(_pkrPlayerPanelView==='chips'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Chip stack records'));
+    root.appendChild(node('p','pkr-quick-explainer',stack&&stack.reason?stack.reason:
+      stack&&stack.source==='verified'?'Current chips are taken from the saved hand stack audit.':
+      stack&&stack.source==='tracked'?'Configured chip issuance, recorded wagers, returns and pot awards determine this stack.':
+      'Chip issuance is shown only when the saved buy-ins match the configured bank.'));
+    var chipRecords=node('div','pkr-chip-records');
+    function chipLine(container,label,value){
+      var line=node('div','pkr-chip-record-row');
+      line.append(node('span','',label),node('strong','',value));container.appendChild(line);
+    }
+    var auditRow=stack&&stack.source==='verified'&&_pkrVerifiedHandAudit&&
+      (_pkrVerifiedHandAudit.stacks||[]).find(function(row){return row.seat_number===Number(sid.replace('seat',''))&&row.display_name===p.name;});
+    if(auditRow){
+      chipRecords.appendChild(node('h4','pkr-quick-page-heading','Saved stack audit'));
+      [['opening_chips','Verified opening'],['contributed_chips','Wagered'],['returned_chips','Returned'],['won_chips','Pot awards'],['closing_chips','Current stack']].forEach(function(field){
+        if(Number.isSafeInteger(auditRow[field[0]]))chipLine(chipRecords,field[1],auditRow[field[0]].toLocaleString('en-AU')+' chips');
+      });
+    }
+    chipRecords.appendChild(node('h4','pkr-quick-page-heading','Chip issuance and buy-ins'));
+    chipLine(chipRecords,'Configured bank',bank>0?fmt(bank):'Not recorded');
+    var configuredChips=Number(state.game&&state.game.starting_chips);
+    chipLine(chipRecords,'Chips per bank',Number.isSafeInteger(configuredChips)&&configuredChips>0?configuredChips.toLocaleString('en-AU'):'Not recorded');
+    chipLine(chipRecords,'Confirmed issued chips',stack&&Number.isSafeInteger(stack.issued)?stack.issued.toLocaleString('en-AU'):'Not confirmed');
+    var buyRecords=(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';});
+    buyRecords.forEach(function(tx,index){chipLine(chipRecords,'Buy-in '+(index+1)+(tx.pkrReconstructed?' · reconstructed':''),fmt(tx.amount));});
+    if(!buyRecords.length)chipRecords.appendChild(node('p','pkr-quick-empty','No buy-in records for this player.'));
+    chipRecords.appendChild(button('View buy-in transactions',function(){go('transactions');},'pkr-quick-link'));
+    chipRecords.appendChild(node('h4','pkr-quick-page-heading','Saved hand activity'));
+    var playerKey=String(p.name||'').trim().toLocaleLowerCase(),handCount=0;
+    function belongs(name){return String(name||'').trim().toLocaleLowerCase()===playerKey;}
+    function list(value){return Array.isArray(value)?value:[];}
+    var ambiguous=Object.values(state.players).filter(function(player){return player&&belongs(player.name);}).length>1;
+    if(ambiguous)chipRecords.appendChild(node('p','pkr-quick-hint','Two current seats share this name. Hand records cannot be safely attributed to this player.'));
+    list(_pkrSeatHands).filter(function(hand){return !ambiguous&&hand&&!hand.voided;}).forEach(function(hand){
+      var entries=[];
+      list(hand.actions).filter(function(action){return action&&belongs(action.display_name);}).forEach(function(action){entries.push({label:action.action||'Wager',chips:action.chips});});
+      var result=hand.result||{};
+      list(result.pot_winners).filter(Boolean).forEach(function(pot){
+        list(pot.split_winners||[{winnerName:pot.winnerName,chips:pot.chips}]).filter(function(winner){return winner&&belongs(winner.winnerName);}).forEach(function(winner){entries.push({label:'Pot award',chips:winner.chips});});
+      });
+      list(result.uncalled_returns).filter(function(row){return row&&belongs(row.display_name);}).forEach(function(row){entries.push({label:'Uncalled return',chips:row.chips});});
+      if(!entries.length)return;
+      handCount++;
+      var details=node('details','pkr-chip-hand-record');
+      details.appendChild(node('summary','','Hand '+(hand.hand_no||'—')+' · '+entries.length+' recorded entries'));
+      entries.forEach(function(entry){chipLine(details,entry.label,Number.isSafeInteger(entry.chips)?entry.chips.toLocaleString('en-AU')+' chips':'Amount not recorded');});
+      chipRecords.appendChild(details);
+    });
+    if(!handCount&&!ambiguous)chipRecords.appendChild(node('p','pkr-quick-empty','No hand activity recorded for this player.'));
+    root.appendChild(chipRecords);
   }else if(_pkrPlayerPanelView==='transactions'){
     root.appendChild(node('h3','pkr-quick-page-heading','Transactions'));
     root.appendChild(node('p','pkr-quick-explainer',

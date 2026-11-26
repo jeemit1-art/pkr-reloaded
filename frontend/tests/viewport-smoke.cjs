@@ -546,12 +546,19 @@ async function test(){
          ?'.pkr-dual-hero':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
-         return {width:r.width,height:r.height,background:s.backgroundImage,
+         return {width:r.width,height:r.height,background:s.backgroundImage,colour:s.backgroundColor,
            art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
        });
        if(item.id==='insights'){
-         if(!visual.background.includes('linear-gradient'))
-           errors.push(size.name+' insights missing designed background');
+         if(visual.colour!=='rgb(255, 255, 255)'||visual.background!=='none')
+           errors.push(size.name+' Insights header must use the solid light app surface');
+         const insightsTheme=await page.locator('.pkr-vnext-insights').evaluate(node=>{
+           const card=node.querySelector('.pkr-insights-kpi');
+           return {background:getComputedStyle(node).backgroundColor,
+             card:card?getComputedStyle(card).backgroundColor:null};
+         });
+         if(insightsTheme.background!=='rgb(244, 246, 248)'||insightsTheme.card!=='rgb(255, 255, 255)')
+           errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
          if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
            errors.push(size.name+' '+item.id+' approved poker equipment artwork missing');

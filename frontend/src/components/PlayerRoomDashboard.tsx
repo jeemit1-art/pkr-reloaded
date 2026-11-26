@@ -123,7 +123,7 @@ export default function PlayerRoomDashboard({
   const goProfile=()=>onMyProfile?onMyProfile():router.push(roomUrl+'?tab=members&mine=profile');
   const goResults=()=>router.push('/results?room='+encodeURIComponent(room.id));
   const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&paymentsScope=mine');
-  const goPaymentGroup=(group:'pay'|'receive')=>router.push('/payments?room='+encodeURIComponent(room.id)+'&paymentsScope=mine&payments=outstanding&paymentGroup='+group);
+  const goPaymentGroup=(group:'pay'|'receive',status?:'payer_claimed')=>router.push('/payments?room='+encodeURIComponent(room.id)+'&paymentsScope=mine&payments=outstanding&paymentGroup='+group+(status?'&paymentStatus='+status:''));
   const goPaymentHistory=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=all&paymentsScope=mine');
   const openGame=(game:Game)=>router.push('/games/'+encodeURIComponent(game.id));
   const openResults=(game:Game)=>router.push(game.results_token
@@ -213,7 +213,7 @@ export default function PlayerRoomDashboard({
             <button type="button" className="pkr-record-action" aria-label="View underlying records: To pay" onClick={()=>goPaymentGroup('pay')}><span>To pay</span><strong className={owedCents>0?'gn-player-loss':'gn-player-neutral'}>{outstandingAmount(owedCents)}</strong></button>
             <button type="button" className="pkr-record-action" aria-label="View underlying records: To receive" onClick={()=>goPaymentGroup('receive')}><span>To receive</span><strong className={receivingCents>0?'gn-player-gain':'gn-player-neutral'}>{outstandingAmount(receivingCents)}</strong></button>
           </div>
-          {receiptsToConfirm>0&&<button type="button" className="gn-player-attention" onClick={goPayments}>
+          {receiptsToConfirm>0&&<button type="button" className="gn-player-attention" onClick={()=>goPaymentGroup('receive','payer_claimed')}>
             <span>{receiptsToConfirm===1?'1 receipt needs your confirmation':receiptsToConfirm+' receipts need your confirmation'}</span><span aria-hidden="true">›</span>
           </button>}
           {visible.length?<div className="gn-player-payment-list">{visible.map(({game,transfer})=><button type="button"

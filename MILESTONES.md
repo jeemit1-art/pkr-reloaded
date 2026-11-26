@@ -13,7 +13,7 @@ Follow-up to the Game night release, addressing reported mobile screenshots.
 
 - The mobile header is a fixed opaque surface, with safe-area padding and a separate content spacer. The installed iOS status bar requests the normal opaque style. The footer continues to cover the home-indicator area.
 - Both full dashboard layouts, player hover/focus rows, RSVP empty states, profile editors and record dialogs use the Game night palette and Inter.
-- Summary metrics open their saved records or their exact filtered on-page lists. This includes player/approval/game counts, results, RSVP groups, payment totals and live table bank records. Zero counts have honest empty states; incomplete history stays marked incomplete.
+- Summary metrics open their saved records or their exact filtered on-page lists. This includes player/approval/game counts, results, RSVP groups, payment totals/statuses, live table bank records and player transactions. Chip stacks show their separate saved chip issuance, stack audit and hand activity. Zero counts have honest empty states; incomplete history stays marked incomplete.
 - Interface symbols use a shared SVG set. Existing user avatars and photos are preserved.
 - Existing navigation, room layout choices, game controls, financial write gates and account actions are retained. This milestone includes no Worker or database changes.
 

@@ -50,6 +50,9 @@ assert.equal(filterPaymentOverview([paid,legacy],'mine','member',query('paymentG
  'A verified zero total has an empty underlying record set');
 assert.equal(filterPaymentOverview(records,'mine','member',query('paymentGroup=pay&paymentStatus=payer_claimed')).length,0);
 assert.equal(filterPaymentOverview(records,'mine','member',query('paymentGroup=receive&paymentSearch=Other')).length,0);
+const incomingDue=row('incoming-due','alex','member','owed');
+assert.deepEqual(filterPaymentOverview([...records,incomingDue],'mine','member',query('payments=outstanding&paymentGroup=receive&paymentStatus=payer_claimed'))
+ .map(r=>r.transfer.id),['incoming'],'Receipt-confirmation count excludes unclaimed incoming payments and all outgoing payments');
 assert.equal(paymentGameDay(Date.parse('2026-11-26T13:59:59Z')/1000),'2026-11-26');
 assert.equal(paymentGameDay(Date.parse('2026-11-26T14:00:00Z')/1000),'2026-11-27');
 assert.equal(filterPaymentOverview(records,'mine','member',query('paymentFrom=2026-11-27&paymentTo=2026-11-27')).length,4);

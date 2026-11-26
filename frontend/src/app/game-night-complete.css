@@ -69,6 +69,12 @@
     background:#FFF0EB!important;color:#A33D28!important;
   }
   html.pkr-game-night .pkr-dual-root .pkr-dual-account-popover>strong {color:#14242C!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-search {background:#EDF1F4!important;border-color:#C8D3DA!important;color:#5D6D75!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-search input {background:transparent!important;color:#14242C!important;font-family:var(--font-body),Inter,sans-serif!important}
+  html.pkr-game-night .pkr-dual-root :is(.pkr-dual-search input,.pkr-dual-account-search input)::placeholder {color:#5D6D75!important;opacity:1!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-account-search {color:#64727A!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-account-search input {background:#FFFFFF!important;color:#14242C!important;border-color:#BECBD2!important;min-height:44px!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-plan-pill {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important}
   html.pkr-game-night .pkr-dual-root .pkr-dual-account-trigger {
     background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important;
     box-shadow:none!important;min-width:44px;min-height:44px;
@@ -372,37 +378,48 @@
 
   /* Current-table bank totals open a scrollable, read-only record sheet. */
   html.pkr-game-night .pkr-dialog-root .pkr-bank-record-dialog .pkr-bank-record-sheet {
-    display:flex!important;flex-direction:column;min-height:0;width:min(100%,600px);
+    display:flex!important;flex-direction:column !important;min-height:0 !important;width:min(100%,600px) !important;
     max-height:calc(var(--pkr-visible-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 26px)!important;
     padding:0!important;overflow:hidden!important;background:#FFFFFF!important;color:#14242C!important;
-    border:1px solid #DFE5E9;border-radius:20px;box-shadow:0 18px 65px #14242C33;
-    font-family:var(--font-body),Inter,system-ui,sans-serif;
+    border:1px solid #DFE5E9 !important;border-radius:20px !important;box-shadow:0 18px 65px #14242C33 !important;
+    font-family:var(--font-body),Inter,system-ui,sans-serif !important;
   }
-  html.pkr-game-night .pkr-bank-record-sheet>header {display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px;border-bottom:1px solid #DFE5E9;flex:none;background:#FFFFFF}
-  html.pkr-game-night .pkr-bank-record-sheet>header>div {min-width:0}
-  html.pkr-game-night .pkr-bank-record-sheet>header small {color:#A33D28;font-size:10px;font-weight:700;letter-spacing:.12em}
-  html.pkr-game-night .pkr-bank-record-sheet h2 {font:700 clamp(22px,5vw,28px)/1.2 var(--font-body),Inter,sans-serif!important;color:#14242C!important;margin:7px 0!important;overflow-wrap:anywhere}
-  html.pkr-game-night .pkr-bank-record-sheet>header p {font-size:13px;line-height:1.5;color:#64727A;margin:0}
-  html.pkr-game-night .pkr-bank-record-sheet>header>button {min-height:44px;flex:none;padding:10px 13px;border:1px solid #C8D3DA;border-radius:10px;background:#EDF1F4;color:#334A54;font:600 13px var(--font-body),Inter,sans-serif;cursor:pointer;touch-action:manipulation}
-  html.pkr-game-night .pkr-bank-record-sheet .pkr-bank-record-list {overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0;padding:8px 14px}
-  html.pkr-game-night .pkr-bank-record-list>p {font-size:14px;color:#64727A;line-height:1.5;padding:12px 4px}
+  html.pkr-game-night .pkr-bank-record-sheet>header {display:flex !important;align-items:flex-start !important;justify-content:space-between !important;gap:14px !important;padding:20px !important;border-bottom:1px solid #DFE5E9 !important;flex:none !important;background:#FFFFFF !important}
+  html.pkr-game-night .pkr-bank-record-sheet>header>div {min-width:0 !important}
+  html.pkr-game-night .pkr-bank-record-sheet>header small {color:#A33D28 !important;font-size:10px !important;font-weight:700 !important;letter-spacing:.12em !important}
+  html.pkr-game-night .pkr-bank-record-sheet h2 {font:700 clamp(22px,5vw,28px)/1.2 var(--font-body),Inter,sans-serif!important;color:#14242C!important;margin:7px 0!important;overflow-wrap:anywhere !important}
+  html.pkr-game-night .pkr-bank-record-sheet>header p {font-size:13px !important;line-height:1.5 !important;color:#64727A !important;margin:0 !important}
+  html.pkr-game-night .pkr-bank-record-sheet>header>button {min-height:44px !important;flex:none !important;padding:10px 13px !important;border:1px solid #C8D3DA !important;border-radius:10px !important;background:#EDF1F4 !important;color:#334A54 !important;font:600 13px var(--font-body),Inter,sans-serif !important;cursor:pointer !important;touch-action:manipulation !important}
+  html.pkr-game-night .pkr-bank-record-sheet .pkr-bank-record-list {overflow-y:auto !important;overscroll-behavior:contain !important;-webkit-overflow-scrolling:touch !important;min-height:0 !important;padding:8px 14px !important}
+  html.pkr-game-night .pkr-bank-record-list>p {font-size:14px !important;color:#64727A !important;line-height:1.5 !important;padding:12px 4px !important}
   html.pkr-game-night .pkr-bank-record-sheet .pkr-bank-record-row {
-    display:flex;width:100%;min-height:66px;align-items:center;gap:12px;padding:13px 7px;
-    border:0;border-bottom:1px solid #DFE5E9;background:#FFFFFF;color:#14242C;
-    text-align:left;cursor:pointer;touch-action:manipulation;font-family:inherit;
+    display:flex !important;width:100% !important;min-height:66px !important;align-items:center !important;gap:12px !important;padding:13px 7px !important;
+    border:0 !important;border-bottom:1px solid #DFE5E9 !important;background:#FFFFFF !important;color:#14242C !important;
+    text-align:left !important;cursor:pointer !important;touch-action:manipulation !important;font-family:inherit !important;
   }
-  html.pkr-game-night .pkr-bank-record-sheet .pkr-bank-record-row:hover {background:#F4F6F8}
-  html.pkr-game-night .pkr-bank-record-row>span {display:grid;gap:5px;flex:1;min-width:0}
-  html.pkr-game-night .pkr-bank-record-row strong {color:#14242C;font-size:14px;font-weight:650;overflow-wrap:anywhere}
-  html.pkr-game-night .pkr-bank-record-row small {color:#64727A;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-  html.pkr-game-night .pkr-bank-record-row b {color:#14242C;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
-  html.pkr-game-night .pkr-bank-record-row>.pkr-glyph {color:#A33D28}
-  html.pkr-game-night .pkr-bank-record-list .pkr-bank-record-warning {background:#FFF4DD;color:#805815;border:1px solid #E5CE9B;border-radius:10px;padding:12px;margin:8px 0}
-  html.pkr-game-night .pkr-bank-record-sheet>footer {flex:none;background:#FFFFFF;border-top:1px solid #DFE5E9;color:#64727A;font-size:12px;line-height:1.5;padding:14px 20px calc(14px + env(safe-area-inset-bottom))}
-  html.pkr-game-night #gameScreen #bankPanel button.bank-cell {appearance:none;text-align:left;cursor:pointer;font-family:inherit;font-size:inherit;font-weight:inherit;border:0;touch-action:manipulation;min-height:70px}
+  html.pkr-game-night .pkr-bank-record-sheet .pkr-bank-record-row:hover {background:#F4F6F8 !important}
+  html.pkr-game-night .pkr-bank-record-row>span {display:grid !important;gap:5px !important;flex:1 !important;min-width:0 !important}
+  html.pkr-game-night .pkr-bank-record-row strong {color:#14242C !important;font-size:14px !important;font-weight:650 !important;overflow-wrap:anywhere !important}
+  html.pkr-game-night .pkr-bank-record-row small {color:#64727A !important;font-size:12px !important;line-height:1.5 !important;overflow-wrap:anywhere !important}
+  html.pkr-game-night .pkr-bank-record-row b {color:#14242C !important;font-size:14px !important;white-space:nowrap !important;font-variant-numeric:tabular-nums !important}
+  html.pkr-game-night .pkr-bank-record-row>.pkr-glyph {color:#A33D28 !important}
+  html.pkr-game-night .pkr-bank-record-list .pkr-bank-record-warning {background:#FFF4DD !important;color:#805815 !important;border:1px solid #E5CE9B !important;border-radius:10px !important;padding:12px !important;margin:8px 0 !important}
+  html.pkr-game-night .pkr-bank-record-sheet>footer {flex:none !important;background:#FFFFFF !important;border-top:1px solid #DFE5E9 !important;color:#64727A !important;font-size:12px !important;line-height:1.5 !important;padding:14px 20px calc(14px + env(safe-area-inset-bottom)) !important}
+  html.pkr-game-night #gameScreen #bankPanel button.bank-cell {appearance:none !important;text-align:left !important;cursor:pointer !important;font-family:inherit !important;font-size:inherit !important;font-weight:inherit !important;border:0 !important;touch-action:manipulation !important;min-height:70px !important}
   html.pkr-game-night #gameScreen #bankPanel button.bank-cell:nth-child(-n+2) {border-bottom:1px solid #344B57!important}
   html.pkr-game-night #gameScreen #bankPanel button.bank-cell:nth-child(odd) {border-right:1px solid #344B57!important}
   html.pkr-game-night #gameScreen #bankPanel button.bank-cell:hover {background:#20343F!important}
+  html.pkr-game-night #gameScreen button.pkr-quick-metric {appearance:none !important;position:relative!important;text-align:left !important;font-family:inherit !important;cursor:pointer !important;touch-action:manipulation !important;padding-right:24px!important}
+  html.pkr-game-night #gameScreen button.pkr-quick-metric::after {content:'›';position:absolute;top:10px;right:10px;color:#FFAD96;font-size:18px;line-height:1}
+  html.pkr-game-night #gameScreen button.pkr-quick-metric:is(:hover,:focus-visible) {border-color:#F27457!important}
+  html.pkr-game-night #gameScreen button.pkr-quick-metric:focus-visible {outline:2px solid #F27457!important;outline-offset:2px !important}
+  html.pkr-game-night #gameScreen .pkr-chip-records {display:grid !important;gap:8px !important;color:#D2DDE2 !important;font-size:12px !important;line-height:1.5 !important}
+  html.pkr-game-night #gameScreen .pkr-chip-records h4 {margin:10px 0 2px !important;color:#F4F6F8 !important}
+  html.pkr-game-night #gameScreen .pkr-chip-record-row {display:flex !important;align-items:baseline !important;justify-content:space-between !important;gap:14px !important;padding:8px 0 !important;border-bottom:1px solid #344B57 !important}
+  html.pkr-game-night #gameScreen .pkr-chip-record-row strong {color:#F4F6F8 !important;text-align:right !important;font-variant-numeric:tabular-nums !important}
+  html.pkr-game-night #gameScreen .pkr-chip-hand-record {border:1px solid #425C68 !important;border-radius:10px !important;padding:0 10px !important;background:#20343F !important}
+  html.pkr-game-night #gameScreen .pkr-chip-hand-record summary {min-height:44px !important;padding:12px 0 !important;cursor:pointer !important;color:#F4F6F8 !important;box-sizing:border-box !important}
+  html.pkr-game-night #gameScreen .pkr-chip-hand-record summary:focus-visible {outline:2px solid #F27457 !important;outline-offset:2px !important}
 
   /* Profile controls are another independently styled, retained app overlay. */
   html.pkr-game-night .pkr-player-profile-sheet {background:#FFFFFF!important;color:#14242C!important;border-color:#DFE5E9!important;box-shadow:0 18px 65px #14242C33!important}
@@ -509,4 +526,115 @@
   html.pkr-game-night .pkr-app .pkr-experience-command-stat>span,
   html.pkr-game-night .pkr-app .pkr-experience-live-metric>small,
   html.pkr-game-night .pkr-night-hub .pkr-night-stats :is(small,span) {color:#5D6D75!important}
+
+  html.pkr-game-night .pkr-results-page .pkr-results-kpi-icon {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important;box-shadow:none!important}
+
+  /* Insights is a standalone main, outside .pkr-app and the Payments wrapper. */
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) {
+    color-scheme:light!important;background:#F4F6F8!important;color:#14242C!important;
+    --bg:#F4F6F8!important;--bg2:#FFFFFF!important;--bg3:#EDF1F4!important;
+    --white:#14242C!important;--ivory:#334A54!important;--muted:#5D6D75!important;
+    --gold:#A33D28!important;--gold-pale:#A33D28!important;--gold-dim:#DFE5E9!important;
+    --green:#147856!important;--red:#BE3949!important;--border:#DFE5E9!important;
+    --border-sub:#DFE5E9!important;--border-hi:#BECBD2!important;
+    --pkr-a-bg:#F4F6F8!important;--pkr-a-surface:#FFFFFF!important;--pkr-a-raised:#EDF1F4!important;
+    --pkr-a-text:#14242C!important;--pkr-a-muted:#5D6D75!important;--pkr-a-line:#DFE5E9!important;
+    --pkr-a-primary:#F27457!important;--pkr-a-on-primary:#14242C!important;--pkr-a-money:#14242C!important;
+    --pkr-a-positive:#147856!important;--pkr-a-negative:#BE3949!important;--pkr-a-danger:#BE3949!important;
+    --pkr-ex-bg:#F4F6F8!important;--pkr-ex-page:#F4F6F8!important;--pkr-ex-surface:#FFFFFF!important;
+    --pkr-ex-surface-2:#EDF1F4!important;--pkr-ex-surface-grad:#FFFFFF!important;--pkr-ex-ink:#14242C!important;
+    --pkr-ex-secondary:#5D6D75!important;--pkr-ex-border:#DFE5E9!important;
+    --pkr-ex-accent:#A33D28!important;--pkr-ex-accent-light:#A33D28!important;--pkr-ex-accent-ink:#14242C!important;
+    font-family:var(--font-body),Inter,system-ui,sans-serif!important;font-variant-numeric:tabular-nums;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(h1,h2,h3,strong,b,button,select) {
+    font-family:var(--font-body),Inter,system-ui,sans-serif!important;text-shadow:none!important;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-vnext-insights-top,.pkr-vnext-card,.pkr-insights-kpi,.pkr-insights-player-mobile-row,.pkr-insights-balance-row) {
+    background:#FFFFFF!important;color:#14242C!important;border-color:#DFE5E9!important;box-shadow:none!important;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-insights-stats {
+    background:transparent!important;border:0!important;box-shadow:none!important;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-intro h1,.pkr-vnext-card-heading h2,.pkr-insights-kpi-copy>strong,.pkr-insights-balance-tiles strong,.pkr-insights-payment-summary strong,.pkr-vnext-game-row strong,.pkr-insights-player-mobile-info strong,.pkr-insights-balance-row>strong,.pkr-vnext-bar-column strong) {color:#14242C!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-intro>p,.pkr-vnext-insights-top p,.pkr-insights-selector label,.pkr-insights-kpi-copy>small,.pkr-insights-kpi-copy>em,.pkr-insights-balance-tiles span,.pkr-insights-balance-tiles small,.pkr-insights-payment-summary span,.pkr-insights-payment-summary p,.pkr-vnext-card-heading p,.pkr-vnext-card-heading>span,.pkr-vnext-empty,.pkr-vnext-muted,.pkr-insights-loader,.pkr-vnext-game-row small,.pkr-insights-player-mobile-info small,.pkr-insights-upcoming-note,.pkr-insights-balance-row>small,.pkr-insights-payment-help,.pkr-insights-bulk-actions>span,.pkr-insights-pagination>span) {color:#5D6D75!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-eyebrow,.pkr-insights-history-hint) {color:#A33D28!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-kpi-icon,.pkr-insights-kpi-icon.gold,.pkr-insights-rank,.pkr-insights-avatar) {
+    background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important;box-shadow:none!important;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-balance-tiles>div,.pkr-insights-payment-summary>div,.pkr-insights-settle-tabs,.pkr-vnext-performance-row>div) {background:#EDF1F4!important;border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-metric-trigger,.pkr-record-action) {background:transparent!important;color:inherit!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-kpi,.pkr-insights-balance-tiles>div,.pkr-insights-payment-summary>div):has(>.pkr-metric-trigger):is(:hover,:focus-within) {border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(select,.pkr-payment-row-actions button,.pkr-settlement-record-filters button,.pkr-insights-settle-tabs button,.pkr-insights-pagination button,.pkr-insights-bulk-actions button,.pkr-vnext-card-heading button,.pkr-settlement-incomplete-games button,.pkr-settlement-incomplete-retry) {
+    background:#FFFFFF!important;color:#334A54!important;border-color:#BECBD2!important;box-shadow:none!important;min-height:44px!important;
+  }
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-settlement-record-filters button.active,.pkr-insights-settle-tabs button[aria-selected=true]) {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-insights-bulk-actions .btn-primary {background:#F27457!important;color:#14242C!important;border-color:#F27457!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-settlement-record-filters button span {background:#EDF1F4!important;color:#334A54!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(button,select,input):focus-visible {outline:2px solid #A33D28!important;outline-offset:3px!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-data-table :is(th,td) {background:#FFFFFF!important;color:#14242C!important;border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-data-table th {background:#EDF1F4!important;color:#5D6D75!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-data-table tr:hover td,
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-vnext-game-row,.pkr-insights-balance-row,.pkr-insights-player-mobile-row):is(:hover,:focus-within) {background:#F4F6F8!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-game-row {background:transparent!important;color:#14242C!important;border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-payment-status-select.paid,.pkr-vnext-status.paid) {background:#EAF5EF!important;color:#147856!important;border-color:#B9D9CB!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-payment-status-select.pending,.pkr-vnext-status.pending) {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-payment-status-select.not-received {background:#FBEFF1!important;color:#BE3949!important;border-color:#E8C5CB!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-insights-payment-notice,.pkr-settlement-incomplete,.pkr-vnext-warning) {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-settlement-incomplete-detail p,.pkr-settlement-review-hint) {color:#5D6D75!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-bar-column {color:#5D6D75!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-bar-column>div {border-color:#BECBD2!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-insights-trend .pkr-vnext-bar-column i {background:#F27457!important;border-color:#A33D28!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-performance-row i.gain {background:#147856!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-performance-row i.loss {background:#BE3949!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-insights-kpi-copy:has(>.pkr-insights-kpi-winner)>em {color:#147856!important}
+  /* Money tones override the neutral table and button surfaces above. */
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-positive,
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-data-table td.pkr-vnext-positive,
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-positive>.pkr-metric-trigger {color:#147856!important}
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) :is(.pkr-vnext-negative,.pkr-insights-alert),
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-data-table td.pkr-vnext-negative,
+  html.pkr-game-night .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-vnext-negative>.pkr-metric-trigger {color:#BE3949!important}
+
+  /* Retained room standings and their history sheet use the same light palette. */
+  html.pkr-game-night :is(.pkr-standings-board,.pkr-player-history-dialog) {
+    color:#14242C!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;
+    --bg2:#FFFFFF!important;--bg3:#EDF1F4!important;--white:#14242C!important;
+    --ivory:#334A54!important;--muted:#5D6D75!important;--faint:#5D6D75!important;
+    --gold:#A33D28!important;--green:#147856!important;--red:#BE3949!important;
+    --border-sub:#DFE5E9!important;--border-hi:#BECBD2!important;
+    --font-display:var(--font-body)!important;--font-num:var(--font-body)!important;
+  }
+  html.pkr-game-night .pkr-standings-board :is(h2,h3,strong,b,button,input,select) {font-family:var(--font-body),Inter,system-ui,sans-serif!important;text-shadow:none!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-heading h2,.pkr-standings-summary strong,.pkr-standings-podium-card>strong,.pkr-standings-player>strong,.pkr-standings-empty h3) {color:#14242C!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-heading p,.pkr-standings-summary span,.pkr-standings-podium-card>small,.pkr-standings-toolbar label,.pkr-standings-toolbar label>span,.pkr-standings-player>small,.pkr-standings-money>small,.pkr-standings-footnote,.pkr-standings-empty p) {color:#5D6D75!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-eyebrow,.pkr-standings-rank-label,.pkr-standings-row-rank,.pkr-standings-open) {color:#A33D28!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-summary>div,.pkr-standings-podium-card,.pkr-standings-row,.pkr-standings-empty) {background:#FFFFFF!important;color:#14242C!important;border-color:#DFE5E9!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-podium-1 {background:#FFF0EB!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-podium-card,.pkr-standings-row):hover {background:#F4F6F8!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-summary>.pkr-metric-trigger,
+  html.pkr-game-night .pkr-standings-board .pkr-standings-summary .pkr-metric-trigger {background:transparent!important;color:inherit!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-summary>div:has(>.pkr-metric-trigger):is(:hover,:focus-within) {border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-updated,.pkr-standings-medal) {background:#FFF0EB!important;color:#A33D28!important;border-color:#E9C5B8!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-avatar:not(:has(img)) {background:#EDF1F4!important;color:#334A54!important;border-color:#BECBD2!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-toolbar input[type=search],.pkr-standings-toolbar select,.pkr-standings-minimum) {background:#FFFFFF!important;color:#334A54!important;border-color:#BECBD2!important;min-height:44px!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-toolbar input::placeholder {color:#64727A!important;opacity:1!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-minimum input {accent-color:#F27457!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-empty button {background:#EDF1F4!important;color:#334A54!important;border-color:#BECBD2!important;min-height:44px!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-track {background:#DFE5E9!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-track .gain {background:#147856!important}
+  html.pkr-game-night .pkr-standings-board .pkr-standings-track .loss {background:#BE3949!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-money,.pkr-standings-podium-card) .gain {color:#147856!important}
+  html.pkr-game-night .pkr-standings-board :is(.pkr-standings-money,.pkr-standings-podium-card) .loss {color:#BE3949!important}
+  html.pkr-game-night :is(.pkr-standings-board,.pkr-player-history-dialog) :is(button,input,select,a):focus-visible {outline:2px solid #A33D28!important;outline-offset:3px!important}
+  html.pkr-game-night .pkr-player-history-dialog {background:#FFFFFF!important;border-color:#DFE5E9!important;box-shadow:0 18px 65px #14242C33!important}
+  html.pkr-game-night .pkr-player-history-dialog .pkr-profile-stats>div {background:#EDF1F4!important;border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-player-history-dialog .pkr-profile-stats small {color:#5D6D75!important}
+  html.pkr-game-night .pkr-player-history-dialog .pkr-profile-stats strong {color:#14242C!important}
+  html.pkr-game-night .pkr-player-history-dialog button[data-pkr-player-close] {background:#EDF1F4!important;color:#334A54!important;min-height:44px!important;min-width:44px!important}
+  html.pkr-game-night .pkr-player-history-dialog>div>button {border-color:#DFE5E9!important;color:#14242C!important}
+  html.pkr-game-night .pkr-player-history-dialog>div>button:hover {background:#F4F6F8!important}
+  html.pkr-game-night .pkr-player-history-dialog :is(.pkr-money-positive,.pkr-profile-stats strong.pkr-money-positive) {color:#147856!important}
+  html.pkr-game-night .pkr-player-history-dialog :is(.pkr-money-negative,.pkr-profile-stats strong.pkr-money-negative) {color:#BE3949!important}
+  html.pkr-game-night .pkr-player-history-dialog :is(.pkr-money-neutral,.pkr-profile-stats strong.pkr-money-neutral) {color:#14242C!important}
 }
