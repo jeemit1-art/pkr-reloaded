@@ -98,7 +98,7 @@ club.post('/events/:id/date-polls',authMiddleware,async c=>{
     const res=await c.env.DB.prepare(
       "INSERT INTO room_date_polls(id,event_id,title,options_json,closes_at,created_by) "+
       "VALUES(?,?,?,?,?,?)"
-    ).bind(id,eventId,title,JSON.stringify(options),closes,c.get('userId')).run();
+    ).bind(id,eventId,title,JSON.stringify(options),Number(closes),c.get('userId')).run();
     if(!res.meta.changes)return c.json({error:'Poll was not created'},409);
     c.header('Cache-Control','private, no-store');
     return c.json({ok:true,id},201);
@@ -126,7 +126,7 @@ club.put('/events/:id/date-polls/:pollId/vote',authMiddleware,async c=>{
       "INSERT INTO room_date_poll_votes(poll_id,user_id,option_index) "+
       "SELECT id,?,? FROM room_date_polls WHERE id=? AND event_id=? AND status='open' AND closes_at>unixepoch() "+
       "ON CONFLICT(poll_id,user_id) DO UPDATE SET option_index=excluded.option_index,updated_at=unixepoch()"
-    ).bind(c.get('userId'),choice,pollId,eventId).run();
+    ).bind(c.get('userId'),Number(choice),pollId,eventId).run();
     if(!updated.meta.changes)return c.json({error:'Voting has closed'},409);
     return c.json({ok:true,option_index:choice});
   }catch(e){return fail(c,e);}
@@ -148,7 +148,7 @@ club.post('/events/:id/date-polls/:pollId/close',authMiddleware,async c=>{
     const changed=await c.env.DB.prepare(
       "UPDATE room_date_polls SET status='closed',selected_index=?,updated_at=unixepoch() "+
       "WHERE id=? AND event_id=? AND status='open'"
-    ).bind(choice,pollId,eventId).run();
+    ).bind(choice===null?null:Number(choice),pollId,eventId).run();
     if(!changed.meta.changes)return c.json({error:'Poll was already closed'},409);
     // Scheduling is deliberately separate: the existing paid-host and game
     // creation controls are never bypassed by closing a date poll.
@@ -320,7 +320,7 @@ club.post('/games/:id/member-requests',authMiddleware,async c=>{
   if(!game)return c.json({error:'Room membership required'},403);
   if(game.status!=='active')return c.json({error:'Requests open only while a game is live'},409);
   const raw=await c.req.json().catch(()=>null) as {kind?:unknown;note?:unknown}|null;
-  const kind=raw?.kind;
+  const kind=String(raw?.kind||'');
   const note=typeof raw?.note==='string'?raw.note.trim():'';
   if(!['buyin','cashout','tournament_rebuy','addon'].includes(String(kind))||
     note.length>180||/[\u0000-\u001f<>]/.test(note))
@@ -348,7 +348,7 @@ club.put('/games/:id/member-requests/:requestId',authMiddleware,async c=>{
   const game=await gameMember(c,c.req.param('id'),'cohost');
   if(!game)return c.json({error:'Host or co-host permission required'},403);
   const raw=await c.req.json().catch(()=>null) as {status?:unknown}|null;
-  const next=raw?.status;
+  const next=String(raw?.status||'');
   if(!['approved','declined','resolved'].includes(String(next)))
     return c.json({error:'Choose approve, decline or resolve'},400);
   try{
@@ -401,7 +401,7 @@ club.post('/events/:id/seasons',authMiddleware,async c=>{
     await c.env.DB.prepare(
       'INSERT INTO room_league_seasons(id,event_id,name,starts_at,ends_at,'+
       'points_first,points_second,points_third,points_other,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)'
-    ).bind(id,eventId,name,start,end,points.first,points.second,points.third,
+    ).bind(id,eventId,name,Number(start),Number(end),points.first,points.second,points.third,
       points.other,c.get('userId')).run();
     return c.json({ok:true,id},201);
   }catch(e){return fail(c,e);}
