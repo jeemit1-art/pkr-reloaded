@@ -11,6 +11,13 @@
     html.pkr-game-night:has(.pkr-primary-mobile-utility){
       scroll-padding-top:calc(var(--pkr-mobile-header-height) + 12px);
     }
+    /* Installed Safari may paint its system-owned inset from the page canvas.
+       Match that canvas to the header; route panels retain their own colours. */
+    html.pkr-game-night:has(.pkr-primary-mobile-utility),
+    html.pkr-game-night:has(.pkr-primary-mobile-utility) body{
+      background:#FFFFFF!important;
+      background-image:none!important;
+    }
     html.pkr-game-night .pkr-primary-mobile-utility{
       position:fixed!important;
       inset:0 0 auto 0!important;
@@ -30,8 +37,8 @@
       isolation:isolate;
       overflow:visible!important;
     }
-    /* Continue the same solid surface into iOS's unsafe area when the viewport
-       origin is inset by the installed-app status bar. No content can show through. */
+    /* Extend the same surface through CSS safe-area space. Native status-area
+       colour is supplied by the matching page canvas and theme metadata. */
     html.pkr-game-night .pkr-primary-mobile-utility::before{
       content:"";
       position:absolute;

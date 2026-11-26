@@ -125,12 +125,34 @@ async function closeSheet(page){
  await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
 }
 async function screenshot(page,name){await page.screenshot({path:path.join(output,name+'.png'),fullPage:false});}
+const fixtureApiActivity=new WeakMap();
+function observeFixtureApi(page){
+ const activity={pending:new Set(),changedAt:Date.now()};fixtureApiActivity.set(page,activity);
+ page.on('request',request=>{
+  if(new URL(request.url()).origin===API){activity.pending.add(request);activity.changedAt=Date.now();}
+ });
+ const completed=request=>{if(activity.pending.delete(request))activity.changedAt=Date.now();};
+ page.on('requestfinished',completed);page.on('requestfailed',completed);
+}
+async function waitForFixtureApi(page){
+ const activity=fixtureApiActivity.get(page);assert(activity,'Synthetic API observation must be installed before navigation');
+ const started=Date.now();
+ // Require a NEW quiet period, including React work queued by the previous
+ // action. An earlier document load-state notification is not a data-ready gate.
+ while(activity.pending.size||Date.now()-Math.max(started,activity.changedAt)<250){
+  assert(Date.now()-started<10000,'Synthetic API requests did not settle: '+
+    [...activity.pending].map(request=>request.method()+' '+request.url()).join(', '));
+  await new Promise(resolve=>setTimeout(resolve,25));
+ }
+}
 async function gotoFixturePage(page,url){
  // These deliberately start fresh documents. Let the routed API/preflight chain
  // finish first so WebKit does not cancel an old document's mocked fetches.
- await page.waitForLoadState('networkidle',{timeout:10000});
+ // Real app button navigations stay untouched and retain all error assertions.
+ await waitForFixtureApi(page);
  await page.goto(url,{waitUntil:'domcontentloaded'});
  await page.waitForLoadState('networkidle',{timeout:10000});
+ await waitForFixtureApi(page);
 }
 
 async function checkFullDashboards(page,state,label){
@@ -285,7 +307,12 @@ async function checkRsvps(page,state,label){
  assert.equal(await page.locator('#pkr-unmatched-rsvp-rows .pkr-night-followup strong').innerText(),'Taylor Reed');
  assert(await page.locator('#pkr-unmatched-rsvp-rows').evaluate(element=>element===document.activeElement));
  await page.getByRole('button',{name:'View seat availability: 6 of 8 places',exact:true}).click();
- await page.waitForURL('**/games/'+upcoming.id+'/rsvp');await page.locator('.pkr-guest').waitFor();
+ await page.waitForURL('**/games/'+upcoming.id+'/rsvp');
+ // .pkr-guest also exists on the loading skeleton. Verify the actual board and
+ // its role-dependent controls before the fixture replaces this document.
+ await page.locator('.pkr-guest-hero').getByRole('heading',{name:room.name,exact:true}).waitFor();
+ assert.equal(await page.locator('.pkr-guest-stats > div').last().locator('strong').innerText(),'6');
+ await page.getByRole('region',{name:'RSVP settings',exact:true}).waitFor();
 }
 
 async function checkPayments(page,state,label){
@@ -344,7 +371,7 @@ async function run(){
     await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'},body:JSON.stringify(response)});
    }catch(error){unexpected.push(error.message);await route.abort();}
   });
-  const page=await context.newPage();page.setDefaultTimeout(20000);
+  const page=await context.newPage();page.setDefaultTimeout(20000);observeFixtureApi(page);
   page.on('pageerror',error=>unexpected.push(new Date().toISOString()+' '+page.url()+': '+(error.stack||error.message)));
   page.on('requestfailed',request=>{if(new URL(request.url()).origin===API)requestFailures.push({at:new Date().toISOString(),page:page.url(),url:request.url(),method:request.method(),error:request.failure()?.errorText});});
   try{

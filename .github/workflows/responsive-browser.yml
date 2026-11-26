@@ -46,6 +46,7 @@ jobs:
           node tests/tournament-structure.cjs
           node tests/gameplay-safety.cjs
           node tests/seat-stack-ledger.cjs
+          node tests/app-version.cjs
       - name: Build and type-check the actual application
         working-directory: frontend
         run: npm run build
@@ -69,7 +70,7 @@ jobs:
         working-directory: frontend
         run: |
           failed=0
-          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive game-night-polish viewport-smoke; do
+          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive game-night-polish app-release-updates viewport-smoke; do
             echo "::group::${suite}"
             if ! node "tests/${suite}.cjs"; then
               echo "::error::Browser suite failed: ${suite}"

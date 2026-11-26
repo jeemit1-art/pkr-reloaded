@@ -21,7 +21,7 @@ import PersistentNavigation from '@/components/PersistentNavigation';
 const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#FFFFFF', colorScheme:'light dark',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#FFFFFF', colorScheme:'light',
 };
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
