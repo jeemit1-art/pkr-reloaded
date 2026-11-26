@@ -75,7 +75,8 @@ async function run(engine){
       assert.equal(await page.getByText('PKR Instant',{exact:true}).count(),0,
         'Legacy link must not open a second player experience');
       if(authorised){
-        await page.getByText('Second Test Club',{exact:false}).first().waitFor();
+        // Target the actual player dashboard; the mobile-hidden desktop sidebar also has this text.
+        await page.locator('[data-testid="player-dashboard"]').getByText('Second Test Club',{exact:false}).first().waitFor({state:'visible'});
         await page.locator('[data-testid="unified-player-rsvp"]').waitFor();
         await page.getByText('My payments',{exact:true}).first().waitFor();
         await page.getByRole('button',{name:'Results',exact:true}).first().waitFor();
