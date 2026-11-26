@@ -21,12 +21,6 @@ type ExpenseRow={id:string;event_id:string;game_id:string|null;category:string;
 async function authorised(c:any,eventId:string,role:'member'|'cohost'|'host'='member'){
   return await requireEventRole(c,eventId,role);
 }
-async function expenseFor(c:any,eventId:string,expenseId:string){
-  return c.env.DB.prepare(
-    'SELECT id,event_id,game_id,category,title,notes,amount_cents,paid_by_user_id,created_by,status,created_at '+
-    'FROM room_shared_expenses WHERE id=? AND event_id=?'
-  ).bind(expenseId,eventId).first<ExpenseRow>();
-}
 
 extras.get('/events/:id/shared-expenses',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
