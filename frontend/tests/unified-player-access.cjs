@@ -38,11 +38,13 @@ async function run(engine){
         else if(method==='GET'&&p==='/events/room-one/history')data=[];
         else if(method==='GET'&&p==='/events/room-one/leaderboard')data=[];
         else if(method==='GET'&&p==='/events/room-one/settlement-ledger')data={games:[],transfers:[]};
+        else if(method==='GET'&&p==='/events/room-one/dashboard-layout')data={event_id:'room-one',layout:'command',updated_at:null};
         else if(authorised&&method==='GET'&&p==='/events/room-two')data={...secondRoom,members:[]};
         else if(authorised&&method==='GET'&&p==='/events/room-two/games')data=[game];
         else if(authorised&&method==='GET'&&p==='/events/room-two/history')data=[];
         else if(authorised&&method==='GET'&&p==='/events/room-two/leaderboard')data=[];
         else if(authorised&&method==='GET'&&p==='/events/room-two/settlement-ledger')data={games:[],transfers:[]};
+        else if(authorised&&method==='GET'&&p==='/events/room-two/dashboard-layout')data={event_id:'room-two',layout:'command',updated_at:null};
         else if(authorised&&method==='GET'&&p==='/games/upcoming-two/rsvp-board')data={
           event:secondRoom,game,version:1,guests,players:[],options:['19:00']};
         else if(authorised&&method==='POST'&&p==='/games/upcoming-two/rsvp-board'){
