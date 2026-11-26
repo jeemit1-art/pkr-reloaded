@@ -96,29 +96,63 @@
 }
 
 
-/* One responsive club/Account header (dashboard, games, results and payments).
-   The installed iOS status bar owns the safe-area above it; the utility itself
-   reserves that inset once, while remaining in document flow when sticky. */
+/* The footer-style top bar must cover the complete viewport safe area.
+   Sticky left the status bar transparent in iOS standalone mode, so cards
+   could scroll behind it. Use one opaque, fixed header and reserve its height
+   exactly once on the body, only while signed-in navigation is mounted.
+   A CSS variable allows the safe-area inset to be tested without a real notch. */
 @media(max-width:1099px){
+  :root{
+    --pkr-primary-safe-top:env(safe-area-inset-top,0px);
+    --pkr-primary-header-row:56px;
+    --pkr-primary-header-height:calc(var(--pkr-primary-header-row) + var(--pkr-primary-safe-top));
+  }
+  body:has(.pkr-primary-mobile-utility){
+    padding-top:var(--pkr-primary-header-height)!important;
+  }
+  html:has(.pkr-primary-mobile-utility){
+    scroll-padding-top:calc(var(--pkr-primary-header-height) + 12px);
+  }
   .pkr-primary-mobile-utility{
     box-sizing:border-box;
-    position:sticky!important;
-    inset:auto!important;
-    top:0!important;
-    z-index:240!important;
-    width:100%;
-    max-width:100%;
-    min-height:calc(56px + env(safe-area-inset-top))!important;
-    padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
-      6px max(12px,env(safe-area-inset-left))!important;
+    position:fixed!important;
+    inset:0 0 auto 0!important;
+    z-index:340!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:var(--pkr-primary-header-height)!important;
+    min-height:var(--pkr-primary-header-height)!important;
+    padding:var(--pkr-primary-safe-top) max(12px,env(safe-area-inset-right))
+      0 max(12px,env(safe-area-inset-left))!important;
     display:flex;
     flex-wrap:nowrap;
     align-items:center;
     gap:clamp(5px,1.6vw,12px);
-    background:#0b2018!important;
-    border-bottom:1px solid #43624e;
+    background:#101a1d!important;
+    background-image:none!important;
+    border-bottom:1px solid #314449!important;
+    box-shadow:0 6px 22px #0007!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    opacity:1!important;
+    transform:none!important;
     overflow:visible;
     isolation:isolate;
+  }
+  .pkr-primary-mobile-mark{color:#6ddfa9!important}
+  .pkr-primary-mobile-utility .pkr-primary-club-name{
+    color:#e6eeec!important;
+    background:transparent!important;
+  }
+  .pkr-primary-mobile-utility select{
+    background:#19292c!important;
+    border-color:#45585b!important;
+    color:#e6eeec!important;
+  }
+  .pkr-primary-mobile-utility .pkr-primary-account{
+    background:#19292c!important;
+    border-color:#45585b!important;
+    color:#e6eeec!important;
   }
   .pkr-primary-mobile-mark{flex:0 0 24px;line-height:1;text-align:center}
   .pkr-primary-mobile-utility select,
@@ -149,7 +183,7 @@
   .pkr-app.pkr-event>.pkr-topbar{display:none!important}
   :is(#pkr-my-payments,#pkr-player-rsvp,#pkr-rooms,
       .pkr-room-games-intro,.pkr-rsvp-settings){
-    scroll-margin-top:calc(68px + env(safe-area-inset-top));
+    scroll-margin-top:calc(var(--pkr-primary-header-height) + 12px);
   }
 }
 @media(max-width:359px){
