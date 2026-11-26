@@ -7,6 +7,7 @@ import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import {loadRoomTransfers,outstandingRoomTransfers,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import PlayerGameNightAccess from './PlayerGameNightAccess';
 import ClubEngagementPanel from './ClubEngagementPanel';
+import ClubExtrasPanel from './ClubExtrasPanel';
 import './PlayerRoomDashboard.css';
 
 type Props={
@@ -150,6 +151,8 @@ export default function PlayerRoomDashboard({
       <PlayerGameNightAccess key={next.id} game={next} memberName={memberName||''}/>
     </div>}
     {!paymentsOnly&&<ClubEngagementPanel eventId={room.id} game={next} isHost={false}/>}
+    {!paymentsOnly&&<ClubExtrasPanel eventId={room.id} games={games} isManager={false}
+      isOwner={false} userId={memberId}/>}
     {!paymentsOnly&&<nav className="pkr-player-actions" aria-label="Player actions">
       <button type="button" onClick={showRsvp}><b>✋</b><strong>My RSVP</strong><small>Arrival and seat</small></button>
       <button type="button" onClick={goPayments}><b>⇄</b><strong>Payments</strong><small>Pay or confirm</small></button>
