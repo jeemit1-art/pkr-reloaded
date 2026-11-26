@@ -359,7 +359,22 @@ function DashboardInner() {
   },[events]);
   const archivedRooms = events.filter(evt => evt.status === 'ended');
   // Exclude ended rooms from active/featured dashboard content by default.
-  const featuredRoom = activeRooms.find(room=>room.id===preferredRoomId)||activeRooms[0]||null;
+  // A legacy PKR Instant or WhatsApp member link selects only an authorised room.
+  const requestedRoomId=searchParams.get('room')||'';
+  const featuredRoom=activeRooms.find(room=>room.id===requestedRoomId)
+    ||activeRooms.find(room=>room.id===preferredRoomId)||activeRooms[0]||null;
+  const previewPlayer=!!featuredRoom&&featuredRoom.role!=='member'&&searchParams.get('view')==='player';
+  useEffect(()=>{
+    if(!requestedRoomId||!events.some(room=>room.id===requestedRoomId&&room.status!=='ended'))return;
+    setPreferredRoomId(requestedRoomId);
+    try{localStorage.setItem('pkr_preferred_room',requestedRoomId);}catch{}
+    // Clear temporary room selector, allowing normal room switching.
+    const url=new URL(window.location.href);
+    if(url.searchParams.get('room')===requestedRoomId){
+      url.searchParams.delete('room');
+      window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+    }
+  },[events,requestedRoomId]);
   const totalGames = events.reduce((sum, evt) => sum + (Number(evt.game_count) || 0), 0);
   useEffect(()=>{
     if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);return;}
@@ -567,26 +582,19 @@ function DashboardInner() {
             </button>
           </section>
         )}
-        {featuredRoom&&<section aria-label="PKR Instant no-install player access"
-           style={{marginBottom:18,padding:'16px 20px',borderRadius:15,
-             background:'linear-gradient(105deg,rgba(22,60,43,.88),rgba(16,27,29,.94))',
-             border:'1px solid rgba(213,181,106,.38)',display:'flex',
-             justifyContent:'space-between',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-           <div>
-             <span style={{display:'block',color:'var(--gold)',fontSize:10,letterSpacing:'.15em',fontWeight:800}}>NEW · NO INSTALLATION REQUIRED</span>
-             <strong style={{display:'block',marginTop:5,color:'var(--ivory)',fontSize:18}}>
-               PKR Instant {playerOnly?'— your game-night view':'— see what your players see'}
-             </strong>
-             <p style={{margin:'5px 0 0',fontSize:12,color:'var(--muted)',maxWidth:480}}>
-               Open games, RSVP, choose a seat and add the night to your calendar in the browser.
-             </p>
-           </div>
-           <button className="btn btn-primary" type="button"
-             onClick={()=>router.push('/instant?room='+encodeURIComponent(featuredRoom.id))}>
-             Open PKR Instant →
-           </button>
-         </section>}
-         {featuredRoom&&(featuredRoom.role==='member'
+        {featuredRoom&&featuredRoom.role!=='member'&&<section className="pkr-player-setup-card"
+          style={{marginBottom:18,padding:'14px 18px',display:'flex',justifyContent:'space-between',
+            flexWrap:'wrap',alignItems:'center',gap:12}}>
+          <div><span className="pkr-eyebrow">ONE PKR EXPERIENCE</span>
+            <p style={{margin:'4px 0 0',fontSize:13,color:'var(--muted)'}}>
+              {previewPlayer?'Viewing the same dashboard your approved players use.':'Preview the player experience without changing your host access.'}
+            </p></div>
+          <button type="button" className="btn btn-ghost"
+            onClick={()=>router.push(previewPlayer?'/dashboard':'/dashboard?view=player&room='+encodeURIComponent(featuredRoom.id))}>
+            {previewPlayer?'Return to host controls →':'Preview player dashboard →'}
+          </button>
+        </section>}
+        {featuredRoom&&(featuredRoom.role==='member'||previewPlayer
           ?<PlayerRoomDashboard room={featuredRoom} games={featuredGames} history={featuredHistory}
             leaders={featuredLeaders} memberId={user?.id} memberName={user?.name}/>
           :<RoomDashboardDual
