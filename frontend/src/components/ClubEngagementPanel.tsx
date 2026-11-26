@@ -11,6 +11,24 @@ const fmt=(seconds:number)=>new Date(seconds*1000).toLocaleString('en-AU',{
 });
 const toTime=(text:string)=>text?Math.floor(new Date(text).getTime()/1000):NaN;
 const err=(e:unknown)=>e instanceof Error?e.message:'Action could not be completed';
+// Local export contains only member-visible league points, never financial totals.
+// Escape CSV formula prefixes so spreadsheet software cannot execute member names.
+function downloadLeague(data:ClubSeasonStandings){
+  const csv=(value:string|number)=>{
+    const plain=String(value).replace(/[\r\n]+/g,' ');
+    const safe=/^[=+\-@\t]/.test(plain)?"'"+plain:plain;
+    return '"'+safe.replace(/"/g,'""')+'"';
+  };
+  const rows=[['Place','Player','Points','Games','First places','Podiums'],
+    ...data.standings.map((row,i)=>[
+      String(i+1),row.display_name,String(row.points),String(row.games_played),
+      String(row.first_places),String(row.podiums)
+    ])];
+  const text='\uFEFF'+rows.map(row=>row.map(csv).join(',')).join('\r\n')+'\r\n';
+  const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='PKR-league-points.csv';a.click();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 const kinds:{kind:ClubMemberRequestKind;label:string}[]=[
   {kind:'buyin',label:'Buy-in / more chips'},{kind:'cashout',label:'Cash-out'},
   {kind:'tournament_rebuy',label:'Tournament rebuy'},{kind:'addon',label:'Tournament add-on'}
@@ -196,6 +214,8 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
            <p>{standings.settled_games} settled games · points: first {standings.season.points_first},
              second {standings.season.points_second}, third {standings.season.points_third},
              others {standings.season.points_other}.</p>
+           <button type="button" onClick={()=>downloadLeague(standings)}>
+             Download season points CSV →</button>
            {standings.standings.length?standings.standings.slice(0,20).map((s,i)=>
              <div className="pkr-club-item" key={s.user_id}>
                <span>{i+1}. {s.display_name}{s.identity_review_required?' · identity review':''}</span>
