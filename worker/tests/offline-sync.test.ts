@@ -8,7 +8,14 @@ const source = readFileSync(new URL('../../frontend/src/app/games/[id]/play/page
 const start = source.indexOf('var _pkrSeatedPlayers = {}');
 const end = source.indexOf('async function loadGameFromPkr()',start);
 if (start < 0 || end <= start) throw new Error('Could not locate shipped offline queue implementation');
-const queueCode = source.slice(start,end);
+// The queue registers its browser events through the shipped lifecycle helper.
+// Include that implementation so the isolated harness uses the same listeners.
+const lifecycleStart = source.indexOf('var _pkrTableDisposed=');
+const lifecycleEnd = source.indexOf('var SK ',lifecycleStart);
+if (lifecycleStart < 0 || lifecycleEnd <= lifecycleStart || lifecycleEnd >= start) {
+  throw new Error('Could not locate shipped table listener helper');
+}
+const queueCode = source.slice(lifecycleStart,lifecycleEnd)+'\n'+source.slice(start,end);
 const storage = new Map<string,string>();
 const key='pkr_pending_v2_synthetic-game_synthetic-host';
 const user = {

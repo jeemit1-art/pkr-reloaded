@@ -201,7 +201,7 @@
     border:1px dashed #6A838E!important;background:#142A34!important;color:#A8BDC7!important;
     box-shadow:none!important;font-size:24px!important;
   }
-  html.pkr-game-night #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat {display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important}
+  html.pkr-game-night #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat {display:flex!important;align-items:center!important;justify-content:center!important;gap:4px!important}
   html.pkr-game-night #gameScreen.pkr-casino-live-table .pkr-empty-seat-number {font-size:11px!important;color:#A6B9C3!important;letter-spacing:0!important}
   html.pkr-game-night #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card {padding:7px 6px!important;align-items:center!important;gap:3px!important}
   html.pkr-game-night #gameScreen.pkr-casino-live-table .pkr-game-compact-avatar {height:26px!important;flex:0 0 26px!important}

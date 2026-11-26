@@ -20,7 +20,7 @@ Baseline: `24282989c73793cd97969f889a8aded568cfd649`.
 
 Recovery branch: `release-checkpoints/pkr-before-game-night-redesign-20261126-2340`.
 
-No Worker, database schema, API-client, original Insights ledger, shared transfer-loader or native source changes. No preview authentication or fictional API data is included in production code.
+No Worker runtime, database schema, API-client, original Insights ledger, shared transfer-loader or native source changes. The offline journal test harness includes the actual table lifecycle helper; all existing financial assertions remain. No preview authentication or fictional API data is included in production code.
 
 ## Validation
 
@@ -31,3 +31,7 @@ No Worker, database schema, API-client, original Insights ledger, shared transfe
 - Actual screenshots and the detailed feature-preservation matrix are in `docs/pkr-game-night-milestone-20261126.md`.
 
 The full Chromium/WebKit CI matrix must pass before release. Manual QA used isolated fictional records and did not perform production money or RSVP writes. Native store builds, signing, push delivery and native/web parity remain a separate milestone.
+
+## Release status
+
+[Draft PR #84](https://github.com/jeemit1-art/pkr-reloaded/pull/84) is published. Main and the live app remain unchanged. The initial Vercel preview build passed. The first CI run identified a Compact-seat CSS override, a stale exact-version security check and an offline journal harness source-extraction issue. Follow-up corrections retain all behavioural assertions; the browser workflow now runs every suite before returning a failing status if any fails. Full remote verification is in progress.

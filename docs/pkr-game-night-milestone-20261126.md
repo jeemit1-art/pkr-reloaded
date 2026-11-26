@@ -2,7 +2,7 @@
 
 ## Milestone 1: modern app interface with existing capabilities retained
 
-Implementation is complete on the isolated feature branch. Local production build, TypeScript checks, functional regression tests and the recorded browser walkthrough pass. Publishing the branch, opening the pull request and the full remote browser matrix remain pending. Main and the live deployment have not been replaced.
+Implementation is published on the isolated feature branch in [draft PR #84](https://github.com/jeemit1-art/pkr-reloaded/pull/84). Local production build, TypeScript checks, functional regression tests and the recorded browser walkthrough pass. Remote CI has run and follow-up corrections are being verified before this milestone is ready for release. Main and the live deployment have not been replaced.
 
 ## Recovery point
 
@@ -66,7 +66,7 @@ The milestone preserves the complete pre-change source. Revert the implementatio
 | Renderer geometry harness | Pass: 240 combinations across 320–1440 widths, 9/13/15/24 seats, three view modes and hand tracking on/off |
 | Actual browser walkthrough | Phone widths 320/390, desktop widths 1024/1280; new Home, player Home, both original dashboard layouts, Games, Players, Results, Calendar, Account, payment overview and original ledger |
 | Actual live-table interactions | Full/Compact selection, phone-to-desktop resizing, player detail figures and action availability verified without recording financial actions |
-| Source preservation check | No changes to Worker, native app, API client, original payment ledger or shared transfer loader; no production preview-auth or fixture routes |
+| Source preservation check | No changes to Worker runtime, native app, API client, original payment ledger or shared transfer loader; no production preview-auth or fixture routes |
 | Whitespace and updated browser-script syntax | Pass |
 
 The browser walkthrough used a separate local copy of the production components with fictional data and an isolated QA API. That adapter is not part of this branch. No production game, RSVP or financial records were changed during verification. The screenshots below show rendered code, rather than generated design images.
@@ -77,11 +77,20 @@ The browser walkthrough used a separate local copy of the production components 
 
 ## Remaining release work
 
-1. Resolve the automated publication block. The user approved the proposed branch publication and draft PR on 27 November 2026. Command-line Git has no authenticated login, so publication was attempted through the connected GitHub account. Repository metadata confirms admin/push access and the reviewed payload contains no environment files or detected credential patterns. Dependency/asset object uploads succeeded, but automatic approval review rejected the complete UI tree twice, stating that it could see the user's “Yes” without the preceding question. No implementation branch was created or moved and no draft PR was opened. A standalone destination-specific authorisation is required by that gate; do not bypass it through another upload path.
-2. Open the prepared draft pull request and run the existing full Chromium/WebKit CI browser matrix. The updated presentation expectations retain the financial, geometry, role and action assertions; the complete matrix has not run for this commit yet.
-3. Review the preview and release through the existing deployment process. This milestone is not a claim that every device or live production workflow has been tested.
-4. Complete the separate native release scope and device/signing/notification checks documented in [native scope](pkr-game-night-native-scope.md). A Next.js build does not produce an App Store or Play Store binary.
+1. Pass the full Chromium/WebKit browser matrix and the existing security/staging gates after the CI corrections below. Financial, geometry, role and action assertions are retained.
+2. Review the preview and release through the existing deployment process only when authorised. This milestone is not a claim that every device or live production workflow has been tested.
+3. Complete the separate native release scope and device/signing/notification checks documented in [native scope](pkr-game-night-native-scope.md). A Next.js build does not produce an App Store or Play Store binary.
 
 ## Follow-up verification — 27 November 2026
 
-The final CI compatibility review found that Full-view player names could truncate on 320px phones. A scoped rule now wraps those names at widths up to 360px, retaining card dimensions, bank/result rows, accessible names and Compact mode. The existing name-fit assertion remains unchanged. CSS parsing, whitespace checks and a fresh production build/TypeScript run passed after the correction. The design manifest was regenerated. Remote CI remains pending the publication gate above.
+The final CI compatibility review found that Full-view player names could truncate on 320px phones. A scoped rule now wraps those names at widths up to 360px, retaining card dimensions, bank/result rows, accessible names and Compact mode. The existing name-fit assertion remains unchanged. CSS parsing, whitespace checks and a fresh production build/TypeScript run passed after the correction. The design manifest was regenerated.
+
+The user explicitly authorised publication to the public repository and feature branch on 27 November 2026. [Draft PR #84](https://github.com/jeemit1-art/pkr-reloaded/pull/84) was opened at `7a4c5a0f44e2b86dd70b911227576d4309303e55`. Its source tree, `a9ec021119ff51a63a9eb9341cecd7f0d3e9de95`, exactly matches the locally tested source. The automatic Vercel deployment completed as a preview for that branch, with no production target.
+
+The first remote run passed the production build, TypeScript, all six preliminary frontend suites, the runtime dependency audit, Game Night/sharing checks, staging isolation/schema checks and 396 Worker tests. It found three issues:
+
+- [Browser run 45889432270](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45889432270): a Game night CSS rule forced Compact empty seats into a column. Removed that direction override so the existing Full and Compact layouts retain their respective presentation. The assertion is unchanged.
+- [Security run 45889432215](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45889432215): the exact-version guard still expected Next.js 16.4.3. Updated it to the installed patched version, 16.4.6, retaining the exact React versions and security thresholds. Runtime audit found zero vulnerabilities. Three development dependency findings are unchanged from main and are separate maintenance work.
+- [Staging run 45889432316](https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45889432316): the offline journal harness omitted the actual lifecycle listener helper when extracting the shipped table script. Corrected source extraction while retaining all 20 financial journal assertions. No Worker runtime or environment-binding change is required.
+
+The browser workflow now runs every existing suite and reports a failing exit code if any suite fails. This exposes all remaining failures in one run without dropping checks. Subsequent CI results must be recorded before claiming that the complete remote matrix passes.
