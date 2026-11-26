@@ -91,6 +91,9 @@ async function run(engine){
         assert.equal(writes[0].seat_number,2);
         assert.equal(guests.length,1);
         assert.equal(await page.evaluate(()=>Boolean(localStorage.getItem('pkr:rsvp:v2:upcoming-two'))),true);
+        // Simulate an old PKR Instant RSVP browser that has only its legacy edit token.
+        await page.evaluate(()=>localStorage.removeItem('pkr:rsvp:v2:upcoming-two'));
+        assert.equal(await page.evaluate(()=>Boolean(localStorage.getItem('pkr:instant:rsvp:upcoming-two'))),true);
         await page.goto(BASE+'/instant?room=room-two',{waitUntil:'domcontentloaded'});
         await page.waitForURL('**/dashboard*');
         await page.getByRole('button',{name:'Update my RSVP'}).waitFor();
