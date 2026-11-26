@@ -91,7 +91,7 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
   const event=await c.env.DB.prepare('SELECT host_id,name,buy_in FROM events WHERE id=?')
     .bind(eventId).first<{host_id:string;name:string;buy_in:number}>();
   if(!event)return c.json({error:'Group not found'},404);
-  const planStatus = await getPlanStatus(c.env.DB, event.host_id);
+  const planStatus = await getPlanStatus(c.env.DB,event.host_id,c.env.PKR_FREE_FIRST_GAME_V1==='1');
 
   if (!planStatus.is_active) {
     return c.json({
@@ -102,6 +102,8 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     }, 402);
   }
 
+  if(planStatus.free_game_available&&(tournamentMode||repeat==='weekly'||repeat==='fortnightly'))
+    return c.json({error:'The free first game is a single cash-game night of up to nine seats. Choose Starter or Pro for tournaments and repeats.',code:'UPGRADE_REQUIRED',feature:'free_first_game_limit'},402);
   if(tournamentMode && !['pro','lifetime'].includes(planStatus.plan))
     return c.json({error:'Tournament hosting requires the Pro subscription.',code:'UPGRADE_REQUIRED',feature:'tournament'},402);
     const requestedSeats=seats??9;
@@ -147,6 +149,13 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
     }
     return actions;
   });
+  if(planStatus.free_game_available){
+    // Place the claim in the SAME atomic D1 batch as the one free game.
+    // A racing request for another free game conflicts and rolls back all inserts.
+    statements.push(c.env.DB.prepare(
+      'INSERT INTO host_free_first_games(host_id,event_id,game_id) VALUES(?,?,?)'
+    ).bind(event.host_id,eventId,sessions[0].id));
+  }
   // A tournament's session, state and blind stages must commit atomically.
   // Cash-game single inserts retain the existing behaviour.
   if(statements.length===1)await statements[0].run();
@@ -432,8 +441,16 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
     // Existing scheduled games cannot bypass the paid-host requirement.
     // Settlement, history and cancellations remain available to preserve records.
     const owner=await c.env.DB.prepare('SELECT host_id FROM events WHERE id=?').bind(game.event_id).first<{host_id:string}>();
-    if (!owner || !(await getPlanStatus(c.env.DB,owner.host_id)).is_active)
-      return c.json({error:'An active paid host subscription is required to start a game.',code:'UPGRADE_REQUIRED',feature:'start_game'},402);
+    const active=owner?await getPlanStatus(c.env.DB,owner.host_id,
+      c.env.PKR_FREE_FIRST_GAME_V1==='1'):null;
+    // The claimed first game remains startable even after its one-time
+    // promotion is consumed. A claim never authorises any other game.
+    const claim=owner&&!active?.is_active&&c.env.PKR_FREE_FIRST_GAME_V1==='1'
+      ?await c.env.DB.prepare(
+        'SELECT game_id FROM host_free_first_games WHERE host_id=? AND event_id=? AND game_id=?'
+      ).bind(owner.host_id,game.event_id,gameId).first<{game_id:string}>():null;
+    if(!owner||(!active?.is_active&&!claim))
+      return c.json({error:'A paid host subscription or your claimed free first game is required to start this session.',code:'UPGRADE_REQUIRED',feature:'start_game'},402);
     if (game.status==='settled'||game.status==='cancelled')
       return c.json({error:'Cannot start a settled or cancelled game'},409);
     if (game.status==='active') return c.json({error:'Game already active'},409);
