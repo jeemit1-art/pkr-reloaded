@@ -49,6 +49,18 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
  const [leagueName,setLeagueName]=useState(''),[from,setFrom]=useState(''),[through,setThrough]=useState('');
  const [points,setPoints]=useState({first:10,second:7,third:5,other:1});
  const [memberNote,setMemberNote]=useState('');
+ async function sharePkr(){
+   setError('');setNotice('');
+   const url=window.location.origin;
+   try{
+     if(navigator.share)await navigator.share({title:'PKR – private poker nights',
+       text:'Organise home poker nights, manage RSVPs and settle games with PKR.',url});
+     else{await navigator.clipboard.writeText(url);
+       setNotice('Public PKR link copied — no private club details shared.');}
+   }catch(e){
+     if(!(e instanceof Error)||e.name!=='AbortError')setError('Could not share PKR from this device.');
+   }
+ }
  const refresh=useCallback(async()=>{
    try{
      const [pollResult,seasonResult]=await Promise.all([api.club.polls(eventId),api.club.seasons(eventId)]);
@@ -203,6 +215,16 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
        </div>
      </details>}
 
+     {isHost&&<details className="pkr-club-card">
+       <summary>♣ Grow your poker club <small>Public referral</small></summary>
+       <div className="pkr-club-body">
+         <p>Invite another organiser to try PKR. This shares only the public PKR homepage,
+           never your members, results, balances or private club links.</p>
+         <button type="button" className="pkr-club-primary" onClick={()=>void sharePkr()}>
+           Share PKR with another host →
+         </button>
+       </div>
+     </details>}
      <details className="pkr-club-card" open={seasons.length>0||undefined}>
        <summary>🏆 Club league seasons <small>{seasons.length} seasons</small></summary>
        <div className="pkr-club-body">
@@ -218,7 +240,9 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
              Download season points CSV →</button>
            {standings.standings.length?standings.standings.slice(0,20).map((s,i)=>
              <div className="pkr-club-item" key={s.user_id}>
-               <span>{i+1}. {s.display_name}{s.identity_review_required?' · identity review':''}</span>
+               <span>{i+1}. {s.display_name}{s.identity_review_required?' · identity review':''}
+                 {s.games_played>=10?' · ⭐ 10+ games':''}
+                 {s.first_places>=1?' · 🏆 Top finisher':''}</span>
                <strong>{s.points} pts <small>· {s.games_played} games</small></strong>
              </div>):<p>No settled results in this season.</p>}
          </>}
