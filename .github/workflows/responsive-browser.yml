@@ -75,8 +75,8 @@ jobs:
           node tests/member-access-guidance.cjs
           node tests/unified-player-access.cjs
           node tests/room-member-profiles.cjs
-          node tests/viewport-smoke.cjs
           node tests/single-header-responsive.cjs
+          node tests/viewport-smoke.cjs
       - name: Upload synthetic-data screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
