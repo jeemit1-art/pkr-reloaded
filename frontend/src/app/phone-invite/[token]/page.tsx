@@ -51,8 +51,8 @@ export default function PhoneInvite(){
        playPkrSound('approved');
        // Joining must succeed before any optional app installation. The
        // WhatsApp browser and iPhone Home Screen app have separate storage.
-       setStatus('Approved! Opening PKR Instant — no installation needed…');
-       router.replace('/instant?room='+encodeURIComponent(result.event_id));
+       setStatus('Approved! Opening your PKR dashboard — no installation needed…');
+       router.replace('/dashboard?room='+encodeURIComponent(result.event_id));
      }else if(!silent){
        setStatus('Still waiting for your host. PKR will check again automatically.');
      }
@@ -93,7 +93,7 @@ export default function PhoneInvite(){
      <div className="pkr-onboard-steps" aria-label="Joining progress">
        <span className="complete">✓ QR or link opened</span>
        <span className={claim?'complete':'current'}>{claim?'✓ Request sent':'2 · Request access'}</span>
-       <span className={claim?'current':''}>3 · Open PKR Instant</span>
+       <span className={claim?'current':''}>3 · Open your PKR dashboard</span>
      </div>
      {data&&<p style={{fontSize:12}}>Private invite for <strong style={{color:'var(--ivory)'}}>{data.masked_phone}</strong>
        {' · '}{data.role==='cohost'?'Co-host':'Player'} access</p>}
@@ -137,7 +137,7 @@ export default function PhoneInvite(){
      {status&&<p role="status" style={{marginTop:14,color:'var(--green)',fontSize:12}}>{status}</p>}
      {error&&<p role="alert" style={{color:'var(--red)',marginTop:14,fontSize:12}}>{error}</p>}
      <div style={{marginTop:14,display:'flex',gap:12,flexWrap:'wrap'}}>
-       <a href="/instant" style={{fontSize:13,color:'var(--gold)'}}>Already approved? Open PKR Instant →</a>
+       <a href="/dashboard" style={{fontSize:13,color:'var(--gold)'}}>Already approved? Open PKR →</a>
        <a href="/mobile-login?help=recover" style={{fontSize:13,color:'var(--gold)'}}>Invitation not working? Recovery guide →</a>
      </div>
      <p style={{fontSize:11,color:'var(--muted)',marginTop:22,lineHeight:1.7}}>
