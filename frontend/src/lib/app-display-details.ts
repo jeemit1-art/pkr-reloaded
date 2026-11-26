@@ -6,6 +6,9 @@ export function collectDisplayDetails(){
   const headerStyle=header?window.getComputedStyle(header):null;
   const box=header?.getBoundingClientRect();
   const viewport=window.visualViewport;
+  const rootStyle=window.getComputedStyle(document.documentElement);
+  const bodyStyle=window.getComputedStyle(document.body);
+  const bodyBox=document.body.getBoundingClientRect();
   const probe=document.createElement('div');
   probe.setAttribute('aria-hidden','true');
   probe.style.cssText='position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
@@ -21,9 +24,16 @@ export function collectDisplayDetails(){
     screen:{width:window.screen.width,height:window.screen.height},
     innerViewport:{width:window.innerWidth,height:window.innerHeight},
     visualViewport:viewport?{width:viewport.width,height:viewport.height,offsetTop:viewport.offsetTop,offsetLeft:viewport.offsetLeft,scale:viewport.scale}:null,
-    canvas:{rootBackground:window.getComputedStyle(document.documentElement).backgroundColor,bodyBackground:window.getComputedStyle(document.body).backgroundColor},
+    canvas:{rootBackground:rootStyle.backgroundColor,bodyBackground:bodyStyle.backgroundColor},
     header:box&&headerStyle?{rect:{top:box.top,right:box.right,bottom:box.bottom,left:box.left,width:box.width,height:box.height},
       position:headerStyle.position,paddingTop:headerStyle.paddingTop,opacity:headerStyle.opacity,background:headerStyle.backgroundColor,display:headerStyle.display}:null,
     safeArea,
+    scrollSurface:{
+      mode:document.documentElement.classList.contains('pkr-contained-scroll')?'contained-body':'document',
+      windowTop:window.scrollY,documentTop:document.scrollingElement?.scrollTop??null,
+      bodyTop:document.body.scrollTop,bodyHeight:document.body.clientHeight,bodyScrollHeight:document.body.scrollHeight,
+      rootOverflowY:rootStyle.overflowY,bodyOverflowY:bodyStyle.overflowY,bodyPosition:bodyStyle.position,
+      bodyBounds:{top:bodyBox.top,bottom:bodyBox.bottom,height:bodyBox.height},
+    },
   };
 }

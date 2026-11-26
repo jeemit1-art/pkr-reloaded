@@ -7,6 +7,33 @@
     --pkr-mobile-header-height:calc(64px + var(--pkr-safe-area-top));
   }
   html.pkr-game-night .pkr-primary-header-space{display:none!important}
+  @media screen and (max-width:1099px){
+    /* Keep the installed app's document stationary. iOS can paint root-scrolled
+       content into its native status area even when a fixed header is opaque.
+       The body scrollport clips page content at the real web viewport edge. */
+    html.pkr-game-night.pkr-contained-scroll{
+      height:100%!important;
+      min-height:0!important;
+      overflow:hidden!important;
+      overscroll-behavior:none;
+    }
+    html.pkr-game-night.pkr-contained-scroll body{
+      position:fixed!important;
+      inset:0!important;
+      height:auto!important;
+      min-height:0!important;
+      max-height:none!important;
+      margin:0!important;
+      box-sizing:border-box!important;
+      overflow-x:hidden!important;
+      /* Inline overflow:hidden from dialog locks must retain precedence. */
+      overflow-y:auto;
+      overscroll-behavior-y:none;
+      -webkit-overflow-scrolling:touch;
+      scroll-padding-top:calc(var(--pkr-mobile-header-height) + 12px);
+      scroll-padding-bottom:calc(var(--pkr-navigation-height) + 12px);
+    }
+  }
   @media(max-width:1099px){
     html.pkr-game-night:has(.pkr-primary-mobile-utility){
       scroll-padding-top:calc(var(--pkr-mobile-header-height) + 12px);

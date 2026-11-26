@@ -25,7 +25,7 @@ export default function AppDialog({children,className='',onDismiss,...props}:
     return()=>{
       dialog.close();
       unlock();
-      if(focused?.isConnected)focused.focus();
+      if(focused?.isConnected)focused.focus({preventScroll:true});
     };
   },[mounted,headingId]);
   if(!mounted)return null;

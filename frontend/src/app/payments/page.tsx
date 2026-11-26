@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import GameNightPayments from '@/components/GameNightPayments';
+import {preservePageScrollForNavigation} from '@/lib/page-scroll';
 import '../game-night-payments.css';
 
 const LedgerAndTools=dynamic(()=>import('../insights/page'),{
@@ -36,8 +37,10 @@ function PaymentsWorkspace(){
  }
  return <div className="pkr-gn-payment-workspace" data-payment-section={tools?'ledger':'overview'}>
   <nav className="pkr-gn-payment-sections" aria-label="Payment sections">
-   <Link href={sectionHref('overview')} aria-current={!tools?'page':undefined} scroll={false}>Overview</Link>
-   <Link href={sectionHref('ledger')} aria-current={tools?'page':undefined} scroll={false}>Ledger &amp; tools</Link>
+   <Link href={sectionHref('overview')} aria-current={!tools?'page':undefined} scroll={false}
+     onNavigate={()=>preservePageScrollForNavigation(sectionHref('overview'))}>Overview</Link>
+   <Link href={sectionHref('ledger')} aria-current={tools?'page':undefined} scroll={false}
+     onNavigate={()=>preservePageScrollForNavigation(sectionHref('ledger'))}>Ledger &amp; tools</Link>
   </nav>
   {tools?<section className="pkr-gn-payment-ledger" aria-label="Payment ledger and tools"><LedgerAndTools/></section>:<GameNightPayments/>}
  </div>;

@@ -47,6 +47,7 @@ jobs:
           node tests/gameplay-safety.cjs
           node tests/seat-stack-ledger.cjs
           node tests/app-version.cjs
+          node tests/page-scroll.cjs
       - name: Build and type-check the actual application
         working-directory: frontend
         run: npm run build
