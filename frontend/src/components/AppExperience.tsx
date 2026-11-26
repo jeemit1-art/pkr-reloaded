@@ -7,6 +7,7 @@ import {restoreKnownPushSubscriptions} from '@/lib/push';
 import SetupReminder from '@/components/SetupReminder';
 import RoomExperienceTheme from '@/components/RoomExperienceTheme';
 import {AppUpdateContext,useAppUpdateState} from '@/components/AppUpdateContext';
+import InstalledPageScroll from '@/components/InstalledPageScroll';
 
 export default function AppExperience({children}:{children:ReactNode}){
   const pathname=usePathname();
@@ -112,7 +113,7 @@ export default function AppExperience({children}:{children:ReactNode}){
     };
   },[pathname]);
 
-  return <AppUpdateContext.Provider value={updates}><RecordProvider><RoomExperienceTheme/><SetupReminder/>{children}
+  return <AppUpdateContext.Provider value={updates}><RecordProvider><InstalledPageScroll/><RoomExperienceTheme/><SetupReminder/>{children}
     {appRoute&&!online&&<div className="pkr-connection-notice" role="status">You are offline. Changes are not confirmed until PKR reconnects.</div>}
     {appRoute&&online&&updates.updateReady&&!inGame&&<div className="pkr-update-notice" role="status">
       <span>{updates.notice||'An app update is ready.'}</span><button type="button" onClick={updates.refresh}>Refresh app</button>

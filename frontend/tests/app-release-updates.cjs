@@ -56,6 +56,17 @@ async function preserved(page,id,before){
  assert.deepEqual(await storage(page),before,'Device sign-in, selected room and saved game state must remain intact');
 }
 async function screenshot(page,name){await page.screenshot({path:path.join(output,name+'.png'),fullPage:false});}
+async function accountScrollMode(page){
+ await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll'));
+ const state=await page.evaluate(()=>({window:scrollY,document:document.scrollingElement?.scrollTop,
+  body:document.body.scrollTop,position:getComputedStyle(document.body).position,
+  overflow:getComputedStyle(document.body).overflowY}));
+ assert.equal(state.window,0,'Account updates must not move the native document viewport');
+ assert.equal(state.document,0,'Account must scroll inside its installed viewport');
+ assert.equal(state.position,'fixed');
+ assert(['auto','scroll'].includes(state.overflow),'Update checks must not leave Account scroll-locked');
+ return state;
+}
 
 async function check(type,label){
  const browser=await type.launch({headless:true});
@@ -101,6 +112,7 @@ async function check(type,label){
   assert.equal(await version.getAttribute('title'),CURRENT);
   assert.equal(await version.innerText(),CURRENT.slice(0,12),'Account must show the running build, not merely the server release');
   await settings.getByText('You are using the latest app version.',{exact:true}).waitFor();
+  await accountScrollMode(page);
   assert.equal(await page.locator('.pkr-update-notice').count(),0);
   const before=await storage(page),id=await documentId(page),initialDocuments=documentRequests.length;
   assert.deepEqual(before,stored);
@@ -113,12 +125,14 @@ async function check(type,label){
   const notice=page.locator('.pkr-update-notice');await notice.waitFor({state:'visible'});
   assert(versionChecks.length>beforeCheck,'The Account check must request current public release metadata');
   assert.equal(await version.getAttribute('data-version'),CURRENT,'Detecting a release must not mislabel the running build');
+  assert((await accountScrollMode(page)).body>0,'The Account update action must be reached by scrolling the contained body');
   await preserved(page,id,before);
   await screenshot(page,label+'-update-ready');
   await notice.getByRole('button',{name:'Dismiss app update',exact:true}).click();
   await notice.waitFor({state:'detached'});
   await page.waitForTimeout(600);
   await preserved(page,id,before);assert.equal(documentRequests.length,initialDocuments);
+  await accountScrollMode(page);
   await settings.getByRole('button',{name:'Check for updates',exact:true}).click();
   await settings.getByText('An app update is ready.',{exact:true}).waitFor();
   assert.equal(await notice.count(),0,'Checking the same release must respect Later');
@@ -146,11 +160,14 @@ async function check(type,label){
   assert.notEqual(await documentId(page),id,'An accepted refresh must actually reload the app');
   assert.equal(documentRequests.length,initialDocuments+1,'Exactly one user-approved reload is allowed');
   assert.deepEqual(await storage(page),before,'A voluntary refresh must retain saved games and device sign-in');
+  await accountScrollMode(page);
 
   const beforeLiveChecks=versionChecks.length;
   await gotoPage(page,BASE+'/games/'+game.id+'/play');
   assert.equal(new URL(page.url()).pathname,'/games/'+game.id+'/play','The live-table case must remain on the authorised host route');
   await page.locator('#seat1 .seat-money').filter({hasText:'$25'}).waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('pkr-contained-scroll')),false,
+   'Gameplay must retain its existing table viewport, outside the primary-page scroll container');
   assert(versionChecks.length>beforeLiveChecks,'The newer release must still be detected during live play');
   assert.equal(versionChecks.at(-1).version,NEWER);
   assert.equal(await page.locator('.pkr-update-notice').count(),0,'An update invitation must never cover a live poker table');

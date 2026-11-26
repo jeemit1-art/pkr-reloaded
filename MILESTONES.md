@@ -33,3 +33,15 @@ The user reported that the header still failed on their iPhone after PR #85. The
 - Extend browser coverage to installed-state and dark-system-preference cases, plus update detection and cancelled refresh. These remain simulations; a fresh installed-iPhone screenshot or display details is needed to confirm the reported physical symptom.
 
 Baseline before this correction: main `a26cc7571e9d9037b667e62fe8843dabe0cd18eb`. WebKit documents that safe-area backgrounds can use the page canvas: [Designing Websites for iPhone X](https://webkit.org/blog/7929/designing-websites-for-iphone-x/).
+
+## Installed app scroll containment — 27 November 2026
+
+A fresh physical iPhone screenshot confirms page content still paints behind the clock on release `db3e8945dc32`, despite the header being fixed at the top of the web viewport and all canvas colours being white. The phone reports a 430 × 873 web viewport within a 430 × 932 screen, with a zero top safe-area inset. The earlier geometry checks did not verify native-area painting.
+
+- Keep the document stationary on installed mobile app pages and scroll their existing content inside a bounded body. Keep the opaque header/footer fixed to the actual viewport; do not invent a status-bar offset from the 59px screen difference.
+- Preserve ordinary browser/desktop scrolling and the existing gameplay surfaces. Scope containment to installed mobile pages with the visible primary header.
+- Adapt existing page-scroll commands, route/hash navigation and Back restoration to the active scroll container. Keep native-dialog background locking and all current controls.
+- Include anonymous scroll-container measurements in the existing display-details copy action. No user records, URLs, identifiers or telemetry are added.
+- Acceptance checks cover a stationary root while the body scrolls, viewport clipping, header/footer hit testing, navigation/restoration, anchors, dialogs and reachable page actions. Native iPhone scrolling still needs confirmation after release.
+
+Recovery checkpoint: `release-checkpoints/pkr-before-scroll-containment-20261127` at main `a81ff3a7e54e63ee6ca03000ec31030ba21157c3`. No Worker/backend or database changes are included.

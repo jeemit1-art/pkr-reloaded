@@ -46,8 +46,8 @@ function RecordSheet({request,canGoBack,onClose,onBack,onNext}:{request:RecordRe
     if(!element)return;
     const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
     const unlock=lockPageScroll();
-    element.showModal();heading.current?.focus();
-    return()=>{element.close();unlock();if(previous?.isConnected)previous.focus();};
+    element.showModal();heading.current?.focus({preventScroll:true});
+    return()=>{element.close();unlock();if(previous?.isConnected)previous.focus({preventScroll:true});};
   },[]);
   useEffect(()=>{
     const controller=new AbortController();

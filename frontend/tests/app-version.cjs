@@ -111,18 +111,21 @@ async function main(){
   });
   let appended=0,removed=0;
   const probe={style:{},setAttribute:(name,value)=>{assert.equal(name,'aria-hidden');assert.equal(value,'true');},remove:()=>{removed++;}};
-  const root={kind:'root'},body={kind:'body',appendChild:node=>{assert.equal(node,probe);appended++;}};
+  const root={kind:'root',scrollTop:0,classList:{contains:name=>{assert.equal(name,'pkr-contained-scroll');return true;}}};
+  const body={kind:'body',scrollTop:280,clientHeight:844,scrollHeight:1800,
+    getBoundingClientRect:()=>({top:0,bottom:844,height:844}),
+    appendChild:node=>{assert.equal(node,probe);appended++;}};
   const header={textContent:'PRIVATE_DIAGNOSTIC_SENTINEL',getBoundingClientRect:()=>({top:0,right:390,bottom:123,left:0,width:390,height:123})};
-  global.document={documentElement:root,body,
+  global.document={documentElement:root,scrollingElement:root,body,
     querySelector:selector=>{assert.equal(selector,'.pkr-primary-mobile-utility');return header;},
     createElement:tag=>{assert.equal(tag,'div');return probe;},
     get cookie(){throw Error('Diagnostics cannot read cookies');}};
-  global.window={screen:{width:390,height:844},innerWidth:390,innerHeight:844,
+  global.window={screen:{width:390,height:844},innerWidth:390,innerHeight:844,scrollY:0,
     visualViewport:{width:390,height:844,offsetTop:0,offsetLeft:0,scale:1},
     matchMedia:query=>{assert.equal(query,'(display-mode: standalone)');return {matches:true};},
     getComputedStyle:node=>node===probe?{paddingTop:'59px',paddingRight:'0px',paddingBottom:'34px',paddingLeft:'0px'}:
       node===header?{position:'fixed',paddingTop:'68px',opacity:'1',backgroundColor:'rgb(255, 255, 255)',display:'flex'}:
-      {backgroundColor:'rgb(255, 255, 255)'},
+      {backgroundColor:'rgb(255, 255, 255)',overflowY:node===body?'auto':'hidden',position:node===body?'fixed':'static'},
     get location(){throw Error('Diagnostics cannot read URLs');},
     get localStorage(){throw Error('Diagnostics cannot read saved state');}};
   const previousNavigator=Object.getOwnPropertyDescriptor(global,'navigator');
@@ -130,11 +133,14 @@ async function main(){
     get userAgent(){throw Error('Diagnostics cannot read identifying browser data');}}});
   try{
     const details=display.collectDisplayDetails();
-    assert.deepEqual(Object.keys(details),['appVersion','standalone','screen','innerViewport','visualViewport','canvas','header','safeArea']);
+    assert.deepEqual(Object.keys(details),['appVersion','standalone','screen','innerViewport','visualViewport','canvas','header','safeArea','scrollSurface']);
     assert.equal(details.appVersion,running);assert.equal(details.standalone,true);
     assert.deepEqual(details.safeArea,{top:'59px',right:'0px',bottom:'34px',left:'0px'});
     assert.equal(details.header.rect.top,0);assert.equal(details.header.paddingTop,'68px');
     assert.equal(details.canvas.rootBackground,'rgb(255, 255, 255)');
+    assert.deepEqual(details.scrollSurface,{mode:'contained-body',windowTop:0,documentTop:0,bodyTop:280,
+      bodyHeight:844,bodyScrollHeight:1800,rootOverflowY:'hidden',bodyOverflowY:'auto',bodyPosition:'fixed',
+      bodyBounds:{top:0,bottom:844,height:844}});
     assert(!JSON.stringify(details).includes('PRIVATE_DIAGNOSTIC_SENTINEL'));
     assert.equal(appended,1);assert.equal(removed,1,'The safe-area probe must leave no DOM residue');
   }finally{

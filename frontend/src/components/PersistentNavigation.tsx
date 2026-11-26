@@ -3,6 +3,7 @@
 import {useEffect,useState} from 'react';
 import {usePathname,useRouter} from 'next/navigation';
 import {api,type Event,getToken} from '@/lib/api';
+import {scrollPageTo} from '@/lib/page-scroll';
 import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
 import './PrimaryNavigation.css';
 
@@ -88,11 +89,21 @@ export default function PersistentNavigation(){
     pathname.startsWith('/games/results/')?'Results':
   (pathname.startsWith('/events/')&&roomTab==='members')?'Players':'Games';
 
+ // Next scrolls the document on a same-URL tap. The installed shell owns a
+ // body scroller, so repeated Home/Account/section taps use that surface too.
+ function navigate(target:string){
+  if(new URL(target,window.location.href).href===window.location.href){
+   if(window.location.hash){
+    let id=window.location.hash.slice(1);try{id=decodeURIComponent(id);}catch{}
+    document.getElementById(id)?.scrollIntoView({block:'start',behavior:'instant'});
+   }else scrollPageTo({left:0,top:0,behavior:'instant'});
+  }else router.push(target);
+ }
  function choose(area:Area){
-  if(area==='Home'){router.push('/dashboard');return;}
-  if(area==='Results'){router.push('/results'+(roomId?'?room='+encodeURIComponent(roomId):''));return;}
-  if(area==='Payments'){router.push('/payments'+(roomId?'?room='+encodeURIComponent(roomId):''));return;}
-  if(!roomId){router.push('/dashboard');return;}
+  if(area==='Home'){navigate('/dashboard');return;}
+  if(area==='Results'){navigate('/results'+(roomId?'?room='+encodeURIComponent(roomId):''));return;}
+  if(area==='Payments'){navigate('/payments'+(roomId?'?room='+encodeURIComponent(roomId):''));return;}
+  if(!roomId){navigate('/dashboard');return;}
   const tab=area==='Players'?'members':'games';
   const target='/events/'+encodeURIComponent(roomId);
   if(pathname===target){
@@ -101,17 +112,17 @@ export default function PersistentNavigation(){
    u.searchParams.delete('view');
    window.history.replaceState(window.history.state,'',u.pathname+u.search+u.hash);
    window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:tab}));
-   window.scrollTo({top:0,behavior:'instant'});
-  }else router.push(target+'?tab='+tab);
+   scrollPageTo({top:0,behavior:'instant'});
+  }else navigate(target+'?tab='+tab);
  }
  function chooseRoom(id:string){
   if(!validRoom(id))return;
   setPreferredRoom(id);
   try{localStorage.setItem('pkr_preferred_room',id);}catch{}
   window.dispatchEvent(new CustomEvent('pkr:room-changed',{detail:id}));
-  if(pathname.startsWith('/results'))router.push('/results?room='+encodeURIComponent(id));
-  else if(pathname==='/payments'||pathname==='/insights')router.push('/payments?room='+encodeURIComponent(id));
-  else router.push('/events/'+encodeURIComponent(id)+'?tab=games');
+  if(pathname.startsWith('/results'))navigate('/results?room='+encodeURIComponent(id));
+  else if(pathname==='/payments'||pathname==='/insights')navigate('/payments?room='+encodeURIComponent(id));
+  else navigate('/events/'+encodeURIComponent(id)+'?tab=games');
  }
  const member=selectedRoom?.role==='member';
  const roomLabel=selectedRoom?.name||'Select your club';
@@ -126,7 +137,7 @@ export default function PersistentNavigation(){
       aria-label="Switch poker club" value={roomId} onChange={e=>chooseRoom(e.target.value)}>
       {roomChoices.map(room=><option key={room.id} value={room.id}>{room.name}</option>)}
     </select>}
-    <button type="button" className="pkr-primary-view-clubs" onClick={()=>router.push('/dashboard#pkr-rooms')}>
+    <button type="button" className="pkr-primary-view-clubs" onClick={()=>navigate('/dashboard#pkr-rooms')}>
      View all clubs ↗
     </button>
    </div>
@@ -138,7 +149,7 @@ export default function PersistentNavigation(){
    </nav>
    <div className="pkr-primary-sidebar-footer">
     <button type="button" className={pathname==='/account'||pathname==='/install'?'active':''}
-      onClick={()=>router.push('/account')} aria-label="Account and notification settings">
+      onClick={()=>navigate('/account')} aria-label="Account and notification settings">
       <PkrGlyph name="account"/> Account & settings
     </button>
     <span>PRIVATE POKER · YOUR GAME</span>
@@ -150,9 +161,9 @@ export default function PersistentNavigation(){
      <select aria-label="Switch poker club" value={roomId} onChange={e=>chooseRoom(e.target.value)}>
        {roomChoices.map(room=><option key={room.id} value={room.id}>{room.name}</option>)}
      </select>:
-     <button type="button" className="pkr-primary-club-name" onClick={()=>router.push('/dashboard#pkr-rooms')}
+     <button type="button" className="pkr-primary-club-name" onClick={()=>navigate('/dashboard#pkr-rooms')}
        aria-label="View poker clubs">{roomLabel} <span aria-hidden="true">⌄</span></button>}
-   <button type="button" className="pkr-primary-account" onClick={()=>router.push('/account')}
+   <button type="button" className="pkr-primary-account" onClick={()=>navigate('/account')}
      aria-label="Account, notifications and installation" aria-current={pathname==='/account'?'page':undefined}>
      <PkrGlyph name="account"/> <span>Account</span>
    </button>

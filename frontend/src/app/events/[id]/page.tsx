@@ -1,5 +1,7 @@
 // @refresh
 'use client';
+import {scrollPageTo} from '@/lib/page-scroll';
+import {lockPageScroll} from '@/lib/overlay-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import AppDialog from '@/components/AppDialog';
@@ -38,7 +40,7 @@ export default function EventPage() {
       const next=(e as CustomEvent<string>).detail;
       if(next==='games'||next==='night'||next==='leaderboard'||next==='history'||next==='members'){
         setTab(next);
-        window.scrollTo(0,0);
+        scrollPageTo({top:0,left:0,behavior:'instant'});
       }
     };
     window.addEventListener('pkr:select-room-tab',open);
@@ -496,7 +498,7 @@ export default function EventPage() {
     url.searchParams.set('tab',next);
     window.history.replaceState(window.history.state,'',url.pathname+url.search);
     window.dispatchEvent(new CustomEvent('pkr:select-room-tab',{detail:next}));
-    window.scrollTo(0,0);
+    scrollPageTo({top:0,left:0,behavior:'instant'});
   };
   const openGameNight=(gameId?:string)=>{
     if(gameId){
@@ -1612,8 +1614,7 @@ function PlayerHistoryDialog({ player, history, leader, onClose }: {
   onCloseRef.current=onClose;
   useEffect(()=>{
     const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
-    const previousOverflow=document.body.style.overflow;
-    document.body.style.overflow='hidden';
+    const unlock=lockPageScroll();
     dialogRef.current?.querySelector<HTMLButtonElement>('[data-pkr-player-close]')?.focus();
     const onKey=(event:KeyboardEvent)=>{
       if(event.key==='Escape'){
@@ -1636,8 +1637,8 @@ function PlayerHistoryDialog({ player, history, leader, onClose }: {
     document.addEventListener('keydown',onKey);
     return ()=>{
       document.removeEventListener('keydown',onKey);
-      document.body.style.overflow=previousOverflow;
-      if(previous?.isConnected)previous.focus();
+      unlock();
+      if(previous?.isConnected)previous.focus({preventScroll:true});
     };
   },[]);
   return (

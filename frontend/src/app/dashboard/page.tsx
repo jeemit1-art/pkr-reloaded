@@ -1,4 +1,5 @@
 'use client';
+import {scrollPageTo} from '@/lib/page-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import AppDialog from '@/components/AppDialog';
@@ -710,7 +711,7 @@ function DashboardInner() {
       </div>
 
       <PkrMobileNav items={[
-        {id:'home',label:'Home',icon:'home',active:true,onSelect:()=>window.scrollTo({top:0,behavior:'smooth'})},
+        {id:'home',label:'Home',icon:'home',active:true,onSelect:()=>scrollPageTo({top:0,behavior:'smooth'})},
         {id:'rooms',label:'Rooms',icon:'rooms',onSelect:()=>document.getElementById('pkr-rooms')?.scrollIntoView({behavior:'smooth'})},
         {id:'scan',label:'Scan',icon:'scan',onSelect:startScan},
         ...(playerOnly&&featuredRoom

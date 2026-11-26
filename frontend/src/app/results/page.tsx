@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useRouter} from 'next/navigation';
+import {isRestoringPageScroll,scrollPageTo} from '@/lib/page-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import {useRoomExperience} from '@/components/PokerClubStage';
@@ -47,8 +48,8 @@ export default function ResultsPage(){
 
  // Open the Results main tab at its heading, never at the old page scroll offset.
  useLayoutEffect(()=>{
-  initialScrollPending.current=true;
-  const reset=()=>{if(initialScrollPending.current)window.scrollTo({top:0,behavior:'instant'});};
+  initialScrollPending.current=!isRestoringPageScroll();
+  const reset=()=>{if(initialScrollPending.current)scrollPageTo({top:0,behavior:'instant'});};
   const cancel=()=>{initialScrollPending.current=false;};
   const inputs=['pointerdown','wheel','touchmove','keydown'] as const;
   inputs.forEach(type=>window.addEventListener(type,cancel,{capture:true,passive:true}));
@@ -64,9 +65,9 @@ export default function ResultsPage(){
  // Subsequent room changes, filters and record sheets keep their own position.
  useLayoutEffect(()=>{
   if(initialLoading||!initialScrollPending.current)return;
-  window.scrollTo({top:0,behavior:'instant'});
+  scrollPageTo({top:0,behavior:'instant'});
   const frame=window.requestAnimationFrame(()=>{
-   if(initialScrollPending.current)window.scrollTo({top:0,behavior:'instant'});
+   if(initialScrollPending.current)scrollPageTo({top:0,behavior:'instant'});
    initialScrollPending.current=false;
   });
   return()=>window.cancelAnimationFrame(frame);
@@ -125,7 +126,7 @@ export default function ResultsPage(){
 
  function setSection(next:View){
   setView(next);setHistoryCount(15);setNotice('');
-  window.scrollTo({top:0,behavior:'instant'});
+  scrollPageTo({top:0,behavior:'instant'});
   const url=new URL(window.location.href);url.searchParams.set('view',next);
   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
  }
