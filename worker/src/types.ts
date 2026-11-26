@@ -19,6 +19,9 @@ export interface Env {
   PKR_SETTLEMENT_V2?: string;
   // Additive club polls, queues, requests and seasons; off until staged D1 migration.
   PKR_CLUB_PLANNING_V1?: string;
+  // Both require isolated D1 migration, explicit staging acceptance, and rollout.
+  PKR_CLUB_EXTRAS_V1?: string;
+  PKR_FREE_FIRST_GAME_V1?: string;
   PKR_CONTACT_KEY?: string;
   // Hosts manually send personal WhatsApp messages. No messaging provider secrets.
   // Disabled by default; only enable after verifying optional D1 migration.
