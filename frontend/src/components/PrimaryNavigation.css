@@ -162,3 +162,24 @@
   /* Desktop uses the full persistent sidebar; no duplicate dashboard topbar. */
   .pkr-primary-mobile-utility{display:none!important}
 }
+
+
+/* Non-sticky room actions preserve notification, create-game and share access
+   on narrow screens without adding another toolbar under the club header. */
+.pkr-room-mobile-actions{display:none}
+@media(max-width:1099px){
+ .pkr-room-mobile-actions{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;
+  gap:8px;margin:0 0 12px;
+ }
+ .pkr-room-mobile-actions button{
+  flex:0 1 auto;min-width:0;min-height:44px;
+  padding:9px clamp(9px,2.2vw,15px)!important;
+  font-size:clamp(11px,2vw,13px)!important;
+  overflow-wrap:anywhere;
+ }
+}
+@media(max-width:359px){
+ .pkr-room-mobile-actions{justify-content:stretch}
+ .pkr-room-mobile-actions button{flex:1 1 auto}
+}
