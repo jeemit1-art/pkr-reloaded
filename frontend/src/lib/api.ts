@@ -319,6 +319,32 @@ export const api = {
     seasonStandings:(eventId:string,seasonId:string)=>req<ClubSeasonStandings>(
       '/events/'+encodeURIComponent(eventId)+'/seasons/'+encodeURIComponent(seasonId)+'/standings'),
   },
+  clubExtras:{
+    expenseList:(id:string)=>req<ClubExpenseList>('/events/'+encodeURIComponent(id)+'/shared-expenses'),
+    propose:(id:string,data:{game_id?:string|null;category:'food'|'venue'|'supplies'|'other';
+       title:string;notes?:string;amount_cents:number;paid_by_user_id:string;member_ids:string[]})=>
+      req<{ok:boolean;id:string}>('/events/'+encodeURIComponent(id)+'/shared-expenses',
+      {method:'POST',body:JSON.stringify(data)}),
+    respond:(id:string,expenseId:string,status:'accepted'|'declined')=>
+      req<{ok:boolean;status:string}>('/events/'+encodeURIComponent(id)+'/shared-expenses/'+
+      encodeURIComponent(expenseId)+'/respond',{method:'PUT',body:JSON.stringify({status})}),
+    cancel:(id:string,expenseId:string)=>req<{ok:boolean}>('/events/'+encodeURIComponent(id)+
+      '/shared-expenses/'+encodeURIComponent(expenseId)+'/cancel',{method:'POST'}),
+    exportPage:(id:string,kind:ClubExportKind,offset:number)=>req<ClubExportPage>(
+      '/events/'+encodeURIComponent(id)+'/data-export?kind='+encodeURIComponent(kind)+'&offset='+offset),
+    presets:(id:string)=>req<{presets:ClubTournamentPreset[]}>(
+      '/events/'+encodeURIComponent(id)+'/tournament-presets'),
+    savePreset:(id:string,name:string,config:ClubTournamentConfig)=>
+      req<{ok:boolean;id:string}>('/events/'+encodeURIComponent(id)+'/tournament-presets',
+      {method:'POST',body:JSON.stringify({name,config})}),
+    deletePreset:(id:string,presetId:string)=>req<{ok:boolean}>(
+      '/events/'+encodeURIComponent(id)+'/tournament-presets/'+encodeURIComponent(presetId),
+      {method:'DELETE'}),
+    getTournament:(gameId:string)=>req<ClubGameTournament>('/games/'+encodeURIComponent(gameId)+'/tournament'),
+    applyPreset:(gameId:string,config:ClubTournamentConfig)=>req<{ok:boolean;levels:number}>(
+      '/games/'+encodeURIComponent(gameId)+'/tournament/setup',
+      {method:'POST',body:JSON.stringify(config)}),
+  },
   billing: {
     plan:     () => req<PlanStatus>('/billing/plan'),
     checkout: (plan: 'starter' | 'pro') =>
@@ -472,4 +498,43 @@ export interface ClubSeasonStandings {
   season:ClubLeagueSeason;settled_games:number;basis:string;
   standings:Array<{user_id:string;display_name:string;points:number;games_played:number;
     first_places:number;podiums:number;identity_review_required:boolean}>;
+}
+
+
+export interface ClubExpenseShare {
+  user_id:string;share_cents:number;status:'proposed'|'accepted'|'declined';
+  responded_at:number|null;
+}
+export interface ClubSharedExpense {
+  id:string;event_id:string;game_id:string|null;category:string;title:string;
+  notes:string|null;amount_cents:number;paid_by_user_id:string;created_by:string;
+  status:'proposed'|'cancelled';created_at:number;shares:ClubExpenseShare[];
+}
+export interface ClubExpenseList {
+  expenses:ClubSharedExpense[];
+  members:Array<{user_id:string;display_name:string}>;
+  note:string;
+}
+export type ClubExportKind='games'|'player_results'|'transfers'|'rsvps'|'members';
+export interface ClubExportPage {
+  kind:ClubExportKind;rows:Array<Record<string,unknown>>;has_more:boolean;
+  next_offset:number|null;exported_at:number;note:string;
+}
+export interface ClubTournamentLevel {
+  level_num:number;small_blind:number;big_blind:number;ante:number;
+  duration_secs:number;is_break:boolean;
+}
+export interface ClubTournamentConfig {
+  format:'tournament'|'rebuy'|'freezeout';
+  starting_chips:number;buy_in_amount:number;rebuy_allowed:boolean;
+  rebuy_levels:number;addon_allowed:boolean;addon_chips:number;
+  payout_structure:Array<{place:number;pct:number}>;levels:ClubTournamentLevel[];
+}
+export interface ClubTournamentPreset {
+  id:string;event_id:string;name:string;config:ClubTournamentConfig;
+  created_at:number;updated_at:number;
+}
+export interface ClubGameTournament {
+  state:Record<string,unknown>|null;
+  levels:Array<Record<string,unknown>>;
 }
