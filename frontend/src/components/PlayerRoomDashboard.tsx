@@ -5,6 +5,7 @@ import {useRouter} from 'next/navigation';
 import {fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import {loadRoomTransfers,outstandingRoomTransfers,type RoomTransferLoad} from '@/lib/room-payment-schedule';
+import PlayerGameNightAccess from './PlayerGameNightAccess';
 import './PlayerRoomDashboard.css';
 
 type Props={
@@ -12,6 +13,24 @@ type Props={
   memberId?:string|null;memberName?:string|null;
   onMyProfile?:()=>void;showAllPayments?:boolean;paymentsOnly?:boolean;
 };
+
+function downloadCalendar(game:Game,room:Event){
+  const utc=(date:Date)=>date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const escape=(value:string)=>value.replace(/\\/g,'\\\\').replace(/[,;]/g,(part)=>'\\'+part).replace(/\r?\n/g,'\\n');
+  const start=new Date(game.scheduled_at*1000);
+  const end=new Date(start.getTime()+4*60*60*1000);
+  const body=[
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PKR//Unified Player Dashboard//EN',
+    'BEGIN:VEVENT','UID:'+escape(game.id)+'@mypkr.app','DTSTAMP:'+utc(new Date()),
+    'DTSTART:'+utc(start),'DTEND:'+utc(end),'SUMMARY:'+escape(room.name+' — poker night'),
+    'DESCRIPTION:'+escape('Open your authorised PKR account: '+window.location.origin+'/dashboard?room='+encodeURIComponent(room.id)),
+    ...(game.location?['LOCATION:'+escape(game.location)]:[]),
+    'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n')+'\r\n';
+  const url=URL.createObjectURL(new Blob([body],{type:'text/calendar;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download='PKR-poker-night.ics';link.click();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 
 function statusText(status:string|undefined,isPayer:boolean){
   if(status==='paid')return 'Confirmed paid';
@@ -27,6 +46,7 @@ export default function PlayerRoomDashboard({
   const router=useRouter();
   const [ledger,setLedger]=useState<RoomTransferLoad|null>(null);
   const [ledgerError,setLedgerError]=useState(false);
+  const [shareNotice,setShareNotice]=useState('');
   useEffect(()=>{
     if(window.location.hash!=='#pkr-my-payments')return;
     // Payment panel is rendered after the selected player's room loads.
@@ -72,6 +92,27 @@ export default function PlayerRoomDashboard({
     ?'/games/results/'+encodeURIComponent(game.results_token)
     :'/games/'+encodeURIComponent(game.id));
   const goRsvp=()=>{if(next)router.push('/games/'+encodeURIComponent(next.id)+'/rsvp');};
+  const showRsvp=()=>{
+    if(next&&['scheduled','lobby'].includes(next.status)){
+      document.getElementById('pkr-player-rsvp')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }else if(next)goRsvp();
+    else goTab('games');
+  };
+  const shareRoom=async()=>{
+    setShareNotice('');
+    const url=window.location.origin+'/dashboard?room='+encodeURIComponent(room.id);
+    try{
+      if(navigator.share){
+        await navigator.share({title:'PKR — '+room.name,text:'Open your private poker club',url});
+      }else{
+        await navigator.clipboard.writeText(url);
+        setShareNotice('Member link copied. Only approved members can open this club.');
+      }
+    }catch(error:unknown){
+      if(!(error instanceof Error)||error.name!=='AbortError')
+        setShareNotice('Could not share the link from this device.');
+    }
+  };
   const goLive=()=>{if(next)router.push(live&&next.live_token
     ?'/games/live/'+encodeURIComponent(next.live_token)
     :'/games/'+encodeURIComponent(next.id));};
@@ -90,15 +131,25 @@ export default function PlayerRoomDashboard({
         <h3>{next?fmtDate(next.scheduled_at):'Your next poker night'}</h3>
         <p>{next?(next.location||room.name)+' · '+next.seats+' seats':'Your host has not scheduled another game yet.'}</p>
         <div className="pkr-player-buttons">
-          {next?<><button type="button" className="pkr-player-primary" onClick={goRsvp}>RSVP &amp; choose seat</button>
-            <button type="button" className="pkr-player-outline" onClick={goLive}>{live?'Watch live table':'Game details'} →</button></>:
+          {next?<>{!live&&<button type="button" className="pkr-player-primary" onClick={showRsvp}>RSVP &amp; choose seat</button>}
+            <button type="button" className="pkr-player-outline" onClick={goLive}>{live?'Watch live table':'Game details'} →</button>
+            {!live&&<button type="button" className="pkr-player-outline" onClick={()=>downloadCalendar(next,room)}>Add to calendar</button>}</>:
            <button type="button" className="pkr-player-outline" onClick={()=>goTab('games')}>View games →</button>}
         </div>
       </div>
       <div className="pkr-player-feature-chip" aria-hidden="true">♠</div>
     </div>}
+    {!paymentsOnly&&<div className="pkr-player-utility">
+      <button type="button" className="pkr-player-link" onClick={()=>void shareRoom()}>Share member link →</button>
+      <button type="button" className="pkr-player-link"
+        onClick={()=>router.push('/install?group='+encodeURIComponent(room.id))}>Phone setup &amp; alerts →</button>
+      {shareNotice&&<p role="status" className="pkr-player-fineprint">{shareNotice}</p>}
+    </div>}
+    {!paymentsOnly&&next&&['scheduled','lobby'].includes(next.status)&&<div id="pkr-player-rsvp">
+      <PlayerGameNightAccess key={next.id} game={next} memberName={memberName||''}/>
+    </div>}
     {!paymentsOnly&&<nav className="pkr-player-actions" aria-label="Player actions">
-      <button type="button" onClick={next?goRsvp:()=>goTab('games')}><b>✋</b><strong>My RSVP</strong><small>Arrival and seat</small></button>
+      <button type="button" onClick={showRsvp}><b>✋</b><strong>My RSVP</strong><small>Arrival and seat</small></button>
       <button type="button" onClick={goPayments}><b>⇄</b><strong>Payments</strong><small>Pay or confirm</small></button>
       <button type="button" onClick={goResults}><b>🏆</b><strong>Results</strong><small>Standings & history</small></button>
       <button type="button" onClick={goProfile}><b>♟</b><strong>My profile</strong><small>Avatar and details</small></button>
