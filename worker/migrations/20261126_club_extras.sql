@@ -48,8 +48,10 @@ CREATE INDEX IF NOT EXISTS idx_room_tournament_presets_room
 -- records a transfer, subscription, buy-in or settlement amount.
 CREATE TABLE IF NOT EXISTS host_free_first_games (
   host_id TEXT PRIMARY KEY REFERENCES users(id),
-  event_id TEXT NOT NULL REFERENCES events(id),
-  game_id TEXT NOT NULL UNIQUE REFERENCES games(id),
+  -- Deliberately not foreign keys: deleting a cancelled test game or ending
+  -- its room must not remove the durable one-time claim or block game deletion.
+  event_id TEXT NOT NULL,
+  game_id TEXT NOT NULL UNIQUE,
   claimed_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE INDEX IF NOT EXISTS idx_host_free_games_game
