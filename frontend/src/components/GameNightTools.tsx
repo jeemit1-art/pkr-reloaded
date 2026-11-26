@@ -15,7 +15,7 @@ import ClubEngagementPanel from './ClubEngagementPanel';
 import ClubExtrasPanel from './ClubExtrasPanel';
 import './GameNightTools.css';
 
-type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void;onScheduleDate?:(ts:number)=>void};
+type Props={event:EventDetail;games:Game[];isHost:boolean;isGroupOwner?:boolean;userId?:string|null;onMembers:()=>void;onSchedule:()=>void;onScheduleDate?:(ts:number)=>void};
 type Data={game:GameDetail;board:RsvpBoardData|null;results:ResultsData|null;boardError:string;resultsError:string};
 type ShareKind='invitation'|'update'|'live'|'results';
 const money=(cents:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(cents/100);
@@ -23,7 +23,7 @@ const errorMessage=(error:unknown)=>error instanceof Error?error.message:'Unable
 const validTransfer=(value:Transfer)=>!!value.id&&value.amount>0&&Number.isSafeInteger(value.amount)&&
   ['owed','not_received','payer_claimed'].includes(value.status||'');
 
-export default function GameNightTools({event,games,isHost,onMembers,onSchedule,onScheduleDate}:Props){
+export default function GameNightTools({event,games,isHost,isGroupOwner=false,userId,onMembers,onSchedule,onScheduleDate}:Props){
   const router=useRouter();
   const availableGames=useMemo(()=>{
     const future=games.filter(g=>isCurrentGame(g))
@@ -294,7 +294,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
     {instantPanel}
     <ClubEngagementPanel eventId={event.id} isHost={isHost} onScheduleDate={onScheduleDate}/>
     <ClubExtrasPanel eventId={event.id} games={games} isManager={isHost}
-      isOwner={event.role==='host'} userId={event.role==='host'?event.host_id:null}/>
+      isOwner={isGroupOwner} userId={userId}/>
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
@@ -409,7 +409,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
     {instantPanel}
     <ClubEngagementPanel eventId={event.id} game={current} isHost={isHost} onScheduleDate={onScheduleDate}/>
     <ClubExtrasPanel eventId={event.id} games={games} isManager={isHost}
-      isOwner={event.role==='host'} userId={event.role==='host'?event.host_id:null}/>
+      isOwner={isGroupOwner} userId={userId}/>
     <div className="pkr-night-secondary-link"><button type="button" onClick={()=>router.push('/account')}>
       Notification & sound settings →</button></div>
     {notice&&<p className="pkr-night-notice" role="status">{notice}</p>}
