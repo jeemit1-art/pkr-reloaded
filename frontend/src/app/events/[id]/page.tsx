@@ -530,6 +530,24 @@ export default function EventPage() {
         {(tab==='games'||tab==='night')&&<GamesSectionTabs roomId={id}
           active={tab==='night'?'rsvps':'sessions'}
           onChoose={next=>selectTab(next==='rsvps'?'night':'games')}/>}
+        {/* The global mobile header owns the status-bar and club navigation.
+            Keep all room actions inside the scrollable page instead of
+            showing a second sticky room header. */}
+        <div className="pkr-room-mobile-actions" aria-label="Room quick actions">
+          {canUsePush()&&<button type="button" className="btn btn-outline"
+            disabled={pushLoading} aria-label={pushEnabled?'Disable club notifications':'Enable club notifications'}
+            onClick={()=>void togglePush()}>
+            {pushEnabled?'🔔 Alerts on':'🔕 Alerts off'}
+          </button>}
+          {isHost&&<>
+            <button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>
+              + Schedule game
+            </button>
+            <button type="button" className="btn btn-outline" onClick={()=>setShowInstall(true)}>
+              Share PKR
+            </button>
+          </>}
+        </div>
 
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
