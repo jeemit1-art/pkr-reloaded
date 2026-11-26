@@ -16,8 +16,8 @@ const output=path.resolve(__dirname,'../../artifacts/app-release-updates');
 fs.mkdirSync(output,{recursive:true});
 const now=Math.floor(Date.now()/1000);
 const user={id:'release-user',name:'Morgan Example',email:'release@invalid.example',plan:'lifetime',is_active:true,trial_active:false,trial_days_left:0,avatar_url:null};
-const room={id:'release-room',name:'Example Poker Club',status:'active',role:'member',host_id:'release-host',member_count:2,game_count:1,buy_in:2500,created_at:now-86400};
-const members=[{id:user.id,name:user.name,role:'member',joined_at:room.created_at},{id:'release-host',name:'Taylor Example',role:'host',joined_at:room.created_at}];
+const room={id:'release-room',name:'Example Poker Club',status:'active',role:'host',host_id:user.id,member_count:2,game_count:1,buy_in:2500,created_at:now-86400};
+const members=[{id:user.id,name:user.name,role:'host',joined_at:room.created_at},{id:'release-member',name:'Taylor Example',role:'member',joined_at:room.created_at}];
 const game={id:'release-game',event_id:room.id,name:'Example live game',status:'active',seats:9,buy_in:2500,starting_chips:0,chip_value:0,bank_size:25,hand_tracking:0,scheduled_at:now,created_at:now,location:'Fictional table',live_token:'release-live',results_token:null};
 const players=[{game_id:game.id,user_id:user.id,display_name:user.name,seat_number:1,buy_ins:1,buy_in_total:2500,cashout:null,revision:1}];
 const transactions=[{type:'buyin',amount:25,ts:now*1000}];
@@ -35,6 +35,7 @@ function fixture(url,method){
  if(p==='/events/'+room.id)return {...room,members};
  if(p==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:'command',updated_at:now};
  if(p==='/events/'+room.id+'/profiles')return {profiles:[]};
+ if(p==='/events/'+room.id+'/push-registrations')return {members:[],definition:'registered_devices_not_delivery_confirmation'};
  if(p==='/events/'+room.id+'/players'||p==='/events/'+room.id+'/history'||p==='/events/'+room.id+'/leaderboard')return [];
  if(p==='/events/'+room.id+'/games')return [game];
  if(p==='/events/'+room.id+'/settlement-ledger')return {games:[],transfers:[]};
@@ -148,6 +149,7 @@ async function check(type,label){
 
   const beforeLiveChecks=versionChecks.length;
   await gotoPage(page,BASE+'/games/'+game.id+'/play');
+  assert.equal(new URL(page.url()).pathname,'/games/'+game.id+'/play','The live-table case must remain on the authorised host route');
   await page.locator('#seat1 .seat-money').filter({hasText:'$25'}).waitFor();
   assert(versionChecks.length>beforeLiveChecks,'The newer release must still be detected during live play');
   assert.equal(versionChecks.at(-1).version,NEWER);
@@ -168,7 +170,7 @@ async function check(type,label){
   }
   assert.deepEqual(unexpected,[],'Release checks and refresh controls must cause no API writes, unexpected requests or runtime errors');
   console.log('PASS '+label+' running version, update detection, Later, confirmed/cancelled refresh, preserved state and live-game suppression');
- }catch(error){await screenshot(page,label+'-failure').catch(()=>{});throw error;}
+ }catch(error){if(unexpected.length)console.error(label+' unexpected requests/errors: '+JSON.stringify(unexpected));await screenshot(page,label+'-failure').catch(()=>{});throw error;}
  finally{await context.close();await browser.close();}
 }
 (async()=>{
