@@ -1,0 +1,128 @@
+/* Game night: shared production tokens and controls. Existing routes and layouts remain intact. */
+@layer pkr-theme-priority {
+  html.pkr-game-night {
+    --gn-paper:#F4F6F8;--gn-ink:#14242C;--gn-coral:#F27457;--gn-muted:#64727A;
+    --gn-line:#DFE5E9;--gn-green:#147856;--gn-red:#BE3949;
+    --font-display:var(--font-body),Inter,system-ui,sans-serif!important;
+    --font-head:var(--font-body),Inter,system-ui,sans-serif!important;
+    --font-num:var(--font-body),Inter,system-ui,sans-serif!important;
+    --font-landing-display:var(--font-body),Inter,system-ui,sans-serif!important;
+    color-scheme:light!important;scrollbar-color:#BBC8CF #F4F6F8;
+  }
+  html.pkr-game-night body{background:#F4F6F8!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important}
+  html.pkr-game-night :is(button,input,select,textarea){font-family:var(--font-body),Inter,system-ui,sans-serif!important}
+  html.pkr-game-night :is(strong,b,.money,.pkr-amount){font-variant-numeric:tabular-nums!important}
+  html.pkr-game-night :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #A33D28!important;outline-offset:3px!important}
+  html.pkr-game-night :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page,.pkr-app.pkr-dialog-root) {
+    --bg:#F4F6F8!important;--bg2:#FFFFFF!important;--bg3:#EDF1F4!important;--bg4:#E4EBEF!important;
+    --white:#14242C!important;--ivory:#334A54!important;--muted:#64727A!important;--faint:#64727A!important;
+    --gold:#A33D28!important;--gold-pale:#8F3424!important;--gold-dim:#B95A43!important;
+    --green:#147856!important;--red:#BE3949!important;--amber:#8A6119!important;
+    --border:#DFE5E9!important;--border-sub:#DFE5E9!important;--border-hi:#BECBD2!important;
+    --pkr-a-bg:#F4F6F8!important;--pkr-a-surface:#FFFFFF!important;--pkr-a-raised:#EDF1F4!important;
+    --pkr-a-text:#14242C!important;--pkr-a-muted:#64727A!important;--pkr-a-line:#DFE5E9!important;
+    --pkr-a-primary:#F27457!important;--pkr-a-on-primary:#14242C!important;
+    --pkr-a-money:#14242C!important;--pkr-a-danger:#BE3949!important;
+    --pkr-ex-bg:#F4F6F8!important;--pkr-ex-surface:#FFFFFF!important;--pkr-ex-surface-2:#EDF1F4!important;
+    --pkr-ex-ink:#14242C!important;--pkr-ex-secondary:#64727A!important;--pkr-ex-border:#DFE5E9!important;
+    --pkr-ex-accent:#A33D28!important;--pkr-ex-accent-light:#A33D28!important;--pkr-ex-accent-ink:#14242C!important;
+    --pkr-ex-green:#147856!important;--pkr-ex-page:#F4F6F8!important;--pkr-ex-surface-grad:#FFFFFF!important;
+    background:#F4F6F8!important;background-image:none!important;color:#14242C!important;
+    font-family:var(--font-body),Inter,system-ui,sans-serif!important;
+  }
+  html.pkr-game-night :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page)>.pkr-content{
+    background:transparent!important;background-image:none!important;color:#14242C!important;
+  }
+  html.pkr-game-night :is(.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page) :is(h1,h2,h3,h4){font-family:var(--font-body),Inter,system-ui,sans-serif!important;letter-spacing:-.035em!important}
+  html.pkr-game-night :is(.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
+    min-height:44px!important;font-size:16px!important;background:#FFFFFF!important;color:#14242C!important;
+    border:1px solid #BECBD2!important;border-radius:11px!important;padding:10px 12px!important;max-width:100%;
+  }
+  html.pkr-game-night :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page) :is(.btn,.pkr-primary-action,.pkr-primary-outline){
+    min-height:44px!important;font-size:14px!important;line-height:1.4!important;border-radius:12px!important;
+    padding:10px 15px!important;box-shadow:none!important;text-shadow:none!important;touch-action:manipulation;
+  }
+  html.pkr-game-night :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page) :is(.btn-primary,.pkr-primary-action){background:#F27457!important;border-color:#F27457!important;color:#14242C!important}
+  html.pkr-game-night :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-primary-page,.pkr-schedule-page) :is(.btn-outline,.btn-ghost,.pkr-primary-outline){background:#FFFFFF!important;border-color:#D5DFE5!important;color:#334A54!important}
+  html.pkr-game-night :is(.pkr-primary-panel,.pkr-primary-metric,.pkr-schedule-game,.pkr-schedule-toolbar,.pkr-account-card){background:#FFFFFF!important;border:1px solid #DFE5E9!important;border-radius:18px!important;box-shadow:none!important;color:#14242C!important}
+  html.pkr-game-night :is(.pkr-primary-panel h2,.pkr-primary-page-head h1,.pkr-primary-row strong,.pkr-schedule-game h2){color:#14242C!important}
+  html.pkr-game-night :is(.pkr-primary-panel p,.pkr-primary-page-head p,.pkr-primary-row small,.pkr-primary-metric small,.pkr-primary-metric span,.pkr-schedule-game p){color:#64727A!important;font-size:14px!important;line-height:1.5!important}
+  html.pkr-game-night :is(.pkr-primary-kicker,.pkr-primary-page-head label,.pkr-primary-metric strong,.pkr-schedule-page .pkr-eyebrow){color:#A33D28!important}
+  html.pkr-game-night .pkr-section-tabs{background:#EDF1F4!important;border-color:#DFE5E9!important;border-radius:14px!important}
+  html.pkr-game-night .pkr-section-tabs button{color:#526670!important;border-radius:10px!important;font-size:14px!important;min-height:44px!important}
+  html.pkr-game-night .pkr-section-tabs button:is([aria-current=page],[aria-selected=true]){color:#9E3D2B!important;background:#FFF0EB!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-section-count{background:#FFE6DC!important;color:#9E3D2B!important}
+  html.pkr-game-night .pkr-primary-empty{color:#64727A!important;border-color:#BECBD2!important}
+  html.pkr-game-night .pkr-primary-row{border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-hero{background:linear-gradient(115deg,#EDF2F4,#FFFFFF 76%)!important;border:1px solid #D4DEE4!important;box-shadow:none!important;border-radius:20px!important;min-height:0!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-hero h1{color:#14242C!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-hero p{color:#64727A!important;font-size:14px!important;line-height:1.5!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-counts{gap:8px!important;flex-wrap:wrap!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-counts span{background:#FFFFFF!important;border-color:#DFE5E9!important;color:#64727A!important}
+  html.pkr-game-night .pkr-schedule-page .pkr-schedule-counts strong{color:#14242C!important}
+  html.pkr-game-night .pkr-account-page .pkr-primary-page-head{background:#EDF1F4!important;border-color:#DFE5E9!important;min-height:0!important}
+  html.pkr-game-night .pkr-account-page .pkr-primary-page-head::before{background:none!important}
+  html.pkr-game-night .pkr-account-page :is(.pkr-primary-panel p strong,.pkr-account-notification-summary>strong){color:#14242C!important}
+  html.pkr-game-night .pkr-account-page :is(.pkr-account-plan,.pkr-account-label){color:#A33D28!important}
+  html.pkr-game-night .pkr-account-page .pkr-account-notification-summary{border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-account-page .pkr-account-notice{background:#FFF0EB!important;border-color:#E9C5B8!important;color:#8F3424!important;font-size:14px!important}
+  html.pkr-game-night .pkr-account-page .pkr-sound-control button{background:#EDF1F4!important;border-color:#BECBD2!important;color:#334A54!important;min-height:44px!important}
+  html.pkr-game-night .pkr-account-page .pkr-experience-choice-options button{min-height:44px!important}
+  html.pkr-game-night .pkr-account-page .pkr-experience-choice-options button.is-active{border-color:#F27457!important;background:#FFF0EB!important;box-shadow:none!important}
+
+  /* Keep all five destinations and the labelled Account control. */
+  html.pkr-game-night .pkr-primary-mobile-utility{min-height:calc(64px + env(safe-area-inset-top))!important;background:#FFFFFF!important;border-bottom:1px solid #DFE5E9!important;padding-inline:16px!important;box-shadow:none!important;backdrop-filter:none!important;color:#14242C!important}
+  html.pkr-game-night .pkr-primary-mobile-mark{color:#CB5038!important;font-size:27px!important}
+  html.pkr-game-night .pkr-primary-club-name,html.pkr-game-night .pkr-primary-mobile-utility>select{color:#14242C!important;background:transparent!important;font-weight:650!important;font-size:14px!important;letter-spacing:-.3px!important;border-color:transparent!important}
+  html.pkr-game-night .pkr-primary-club-name>span{color:#64727A!important}
+  html.pkr-game-night .pkr-primary-mobile-utility .pkr-primary-account{min-height:44px!important;border-radius:13px!important;background:#EDF1F4!important;border:1px solid #DFE5E9!important;color:#334A54!important;font-size:12px!important}
+  html.pkr-game-night .pkr-primary-account svg{width:18px!important;height:18px!important;color:#334A54!important}
+  html.pkr-game-night .pkr-primary-bottom-nav{background:#FFFFFF!important;border-top:1px solid #DFE5E9!important;box-shadow:none!important;backdrop-filter:none!important;min-height:76px!important;padding:7px 10px calc(7px + env(safe-area-inset-bottom))!important;gap:3px!important}
+  html.pkr-game-night .pkr-primary-bottom-nav button{color:#65737B!important;min-height:59px!important;border:0!important;border-radius:16px!important;gap:5px!important;padding:8px 0!important}
+  html.pkr-game-night .pkr-primary-bottom-nav button.active{background:#FFF0EB!important;color:#9E3D2B!important}
+  html.pkr-game-night .pkr-primary-bottom-nav button small{font-size:12px!important;line-height:1.3!important;font-weight:600!important;color:inherit!important}
+  html.pkr-game-night .pkr-primary-bottom-nav button svg{width:22px!important;height:22px!important;color:inherit!important}
+  html.pkr-game-night .pkr-primary-sidebar{background:#FFFFFF!important;border-color:#DFE5E9!important;color:#14242C!important}
+  html.pkr-game-night .pkr-primary-sidebar .pkr-persistent-room{background:#F4F6F8!important;border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-primary-sidebar :is(button,select,.pkr-persistent-room strong,.pkr-persistent-brand){color:#14242C!important}
+  html.pkr-game-night .pkr-primary-sidebar nav button{width:100%!important;min-height:48px!important;background:transparent!important;border-color:transparent!important;font-size:15px!important}
+  html.pkr-game-night .pkr-primary-sidebar nav button svg{color:#526670!important}
+  html.pkr-game-night .pkr-primary-sidebar nav button.active{background:#FFF0EB!important;color:#9E3D2B!important;border-color:#E9C5B8!important}
+  html.pkr-game-night .pkr-primary-sidebar :is(.pkr-persistent-brand>span,.pkr-persistent-room>span,.pkr-primary-view-clubs){color:#A33D28!important}
+  html.pkr-game-night .pkr-primary-sidebar :is(.pkr-room-switcher,.pkr-primary-sidebar-footer button){background:#F4F6F8!important;border-color:#D5DFE5!important;color:#334A54!important;min-height:44px!important;font-size:14px!important}
+  html.pkr-game-night .pkr-primary-sidebar-footer{border-color:#DFE5E9!important}
+  html.pkr-game-night .pkr-primary-sidebar :is(.pkr-persistent-room label,.pkr-primary-sidebar-footer>span){color:#64727A!important}
+  html.pkr-game-night .pkr-app.pkr-dashboard>.pkr-content{padding:22px 20px calc(105px + env(safe-area-inset-bottom))!important}
+  html.pkr-game-night .pkr-room-list-search input{background:#FFFFFF!important;color:#14242C!important;border-color:#BECBD2!important;font-size:16px!important}
+  html.pkr-game-night .pkr-room-list-search input::placeholder{color:#64727A!important}
+  html.pkr-game-night .pkr-player-setup-card{background:#FFFFFF!important;border-color:#DFE5E9!important;color:#14242C!important}
+
+  /* This personal view switch never changes the saved Command / Live setting. */
+  html.pkr-game-night .pkr-gn-home-switch{display:flex!important;gap:4px!important;padding:4px!important;margin:0 auto 22px!important;max-width:1080px!important;width:fit-content!important;background:#E8EEF2!important;border:1px solid #DDE5EA!important;border-radius:14px!important}
+  html.pkr-game-night .pkr-gn-home-switch button{border:0!important;border-radius:10px!important;background:transparent!important;color:#526670!important;min-height:44px!important;padding:10px 18px!important;font-size:14px!important;font-weight:600!important;cursor:pointer!important}
+  html.pkr-game-night .pkr-gn-home-switch button[aria-pressed=true]{background:#FFFFFF!important;color:#14242C!important;box-shadow:0 2px 5px #14242C0D!important}
+  html.pkr-game-night .pkr-dual-root[hidden]{display:none!important}
+  html.pkr-game-night .pkr-dual-root{--bg:#061410!important;--bg2:#11271f!important;--bg3:#16372a!important;--white:#eef7ef!important;--ivory:#dceade!important;--muted:#b1c8b8!important;--gold:#e9bf76!important;--green:#59e8a9!important;--red:#ff7c8e!important;--border-sub:#365445!important;--border-hi:#53745c!important;color:#eef7ef!important}
+  html.pkr-game-night .pkr-dual-root{
+    background:#061410!important;padding:18px!important;border-radius:24px!important;
+    --pkr-ex-bg:#061410!important;--pkr-ex-surface:#11271f!important;--pkr-ex-surface-2:#16372a!important;
+    --pkr-ex-ink:#eef7ef!important;--pkr-ex-secondary:#b1c8b8!important;--pkr-ex-border:#53745c!important;
+    --pkr-ex-accent:#e9bf76!important;--pkr-ex-accent-light:#fff0c9!important;--pkr-ex-accent-ink:#231a0d!important;
+    --pkr-a-bg:#061410!important;--pkr-a-surface:#11271f!important;--pkr-a-raised:#16372a!important;
+    --pkr-a-text:#eef7ef!important;--pkr-a-muted:#b1c8b8!important;--pkr-a-line:#53745c!important;
+  }
+  html.pkr-game-night .pkr-dual-root .pkr-dual-switcher{background:#11271f!important;color:#eef7ef!important;border-color:#53745c!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-switch-actions{background:#0b211a!important;border-color:#53745c!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-switch-actions button{background:transparent!important;color:#b1c8b8!important}
+  html.pkr-game-night .pkr-dual-root .pkr-dual-switch-actions button.active{background:#e9bf76!important;color:#231a0d!important;border-color:#e9bf76!important}
+  html.pkr-game-night .pkr-primary-sidebar .pkr-persistent-brand>span{background:#F27457!important;color:#14242C!important}
+  html.pkr-game-night .pkr-primary-sidebar nav button.active{box-shadow:inset 3px 0 #F27457!important}
+  html.pkr-game-night .pkr-app.pkr-dashboard>.pkr-content>.pkr-player-setup-card{margin-top:24px!important}
+  @media(max-width:359px){
+    html.pkr-game-night .pkr-primary-mobile-utility{padding-inline:10px!important}
+    html.pkr-game-night .pkr-primary-bottom-nav{padding-inline:5px!important}
+    html.pkr-game-night .pkr-primary-bottom-nav button small{font-size:11px!important}
+    html.pkr-game-night .pkr-app.pkr-dashboard>.pkr-content{padding-inline:14px!important}
+  }
+  @media(prefers-reduced-motion:reduce){html.pkr-game-night *{scroll-behavior:auto!important}}
+}

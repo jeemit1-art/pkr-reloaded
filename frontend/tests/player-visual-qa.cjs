@@ -82,7 +82,8 @@ async function main(){
    async function check(label,fn){try{await fn();results.push('PASS '+size.name+' '+label);}catch(e){failures.push('FAIL '+size.name+' '+label+': '+e.message);}}
    await check('member dashboard',async()=>{
     await visit('/dashboard','[data-testid="player-dashboard"]');
-    assert.equal(await page.getByText('Welcome, Alex',{exact:false}).count()>=1,true);
+    await page.locator('[data-testid="player-dashboard"] .gn-player-next')
+      .getByRole('heading',{name:room.name,exact:true}).waitFor();
     assert.equal(await page.locator('[data-testid="dual-dashboard"]').count(),0);
     assert.equal(await page.getByText('Quick Buy-in').count(),0);
     assert.equal(await page.getByText('Create a Game').count(),0);
@@ -94,15 +95,20 @@ async function main(){
     const amount=await panel.innerText();
     assert(amount.includes('$25')&&amount.includes('$75'));
     assert(!amount.includes('$9,900'));
+    const primarySections=['Home','Games','Players','Results','Payments'];
     if(size.width<1100){
-      assert.equal(await page.locator('.pkr-player-universal-nav button').count(),4,'Player bottom navigation');
+      const bottomNav=page.locator('.pkr-primary-bottom-nav');
+      assert.equal(await bottomNav.isVisible(),true,'Player bottom navigation is visible');
+      assert.deepEqual((await bottomNav.getByRole('button').allTextContents()).map(text=>text.trim()),primarySections,
+        'Players retain all five primary destinations');
       assert.equal(await page.locator('.pkr-persistent-nav').isVisible(),false,'Desktop sidebar must stay hidden on mobile');
-      assert.equal(await page.locator('.pkr-player-universal-nav').getByRole('button',{name:'More'}).count(),1);
+      assert.equal(await page.getByRole('button',{name:'Account, notifications and installation',exact:true}).isVisible(),true);
     } else {
       const sidebar=page.locator('.pkr-persistent-nav');
-      assert.equal(await sidebar.isVisible(),true,'Player desktop gets limited sidebar');
-      assert.equal(await sidebar.getByRole('button',{name:'Members'}).count(),1);
-      assert.equal(await sidebar.getByRole('button',{name:'My payments'}).count(),1);
+      assert.equal(await sidebar.isVisible(),true,'Player desktop keeps the primary sidebar');
+      assert.deepEqual((await sidebar.getByRole('navigation',{name:'Primary sections'}).getByRole('button').allTextContents()).map(text=>text.trim()),primarySections);
+      assert.equal(await sidebar.getByRole('button',{name:'Players',exact:true}).count(),1);
+      assert.equal(await sidebar.getByRole('button',{name:'Payments',exact:true}).count(),1);
       assert.equal(await sidebar.getByRole('button',{name:'Settlements'}).count(),0);
       assert.equal(await sidebar.getByRole('button',{name:'Schedule'}).count(),0);
     }
@@ -111,8 +117,7 @@ async function main(){
    });
    if(size.name==='phone'){
     await check('scan navigation',async()=>{
-      await page.locator('.pkr-player-universal-nav').getByRole('button',{name:'More'}).click();
-      await page.locator('.pkr-navigation-more-panel').getByRole('button',{name:'Scan invitation'}).click();
+      await page.getByRole('button',{name:'Scan invite',exact:true}).click();
       await page.locator('#scanVideo').waitFor({state:'visible',timeout:10000});
     });
    }
@@ -120,6 +125,8 @@ async function main(){
     await check('self profile',async()=>{
       await page.getByRole('button',{name:/My profile/}).first().click();
       await page.locator('.pkr-player-profile-sheet').waitFor({state:'visible',timeout:15000});
+      await page.getByRole('form',{name:'Player profile for '+user.name,exact:true})
+        .getByRole('heading',{name:user.name,exact:true}).waitFor();
       assert.equal(await page.getByText('Remove member',{exact:false}).count(),0);
     });
    }
@@ -188,6 +195,7 @@ async function main(){
    });
    try{
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded',timeout:40000});
+    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
     await page.locator('[data-testid="dual-dashboard"]').waitFor({state:'visible',timeout:16000});
     assert.equal(await page.locator('[data-testid="player-dashboard"]').count(),0);
     assert.equal(await page.locator('.pkr-persistent-nav').count(),1);

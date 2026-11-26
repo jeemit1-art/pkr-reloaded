@@ -33,6 +33,9 @@ const layout=postcss.atRule({name:'layer',params:'pkr-layout'});layout.append(ba
 const priority=postcss.atRule({name:'layer',params:'pkr-theme-priority'});priority.append(select(theme,true).nodes);out.append(priority);
 const normal=postcss.atRule({name:'layer',params:'pkr-theme'});normal.append(select(theme,false).nodes);out.append(normal);
 const css=out.toString();fs.writeFileSync(path.join(app,'pkr-theme-a.css'),css+'\n');
-const manifest={theme:'Theme A - Midnight Felt',cssSha256:crypto.createHash('sha256').update(css).digest('hex'),colours:{background:'#0B0F12',surface:'#131A1F',raised:'#1B242B',line:'#26323A',text:'#EAF0F2',muted:'#8A99A3',primary:'#3DDC97',money:'#F2B84B',danger:'#FF5A5F',felt:'#0F5C4A'},fonts:['Bricolage Grotesque','Inter','JetBrains Mono']};
+// The original cascade remains intact beneath the additive Game night styles.
+const gameNightNames=['game-night.css','game-night-secondary.css','game-night-host.css','game-night-player.css','game-night-live.css','game-night-payments.css'];
+const presentationCss=css+gameNightNames.map(name=>fs.readFileSync(path.join(app,name),'utf8')).join('\n');
+const manifest={theme:'PKR Game night',cssSha256:crypto.createHash('sha256').update(presentationCss).digest('hex'),colours:{background:'#F4F6F8',surface:'#FFFFFF',raised:'#EDF1F4',line:'#DFE5E9',text:'#14242C',muted:'#64727A',primary:'#F27457',money:'#14242C',positive:'#147856',danger:'#BE3949',felt:'#14242C'},fonts:['Inter'],preservedDashboardLayouts:['Command Centre','Live Poker']};
 fs.writeFileSync(path.resolve(__dirname,'../public/design-version.json'),JSON.stringify(manifest,null,2)+'\n');
-console.log('Compiled one Midnight Felt cascade: '+manifest.cssSha256.slice(0,12));
+console.log('Compiled PKR presentation: '+manifest.cssSha256.slice(0,12));

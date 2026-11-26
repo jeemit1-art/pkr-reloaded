@@ -129,10 +129,14 @@ async function check(browser,width,height,count){
     assert.equal(await page.locator('#seat1 .pkr-game-compact-name').getAttribute('title'),'Alex');
    }
    const bank=compact?'.pkr-game-compact-bank':'.pkr-game-seat-bank';
-   assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
-   assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
-   assert.equal(await page.locator('#seat2 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(61, 220, 151)');
-   assert.equal(await page.locator('#seat3 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 93, 114)');
+   assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(189, 207, 216)',
+    'Active buy-ins are neutral records, not a cash-out loss.');
+   assert.equal((await page.locator('#seat1 .pkr-game-seat-result').textContent()).trim(),'$25');
+   assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(244, 246, 248)');
+   assert.equal(await page.locator('#seat2 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(120, 221, 179)');
+   assert.match(await page.locator('#seat2 .pkr-game-seat-result').textContent(),/\+\$15/);
+   assert.equal(await page.locator('#seat3 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 145, 160)');
+   assert.match(await page.locator('#seat3 .pkr-game-seat-result').textContent(),/-\$15/);
    assert.equal(await page.locator('#seat4').getAttribute('data-status'),'cashed','Zero-dollar cashout still marks player cashed out');
    assert.match(await page.locator('#seat4 .pkr-game-seat-result').textContent(),/-\$25/);
    const geometry=await page.evaluate(()=>{

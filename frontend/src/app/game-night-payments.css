@@ -1,0 +1,220 @@
+/* Payments presentation. Financial records and shared ledger tools remain authoritative. */
+@layer pkr-theme-priority {
+ html.pkr-game-night .pkr-gn-payments {
+  --gn-pay-ink:#14242C;--gn-pay-muted:#64727A;--gn-pay-line:#E3E8EB;
+  width:100%!important;max-width:760px!important;margin:0 auto!important;
+  padding:24px 20px calc(110px + env(safe-area-inset-bottom))!important;
+  background:#F4F6F8!important;color:#14242C!important;
+  font:400 16px/1.5 Inter,var(--font-body),system-ui,sans-serif!important;
+  font-variant-numeric:tabular-nums!important;text-shadow:none!important;
+ }
+ html.pkr-game-night .pkr-gn-payments :is(h1,h2,h3,p,button,summary,strong,small,select) {
+  font-family:Inter,var(--font-body),system-ui,sans-serif!important;text-shadow:none!important;
+ }
+ html.pkr-game-night .pkr-gn-payments :is(button,summary,select) {
+  min-height:48px!important;font-size:16px!important;cursor:pointer!important;
+ }
+ html.pkr-game-night .pkr-gn-payments :is(button,summary,select):focus-visible {
+  outline:2px solid #14242C!important;outline-offset:4px!important;
+ }
+ html.pkr-game-night .pkr-gn-payments button:disabled {opacity:.5!important;cursor:wait!important}
+ html.pkr-game-night .pkr-gn-payments-heading {
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;margin:0 0 24px!important;
+ }
+ html.pkr-game-night .pkr-gn-payments-club {margin:0 0 4px!important;font-size:14px!important;font-weight:500!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payments h1 {margin:0!important;font-size:34px!important;line-height:1.15!important;font-weight:750!important;letter-spacing:-.04em!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-menu {position:relative!important;z-index:4!important;flex-shrink:0!important}
+ html.pkr-game-night .pkr-gn-payment-menu summary {
+  width:48px!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  list-style:none!important;border:1px solid #E3E8EB!important;border-radius:50%!important;background:#fff!important;color:#14242C!important;
+ }
+ html.pkr-game-night .pkr-gn-payment-menu summary::-webkit-details-marker {display:none!important}
+ html.pkr-game-night .pkr-gn-payment-menu>div {position:absolute!important;top:56px!important;right:0!important;width:245px!important;padding:6px!important;background:#fff!important;border:1px solid #E3E8EB!important;border-radius:16px!important;box-shadow:0 8px 28px #14242c12!important}
+ html.pkr-game-night .pkr-gn-payment-menu button {display:flex!important;align-items:center!important;gap:10px!important;width:100%!important;padding:12px!important;text-align:left!important;background:transparent!important;border:0!important;border-radius:10px!important;color:#14242C!important;font-weight:500!important}
+ html.pkr-game-night .pkr-gn-payment-menu button:hover {background:#F4F6F8!important}
+ html.pkr-game-night .pkr-gn-payment-room-label {display:flex!important;flex-direction:column!important;gap:6px!important;margin:0 0 16px!important;font-size:14px!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-room-label select {padding:10px 12px!important;border:1px solid #E3E8EB!important;border-radius:12px!important;background:#fff!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-scope {display:grid!important;grid-template-columns:1fr 1fr!important;padding:4px!important;margin:0 0 20px!important;background:#E8ECEF!important;border-radius:14px!important}
+ html.pkr-game-night .pkr-gn-payment-scope button {border:0!important;border-radius:10px!important;background:transparent!important;color:#64727A!important;font-weight:600!important}
+ html.pkr-game-night .pkr-gn-payment-scope button[aria-pressed=true] {background:#fff!important;color:#14242C!important;box-shadow:0 1px 4px #14242c0a!important}
+ html.pkr-game-night .pkr-gn-payment-totals {display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;margin:0 0 22px!important}
+ html.pkr-game-night .pkr-gn-payment-total {display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:8px!important;min-width:0!important;padding:18px 16px!important;border:1px solid #E3E8EB!important;border-radius:18px!important;background:#fff!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-total-label {display:flex!important;align-items:center!important;gap:7px!important;font-size:14px!important;font-weight:550!important;color:#64727A!important;line-height:1.35!important}
+ html.pkr-game-night .pkr-gn-payment-direction {display:flex!important;flex-shrink:0!important}
+ html.pkr-game-night .pkr-gn-payment-direction svg {width:17px!important;height:17px!important}
+ html.pkr-game-night .pkr-gn-payment-total strong {font-size:34px!important;line-height:1.1!important;font-weight:700!important;letter-spacing:-.045em!important;color:#14242C!important;overflow-wrap:anywhere!important}
+ html.pkr-game-night .pkr-gn-payment-total small {font-size:14px!important;line-height:1.4!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-total.is-pay .pkr-gn-payment-direction {color:#BE3949!important}
+ html.pkr-game-night .pkr-gn-payment-total.is-receive .pkr-gn-payment-direction {color:#147856!important}
+ html.pkr-game-night .pkr-gn-payment-filters {display:flex!important;gap:24px!important;border-bottom:1px solid #DCE3E7!important;margin:0 0 22px!important}
+ html.pkr-game-night .pkr-gn-payment-filters button {position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;padding:0 2px 12px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#64727A!important;font-weight:600!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-filters button[aria-pressed=true] {color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-filters button[aria-pressed=true]::after {content:''!important;position:absolute!important;left:0!important;right:0!important;bottom:-1px!important;height:3px!important;background:#F27457!important;border-radius:3px 3px 0 0!important}
+ html.pkr-game-night .pkr-gn-payment-filters button span {min-width:23px!important;display:inline-flex!important;justify-content:center!important;align-items:center!important;padding:1px 6px!important;border-radius:6px!important;background:#E8ECEF!important;color:#64727A!important;font-size:14px!important}
+ html.pkr-game-night .pkr-gn-payment-filters button[aria-pressed=true] span {background:#FDE8E1!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-list-heading {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin:0 0 12px!important}
+ html.pkr-game-night .pkr-gn-payment-list-heading h2 {margin:0!important;font-size:18px!important;line-height:1.35!important;font-weight:650!important;letter-spacing:-.02em!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-list-heading>span {font-size:14px!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-list {display:grid!important;gap:12px!important}
+ html.pkr-game-night .pkr-gn-payment-card {padding:18px 16px 16px!important;border:1px solid #E3E8EB!important;border-radius:18px!important;background:#fff!important;box-shadow:none!important;min-width:0!important}
+ html.pkr-game-night .pkr-gn-payment-card-top {display:flex!important;align-items:center!important;gap:12px!important}
+ html.pkr-game-night .pkr-gn-payment-avatar {width:42px!important;height:42px!important;display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 42px!important;background:#EEF1F3!important;border:1px solid #E4E9EC!important;border-radius:50%!important;color:#3F535D!important;font-size:14px!important;font-weight:650!important}
+ html.pkr-game-night .pkr-gn-payment-person {flex:1!important;min-width:0!important}
+ html.pkr-game-night .pkr-gn-payment-person h3 {margin:0 0 3px!important;font-size:16px!important;font-weight:650!important;letter-spacing:-.015em!important;line-height:1.35!important;color:#14242C!important;overflow-wrap:anywhere!important}
+ html.pkr-game-night .pkr-gn-payment-person p {margin:0!important;font-size:14px!important;line-height:1.4!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-amount {font-size:23px!important;font-weight:700!important;letter-spacing:-.03em!important;line-height:1.15!important;color:#14242C!important;flex-shrink:0!important}
+ html.pkr-game-night .pkr-gn-payment-game-date {margin:10px 0 0 54px!important;font-size:14px!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-card-status {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:11px 0 0!important;flex-wrap:wrap!important}
+ html.pkr-game-night .pkr-gn-payment-status {display:inline-flex!important;align-items:center!important;gap:5px!important;padding:5px 8px!important;border-radius:7px!important;font-size:14px!important;line-height:1.35!important;font-weight:500!important}
+ html.pkr-game-night .pkr-gn-payment-status svg {width:14px!important;height:14px!important;flex-shrink:0!important}
+ html.pkr-game-night .pkr-gn-payment-status.is-due {color:#A12F3D!important;background:#FBEFF1!important}
+ html.pkr-game-night .pkr-gn-payment-status.is-paid {color:#147856!important;background:#EAF5EF!important}
+ html.pkr-game-night .pkr-gn-payment-status:is(.is-sent,.is-review) {color:#52616A!important;background:#EEF1F3!important}
+ html.pkr-game-night .pkr-gn-payment-record-link {display:flex!important;align-items:center!important;gap:3px!important;padding:4px 0 4px 6px!important;border:0!important;background:transparent!important;color:#64727A!important;font-size:14px!important;font-weight:500!important}
+ html.pkr-game-night .pkr-gn-payment-record-link svg {width:15px!important;height:15px!important}
+ html.pkr-game-night .pkr-gn-payment-primary {display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;padding:12px 16px!important;border:1px solid #F27457!important;border-radius:12px!important;background:#F27457!important;color:#14242C!important;font-size:16px!important;font-weight:650!important;line-height:1.4!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-primary:hover {background:#F5876E!important;border-color:#F5876E!important}
+ html.pkr-game-night .pkr-gn-payment-secondary {display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;padding:12px 16px!important;border:1px solid #DCE3E7!important;border-radius:12px!important;background:#fff!important;color:#14242C!important;font-size:16px!important;font-weight:600!important;line-height:1.4!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-secondary:hover {background:#F4F6F8!important}
+ html.pkr-game-night .pkr-gn-payment-card-action {width:100%!important;margin:4px 0 0!important}
+ html.pkr-game-night .pkr-gn-payment-card-action svg {width:18px!important;height:18px!important}
+ html.pkr-game-night .pkr-gn-payment-receipt-actions {display:flex!important;flex-wrap:wrap!important;gap:8px!important;margin-top:4px!important}
+ html.pkr-game-night .pkr-gn-payment-receipt-actions .pkr-gn-payment-primary {flex:1 1 100%!important}
+ html.pkr-game-night .pkr-gn-payment-receipt-actions .pkr-gn-payment-secondary {flex:1 1 100%!important}
+ html.pkr-game-night .pkr-gn-payment-card-note {margin:10px 0 0!important;color:#64727A!important;font-size:14px!important;line-height:1.5!important}
+ html.pkr-game-night .pkr-gn-payment-footnote {margin:20px 4px!important;color:#64727A!important;font-size:14px!important;line-height:1.6!important;max-width:46ch!important}
+ html.pkr-game-night .pkr-gn-payment-tools-link {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;width:100%!important;padding:15px 0!important;border:0!important;border-top:1px solid #DCE3E7!important;border-radius:0!important;background:transparent!important;color:#14242C!important;font-size:16px!important;font-weight:550!important}
+ html.pkr-game-night .pkr-gn-payment-tools-link>span {display:flex!important;align-items:center!important;gap:10px!important}
+ html.pkr-game-night .pkr-gn-payment-tools-link>svg {color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-empty {padding:30px 20px!important;background:#fff!important;border:1px solid #E3E8EB!important;border-radius:18px!important;text-align:center!important}
+ html.pkr-game-night .pkr-gn-payment-empty-icon {display:inline-flex!important;align-items:center!important;justify-content:center!important;width:48px!important;height:48px!important;border-radius:50%!important;background:#EAF5EF!important;color:#147856!important;margin:0 0 12px!important}
+ html.pkr-game-night .pkr-gn-payment-empty h2 {margin:0 0 8px!important;font-size:20px!important;font-weight:650!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-empty p {margin:0!important;color:#64727A!important;font-size:16px!important;line-height:1.55!important}
+ html.pkr-game-night .pkr-gn-payment-empty button {margin:18px auto 0!important}
+ html.pkr-game-night :is(.pkr-gn-payment-notice,.pkr-gn-payment-warning,.pkr-gn-payment-action-error) {font-size:14px!important;line-height:1.5!important;padding:12px 14px!important;border-radius:12px!important;margin:0 0 16px!important}
+ html.pkr-game-night .pkr-gn-payment-notice {display:flex!important;align-items:flex-start!important;gap:8px!important;background:#EAF5EF!important;color:#147856!important}
+ html.pkr-game-night .pkr-gn-payment-warning {background:#EEF1F3!important;color:#52616A!important}
+ html.pkr-game-night .pkr-gn-payment-action-error {background:#FBEFF1!important;color:#A12F3D!important}
+ html.pkr-game-night .pkr-gn-payment-dialog {position:fixed!important;inset:auto 0 0!important;width:100%!important;max-width:520px!important;max-height:90dvh!important;margin:0 auto!important;padding:0!important;border:0!important;border-radius:24px 24px 0 0!important;background:#fff!important;color:#14242C!important;box-shadow:0 -10px 40px #14242c18!important;overflow:auto!important}
+ html.pkr-game-night .pkr-gn-payment-dialog::backdrop {background:#14242c75!important;backdrop-filter:blur(3px)!important}
+ html.pkr-game-night .pkr-gn-payment-dialog-inner {padding:10px 24px calc(24px + env(safe-area-inset-bottom))!important;display:flex!important;flex-direction:column!important;gap:12px!important}
+ html.pkr-game-night .pkr-gn-payment-dialog-handle {height:4px!important;width:34px!important;background:#DCE3E7!important;border-radius:4px!important;align-self:center!important;margin:0 0 10px!important}
+ html.pkr-game-night .pkr-gn-payment-dialog h2 {margin:0!important;font-size:24px!important;font-weight:700!important;letter-spacing:-.035em!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-dialog-amount {font-size:42px!important;line-height:1.15!important;letter-spacing:-.04em!important;font-weight:700!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-dialog p {margin:0!important;font-size:16px!important;line-height:1.55!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-dialog p>span {color:#64727A!important;font-size:14px!important}
+ html.pkr-game-night .pkr-gn-payment-dialog .pkr-gn-payment-dialog-explanation {padding:8px 0!important;color:#64727A!important;font-size:14px!important}
+ html.pkr-game-night .pkr-gn-payment-dialog .pkr-gn-payment-action-error {color:#A12F3D!important;margin:0!important}
+ @media(min-width:640px){
+  html.pkr-game-night .pkr-gn-payments {padding:32px 28px 120px!important}
+  html.pkr-game-night .pkr-gn-payment-total {padding:22px!important}
+  html.pkr-game-night .pkr-gn-payment-total strong {font-size:42px!important}
+  html.pkr-game-night .pkr-gn-payment-card {padding:20px!important}
+  html.pkr-game-night .pkr-gn-payment-card-action {width:auto!important;margin-left:auto!important;min-width:176px!important}
+  html.pkr-game-night .pkr-gn-payment-receipt-actions {justify-content:flex-end!important}
+  html.pkr-game-night .pkr-gn-payment-receipt-actions :is(.pkr-gn-payment-primary,.pkr-gn-payment-secondary) {flex:0 1 auto!important}
+  html.pkr-game-night .pkr-gn-payment-dialog {inset:0!important;margin:auto!important;max-height:fit-content!important;border-radius:24px!important}
+ }
+ html.pkr-game-night .pkr-gn-payment-workspace {background:#F4F6F8!important;color:#14242C!important;min-width:0!important}
+ html.pkr-game-night .pkr-gn-payment-sections {display:flex!important;gap:6px!important;max-width:720px!important;margin:0 auto!important;padding:18px 20px 0!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important}
+ html.pkr-game-night .pkr-gn-payment-sections a {display:flex!important;align-items:center!important;justify-content:center!important;min-height:48px!important;flex:1!important;padding:10px 14px!important;border:1px solid #DCE3E7!important;border-radius:12px!important;background:#fff!important;color:#64727A!important;font-size:14px!important;font-weight:600!important;line-height:1.4!important;text-decoration:none!important}
+ html.pkr-game-night .pkr-gn-payment-sections a[aria-current=page] {background:#14242C!important;color:#fff!important;border-color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-sections a:focus-visible {outline:2px solid #14242C!important;outline-offset:3px!important}
+ html.pkr-game-night .pkr-gn-payment-refresh {width:48px!important;flex:0 0 48px!important;display:grid!important;place-items:center!important;padding:0!important;border:1px solid #DCE3E7!important;border-radius:50%!important;background:#fff!important;color:#14242C!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-view-label {margin:0 0 16px!important;font-size:14px!important;font-weight:600!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-totals-note {margin:-10px 0 20px!important;color:#64727A!important;font-size:14px!important;line-height:1.5!important}
+ html.pkr-game-night .pkr-gn-payment-search-tools {margin:0 0 22px!important;display:grid!important;gap:10px!important}
+ html.pkr-game-night .pkr-gn-payment-search-label {display:grid!important;gap:6px!important;font-size:14px!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-search-label>span {position:relative!important;display:flex!important;align-items:center!important}
+ html.pkr-game-night .pkr-gn-payment-search-label svg {position:absolute!important;left:14px!important;pointer-events:none!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-search-label input {width:100%!important;padding-left:43px!important}
+ html.pkr-game-night .pkr-gn-payments input {height:48px!important;min-height:48px!important;min-width:0!important;width:100%!important;padding:10px 12px!important;border:1px solid #DCE3E7!important;border-radius:12px!important;background:#fff!important;color:#14242C!important;font:400 16px/1.4 var(--font-body),Inter,system-ui,sans-serif!important;box-shadow:none!important;color-scheme:light!important}
+ html.pkr-game-night .pkr-gn-payment-search-label input[type=search] {padding-left:43px!important}
+ html.pkr-game-night .pkr-gn-payments input::placeholder {color:#64727A!important;opacity:1!important}
+ html.pkr-game-night .pkr-gn-payments input:focus-visible {outline:2px solid #14242C!important;outline-offset:3px!important}
+ html.pkr-game-night .pkr-gn-payment-advanced-filters {border:1px solid #DCE3E7!important;border-radius:12px!important;background:#fff!important}
+ html.pkr-game-night .pkr-gn-payment-advanced-filters summary {padding:12px 14px!important;font-size:14px!important;font-weight:600!important;color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-advanced-filters summary>span {float:right!important;margin-left:8px!important;font-size:12px!important;font-weight:500!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-filter-fields {display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;padding:0 14px 14px!important}
+ html.pkr-game-night .pkr-gn-payment-filter-fields label {display:grid!important;gap:6px!important;min-width:0!important;font-size:14px!important;color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-filter-fields select {width:100%!important;min-width:0!important;padding:10px 12px!important;border:1px solid #DCE3E7!important;border-radius:12px!important;background:#fff!important;color:#14242C!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-status-filter {grid-column:1 / -1!important}
+ html.pkr-game-night .pkr-gn-payment-clear-filters {justify-self:start!important;padding:0 2px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#14242C!important;font-size:14px!important;font-weight:600!important;text-decoration:underline!important;text-underline-offset:3px!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-warning p {margin:0!important;color:inherit!important;font-size:14px!important;line-height:1.5!important}
+ html.pkr-game-night .pkr-gn-payment-warning-actions {display:flex!important;flex-wrap:wrap!important;gap:4px 14px!important;margin-top:4px!important}
+ html.pkr-game-night .pkr-gn-payment-warning-actions button {padding:4px 0!important;border:0!important;background:transparent!important;color:#14242C!important;font-size:14px!important;font-weight:600!important;text-align:left!important;text-decoration:underline!important;text-underline-offset:3px!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-notification-link {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;width:100%!important;margin:12px 0 0!important;padding:8px 0 0!important;border:0!important;border-top:1px solid #E3E8EB!important;border-radius:0!important;background:transparent!important;color:#64727A!important;font-size:14px!important;font-weight:500!important;text-align:left!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-notification-link svg {width:16px!important;height:16px!important}
+ html.pkr-game-night .pkr-gn-payment-show-more {width:100%!important;margin:16px 0 0!important}
+ html.pkr-game-night .pkr-gn-payment-card-top {display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important}
+ html.pkr-game-night .pkr-gn-payment-amount {max-width:100%!important;overflow-wrap:anywhere!important}
+ html.pkr-game-night .pkr-gn-payment-dialog :is(button,h2,p,strong) {font-family:var(--font-body),Inter,system-ui,sans-serif!important;text-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-dialog button {min-height:48px!important;cursor:pointer!important}
+ html.pkr-game-night .pkr-gn-payment-dialog button:disabled {opacity:.5!important;cursor:wait!important}
+ html.pkr-game-night .pkr-gn-payment-dialog button:focus-visible {outline:2px solid #14242C!important;outline-offset:3px!important}
+ /* The shared Insights main is nested here, so the shell's body > main sidebar
+    rule cannot position it. Offset the wrapper once and size the main within it. */
+ html.pkr-game-night .pkr-gn-payment-ledger {box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:12px 0 calc(28px + env(safe-area-inset-bottom))!important}
+ html.pkr-game-night .pkr-gn-payment-ledger>.pkr-vnext-insights {box-sizing:border-box!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:12px clamp(14px,2.5vw,32px) calc(106px + env(safe-area-inset-bottom))!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-payments-focus {
+  --bg:#F4F6F8!important;--bg2:#fff!important;--bg3:#EEF1F3!important;--white:#14242C!important;--ivory:#14242C!important;--muted:#64727A!important;--gold:#14242C!important;--gold-dim:#DCE3E7!important;--border:#DCE3E7!important;--border-hi:#C7D2D8!important;--green:#147856!important;--red:#BE3949!important;
+  --pkr-a-bg:#F4F6F8!important;--pkr-a-surface:#fff!important;--pkr-a-raised:#EEF1F3!important;--pkr-a-text:#14242C!important;--pkr-a-muted:#64727A!important;--pkr-a-line:#DCE3E7!important;--pkr-a-primary:#F27457!important;--pkr-a-on-primary:#14242C!important;--pkr-a-money:#14242C!important;--pkr-a-danger:#BE3949!important;
+  --pkr-ex-bg:#F4F6F8!important;--pkr-ex-surface:#fff!important;--pkr-ex-surface-2:#EEF1F3!important;--pkr-ex-ink:#14242C!important;--pkr-ex-secondary:#64727A!important;--pkr-ex-border:#DCE3E7!important;--pkr-ex-accent:#A33D28!important;--pkr-ex-accent-light:#A33D28!important;--pkr-ex-accent-ink:#14242C!important;--pkr-ex-green:#147856!important;--pkr-ex-page:#F4F6F8!important;--pkr-ex-surface-grad:#fff!important;
+  color:#14242C!important;background:#F4F6F8!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;
+ }
+ @media(min-width:1100px){
+  html.pkr-game-night body:has(.pkr-primary-sidebar) .pkr-gn-payment-ledger {margin-left:218px!important;width:calc(100% - 218px)!important;max-width:calc(100% - 218px)!important}
+ }
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-vnext-card,.pkr-payments-controls,.pkr-payments-reminder-tools,.pkr-insights-payment-summary>div,.pkr-insights-balance-row,.pkr-insights-kpi,.pkr-insights-balance-tiles>div,.pkr-experience-stage) {background:#fff!important;color:#14242C!important;border-color:#DCE3E7!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-stage {flex-wrap:wrap!important;min-height:0!important;padding:22px!important;gap:18px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-experience-stage h1,.pkr-experience-command-stat strong,.pkr-experience-live-metrics strong) {color:#14242C!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;text-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-experience-stage p,.pkr-experience-command-stat>span,.pkr-experience-live-metrics small) {color:#64727A!important;font-size:14px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-eyebrow {color:#A33D28!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-command-stats {display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;flex:1 1 400px!important;max-width:100%!important;min-width:0!important;gap:10px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-command-stat {min-width:0!important;max-width:none!important;background:#EEF1F3!important;border-color:#DCE3E7!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-live-metrics>span {background:#EEF1F3!important;border:1px solid #DCE3E7!important;border-radius:12px!important;padding:10px 12px!important;box-shadow:none!important}
+ /* Retain every record drill-down and restore the metric grids explicitly;
+    old payment-focus and room-theme rules otherwise leave tall stacked cards. */
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpis {display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important;margin:0 0 18px!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpis>.pkr-insights-kpi {display:flex!important;grid-column:auto!important;min-width:0!important;padding:14px!important;border:1px solid #DCE3E7!important;border-radius:14px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpi>.pkr-metric-trigger {flex-direction:column!important;align-items:flex-start!important;gap:10px!important;text-align:left!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpi-icon {width:36px!important;height:36px!important;flex-basis:36px!important;background:#EEF1F3!important;color:#52616A!important;font-size:20px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-kpi-copy>strong,.pkr-insights-balance-tiles strong,.pkr-insights-payment-summary strong) {color:#14242C!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;text-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-kpi-copy>small,.pkr-insights-kpi-copy>em,.pkr-insights-balance-tiles span,.pkr-insights-balance-tiles small,.pkr-insights-payment-summary span) {color:#64727A!important;font-size:14px!important;line-height:1.4!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-overview-grid,.pkr-insights-activity-grid) {display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-balance-tiles {display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-vnext-card-heading {flex-wrap:wrap!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-vnext-card-heading h2,.pkr-insights-payment-help,.pkr-payments-reminder-tools strong,.pkr-payments-controls-links span) {color:#14242C!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-vnext-card-heading p,.pkr-payments-reminder-tools p,.pkr-insights-payment-summary p,.pkr-insights-selector label) {color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(select,button) {min-height:48px!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(select,.pkr-payment-row-actions button,.pkr-settlement-record-filters button,.pkr-insights-settle-tabs button,.pkr-insights-pagination button,.pkr-payments-reminder-buttons button,.pkr-insights-bulk-actions button,.pkr-primary-outline,.pkr-vnext-card-heading button) {background:#fff!important;color:#14242C!important;border-color:#DCE3E7!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-settlement-record-filters button.active,.pkr-insights-settle-tabs button.active,.pkr-insights-bulk-actions .btn-primary) {background:#F27457!important;color:#14242C!important;border-color:#F27457!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-settle-tabs,.pkr-settlement-record-filters button span,.pkr-insights-avatar) {background:#EEF1F3!important;color:#52616A!important;border-color:#DCE3E7!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-vnext-table-scroll {max-width:100%!important;min-width:0!important;overflow-x:auto!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-vnext-data-table :is(th,td) {background:#fff!important;color:#14242C!important;border-color:#E3E8EB!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-vnext-data-table th {background:#EEF1F3!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-vnext-empty,.pkr-insights-loader,.pkr-insights-bulk-actions span,.pkr-insights-pagination span,.pkr-insights-balance-row>small) {color:#64727A!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-vnext-positive {color:#147856!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-vnext-negative,.pkr-insights-alert) {color:#BE3949!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-payment-status-select.paid,.pkr-vnext-status.paid) {background:#EAF5EF!important;color:#147856!important;border-color:#B9D9CB!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-payment-status-select.not-received {background:#FBEFF1!important;color:#BE3949!important;border-color:#E8C5CB!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-payment-notice,.pkr-settlement-incomplete) {background:#EEF1F3!important;color:#52616A!important;border-color:#DCE3E7!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-settlement-incomplete-detail p,.pkr-settlement-review-hint) {color:#52616A!important}
+ html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-settlement-incomplete-games button,.pkr-settlement-incomplete-retry) {background:#fff!important;color:#14242C!important;border-color:#DCE3E7!important}
+ @media(max-width:1299px){html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpis {grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+ @media(max-width:720px){
+  html.pkr-game-night .pkr-gn-payment-ledger :is(.pkr-insights-kpis,.pkr-insights-balance-tiles) {grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpis>.pkr-insights-kpi:last-child {grid-column:1 / -1!important}
+  html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-command-stats {flex-basis:100%!important}
+ }
+ @media(max-width:380px){
+  html.pkr-game-night .pkr-gn-payment-card-top {grid-template-columns:36px minmax(0,1fr)!important;gap:9px!important}
+  html.pkr-game-night .pkr-gn-payment-avatar {width:36px!important;height:36px!important}
+  html.pkr-game-night .pkr-gn-payment-amount {grid-column:2!important;margin-top:3px!important}
+  html.pkr-game-night .pkr-gn-payment-total {padding:16px 12px!important}
+  html.pkr-game-night .pkr-gn-payment-total strong {font-size:30px!important}
+  html.pkr-game-night .pkr-gn-payment-filters {gap:20px!important}
+  html.pkr-game-night .pkr-gn-payment-filter-fields {grid-template-columns:1fr!important}
+ }
+ @media(prefers-reduced-motion:reduce){html.pkr-game-night .pkr-gn-payments * {scroll-behavior:auto!important;transition:none!important}}
+}

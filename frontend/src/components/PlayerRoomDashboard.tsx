@@ -2,13 +2,18 @@
 
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
+import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import {loadRoomTransfers,outstandingRoomTransfers,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import PlayerGameNightAccess from './PlayerGameNightAccess';
 import ClubEngagementPanel from './ClubEngagementPanel';
 import ClubExtrasPanel from './ClubExtrasPanel';
-import './PlayerRoomDashboard.css';
+
+type LedgerSnapshot={key:string;data:RoomTransferLoad|null;error:string;loading:boolean;updatedAt:Date|null};
+type GameSnapshot={roomId:string;data:Game[]|null;error:string;loading:boolean;updatedAt:Date|null};
+const dateOptions={timeZone:'Australia/Brisbane'};
+const emptyGames:Game[]=[];
+const emptyLeaders:LeaderboardEntry[]=[];
 
 type Props={
   room:Event;games:Game[];history?:Game[];leaders?:LeaderboardEntry[];
@@ -35,7 +40,7 @@ function downloadCalendar(game:Game,room:Event){
 }
 
 function statusText(status:string|undefined,isPayer:boolean){
-  if(status==='paid')return 'Confirmed paid';
+  if(status==='paid')return 'Recorded paid';
   if(status==='payer_claimed')return isPayer?'Sent · awaiting confirmation':'Confirm receipt';
   if(status==='not_received')return isPayer?'Recipient reported not received':'Not received';
   if(status==='legacy')return 'Host review required';
@@ -43,12 +48,23 @@ function statusText(status:string|undefined,isPayer:boolean){
 }
 
 export default function PlayerRoomDashboard({
-  room,games,history=[],leaders=[],memberId,memberName,onMyProfile,showAllPayments=false,paymentsOnly=false,
+  room,games,history=emptyGames,leaders=emptyLeaders,memberId,memberName,onMyProfile,showAllPayments=false,paymentsOnly=false,
 }:Props){
   const router=useRouter();
-  const [ledger,setLedger]=useState<RoomTransferLoad|null>(null);
-  const [ledgerError,setLedgerError]=useState(false);
+  const [ledgerSnapshot,setLedgerSnapshot]=useState<LedgerSnapshot|null>(null);
+  const [gameSnapshot,setGameSnapshot]=useState<GameSnapshot|null>(null);
+  const [paymentRefresh,setPaymentRefresh]=useState(0);
+  const [gameRefresh,setGameRefresh]=useState(0);
   const [shareNotice,setShareNotice]=useState('');
+  const ledgerKey=room.id+':'+(memberId||'');
+  const currentLedger=ledgerSnapshot?.key===ledgerKey?ledgerSnapshot:null;
+  const ledger=currentLedger?.data||null;
+  const ledgerError=currentLedger?.error||'';
+  const loadingPayments=!!memberId&&(!currentLedger||currentLedger.loading);
+  const currentGameData=gameSnapshot?.roomId===room.id?gameSnapshot:null;
+  const loadingGames=!paymentsOnly&&(!currentGameData||currentGameData.loading);
+  const gameError=currentGameData?.error||'';
+  const currentGames=useMemo(()=>gameError?[]:(currentGameData?.data||games).filter(game=>game.event_id===room.id),[gameError,currentGameData?.data,games,room.id]);
   useEffect(()=>{
     if(window.location.hash!=='#pkr-my-payments')return;
     // Payment panel is rendered after the selected player's room loads.
@@ -57,23 +73,36 @@ export default function PlayerRoomDashboard({
   },[room.id]);
   useEffect(()=>{
     const controller=new AbortController();
-    setLedger(null);setLedgerError(false);
-    if(memberId){
-      loadRoomTransfers(room.id,undefined,controller.signal)
-        .then(result=>{if(!controller.signal.aborted)setLedger(result);})
-        .catch(()=>{if(!controller.signal.aborted)setLedgerError(true);});
-    }
+    const key=room.id+':'+(memberId||'');
+    setLedgerSnapshot({key,data:null,error:'',loading:!!memberId,updatedAt:null});
+    if(memberId)loadRoomTransfers(room.id,undefined,controller.signal)
+      .then(data=>{if(!controller.signal.aborted)setLedgerSnapshot({key,data,error:'',loading:false,updatedAt:new Date()});})
+      .catch(error=>{if(!controller.signal.aborted)setLedgerSnapshot({key,data:null,loading:false,updatedAt:null,
+        error:error instanceof Error?error.message:'Payment records could not be loaded.'});});
     return()=>controller.abort();
-  },[room.id,memberId]);
+  },[room.id,memberId,paymentRefresh]);
+  useEffect(()=>{
+    if(paymentsOnly)return;
+    let active=true;
+    setGameSnapshot(previous=>({roomId:room.id,data:previous?.roomId===room.id?previous.data:null,error:'',loading:true,updatedAt:null}));
+    api.games.list(room.id).then(data=>{
+      if(active)setGameSnapshot({roomId:room.id,data:data.filter(game=>game.event_id===room.id),error:'',loading:false,updatedAt:new Date()});
+    }).catch(error=>{
+      if(active)setGameSnapshot({roomId:room.id,data:null,loading:false,updatedAt:null,
+        error:error instanceof Error?error.message:'Your games could not be loaded.'});
+    });
+    return()=>{active=false;};
+  },[room.id,memberId,games,gameRefresh,paymentsOnly]);
 
-  const upcoming=useMemo(()=>games.filter(isCurrentGame).sort((a,b)=>{
+  const upcoming=useMemo(()=>currentGames.filter(game=>isCurrentGame(game)).sort((a,b)=>{
     if(isLiveGame(a)!==isLiveGame(b))return isLiveGame(a)?-1:1;
     return a.scheduled_at-b.scheduled_at;
-  }),[games]);
+  }),[currentGames]);
   const next=upcoming[0]||null;
   const live=!!next&&isLiveGame(next);
-  const settled=useMemo(()=>history.filter(g=>g.status==='settled')
-    .sort((a,b)=>b.scheduled_at-a.scheduled_at),[history]);
+  const settled=useMemo(()=>[...new Map([...history,...currentGames].filter(game=>game.event_id===room.id)
+    .map(game=>[game.id,game])).values()].filter(game=>game.status==='settled')
+    .sort((a,b)=>b.scheduled_at-a.scheduled_at),[history,currentGames,room.id]);
   // Use authenticated IDs, not names that may match unrelated historical guests.
   const mine=useMemo(()=>memberId?(ledger?.records||[]).filter(item=>
     item.transfer.from===memberId||item.transfer.to===memberId):[],[ledger,memberId]);
@@ -83,23 +112,22 @@ export default function PlayerRoomDashboard({
   const owedCents=owed.reduce((sum,item)=>sum+item.transfer.amount,0);
   const receivingCents=receiving.reduce((sum,item)=>sum+item.transfer.amount,0);
   const visible=showAllPayments?mine.slice().sort((a,b)=>b.game.scheduled_at-a.game.scheduled_at):pending.slice(0,4);
+  const legacyPayments=mine.filter(item=>item.transfer.status==='legacy').length;
+  const paymentsIncomplete=!!ledger?.unavailable.length||legacyPayments>0;
+  const receiptsToConfirm=receiving.filter(item=>item.transfer.status==='payer_claimed').length;
+  const outstandingAmount=(cents:number)=>paymentsIncomplete?(cents>0?'≥ '+fmt(cents):'—'):fmt(cents);
   const ownResult=memberId?leaders.find(item=>item.user_id===memberId):undefined;
   const roomUrl='/events/'+encodeURIComponent(room.id);
   const goTab=(tab:string)=>router.push(roomUrl+'?tab='+tab);
   const goProfile=()=>onMyProfile?onMyProfile():router.push(roomUrl+'?tab=members&mine=profile');
   const goResults=()=>router.push('/results?room='+encodeURIComponent(room.id));
-  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id));
+  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&paymentsScope=mine');
+  const goPaymentHistory=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=all&paymentsScope=mine');
   const openGame=(game:Game)=>router.push('/games/'+encodeURIComponent(game.id));
   const openResults=(game:Game)=>router.push(game.results_token
     ?'/games/results/'+encodeURIComponent(game.results_token)
     :'/games/'+encodeURIComponent(game.id));
   const goRsvp=()=>{if(next)router.push('/games/'+encodeURIComponent(next.id)+'/rsvp');};
-  const showRsvp=()=>{
-    if(next&&['scheduled','lobby'].includes(next.status)){
-      document.getElementById('pkr-player-rsvp')?.scrollIntoView({behavior:'smooth',block:'start'});
-    }else if(next)goRsvp();
-    else goTab('games');
-  };
   const shareRoom=async()=>{
     setShareNotice('');
     const url=window.location.origin+'/dashboard?room='+encodeURIComponent(room.id);
@@ -119,77 +147,122 @@ export default function PlayerRoomDashboard({
     ?'/games/live/'+encodeURIComponent(next.live_token)
     :'/games/'+encodeURIComponent(next.id));};
 
-  return <section className={'pkr-player-home'+(paymentsOnly?' payments-only':'')} data-testid="player-dashboard" aria-label={paymentsOnly?'My payments':'Player dashboard'}>
-    {!paymentsOnly&&<header className="pkr-player-home-header">
-      <div><span className="pkr-player-eyebrow">♠ PLAYER VIEW</span>
-        <h2>{memberName?'Welcome, '+memberName.trim().split(' ')[0]:'Your poker night'}</h2>
-        <p>{room.name} · Your games, payments and results.</p>
-      </div>
-      <button type="button" className="pkr-player-outline" onClick={goProfile}>My profile ↗</button>
-    </header>}
-    {!paymentsOnly&&<div className="pkr-player-feature">
-      <div className="pkr-player-feature-content">
-        <span className="pkr-player-eyebrow">{live?'● LIVE NOW':next?'NEXT GAME':'NO UPCOMING GAMES'}</span>
-        <h3>{next?fmtDate(next.scheduled_at):'Your next poker night'}</h3>
-        <p>{next?(next.location||room.name)+' · '+next.seats+' seats':'Your host has not scheduled another game yet.'}</p>
-        <div className="pkr-player-buttons">
-          {next?<>{!live&&<button type="button" className="pkr-player-primary" onClick={showRsvp}>RSVP &amp; choose seat</button>}
-            <button type="button" className="pkr-player-outline" onClick={goLive}>{live?'Watch live table':'Game details'} →</button>
-            {!live&&<button type="button" className="pkr-player-outline" onClick={()=>downloadCalendar(next,room)}>Add to calendar</button>}</>:
-           <button type="button" className="pkr-player-outline" onClick={()=>goTab('games')}>View games →</button>}
+  const date=next?new Date(next.scheduled_at*1000):null;
+  return <section className={'pkr-player-home pkr-game-night-player'+(paymentsOnly?' payments-only':'')}
+    data-testid="player-dashboard" aria-label={paymentsOnly?'My payments':'Player dashboard'}>
+    {!paymentsOnly&&<section className="gn-player-next" aria-label={live?'Your live game':'Your next game'} aria-busy={loadingGames}>
+      <div className="gn-player-next-top">
+        <span className="gn-player-label">{live?'Your game is live':next?'Your next game':'Your game night'}</span>
+        <div className="gn-player-next-controls">
+          {next&&<span className={'gn-player-state'+(live?' is-live':'')}>{live?'Live now':next.status==='lobby'?'Lobby open':'Scheduled'}</span>}
+          <button type="button" className="gn-player-text-button gn-player-refresh-game" disabled={loadingGames}
+            aria-label={loadingGames?'Refreshing game':'Refresh game'} aria-busy={loadingGames}
+            onClick={()=>setGameRefresh(value=>value+1)}>{loadingGames?'Updating…':'Refresh'}</button>
         </div>
       </div>
-      <div className="pkr-player-feature-chip" aria-hidden="true">♠</div>
-    </div>}
-    {!paymentsOnly&&<div className="pkr-player-utility">
-      <button type="button" className="pkr-player-link" onClick={()=>void shareRoom()}>Share member link →</button>
-      <button type="button" className="pkr-player-link"
-        onClick={()=>router.push('/install?group='+encodeURIComponent(room.id))}>Phone setup &amp; alerts →</button>
-      {shareNotice&&<p role="status" className="pkr-player-fineprint">{shareNotice}</p>}
-    </div>}
-    {!paymentsOnly&&next&&['scheduled','lobby'].includes(next.status)&&<div id="pkr-player-rsvp">
-      <PlayerGameNightAccess key={next.id} game={next} memberName={memberName||''}/>
-    </div>}
-    {!paymentsOnly&&<ClubEngagementPanel eventId={room.id} game={next} isHost={false}/>}
-    {!paymentsOnly&&<ClubExtrasPanel eventId={room.id} games={games} isManager={false}
-      isOwner={false} userId={memberId}/>}
-    {!paymentsOnly&&<nav className="pkr-player-actions" aria-label="Player actions">
-      <button type="button" onClick={showRsvp}><b>✋</b><strong>My RSVP</strong><small>Arrival and seat</small></button>
-      <button type="button" onClick={goPayments}><b>⇄</b><strong>Payments</strong><small>Pay or confirm</small></button>
-      <button type="button" onClick={goResults}><b>🏆</b><strong>Results</strong><small>Standings & history</small></button>
-      <button type="button" onClick={goProfile}><b>♟</b><strong>My profile</strong><small>Avatar and details</small></button>
-    </nav>}
-    <div className="pkr-player-columns">
-      <section className="pkr-player-panel" id="pkr-my-payments" aria-label="My settlement payments">
-        <div className="pkr-player-panel-head"><div><span className="pkr-player-eyebrow">MY SETTLEMENTS</span><h3>My payments</h3></div><small>{ledger?pending.length:'—'} pending</small></div>
-        {!memberId?<p className="pkr-player-empty">Sign in with your approved room account to see your payments.</p>:
-         ledgerError?<p className="pkr-player-empty" role="alert">Payments could not be loaded. Open your game results or try again.</p>:
-         !ledger?<p className="pkr-player-empty" role="status">Checking your recorded payments…</p>:<>
-          {!!ledger.unavailable.length&&<p className="pkr-player-warning" role="status">Some older game payments could not be checked. Totals may be incomplete.</p>}
-          <div className="pkr-player-totals">
-            <div><small>To pay</small><strong className="pkr-player-negative">{ledger.unavailable.length?'≥ ':''}{fmt(owedCents)}</strong></div>
-            <div><small>To receive</small><strong className="pkr-player-positive">{ledger.unavailable.length?'≥ ':''}{fmt(receivingCents)}</strong></div>
+      {next&&date?<>
+        <div className="gn-player-game-identity">
+          <div className="gn-player-date" aria-hidden="true">
+            <span>{date.toLocaleDateString('en-AU',{...dateOptions,month:'short'})}</span>
+            <strong>{date.toLocaleDateString('en-AU',{...dateOptions,day:'numeric'})}</strong>
           </div>
-          {visible.length?<div className="pkr-player-payments">
-            {visible.map(({game,transfer})=><button type="button" key={game.id+':'+transfer.id} onClick={()=>openResults(game)}>
-              <span><strong>{transfer.from===memberId?'Pay '+transfer.to_name:'Receive from '+transfer.from_name}</strong>
-                <small>{fmtDate(game.scheduled_at)} · {statusText(transfer.status,transfer.from===memberId)}</small></span>
-              <b className={transfer.from===memberId?'pkr-player-negative':'pkr-player-positive'}>{fmt(transfer.amount)}</b><span aria-hidden="true">›</span>
-            </button>)}
-          </div>:<p className="pkr-player-empty">{showAllPayments?'No recorded payments are linked to your account.':'No outstanding payments are linked to your account.'}</p>}
-          {!showAllPayments&&<button type="button" className="pkr-player-link" onClick={()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=all')}>View my payment history →</button>}
-          <p className="pkr-player-fineprint">Open a payment to mark it sent or confirm receipt when you are the verified payer or recipient. PKR does not transfer money.</p>
-        </>}
-      </section>
-      {!paymentsOnly&&<section className="pkr-player-panel">
-        <div className="pkr-player-panel-head"><div><span className="pkr-player-eyebrow">YOUR PERFORMANCE</span><h3>My results</h3></div><button type="button" className="pkr-player-link" onClick={goResults}>Standings →</button></div>
-        <div className="pkr-player-my-result">{ownResult?<><strong className={ownResult.total_net>=0?'pkr-player-positive':'pkr-player-negative'}>{fmtSign(ownResult.total_net)}</strong><span>{ownResult.games_played} linked games · {ownResult.games_won} profitable</span></>:
-          <><strong>—</strong><span>No settled results linked to your approved account yet.</span></>}</div>
+          <div><h2>{room.name}</h2>
+            <p><time dateTime={date.toISOString()}>{date.toLocaleDateString('en-AU',{...dateOptions,weekday:'short',day:'numeric',month:'short'})} · {date.toLocaleTimeString('en-AU',{...dateOptions,hour:'numeric',minute:date.getUTCMinutes()?'2-digit':undefined})}</time></p>
+          </div>
+        </div>
+        <div className="gn-player-game-footer">
+          <p className="gn-player-location">{next.location||room.name}<span> · {next.seats} seats</span></p>
+          <button type="button" className="gn-player-text-button" onClick={()=>openGame(next)}>Game details <span aria-hidden="true">›</span></button>
+        </div>
+        {live&&<div className="gn-player-live-actions">
+          <button type="button" className="gn-player-primary" onClick={goLive}>Watch live table</button>
+          <button type="button" className="gn-player-text-button" onClick={goRsvp}>My RSVP &amp; attendance</button>
+        </div>}
+        {upcoming.length>1&&<button type="button" className="gn-player-text-button gn-player-more-games" onClick={()=>goTab('games')}>View all {upcoming.length} upcoming and live games</button>}
+      </>:gameError?<div className="gn-player-game-empty">
+        <h2>Game details unavailable</h2><p className="gn-player-warning" role="alert">{gameError}</p>
+        <button type="button" className="gn-player-secondary" onClick={()=>setGameRefresh(value=>value+1)}>Try again</button>
+        <button type="button" className="gn-player-text-button" onClick={()=>goTab('games')}>View games</button>
+      </div>:loadingGames?<p className="gn-player-muted" role="status">Checking your club&apos;s games…</p>:<div className="gn-player-game-empty">
+        <h2>No game scheduled yet</h2><p>Your next poker night will appear here when your host adds it.</p>
+        <button type="button" className="gn-player-secondary" onClick={()=>goTab('games')}>View games</button>
+      </div>}
+    </section>}
+
+    {!paymentsOnly&&next&&['scheduled','lobby'].includes(next.status)&&<div id="pkr-player-rsvp">
+      <PlayerGameNightAccess key={room.id+':'+next.id+':'+(memberId||'')} game={next} memberName={memberName||''}/>
+    </div>}
+
+    <section className="gn-player-payments gn-player-card" id="pkr-my-payments" aria-label="My settlement payments" aria-busy={loadingPayments}>
+      <header className="gn-player-section-heading"><h3>My payments</h3>
+        <button type="button" className="gn-player-text-button" onClick={goPayments}>View payments <span aria-hidden="true">›</span></button>
+      </header>
+      {!memberId?<p className="gn-player-muted">Sign in with your approved room account to see your payments.</p>:
+        loadingPayments?<p className="gn-player-muted" role="status">Checking your recorded payments…</p>:
+        ledgerError?<><p className="gn-player-warning" role="alert">{ledgerError}</p>
+          <button type="button" className="gn-player-secondary" onClick={()=>setPaymentRefresh(value=>value+1)}>Retry payments</button></>:
+        ledger?<>
+          {paymentsIncomplete&&<p className="gn-player-warning" role="status">
+            {!!ledger.unavailable.length&&'Some older game payments could not be checked. '}
+            {legacyPayments>0&&legacyPayments+' historical '+(legacyPayments===1?'payment record needs':'payment records need')+' host review. '}
+            Totals may be incomplete.
+          </p>}
+          <div className="gn-player-balances">
+            <div><span>To pay</span><strong className={owedCents>0?'gn-player-loss':'gn-player-neutral'}>{outstandingAmount(owedCents)}</strong></div>
+            <div><span>To receive</span><strong className={receivingCents>0?'gn-player-gain':'gn-player-neutral'}>{outstandingAmount(receivingCents)}</strong></div>
+          </div>
+          {receiptsToConfirm>0&&<button type="button" className="gn-player-attention" onClick={goPayments}>
+            <span>{receiptsToConfirm===1?'1 receipt needs your confirmation':receiptsToConfirm+' receipts need your confirmation'}</span><span aria-hidden="true">›</span>
+          </button>}
+          {visible.length?<div className="gn-player-payment-list">{visible.map(({game,transfer})=><button type="button"
+            key={game.id+':'+transfer.id} onClick={()=>openResults(game)}>
+            <span><strong>{transfer.from===memberId?'Pay '+transfer.to_name:'Receive from '+transfer.from_name}</strong>
+              <small>{statusText(transfer.status,transfer.from===memberId)}</small>
+              <small>{fmtDate(game.scheduled_at)}</small></span>
+            <b className={transfer.amount===0||transfer.status==='paid'||transfer.status==='legacy'?'gn-player-neutral':transfer.from===memberId?'gn-player-loss':'gn-player-gain'}>{fmt(transfer.amount)}</b><span aria-hidden="true">›</span>
+          </button>)}</div>:<p className="gn-player-muted">{paymentsIncomplete?'No outstanding payments found in the records checked.':
+            showAllPayments?'No recorded payments are linked to your account.':'You have no outstanding payments.'}</p>}
+          <div className="gn-player-payment-links">
+            <button type="button" className="gn-player-text-button" onClick={goPaymentHistory}>My payment history</button>
+            <button type="button" className="gn-player-text-button" disabled={loadingPayments} onClick={()=>setPaymentRefresh(value=>value+1)}>Refresh payments</button>
+          </div>
+          <p className="gn-player-payment-note">{!showAllPayments&&pending.length>visible.length?pending.length+' outstanding payments. ':''}
+            Open a payment to mark it sent or confirm receipt when you are the verified payer or recipient. PKR does not transfer money.
+          </p>
+          {currentLedger?.updatedAt&&<p className="gn-player-updated">Updated {currentLedger.updatedAt.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'})}</p>}
+        </>:null}
+    </section>
+
+    {!paymentsOnly&&<section className="gn-player-results gn-player-card" aria-label="My results">
+      <header className="gn-player-section-heading"><h3>My results</h3>
+        <button type="button" className="gn-player-text-button" onClick={goResults}>Standings <span aria-hidden="true">›</span></button>
+      </header>
+      {ownResult?<div className="gn-player-result-summary">
+        <strong className={ownResult.total_net>0?'gn-player-gain':ownResult.total_net<0?'gn-player-loss':'gn-player-neutral'}>{fmtSign(ownResult.total_net)}</strong>
+        <span>Net across {ownResult.games_played} linked games<br/>{ownResult.games_won} profitable</span>
+      </div>:<p className="gn-player-muted">Your settled results will appear here once linked to your approved account.</p>}
+      <div className="gn-player-recent">
         <h4>Recent completed games</h4>
-        {settled.length?<div className="pkr-player-recent">{settled.slice(0,3).map(game=><button type="button" key={game.id} onClick={()=>openGame(game)}><span>{fmtDate(game.scheduled_at)}</span><span>View results ›</span></button>)}</div>:
-         <p className="pkr-player-empty">Completed games will appear here.</p>}
-        <button type="button" className="pkr-player-link" onClick={()=>router.push('/results?room='+encodeURIComponent(room.id)+'&view=history')}>Game history →</button>
-      </section>}
-    </div>
+        {settled.length?settled.slice(0,3).map(game=><button type="button" key={game.id} onClick={()=>openGame(game)}>
+          <span>{fmtDate(game.scheduled_at)}</span><span>View results <span aria-hidden="true">›</span></span>
+        </button>):<p className="gn-player-muted">Completed games will appear here.</p>}
+        <button type="button" className="gn-player-text-button" onClick={()=>router.push('/results?room='+encodeURIComponent(room.id)+'&view=history')}>Game history</button>
+      </div>
+    </section>}
+
+    {!paymentsOnly&&<section className="gn-player-more" aria-label="Player tools and preferences">
+      <h3>Your club tools</h3>
+      <div className="gn-player-more-list">
+        {next&&!live&&<button type="button" onClick={()=>downloadCalendar(next,room)}><span>Add to calendar</span><span aria-hidden="true">›</span></button>}
+        {next&&<button type="button" onClick={goRsvp}><span>Full RSVP board &amp; alert settings</span><span aria-hidden="true">›</span></button>}
+        <button type="button" onClick={()=>goTab('games')}><span>All games</span><span aria-hidden="true">›</span></button>
+        <button type="button" onClick={goProfile}><span>My profile</span><span aria-hidden="true">›</span></button>
+        <button type="button" onClick={()=>void shareRoom()}><span>Share member link</span><span aria-hidden="true">›</span></button>
+        <button type="button" onClick={()=>router.push('/install?group='+encodeURIComponent(room.id))}><span>Phone setup &amp; alerts</span><span aria-hidden="true">›</span></button>
+      </div>
+      {shareNotice&&<p role="status" className="gn-player-muted">{shareNotice}</p>}
+    </section>}
+    {!paymentsOnly&&<ClubEngagementPanel eventId={room.id} game={next} isHost={false}/>}
+    {!paymentsOnly&&<ClubExtrasPanel eventId={room.id} games={currentGames} isManager={false} isOwner={false} userId={memberId}/>}
   </section>;
 }

@@ -3,15 +3,15 @@
 import {useEffect,useState} from 'react';
 import {usePathname,useRouter} from 'next/navigation';
 import {api,type Event,getToken} from '@/lib/api';
-import PkrGlyph from '@/components/PkrGlyph';
+import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
 import './PrimaryNavigation.css';
 
 type Area='Home'|'Games'|'Players'|'Results'|'Payments';
-const destinations:Array<{name:Area;icon:'home'|'games'|'members'|'players'|'settle'}>=[
+const destinations:Array<{name:Area;icon:PkrGlyphName}>=[
  {name:'Home',icon:'home'},
  {name:'Games',icon:'games'},
  {name:'Players',icon:'members'},
- {name:'Results',icon:'players'},
+ {name:'Results',icon:'insights'},
  {name:'Payments',icon:'settle'},
 ];
 
@@ -154,7 +154,7 @@ export default function PersistentNavigation(){
        aria-label="View poker clubs">{roomLabel} <span aria-hidden="true">⌄</span></button>}
    <button type="button" className="pkr-primary-account" onClick={()=>router.push('/account')}
      aria-label="Account, notifications and installation" aria-current={pathname==='/account'?'page':undefined}>
-     <span aria-hidden="true">⚙</span> <span>Account</span>
+     <PkrGlyph name="install"/> <span>Account</span>
    </button>
   </div>
   <nav className="pkr-universal-bottom-nav pkr-primary-bottom-nav" aria-label={areaLabel}>

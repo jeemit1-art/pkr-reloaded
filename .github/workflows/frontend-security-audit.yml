@@ -45,6 +45,6 @@ jobs:
         run: |
           node -e '
             const p=require("./package.json");
-            if(p.dependencies.next!=="16.4.3"||p.dependencies.react!=="19.3.1"||p.dependencies["react-dom"]!=="19.3.1")throw Error("Unexpected or unsupported Next/React version");
-            console.log("Next 16.4.3 and React 19.3.1 verified");
+            if(p.dependencies.next!=="16.4.6"||p.dependencies.react!=="19.3.1"||p.dependencies["react-dom"]!=="19.3.1")throw Error("Unexpected or unsupported Next/React version");
+            console.log("Next 16.4.6 and React 19.3.1 verified");
           '

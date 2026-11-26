@@ -42,6 +42,7 @@ jobs:
         run: |
           node tests/record-details.cjs
           node tests/room-payment-schedule.cjs
+          node tests/payment-overview.cjs
           node tests/tournament-structure.cjs
           node tests/gameplay-safety.cjs
           node tests/seat-stack-ledger.cjs
@@ -67,16 +68,16 @@ jobs:
       - name: Test records, visible popups and app layouts using synthetic API data
         working-directory: frontend
         run: |
-          node tests/room-player-merge.cjs
-          node tests/reference-seat-sizes.cjs
-          node tests/seat-table-experience.cjs
-          node tests/dense-seat-layout.cjs
-          node tests/app-experience.cjs
-          node tests/member-access-guidance.cjs
-          node tests/unified-player-access.cjs
-          node tests/room-member-profiles.cjs
-          node tests/single-header-responsive.cjs
-          node tests/viewport-smoke.cjs
+          failed=0
+          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive viewport-smoke; do
+            echo "::group::${suite}"
+            if ! node "tests/${suite}.cjs"; then
+              echo "::error::Browser suite failed: ${suite}"
+              failed=1
+            fi
+            echo '::endgroup::'
+          done
+          exit "$failed"
       - name: Upload synthetic-data screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

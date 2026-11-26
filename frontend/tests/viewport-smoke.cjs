@@ -135,12 +135,12 @@ async function test(){
         errors.push(size.name+' Midnight Felt design tokens mismatch: '+JSON.stringify(theme));
       if(theme.proBorder!=='rgb(242, 184, 75)')
         errors.push(size.name+' Pro pricing card lacks gold outline: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(242, 184, 75)'||!theme.priceFont.toLowerCase().includes('jetbrains'))
-        errors.push(size.name+' pricing must use JetBrains Mono gold numbers: '+JSON.stringify(theme));
+      if(theme.priceColor!=='rgb(242, 184, 75)'||!theme.priceFont.toLowerCase().includes('inter'))
+        errors.push(size.name+' pricing must preserve gold numbers in the bundled Inter font: '+JSON.stringify(theme));
       if(!theme.logoBackground.includes('/brand/pkr-midnight-mark.svg'))
         errors.push(size.name+' brand geometric spade asset not loaded');
-      if(!theme.font.toLowerCase().includes('bricolage'))
-        errors.push(size.name+' landing headings must use Bricolage Grotesque: '+theme.font);
+      if(!theme.font.toLowerCase().includes('inter'))
+        errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
       if(!planText.includes('$9.99')||!planText.includes('$19.99'))
         errors.push(size.name+' Theme A must preserve Starter and Pro prices');
@@ -240,6 +240,7 @@ async function test(){
    for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-room-games-intro'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
+     if(item.id==='dashboard')await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // One consistent primary navigation: no stacked sticky banners or lost
@@ -438,7 +439,7 @@ async function test(){
          }
          if(visual.head.bottom>visual.bank.top+2||visual.bank.bottom>visual.dock.top)
            errors.push(size.name+' gameplay chrome overlaps: '+JSON.stringify(visual));
-         if(visual.theme!=='#3DDC97')errors.push(size.name+' gameplay chrome Theme A missing');
+         if(visual.theme.toLowerCase()!=='#78ddb3')errors.push(size.name+' gameplay chrome Game night accent missing: '+visual.theme);
          if(!visual.chipsLoaded)errors.push(size.name+' real poker chips asset not loaded in bank summary');
          if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
            errors.push(size.name+' gameplay settlement/end-game control missing');
@@ -524,10 +525,15 @@ async function test(){
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
-         return {height:r.height,image:s.backgroundImage};
+         return {height:r.height,image:s.backgroundImage,
+           surface:s.getPropertyValue('--pkr-a-surface').trim(),
+           font:getComputedStyle(el.querySelector('h1,h2,.display')||el).fontFamily};
        });
        if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
-         errors.push(size.name+' game detail hero does not use the Midnight Felt header: '+JSON.stringify(summary));
+         errors.push(size.name+' game detail header lost its retained gradient or geometry: '+JSON.stringify(summary));
+       // Production CSS may shorten white from #ffffff to the equivalent #fff.
+       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
+         errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -619,10 +625,14 @@ async function test(){
      if(item.id==='insights'){
 
        if(size.width<=700){
-        const top=await page.locator('.pkr-vnext-insights-top').evaluate(el=>({
-         top:el.getBoundingClientRect().top,padding:getComputedStyle(document.querySelector('.pkr-insights-refresh')).paddingTop
-        }));
-        if(top.top>75) errors.push(size.name+' unexpected empty gap before Insights heading: '+JSON.stringify(top));
+        const top=await page.locator('.pkr-vnext-insights-top').evaluate(el=>{
+         const header=document.querySelector('.pkr-primary-mobile-utility');
+         return {top:el.getBoundingClientRect().top,headerBottom:header?.getBoundingClientRect().bottom??null,
+           padding:getComputedStyle(document.querySelector('.pkr-insights-refresh')).paddingTop};
+        });
+        // Keep content close to the single header, including its safe-area inset.
+        if(top.headerBottom===null||top.top<top.headerBottom-1||top.top>top.headerBottom+16)
+          errors.push(size.name+' Insights heading overlaps the header or leaves an unexpected gap: '+JSON.stringify(top));
        }
 
        await page.locator('#pkr-insights-room').waitFor({state:'visible'});
@@ -739,25 +749,27 @@ async function test(){
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
-       if(chrome!=='rgb(19, 26, 31)')errors.push(size.name+' live table header should be Midnight Felt surface: '+chrome);
-       const share=page.locator('#gameScreen .share-btn');
-       if(await share.count()){
-         const shareColour=await share.first().evaluate(el=>getComputedStyle(el).backgroundColor);
-         if(shareColour!=='rgb(61, 220, 151)')
-           errors.push(size.name+' live game Share control is not lime: '+shareColour);
-       }
+       if(chrome!=='rgb(15, 29, 37)')errors.push(size.name+' live table header should use the Game night slate surface: '+chrome);
+       const share=page.locator('#gameScreen #publishBtn');
+       if(!await share.isVisible())errors.push(size.name+' live game Share action is hidden');
+       const shareColour=await share.evaluate(el=>getComputedStyle(el).color);
+       if(shareColour!=='rgb(198, 215, 222)')
+         errors.push(size.name+' live game Share action must use readable neutral text: '+shareColour);
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
+       const settleColour=await page.locator('#gameScreen #settleBtn').evaluate(el=>getComputedStyle(el).backgroundColor);
+       if(settleColour!=='rgb(242, 116, 87)')errors.push(size.name+' live game settle action must use the coral action colour: '+settleColour);
        const feltTheme=await page.locator('#tableFelt').evaluate(node=>{
          const s=getComputedStyle(node);
          const rail=getComputedStyle(document.querySelector('#tableOuter'));
-         return {felt:s.backgroundImage,rail:rail.backgroundImage,
+         return {felt:s.backgroundImage,rail:rail.backgroundImage,railColour:rail.backgroundColor,
                  moneyFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
                  feltWidth:node.getBoundingClientRect().width};
        });
-       if(!feltTheme.felt.includes('15, 92, 74')||!feltTheme.rail.includes('66, 77, 85'))
-         errors.push(size.name+' felt/rail deviates from Midnight Felt palette: '+JSON.stringify(feltTheme));
-       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains'))
-         errors.push(size.name+' bank amounts do not use JetBrains Mono: '+feltTheme.moneyFont);
+       if(!feltTheme.felt.includes('36, 66, 77')||!feltTheme.felt.includes('27, 51, 62')||
+           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(41, 62, 73)')
+         errors.push(size.name+' felt/rail deviates from the Game night slate palette: '+JSON.stringify(feltTheme));
+       if(!feltTheme.moneyFont.toLowerCase().includes('inter'))
+         errors.push(size.name+' bank amounts do not use the bundled Inter font: '+feltTheme.moneyFont);
 
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
@@ -985,6 +997,7 @@ async function test(){
            errors.push(size.name+' last Insights graph row hidden by navigation: '+JSON.stringify(lastGraph));
        }
        await nav.getByRole('button',{name:'Payments',exact:true}).click();
+       await page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:'Ledger & tools',exact:true}).click();
        await page.getByRole('heading',{name:'Payments',exact:true}).waitFor({state:'visible',timeout:12000});
        try{await page.locator('#pkr-settlement').waitFor({state:'visible',timeout:15000})}
        catch{errors.push(size.name+' settlement ledger did not load in Payments')}

@@ -1,0 +1,275 @@
+/* Game-night player home. Uses the existing membership, RSVP and payment records. */
+@layer pkr-theme-priority {
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player {
+    display:flex!important;flex-direction:column!important;gap:16px!important;
+    width:100%!important;max-width:1000px!important;margin:0 auto 24px!important;
+    color:#14242C!important;background:transparent!important;font-size:16px!important;
+    font-family:Inter,var(--font-body),system-ui,sans-serif!important;
+    font-variant-numeric:tabular-nums!important;
+  }
+  /* Reset inherited player-dashboard flex order before applying the new sequence. */
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>* {order:6!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>.gn-player-next {order:0!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>#pkr-player-rsvp {order:1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>.gn-player-payments {order:2!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>.gn-player-results {order:3!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player>.gn-player-more {order:4!important}
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) * {
+    box-sizing:border-box!important;min-width:0!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) :is(h2,h3,h4,p) {
+    margin:0!important;font-family:Inter,var(--font-body),system-ui,sans-serif!important;
+    color:#14242C!important;letter-spacing:normal!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) p {
+    font-size:16px!important;line-height:1.5!important;color:#5D6D74!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) button {
+    cursor:pointer!important;touch-action:manipulation!important;font-family:inherit!important;
+    min-height:48px!important;font-size:14px!important;font-weight:600!important;
+    text-transform:none!important;letter-spacing:normal!important;box-shadow:none!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) :is(button,select,summary):focus-visible {
+    outline:3px solid #147856!important;outline-offset:3px!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) button:disabled {
+    cursor:not-allowed!important;opacity:.55!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-label {
+    display:block!important;font-size:14px!important;line-height:1.4!important;
+    font-weight:500!important;color:#5D6D74!important;letter-spacing:0!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-primary {
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    width:100%!important;border:1px solid #F27457!important;border-radius:13px!important;
+    background:#F27457!important;color:#14242C!important;padding:13px 16px!important;font-size:16px!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-secondary {
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;border:1px solid #D6DEE2!important;border-radius:13px!important;
+    background:#FFFFFF!important;color:#14242C!important;padding:13px 16px!important;font-size:16px!important;
+  }
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-text-button {
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+    flex-shrink:0!important;border:0!important;background:transparent!important;color:#294B59!important;padding:10px 0!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player :is(.gn-player-next,.gn-player-rsvp,.gn-player-card) {
+    background:#FFFFFF!important;border:1px solid #DFE5E8!important;border-radius:20px!important;
+    box-shadow:0 3px 12px #14242C04!important;overflow:hidden!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next {
+    padding:12px 16px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next-top {
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+    min-height:48px!important;gap:8px!important;margin:0 0 6px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next-top>.gn-player-label {white-space:nowrap!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next-controls {
+    display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;
+    flex-wrap:nowrap!important;width:auto!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-refresh-game {
+    width:auto!important;min-width:56px!important;min-height:48px!important;font-size:14px!important;
+    line-height:1.2!important;white-space:nowrap!important;padding:10px 0!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-state {
+    display:inline-flex!important;align-items:center!important;background:#F4F6F8!important;color:#52636A!important;
+    border:1px solid #E3E9EC!important;border-radius:8px!important;padding:5px 7px!important;font-size:14px!important;
+    font-weight:600!important;line-height:1.2!important;white-space:nowrap!important;flex-shrink:0!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-state.is-live {
+    color:#147856!important;background:#E8F5EE!important;border-color:#CCE6D9!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-identity {
+    display:grid!important;grid-template-columns:48px minmax(0,1fr)!important;align-items:center!important;gap:12px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-date {
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;
+    width:48px!important;min-height:54px!important;border-radius:12px!important;background:#FDECE6!important;color:#14242C!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-date span {font-size:14px!important;font-weight:600!important;line-height:1.2!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-date strong {font-size:26px!important;font-weight:700!important;line-height:1.1!important;letter-spacing:-1px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-identity h2 {
+    font-size:20px!important;line-height:1.25!important;letter-spacing:-.5px!important;font-weight:700!important;margin:0 0 5px!important;overflow-wrap:break-word!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-identity p {font-size:14px!important;color:#52636A!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-open {
+    display:grid!important;place-items:center!important;width:48px!important;min-width:48px!important;min-height:48px!important;
+    margin-right:-8px!important;margin-left:-5px!important;border:0!important;background:transparent!important;color:#53676F!important;
+    border-radius:12px!important;font-size:30px!important;font-weight:400!important;line-height:1!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-location {
+    margin:14px 0 0!important;font-size:14px!important;color:#52636A!important;overflow-wrap:break-word!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-location span {white-space:nowrap!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-footer {
+    display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin-top:4px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-footer .gn-player-location {margin:0!important;flex:1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-empty {display:grid!important;gap:12px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-empty h2 {font-size:22px!important;line-height:1.3!important;font-weight:650!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more-games {width:100%!important;border-top:1px solid #E6EBEE!important;margin-top:6px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-live-actions {display:grid!important;gap:4px!important;margin-top:16px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-summary {
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+    gap:4px 12px!important;padding:14px 16px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-summary>.gn-player-label {grid-column:1!important;grid-row:1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-summary>p {grid-column:1/-1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-answer {
+    display:flex!important;align-items:center!important;gap:7px!important;margin:0!important;min-height:24px!important;grid-column:1!important;grid-row:2!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-answer strong {font-size:16px!important;font-weight:650!important;line-height:1.4!important;color:#14242C!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-response-main {display:block!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-response-meta {display:block!important;font-size:14px!important;line-height:1.4!important;font-weight:500!important;margin-top:3px!important;white-space:normal!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-response-check {
+    width:22px!important;height:22px!important;flex:0 0 22px!important;display:grid!important;place-items:center!important;
+    border-radius:50%!important;background:#E5F3EA!important;color:#147856!important;font-size:15px!important;font-weight:700!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-edit-rsvp {
+    grid-column:2!important;grid-row:1 / span 2!important;margin:0!important;width:auto!important;
+    max-width:126px!important;min-height:48px!important;padding:11px 12px!important;font-size:14px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-edit-rsvp.gn-player-secondary {border-color:#F27457!important;background:#FFF3EF!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attending {padding:8px 16px!important;border-top:1px solid #E6EBEE!important;background:#FCFDFD!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-line {display:flex!important;align-items:center!important;gap:10px!important;min-height:48px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-avatars {display:flex!important;padding-left:4px!important;flex-shrink:0!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-avatars span {
+    display:grid!important;place-items:center!important;width:28px!important;height:28px!important;margin-left:-7px!important;
+    border:2px solid #FCFDFD!important;border-radius:50%!important;background:#DFE8ED!important;color:#3A5966!important;font-size:9px!important;font-weight:700!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-avatars span:nth-child(2n) {background:#EADFD4!important;color:#795442!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-avatars span:nth-child(3n) {background:#DCECE4!important;color:#315F4A!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-copy {flex:1!important;min-width:0!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-copy strong {font-size:14px!important;line-height:1.4!important;font-weight:650!important;color:#14242C!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-copy p {font-size:14px!important;line-height:1.4!important;margin-top:3px!important;overflow-wrap:break-word!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-card {padding:4px 18px 16px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-section-heading {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-height:58px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player :is(.gn-player-section-heading,.gn-player-more) h3 {font-size:18px!important;line-height:1.3!important;font-weight:650!important;letter-spacing:-.3px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-balances {display:grid!important;grid-template-columns:1fr 1fr!important;gap:16px!important;margin:4px 0 10px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-balances>div {display:grid!important;gap:5px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-balances>div+div {border-left:1px solid #E0E6E9!important;padding-left:18px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-balances span {font-size:14px!important;line-height:1.4!important;color:#5D6D74!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-balances strong {font-size:30px!important;line-height:1.2!important;letter-spacing:-1px!important;font-weight:650!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-gain {color:#147856!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-loss {color:#BE3949!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-neutral {color:#52636A!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list>button {
+    display:flex!important;align-items:center!important;gap:10px!important;width:100%!important;
+    border:0!important;border-top:1px solid #E6EBEE!important;border-radius:0!important;background:transparent!important;
+    color:#14242C!important;padding:13px 0!important;text-align:left!important;min-height:68px!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list>button>span:first-child {display:grid!important;gap:4px!important;flex:1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list strong {font-size:16px!important;font-weight:600!important;line-height:1.4!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list small {font-size:14px!important;font-weight:400!important;color:#5D6D74!important;line-height:1.4!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list b {font-size:17px!important;font-weight:650!important;white-space:nowrap!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-list>button>span:last-child {color:#819198!important;font-size:23px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-note {font-size:14px!important;line-height:1.5!important;color:#64757C!important;margin:10px 0 0!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payment-links {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px 18px!important;flex-wrap:wrap!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attention {
+    display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+    width:100%!important;background:#EDF7F1!important;border:1px solid #C6E3D2!important;color:#116344!important;
+    padding:12px!important;margin:12px 0!important;border-radius:12px!important;text-align:left!important;line-height:1.5!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-updated {font-size:14px!important;color:#64757C!important;margin-top:10px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-result-summary {display:flex!important;align-items:center!important;gap:18px!important;padding:5px 0 18px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-result-summary strong {font-size:30px!important;line-height:1.2!important;letter-spacing:-.8px!important;font-weight:650!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-result-summary span {font-size:14px!important;line-height:1.5!important;color:#5D6D74!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent {border-top:1px solid #E6EBEE!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent h4 {font-size:16px!important;line-height:1.5!important;font-weight:600!important;padding:16px 0 9px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent summary {
+    display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+    min-height:48px!important;font-size:14px!important;list-style:none!important;cursor:pointer!important;color:#294B59!important;font-weight:600!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent summary::-webkit-details-marker {display:none!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent[open] summary>span {transform:rotate(180deg)!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent>button {
+    display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+    width:100%!important;background:transparent!important;color:#294B59!important;border:0!important;border-top:1px solid #E6EBEE!important;
+    border-radius:0!important;padding:12px 0!important;text-align:left!important;font-weight:500!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent>button>span:first-child {flex:1!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-recent>button>span:last-child {flex-shrink:0!important;font-size:14px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more {padding:4px 0 0!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more h3 {padding:2px 2px 14px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more-list {background:#FFFFFF!important;border:1px solid #DFE5E8!important;border-radius:18px!important;overflow:hidden!important;padding:0 18px!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more-list button {
+    display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;gap:12px!important;
+    min-height:55px!important;background:transparent!important;border:0!important;border-radius:0!important;padding:12px 0!important;color:#294B59!important;text-align:left!important;font-size:16px!important;font-weight:500!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more-list button+button {border-top:1px solid #E6EBEE!important}
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more-list button>span:last-child {color:#829198!important;font-size:23px!important}
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-muted {color:#5D6D74!important}
+  html.pkr-game-night .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-warning {
+    border:1px solid #EDD2A8!important;background:#FFF7E8!important;color:#74521F!important;border-radius:12px!important;padding:12px!important;margin:10px 0!important;font-size:14px!important;line-height:1.5!important;
+  }
+  html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-notice {background:#E8F5EE!important;border:1px solid #C6E3D2!important;border-radius:12px!important;color:#147856!important;padding:10px 12px!important;margin-top:12px!important;font-size:14px!important}
+
+  /* A native top-layer dialog preserves focus, scroll locking and escape support. */
+  html.pkr-game-night .pkr-app.pkr-dialog-root dialog.gn-player-rsvp-dialog {
+    position:fixed!important;top:var(--pkr-visible-top,0)!important;left:0!important;right:0!important;bottom:auto!important;
+    height:var(--pkr-visible-height,100dvh)!important;max-height:var(--pkr-visible-height,100dvh)!important;
+    width:100vw!important;max-width:none!important;padding:0!important;margin:0!important;
+    border:0!important;border-radius:0!important;background:transparent!important;
+    align-items:flex-end!important;justify-content:center!important;overflow:hidden!important;
+  }
+  html.pkr-game-night .pkr-app.pkr-dialog-root dialog.gn-player-rsvp-dialog::backdrop {background:#14242C70!important;backdrop-filter:blur(3px)!important}
+  html.pkr-game-night .pkr-app.pkr-dialog-root dialog.gn-player-rsvp-dialog .gn-player-rsvp-sheet {
+    width:min(100%,540px)!important;max-height:calc(var(--pkr-visible-height,100dvh) - env(safe-area-inset-top) - 12px)!important;
+    overflow-y:auto!important;overscroll-behavior:contain!important;background:#FFFFFF!important;color:#14242C!important;
+    border:1px solid #E0E6E9!important;border-bottom:0!important;border-radius:26px 26px 0 0!important;
+    padding:10px 22px calc(22px + env(safe-area-inset-bottom))!important;font-family:Inter,var(--font-body),system-ui,sans-serif!important;
+    box-shadow:0 -12px 50px #14242C18!important;font-size:16px!important;
+  }
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-handle {width:36px!important;height:4px!important;background:#CCD5DA!important;border-radius:4px!important;margin:0 auto 17px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-heading {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-heading h2 {font-size:26px!important;font-weight:700!important;line-height:1.2!important;letter-spacing:-.7px!important;margin:5px 0 0!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-close {width:48px!important;min-width:48px!important;height:48px!important;background:#F4F6F8!important;border:1px solid #E1E7EA!important;border-radius:50%!important;color:#3F5965!important;font-size:27px!important;font-weight:400!important;line-height:1!important;padding:0!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-game {margin:14px 0 18px!important;font-size:14px!important;line-height:1.5!important;color:#5D6D74!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-current {display:grid!important;gap:6px!important;padding:14px!important;background:#F4F6F8!important;border:1px solid #E4E9EC!important;border-radius:13px!important;margin:0 0 21px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-current strong {font-size:16px!important;font-weight:600!important;line-height:1.45!important;color:#14242C!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-sheet-field {display:grid!important;gap:10px!important;margin:0 0 20px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-field-label {font-size:14px!important;font-weight:600!important;line-height:1.5!important;color:#14242C!important;letter-spacing:0!important;text-transform:none!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-response-options {display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-response-options button {border:1px solid #D6E0E4!important;border-radius:12px!important;background:#FFFFFF!important;color:#344F5A!important;padding:11px 8px!important;font-size:16px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-response-options button.selected {border:2px solid #147856!important;background:#EDF7F1!important;color:#116344!important;padding:10px 7px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet select {width:100%!important;min-height:50px!important;border:1px solid #CCD8DE!important;border-radius:12px!important;background:#FFFFFF!important;color:#14242C!important;padding:12px 14px!important;font:inherit!important;font-size:16px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-save-rsvp {min-height:52px!important;margin:4px 0 8px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-full-rsvp {width:100%!important;font-size:14px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-refresh-rsvp {display:flex!important;margin:0 auto!important;font-size:14px!important;color:#5D6D74!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-updated {font-size:14px!important;color:#73838A!important;text-align:center!important;margin-top:0!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-list {border-top:1px solid #E1E8EB!important;padding-top:12px!important;margin-top:18px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-list header {display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-list h3 {font-size:18px!important;font-weight:650!important;line-height:1.4!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-list>p {font-size:14px!important;line-height:1.5!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-rows {margin:8px 0 14px!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-rows>div {
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important;gap:14px!important;
+    border-bottom:1px solid #E6EBEE!important;padding:13px 0!important;line-height:1.5!important;overflow-wrap:anywhere!important;
+  }
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-rows strong {font-size:16px!important;font-weight:600!important;color:#14242C!important}
+  html.pkr-game-night .pkr-app .gn-player-rsvp-sheet .gn-player-guest-rows span {font-size:14px!important;text-align:right!important;color:#52636A!important}
+
+  @media(min-width:800px) {
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player {display:grid!important;grid-template-columns:1fr 1fr!important;gap:20px!important;align-items:start!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next {grid-column:1!important;grid-row:1!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player #pkr-player-rsvp {grid-column:1!important;grid-row:2 / span 2!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-payments {grid-column:2!important;grid-row:1 / span 2!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-results {grid-column:2!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-more {grid-column:1/-1!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player.payments-only {display:flex!important;max-width:840px!important}
+    html.pkr-game-night .pkr-app.pkr-dialog-root dialog.gn-player-rsvp-dialog {align-items:center!important;padding:20px!important}
+    html.pkr-game-night .pkr-app.pkr-dialog-root dialog.gn-player-rsvp-dialog .gn-player-rsvp-sheet {border-radius:24px!important;border-bottom:1px solid #E0E6E9!important}
+  }
+  @media(max-width:359px) {
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next {padding:12px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-rsvp-summary {padding:15px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-next-top>.gn-player-label {white-space:normal!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-identity {grid-template-columns:48px minmax(0,1fr)!important;gap:9px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-date {width:48px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-game-identity h2 {font-size:18px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-line {flex-wrap:wrap!important;gap:5px 10px!important}
+    html.pkr-game-night .pkr-app .pkr-player-home.pkr-game-night-player .gn-player-attendance-copy {flex-basis:calc(100% - 100px)!important}
+  }
+}

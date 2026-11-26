@@ -5,6 +5,7 @@ import {useRouter} from 'next/navigation';
 import {api,fmt,fmtDate,fmtSign,type Event,type EventMember,type Game,type GameDetail,
   type LeaderboardEntry,type RoomDashboardLayout,type RoomPlayerProfile} from '@/lib/api';
 import RoomOutstandingCard from '@/components/RoomOutstandingCard';
+import GameNightHostHome from '@/components/GameNightHostHome';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import './RoomDashboardDual.css';
@@ -32,6 +33,9 @@ type Props={
   onSearchChange?:(text:string)=>void;
   onSignOut?:()=>void;
   onPlan?:()=>void;
+  onRefreshData?:()=>void;
+  refreshing?:boolean;
+  refreshError?:string;
 };
 const money=(cents:number|null|undefined)=>Number.isSafeInteger(cents)?fmt(cents as number):'—';
 const shortName=(name:string)=>name.split(/\s+/).filter(Boolean).map(s=>s[0]).slice(0,2).join('').toUpperCase();
@@ -60,7 +64,7 @@ function PlayerAvatar({name,image,size='normal'}:{name:string;image?:string|null
 export default function RoomDashboardDual({
   room,games,history=[],leaders=[],members=[],rooms=[],viewerIsHost,viewerCanManageGames,
   onRoomSelect,onCreateGame,onInvite,onScan,onMembers,onHistory,
-  userName,planName,searchValue,onSearchChange,onSignOut,onPlan,
+  userName,planName,searchValue,onSearchChange,onSignOut,onPlan,onRefreshData,refreshing,refreshError,
 }:Props){
   const router=useRouter();
   const canManageGames=viewerCanManageGames??viewerIsHost;
@@ -76,13 +80,25 @@ export default function RoomDashboardDual({
   const [roomMenu,setRoomMenu]=useState(false);
   const [accountMenu,setAccountMenu]=useState(false);
   const [clock,setClock]=useState(()=>Date.now());
+  const [homeView,setHomeView]=useState<'night'|'full'>('night');
+  const [refreshKey,setRefreshKey]=useState(0);
+  // A personal home view is separate from the host's room-wide appearance.
+  // The existing authoritative command/live preference is never overwritten.
+  useEffect(()=>{
+    try{if(localStorage.getItem('pkr_home_view:v1')==='full')setHomeView('full');}catch{}
+  },[]);
+  const selectHomeView=(next:'night'|'full')=>{
+    setHomeView(next);
+    try{localStorage.setItem('pkr_home_view:v1',next);}catch{}
+  };
   useEffect(()=>{const timer=window.setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[]);
-  const current=useMemo(()=>games.filter(isCurrentGame).sort((a,b)=>{
+  const current=useMemo(()=>games.filter(game=>isCurrentGame(game)).sort((a,b)=>{
     if(isLiveGame(a)!==isLiveGame(b))return isLiveGame(a)?-1:1;
     return a.scheduled_at-b.scheduled_at;
   }),[games]);
   const featured=current[0]||null;
-  const active=featured&&isLiveGame(featured)?featured:null;
+  const latestFeatured=featured&&gameDetail?.id===featured.id?gameDetail:featured;
+  const active=latestFeatured&&isLiveGame(latestFeatured)?latestFeatured:null;
   const settlements=useMemo(()=>history.filter(g=>g.status==='settled')
     .sort((a,b)=>b.scheduled_at-a.scheduled_at),[history]);
 
@@ -124,7 +140,7 @@ export default function RoomDashboardDual({
     void refresh();
     const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void refresh();},30000);
     return()=>{mounted=false;clearInterval(timer)};
-  },[featured?.id]);
+  },[featured?.id,refreshKey]);
 
   useEffect(()=>{
     let mounted=true;setLedger(null);setLedgerError(false);
@@ -133,7 +149,7 @@ export default function RoomDashboardDual({
     void refresh();
     const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void refresh();},45000);
     return()=>{mounted=false;clearInterval(timer)};
-  },[room.id]);
+  },[room.id,refreshKey]);
 
   useEffect(()=>{
     let mounted=true;setProfiles([]);
@@ -166,7 +182,7 @@ export default function RoomDashboardDual({
   const goInvite=()=>viewerIsHost?(onInvite?onInvite():goMembers()):goMembers();
   const goCreate=()=>canManageGames?(onCreateGame?onCreateGame():openRoom()):openRoom();
   const goSchedule=()=>router.push('/schedule');
-  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=outstanding');
+  const goPayments=()=>router.push('/payments?room='+encodeURIComponent(room.id)+'&payments=outstanding&paymentsScope='+(canManageGames?'club':'mine'));
   const goLeaders=()=>router.push('/results?room='+encodeURIComponent(room.id));
   const goRsvp=()=>featured&&router.push('/games/'+encodeURIComponent(featured.id)+'/rsvp');
   const goRsvpSettings=()=>{
@@ -181,7 +197,7 @@ export default function RoomDashboardDual({
   };
   const payments=useMemo(()=>outstandingRoomTransfers(ledger?.records||[]),[ledger]);
   const pendingCents=totalTransferCents(payments);
-  const incomplete=!!ledgerError||!!ledger?.unavailable.length;
+  const incomplete=!!ledgerError||!!ledger?.unavailable.length||!!ledger?.records.some(row=>row.transfer.status==='legacy');
   const paymentLabel=ledgerError||!ledger?'—':incomplete?(payments.length?'≥ '+fmt(pendingCents):'—'):fmt(pendingCents);
   const paymentHint=ledgerError?'Payments unavailable':incomplete?'Total unverified':payments.length+' pending transfer'+(payments.length===1?'':'s');
   const livePlayers=gameDetail&&featured&&gameDetail.id===featured.id?gameDetail.players:[];
@@ -253,7 +269,25 @@ export default function RoomDashboardDual({
     </div>
   </section>;
 
-  return <section className={'pkr-dual-root pkr-dual-'+layout} data-testid="dual-dashboard"
+  const focusGame=latestFeatured||settlements[0]||null;
+  return <>
+    <div className="pkr-gn-home-switch" role="group" aria-label="Home view">
+      <button type="button" aria-pressed={homeView==='night'} onClick={()=>selectHomeView('night')}>Game night</button>
+      <button type="button" aria-pressed={homeView==='full'} onClick={()=>selectHomeView('full')}>Full dashboard</button>
+    </div>
+    {homeView==='night'?<GameNightHostHome room={room} featured={focusGame} active={!!active}
+      going={going} seated={seated.length} payments={payments} paymentLabel={paymentLabel}
+      paymentState={ledgerError?'unavailable':!ledger?'loading':incomplete?'partial':'ready'}
+      attendanceState={gameError?'unavailable':!featured||gameDetail?.id===featured.id?'ready':'loading'}
+      canInvite={viewerIsHost} canManageGames={canManageGames}
+      onGame={()=>{if(active)openTable();else if(focusGame)router.push('/games/'+encodeURIComponent(focusGame.id));else goCreate();}}
+      onSchedule={goCreate} onInvite={goInvite} onRsvp={featured?goRsvp:goGameNight}
+      onSharing={goGameNight} onPayments={goPayments} onResults={goLeaders}
+      onCalendar={goSchedule} onMembers={goMembers} onScan={onScan||goMembers}
+      onAppearance={()=>selectHomeView('full')} onRsvpSettings={goRsvpSettings}
+      onAccount={goNotificationSettings} onRoom={openRoom} refreshing={refreshing} refreshError={refreshError}
+      onRefresh={()=>{setRefreshKey(v=>v+1);onRefreshData?.();}}/>:null}
+    <section hidden={homeView!=='full'} className={'pkr-dual-root pkr-dual-'+layout} data-testid="dual-dashboard"
     data-layout={layout} data-room-id={room.id} aria-label="Poker room dashboard">
     <div className="pkr-dual-shell">
       <header className="pkr-dual-toolbar">
@@ -299,7 +333,7 @@ export default function RoomDashboardDual({
         <div className="pkr-dual-switcher-heading">
           <span className="pkr-dual-diamond">◆</span>
           <div><strong>Room appearance</strong>
-            <small>{viewerIsHost?'Your choice applies across Home, Games, Players, Results and Payments':
+            <small>{viewerIsHost?'Shared club layout · Full dashboard and related screens':
               'Command Centre or Live Poker · selected by your host'}</small></div>
         </div>
         {viewerIsHost&&<div className="pkr-dual-switch-actions" role="group" aria-label="Host poker room appearance">
@@ -486,5 +520,6 @@ export default function RoomDashboardDual({
         <RoomOutstandingCard roomId={room.id}/>
       </>}
     </div>
-  </section>;
+  </section>
+  </>;
 }
