@@ -517,7 +517,7 @@ export interface ClubExpenseList {
   members:Array<{user_id:string;display_name:string}>;
   note:string;
 }
-export type ClubExportKind='games'|'player_results'|'transfers'|'rsvps'|'members';
+export type ClubExportKind='games'|'player_results'|'transfers'|'rsvps'|'rsvps_live'|'members'|'expense_splits'|'payment_events';
 export interface ClubExportPage {
   kind:ClubExportKind;rows:Array<Record<string,unknown>>;has_more:boolean;
   next_offset:number|null;exported_at:number;note:string;
