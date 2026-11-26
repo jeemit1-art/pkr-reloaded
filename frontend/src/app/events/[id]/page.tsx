@@ -539,14 +539,9 @@ export default function EventPage() {
             onClick={()=>void togglePush()}>
             {pushEnabled?'🔔 Alerts on':'🔕 Alerts off'}
           </button>}
-          {isHost&&<>
-            <button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>
-              + Schedule game
-            </button>
-            <button type="button" className="btn btn-outline" onClick={()=>setShowInstall(true)}>
-              Share PKR
-            </button>
-          </>}
+          {isHost&&<button type="button" className="btn btn-outline" onClick={()=>setShowInstall(true)}>
+            Share PKR
+          </button>}
         </div>
 
         {/* Games, schedules and completed sessions */}
