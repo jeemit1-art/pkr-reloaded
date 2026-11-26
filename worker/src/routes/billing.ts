@@ -71,6 +71,11 @@ billing.get('/plan', authMiddleware, async (c) => {
     Number.isSafeInteger(user.plan_expires_at)&&Number(user.plan_expires_at)>now;
   const isActive=effectivePlan==='lifetime'||paid;
   const freeAvailable=!isActive&&await freeFirstGameEligible(c.env.DB,user.id,c.env.PKR_FREE_FIRST_GAME_V1==='1');
+  const priorFree=!isActive&&c.env.PKR_FREE_FIRST_GAME_V1==='1'&&!freeAvailable
+    ?await c.env.DB.prepare(
+      'SELECT g.status FROM host_free_first_games h JOIN games g ON g.id=h.game_id WHERE h.host_id=? LIMIT 1'
+    ).bind(user.id).first<{status:string}>():null;
+  const freeGameInProgress=!!priorFree&&['scheduled','lobby','active'].includes(priorFree.status);
 
   return c.json({
     plan: effectivePlan,
@@ -80,6 +85,7 @@ billing.get('/plan', authMiddleware, async (c) => {
     plan_expires_at: user.plan_expires_at,
     is_active: isActive||freeAvailable,
     free_game_available:freeAvailable,
+    free_game_in_progress:freeGameInProgress,
     has_payment: !!user.stripe_customer_id&&!!user.stripe_subscription_id,
     // What this plan allows:
     max_groups: effectivePlan === 'pro' || effectivePlan === 'lifetime' ? null : 1,
