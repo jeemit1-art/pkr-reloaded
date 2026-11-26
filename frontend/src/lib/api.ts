@@ -359,6 +359,7 @@ export interface PlanStatus {
   plan: 'trial' | 'starter' | 'pro' | 'lifetime';
   trial_active: boolean;
   free_game_available?:boolean;
+  free_game_in_progress?:boolean;
   trial_days_left: number;
   trial_end: number;
   plan_expires_at: number | null;
@@ -379,6 +380,7 @@ export interface User {
   trial_days_left: number;
   is_active: boolean;
   free_game_available?:boolean;
+  free_game_in_progress?:boolean;
 }
 
 export interface Event {
