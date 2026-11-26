@@ -242,6 +242,38 @@ async function test(){
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
+     // One consistent primary navigation: no stacked sticky banners or lost
+     // room actions on mobile/tablet; the sidebar owns desktop navigation.
+     if(item.id==='dashboard'||item.id==='room'){
+       const nav=await page.evaluate(()=>{
+         const visible=node=>!!node&&getComputedStyle(node).display!=='none'&&
+           node.getBoundingClientRect().height>0;
+         const mobile=document.querySelector('.pkr-primary-mobile-utility');
+         const legacy=document.querySelector('.pkr-app.pkr-dashboard > .nav.pkr-topbar');
+         const roomBar=document.querySelector('.pkr-app.pkr-event > .pkr-topbar');
+         return {mobile:visible(mobile),legacy:visible(legacy),roomBar:visible(roomBar),
+           sidebar:visible(document.querySelector('.pkr-persistent-nav')),
+           roomActions:visible(document.querySelector('.pkr-room-mobile-actions')),
+           width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth};
+       });
+       if(nav.scroll>nav.width+4)
+         errors.push(size.name+' '+item.id+' primary navigation overflow '+JSON.stringify(nav));
+       if(nav.legacy)
+         errors.push(size.name+' duplicate dashboard top banner is visible');
+       if(size.width<1100){
+         if(!nav.mobile||nav.sidebar)
+           errors.push(size.name+' '+item.id+' responsive header/sidebar mismatch '+JSON.stringify(nav));
+         if(item.id==='room'&&(nav.roomBar||!nav.roomActions))
+           errors.push(size.name+' room renders a second top bar or lost quick actions '+JSON.stringify(nav));
+         if(item.id==='room'){
+           for(const buttonName of ['Share PKR']){
+             const action=page.locator('.pkr-room-mobile-actions').getByRole('button',{name:new RegExp(buttonName)});
+             if(!await action.isVisible())errors.push(size.name+' room missing '+buttonName+' quick action');
+           }
+         }
+       }else if(nav.mobile||!nav.sidebar)
+         errors.push(size.name+' '+item.id+' desktop navigation mismatch '+JSON.stringify(nav));
+     }
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
