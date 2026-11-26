@@ -12,6 +12,7 @@ import {createPkrResultsImage} from '@/lib/pkr-results-image';
 import {isCurrentGame} from '@/lib/game-status';
 import {rsvpChoiceLabel} from '@/lib/rsvp-choices';
 import ClubEngagementPanel from './ClubEngagementPanel';
+import ClubExtrasPanel from './ClubExtrasPanel';
 import './GameNightTools.css';
 
 type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void;onScheduleDate?:(ts:number)=>void};
@@ -292,6 +293,8 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
       <button type="button" onClick={()=>router.push('/account')}>Notification settings →</button></div>
     {instantPanel}
     <ClubEngagementPanel eventId={event.id} isHost={isHost} onScheduleDate={onScheduleDate}/>
+    <ClubExtrasPanel eventId={event.id} games={games} isManager={isHost}
+      isOwner={event.role==='host'} userId={event.role==='host'?event.host_id:null}/>
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
@@ -405,6 +408,8 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule,
 
     {instantPanel}
     <ClubEngagementPanel eventId={event.id} game={current} isHost={isHost} onScheduleDate={onScheduleDate}/>
+    <ClubExtrasPanel eventId={event.id} games={games} isManager={isHost}
+      isOwner={event.role==='host'} userId={event.role==='host'?event.host_id:null}/>
     <div className="pkr-night-secondary-link"><button type="button" onClick={()=>router.push('/account')}>
       Notification & sound settings →</button></div>
     {notice&&<p className="pkr-night-notice" role="status">{notice}</p>}
