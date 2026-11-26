@@ -559,6 +559,12 @@ function DashboardInner() {
             <h2>Poker rooms <span style={{fontSize:13,color:'var(--muted)',fontWeight:600}}>({activeRooms.length} active)</span></h2>
           </div>
           <div className="pkr-list-head-actions">
+            <label className="pkr-room-list-search">
+              <span className="sr-only">Search poker rooms</span>
+              <input type="search" aria-label="Search poker rooms"
+                placeholder="Search your clubs…" value={search}
+                onChange={e=>setSearch(e.target.value)}/>
+            </label>
             {archivedRooms.length>0&&
               <button type="button" className="btn btn-ghost" aria-expanded={showArchivedRooms}
                 aria-controls="pkr-archived-rooms" onClick={()=>setShowArchivedRooms(show=>!show)}>
