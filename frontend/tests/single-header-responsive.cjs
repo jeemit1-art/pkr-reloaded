@@ -259,6 +259,12 @@ async function installedNavigation(page,size,returnOffset,engineName){
   assert(Math.abs((await stationaryRoot(page,'Payment '+label+' navigation')).body-target)<=1,
    'Payment section links with scroll=false must preserve the current offset');
  }
+ // Return through the actual app control after the query-driven payment flows.
+ await page.locator('.pkr-primary-bottom-nav').getByRole('button',{name:'Home',exact:true}).click();
+ await page.getByTestId('player-dashboard').waitFor();
+ await page.waitForLoadState('networkidle',{timeout:10000});
+ await page.waitForFunction(()=>document.body.scrollTop<=1);
+ await stationaryRoot(page,'Home after payment navigation');
 }
 async function check(engine,size){
  const browser=await engine.launch({headless:true});
@@ -294,6 +300,9 @@ async function check(engine,size){
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
   await page.getByTestId('player-dashboard').waitFor({state:'visible'});
   await setSafeArea(page,size);
+  await page.getByTestId('player-dashboard').locator('.gn-player-next[aria-busy="false"]').waitFor();
+  await page.getByTestId('player-dashboard').locator('[aria-label="My settlement payments"][aria-busy="false"]').waitFor();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'default','Installed app must request an opaque native status bar');
   if(size.installed){
     await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-installed'));
@@ -357,6 +366,7 @@ async function check(engine,size){
   assert(geometry.width>=size.width-3&&geometry.width<=size.width+1,
     'CSS viewport differs from the requested viewport beyond native scrollbar width: '+JSON.stringify(geometry));
   assert(geometry.scrollWidth<=geometry.width+3,'Page overflows horizontally: '+JSON.stringify(geometry));
+  await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'.png'),fullPage:false});
   let returnOffset=0;
   if(size.width<1100){
     assert(geometry.primaryVisible,'Club/Account header not visible');
@@ -455,11 +465,6 @@ async function check(engine,size){
     'Plan: LIFETIME','Account must retain the member plan');
   if(size.containedScenario)await installedNavigation(page,size,returnOffset,engine.name());
   assert.deepEqual(problems,[]);
-  if(size.installed)await page.waitForLoadState('networkidle',{timeout:10000});
-  await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
-  await page.getByTestId('player-dashboard').waitFor({state:'visible'});
-  await setSafeArea(page,size);
-  await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'.png'),fullPage:false});
   console.log('PASS '+engine.name()+' '+size.name+' single header, account access and overflow'+
    (size.installed?', stationary root and contained body scrolling':'')+
    (size.containedScenario?', hash/back restoration, last action, dialog focus/lock and resize migration':''));
