@@ -6,6 +6,8 @@ import {api,fmt,fmtDate,fmtSign,type Event,type EventMember,type Game,type GameD
   type LeaderboardEntry,type RoomDashboardLayout,type RoomPlayerProfile} from '@/lib/api';
 import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import GameNightHostHome from '@/components/GameNightHostHome';
+import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import './RoomDashboardDual.css';
@@ -292,11 +294,11 @@ export default function RoomDashboardDual({
     <div className="pkr-dual-shell">
       <header className="pkr-dual-toolbar">
         <div className="pkr-dual-toolbar-lead">
-          <span className="pkr-dual-suit" aria-hidden="true">♠</span>
+          <span className="pkr-dual-suit"><PkrGlyph name="spade" size={32}/></span>
           <div className="pkr-dual-brand-copy"><strong>PKR</strong><small>PRIVATE POKER CLUB</small></div>
           {planName&&<span className="pkr-dual-plan-pill">{planName}</span>}
         </div>
-        {onSearchChange&&<label className="pkr-dual-search"><span aria-hidden="true">⌕</span>
+        {onSearchChange&&<label className="pkr-dual-search"><PkrGlyph name="search"/>
           <input aria-label="Search poker rooms" value={searchValue||''}
             onChange={event=>onSearchChange(event.target.value)} placeholder="Search poker rooms…"/>
         </label>}
@@ -307,7 +309,7 @@ export default function RoomDashboardDual({
             {roomMenu&&<div className="pkr-dual-room-menu" role="listbox">
               {[room,...otherRooms].map(r=><button key={r.id} type="button" role="option"
                 aria-selected={r.id===room.id} onClick={()=>{setRoomMenu(false);onRoomSelect(r.id);}}>
-                {r.name}{r.id===room.id?' ✓':''}</button>)}
+                {r.name}{r.id===room.id&&<PkrGlyph name="check" size={16}/>}</button>)}
             </div>}
           </div>:
           <button className="pkr-dual-room-label" type="button" onClick={openRoom}>
@@ -331,7 +333,7 @@ export default function RoomDashboardDual({
       </header>
       <div className="pkr-dual-switcher" aria-label="Poker room appearance">
         <div className="pkr-dual-switcher-heading">
-          <span className="pkr-dual-diamond">◆</span>
+          <span className="pkr-dual-diamond"><PkrGlyph name="grid"/></span>
           <div><strong>Room appearance</strong>
             <small>{viewerIsHost?'Shared club layout · Full dashboard and related screens':
               'Command Centre or Live Poker · selected by your host'}</small></div>
@@ -340,11 +342,11 @@ export default function RoomDashboardDual({
           <button type="button" aria-pressed={layoutReady&&layout==='command'}
             disabled={!layoutReady||saving} onClick={()=>void choose('command')}
             className={layout==='command'?'active':''}>
-            ▦ <span>Command Centre</span></button>
+            <PkrGlyph name="grid"/> <span>Command Centre</span></button>
           <button type="button" aria-pressed={layoutReady&&layout==='live'}
             disabled={!layoutReady||saving} onClick={()=>void choose('live')}
             className={layout==='live'?'active':''}>
-            ♠ <span>Live Poker</span></button>
+            <PkrGlyph name="table"/> <span>Live Poker</span></button>
         </div>}
       </div>
       {layoutError&&<p role="alert" className="pkr-dual-error">{layoutError}</p>}
@@ -355,59 +357,63 @@ export default function RoomDashboardDual({
         </div>
         <section className="pkr-dual-hero pkr-dual-hero-command">
           <div className="pkr-dual-hero-text">
-            <div className="pkr-dual-eyebrow"><span>◆ CURRENT ROOM</span><span className="pkr-dual-status">{liveLabel}</span></div>
+            <div className="pkr-dual-eyebrow"><span><PkrGlyph name="grid"/> CURRENT ROOM</span><span className="pkr-dual-status">{liveLabel}</span></div>
             <h3>{room.name}</h3>
-            <p>♠ Private room · {roomMembers} members · {seatText}</p>
+            <p><PkrGlyph name="spade" size={16}/> Private room · <RecordMetric bare request={{kind:'members',title:'Room members',roomId:room.id}}>{roomMembers} members</RecordMetric> · {featured?<RecordMetric bare
+              request={{kind:'seats',title:'Table seats',gameId:featured.id}}>{seatText}</RecordMetric>:seatText}</p>
             <div className="pkr-dual-hero-buttons">
               <button type="button" className="pkr-dual-gold-button" onClick={active?openTable:featured?openGame:goCreate}>
                 {active?'Resume Game':featured?'View Next Game':canManageGames?'Create a Game':'Open Room'} <span>→</span></button>
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Room details ↗</button>
             </div>
           </div>
-          <div className="pkr-dual-hero-image" aria-hidden="true"><span>♠</span></div>
+          <div className="pkr-dual-hero-image" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
         <RoomOutstandingCard roomId={room.id}/>
         {featureHub}
         <section className="pkr-dual-nextgame">
-          <div><span className="pkr-dual-kicker">▦ NEXT GAME NIGHT</span>
+          <div><span className="pkr-dual-kicker"><PkrGlyph name="schedule"/> NEXT GAME NIGHT</span>
             <h3>{featured?niceDate(featured.scheduled_at):'No session scheduled'}</h3>
             <p>{featured?.location||'Choose a date for the next game'}</p>
             <span className="pkr-dual-tag">{active?'Game in progress':featured?'Game scheduled':'Ready when you are'}</span>
           </div>
           <div className="pkr-dual-rsvp-summary">
-            <strong>{featured?going.length+' going':'No RSVPs yet'}</strong>
-            {featured&&<span>{rsvps.length} responses · {maybe.length} maybe</span>}
+            {featured?<RecordMetric bare request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:featured.id,filter:'yes'}}><strong>{going.length} going</strong></RecordMetric>:<strong>No RSVPs yet</strong>}
+            {featured&&<span><RecordMetric bare request={{kind:'rsvps',title:'All RSVP responses',gameId:featured.id}}>{rsvps.length} responses</RecordMetric>
+              {' · '}<RecordMetric bare request={{kind:'rsvps',title:'Interested RSVPs',gameId:featured.id,filter:'maybe'}}>{maybe.length} maybe</RecordMetric></span>}
             {featured&&<div className="pkr-dual-progress"><span style={{width:(rsvps.length?100*going.length/rsvps.length:0)+'%'}}/></div>}
             <button type="button" onClick={featured?goRsvp:goCreate}>{featured?'RSVP & game details':'Schedule a game'} →</button>
           </div>
         </section>
         <div className="pkr-dual-metrics">
-          <button type="button" onClick={active?openTable:openRoom}><span>▥ Recorded buy-ins</span><strong>{money(totalBuyins)}</strong><small>{active?'Current live table':'Open a live game to view'}</small></button>
-          <button type="button" onClick={goMembers}><span>♟ Room members</span><strong>{roomMembers}</strong><small>Private club</small></button>
-          <button type="button" onClick={goPayments}><span>⇄ Pending transfers</span><strong>{paymentLabel}</strong><small>{paymentHint}</small></button>
-          <button type="button" onClick={goHistory}><span>◉ Settled games</span><strong>{settlements.length}</strong><small>Recorded results</small></button>
+          {featured?<RecordMetric bare request={{kind:'players',title:'Recorded buy-ins',gameId:featured.id,measure:'buyins'}}><span><PkrGlyph name="settle"/> Recorded buy-ins</span><strong>{money(totalBuyins)}</strong><small>{active?'Current live table':'Saved game records'}</small></RecordMetric>:
+            <button type="button" onClick={openRoom}><span><PkrGlyph name="settle"/> Recorded buy-ins</span><strong>—</strong><small>Open a live game to view</small></button>}
+          <RecordMetric bare request={{kind:'members',title:'Room members',roomId:room.id}}><span><PkrGlyph name="members"/> Room members</span><strong>{roomMembers}</strong><small>Private club</small></RecordMetric>
+          <button type="button" onClick={goPayments}><span><PkrGlyph name="settle"/> Pending transfers</span><strong>{paymentLabel}</strong><small>{paymentHint}</small></button>
+          <RecordMetric bare request={{kind:'games',title:'Settled games',roomId:room.id,filter:'settled'}}><span><PkrGlyph name="history"/> Settled games</span><strong>{settlements.length}</strong><small>Recorded results</small></RecordMetric>
         </div>
         <div className="pkr-dual-data-grid">
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>🏆 Leaderboard</h3><button onClick={goLeaders}>View all ↗</button></div>
-            {leaderboard.length?leaderboard.map((p,i)=><button className="pkr-dual-leader" type="button" onClick={goLeaders} key={p.user_id||p.display_name}>
+            <div className="pkr-dual-section-title"><h3><PkrGlyph name="trophy"/> Leaderboard</h3><button onClick={goLeaders}>View all ↗</button></div>
+            {leaderboard.length?leaderboard.map((p,i)=><RecordMetric bare className="pkr-dual-leader" key={p.user_id||p.display_name}
+              request={{kind:'player',title:p.display_name+' — game history',roomId:room.id,playerId:p.user_id,playerName:p.display_name}}>
               <span className="pkr-dual-rank">{i+1}</span>
               <PlayerAvatar name={p.display_name} image={avatarFor(p.user_id,p.display_name)} size="small"/>
               <strong>{nameFor(p.user_id,p.display_name)}</strong>
               <b className={p.total_net>=0?'pkr-dual-positive':'pkr-dual-negative'}>{fmtSign(p.total_net)}</b>
-            </button>):<p className="pkr-dual-empty">No settled-game leaderboard yet.</p>}
+            </RecordMetric>):<p className="pkr-dual-empty">No settled-game leaderboard yet.</p>}
           </section>
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>◷ Recent activity</h3><button onClick={goHistory}>View history ↗</button></div>
+            <div className="pkr-dual-section-title"><h3><PkrGlyph name="history"/> Recent activity</h3><button onClick={goHistory}>View history ↗</button></div>
             {paidHistory.length?paidHistory.map(({game,transfer})=>
               <button className="pkr-dual-activity" type="button"
-                key={game.id+':'+transfer.id} onClick={goPayments}>
-                <span className="pkr-dual-activity-mark">✓</span>
+                key={game.id+':'+transfer.id} onClick={()=>router.push(game.results_token?'/games/results/'+encodeURIComponent(game.results_token):'/games/'+encodeURIComponent(game.id))}>
+                <span className="pkr-dual-activity-mark"><PkrGlyph name="check"/></span>
                 <span><strong>{transfer.from_name} · marked paid</strong>
                   <small>{transfer.paid_at?niceDate(transfer.paid_at):'Paid date not recorded'} · {money(transfer.amount)}</small></span>
               </button>):settlements.length?settlements.slice(0,3).map(g=>
               <button className="pkr-dual-activity" key={g.id} type="button" onClick={()=>router.push('/games/'+g.id)}>
-                <span className="pkr-dual-activity-mark">♠</span>
+                <span className="pkr-dual-activity-mark"><PkrGlyph name="games"/></span>
                 <span><strong>Poker game settled</strong><small>{niceDate(g.scheduled_at)}</small></span>
               </button>):<p className="pkr-dual-empty">Game and payment history will appear here.</p>}
           </section>
@@ -420,8 +426,8 @@ export default function RoomDashboardDual({
             <div className="pkr-dual-eyebrow"><span>TONIGHT'S GAME</span><span className="pkr-dual-status">{liveLabel}</span></div>
             <h3>{room.name}</h3>
             <p>{featured?niceDate(featured.scheduled_at):'No game has been scheduled'}</p>
-            <p className="pkr-dual-seatline">♟ {seatText}
-              {countAvailable!==null&&<small> · {countAvailable} available</small>}</p>
+            <p className="pkr-dual-seatline"><PkrGlyph name="members"/> {featured?<RecordMetric bare request={{kind:'seats',title:'Table seats',gameId:featured.id}}>{seatText}</RecordMetric>:seatText}
+              {featured&&countAvailable!==null&&<small> · <RecordMetric bare request={{kind:'seats',title:'Available seats',gameId:featured.id,filter:'available'}}>{countAvailable} available</RecordMetric></small>}</p>
             {featured&&!active&&secondsToStart>0&&<div className="pkr-dual-countdown">
               <span>GAME STARTS IN</span><strong aria-live="off">{countDownText}</strong>
             </div>}
@@ -430,25 +436,28 @@ export default function RoomDashboardDual({
                 {active?'Join the Table':featured?'View Game':canManageGames?'Schedule Game':'Open Room'} <span>→</span></button>
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Game room ↗</button>
             </div>
-          </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><span>♠</span></div>
+          </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
         {featureHub}
         <div className="pkr-dual-highlights">
           <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
-          <button type="button" onClick={goRsvp} disabled={!featured}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></button>
-          <button type="button" onClick={openGame} disabled={!featured}><span><DashIcon name="table"/></span><strong>{countAvailable===null?'—':countAvailable}</strong><small>Seats available</small></button>
-          <button type="button" onClick={goPayments}><span><DashIcon name="chip"/></span><strong>{ledger?ledger.unavailable.length:'—'}</strong><small>Games to verify</small></button>
+          <RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'RSVPs not confirmed going',gameId:featured?.id,filter:'not-confirmed'}}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></RecordMetric>
+          <RecordMetric bare disabled={!featured} request={{kind:'seats',title:'Available seats',gameId:featured?.id,filter:'available'}}><span><DashIcon name="table"/></span><strong>{countAvailable===null?'—':countAvailable}</strong><small>Seats available</small></RecordMetric>
+          <RecordMetric bare disabled={!ledger} request={{kind:'games',title:'Games with unavailable payment records',roomId:room.id,gameIds:ledger?.unavailable.map(game=>game.id)||[]}}><span><PkrGlyph name="warning"/></span><strong>{ledger?ledger.unavailable.length:'—'}</strong><small>Games to verify</small></RecordMetric>
         </div>
         <section className="pkr-dual-table-panel">
           <div className="pkr-dual-section-title"><h3><i className="pkr-dual-live-dot"/> Live Table Snapshot</h3>
-            <div className="pkr-dual-panel-actions"><span className="pkr-dual-table-count">{seated.length} / {featured?.seats||0} PLAYERS</span>
+            <div className="pkr-dual-panel-actions"><RecordMetric bare className="pkr-dual-table-count" disabled={!featured}
+              request={{kind:'seats',title:'Table seats',gameId:featured?.id}}>{seated.length} / {featured?.seats||0} PLAYERS</RecordMetric>
               <button type="button" onClick={active?openTable:openGame} disabled={!featured}>View table ↗</button></div></div>
           <div className={'pkr-dual-felt-stage'+(seatCount>9?' pkr-dual-dense':'')} aria-label="Read-only seating preview">
             <div className="pkr-dual-felt">
-              <span>♠ ♥ ♣ ♦</span>
+              <span><PkrGlyph name="spade" size={16}/> <PkrGlyph name="heart" size={16}/> <PkrGlyph name="club" size={16}/> <PkrGlyph name="diamond" size={16}/></span>
               <small>{active?'RECORDED BUY-INS':'NEXT GAME SEATING'}</small>
-              <strong>{active?(totalBuyins===null?'—':fmt(totalBuyins)):seatText}</strong>
-              <b>♠ PKR ♠</b>
+              <RecordMetric bare className="pkr-dual-felt-record" disabled={!featured}
+                request={active?{kind:'players',title:'Recorded buy-ins',gameId:active.id,measure:'buyins'}:{kind:'seats',title:'Table seats',gameId:featured?.id}}>
+                <strong>{active?(totalBuyins===null?'—':fmt(totalBuyins)):seatText}</strong></RecordMetric>
+              <b><PkrGlyph name="spade" size={16}/> PKR <PkrGlyph name="spade" size={16}/></b>
             </div>
             {featured&&displaySeats.map((item)=>item.player?
               <button type="button" key={item.seat}
@@ -482,7 +491,9 @@ export default function RoomDashboardDual({
         </section>
         <section className="pkr-dual-coming">
           <div className="pkr-dual-section-title"><h3>Who's Coming?</h3><button type="button" onClick={goRsvp} disabled={!featured}>See all RSVPs ↗</button></div>
-          <p>{going.length} confirmed · {maybe.length} maybe · {rsvps.length} recorded responses</p>
+          <p><RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:featured?.id,filter:'yes'}}>{going.length} confirmed</RecordMetric>
+            {' · '}<RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'Interested RSVPs',gameId:featured?.id,filter:'maybe'}}>{maybe.length} maybe</RecordMetric>
+            {' · '}<RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'All RSVP responses',gameId:featured?.id}}>{rsvps.length} recorded responses</RecordMetric></p>
           <div className="pkr-dual-coming-grid">
             {rsvps.length?rsvps.slice(0,16).map(r=>
               <button type="button" key={r.id} onClick={goRsvp}>
@@ -494,7 +505,7 @@ export default function RoomDashboardDual({
         </section>
         <div className="pkr-dual-data-grid pkr-dual-live-tools">
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>◉ Quick Buy-in</h3><small>Host / co-host · player seat required</small></div>
+            <div className="pkr-dual-section-title"><h3><PkrGlyph name="settle"/> Quick Buy-in</h3><small>Host / co-host · player seat required</small></div>
             <div className="pkr-dual-banks">
               {[25,50,100].map(amount=><button type="button" key={amount} disabled={!canManageGames||!active}
                 onClick={()=>goQuickBuyin(amount)} title={'Open the table with $'+amount+' selected, then choose a player'}>
@@ -503,15 +514,15 @@ export default function RoomDashboardDual({
             <p className="pkr-dual-help">Select an amount, then select a player at the table to confirm. No buy-in is recorded here.</p>
           </section>
           <section className="pkr-dual-data-card">
-            <div className="pkr-dual-section-title"><h3>♟ RSVP & WhatsApp updates</h3><small>Live board</small></div>
+            <div className="pkr-dual-section-title"><h3><PkrGlyph name="members"/> RSVP & WhatsApp updates</h3><small>Live board</small></div>
             <p className="pkr-dual-help">Current attendance, arrival times, available seats and one-tap WhatsApp updates are in Game Night.</p>
             <button type="button" className="pkr-dual-wide-link" onClick={goGameNight}>Manage RSVPs →</button>
           </section>
         </div>
         <section className="pkr-dual-data-card pkr-dual-settlements">
-          <div className="pkr-dual-section-title"><h3>⇄ Recent Settlements</h3><button onClick={goPayments}>View all ↗</button></div>
+          <div className="pkr-dual-section-title"><h3><PkrGlyph name="settle"/> Recent Settlements</h3><button onClick={goPayments}>View all ↗</button></div>
           {paidHistory.length?<div className="pkr-dual-settlement-grid">{paidHistory.map(({game,transfer})=>
-            <button type="button" key={game.id+':'+transfer.id} onClick={goPayments}>
+            <button type="button" key={game.id+':'+transfer.id} onClick={()=>router.push(game.results_token?'/games/results/'+encodeURIComponent(game.results_token):'/games/'+encodeURIComponent(game.id))}>
               <PlayerAvatar name={transfer.from_name} size="small"/>
               <span><strong>{transfer.from_name}</strong><b className="pkr-dual-positive">{money(transfer.amount)} paid</b>
               <small>{transfer.paid_at?niceDate(transfer.paid_at):'Paid date not recorded'}</small></span>

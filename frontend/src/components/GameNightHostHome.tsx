@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import PkrGlyph, {type PkrGlyphName} from '@/components/PkrGlyph';
+import RecordMetric from '@/components/RecordMetric';
 import type {Event, Game, Rsvp} from '@/lib/api';
 import type {RoomTransferRecord} from '@/lib/room-payment-schedule';
 
@@ -39,13 +40,13 @@ export default function GameNightHostHome(p:Props){
     {label:'Game sessions',detail:'Dates, tables and game details',icon:'games',run:p.onRoom},
     {label:'Calendar',detail:'Upcoming and unfinished games',icon:'schedule',run:p.onCalendar},
     {label:'RSVPs & sharing',detail:'Attendance, seats and WhatsApp',icon:'members',run:p.onSharing},
-    {label:'RSVP settings',detail:'Arrival times and custom replies',icon:'schedule',run:p.onRsvpSettings,show:p.canManageGames},
+    {label:'RSVP settings',detail:'Arrival times and custom replies',icon:'settings',run:p.onRsvpSettings,show:p.canManageGames},
     {label:'Players & invitations',detail:'Profiles, approvals and QR codes',icon:'members',run:p.onMembers},
     {label:'Results & history',detail:'Standings, graphs and past games',icon:'insights',run:p.onResults},
     {label:'Payments',detail:'Saved records, reminders and ledger',icon:'settle',run:p.onPayments},
-    {label:'Account & notifications',detail:'Install, alerts, sound and account',icon:'install',run:p.onAccount},
-    {label:'Scan invitation',detail:'Join a club using its QR code',icon:'games',run:p.onScan},
-    {label:'Room appearance',detail:'Command Centre and Live Poker',icon:'home',run:p.onAppearance},
+    {label:'Account & notifications',detail:'Install, alerts, sound and account',icon:'account',run:p.onAccount},
+    {label:'Scan invitation',detail:'Join a club using its QR code',icon:'qr',run:p.onScan},
+    {label:'Room appearance',detail:'Command Centre and Live Poker',icon:'grid',run:p.onAppearance},
   ];
   const query = search.trim().toLocaleLowerCase('en-AU');
   const matches = tools.filter(t=>t.show!==false&&(!query||(t.label+' '+t.detail).toLocaleLowerCase('en-AU').includes(query)));
@@ -53,7 +54,7 @@ export default function GameNightHostHome(p:Props){
   return <section className="pkr-gn-home" data-testid="game-night-host-home">
     <header className="pkr-gn-page-head">
       <div><span className="pkr-gn-eyebrow">YOUR CLUB, YOUR NIGHT</span><h1>Game night<span>.</span></h1></div>
-      <button className="pkr-gn-refresh" type="button" disabled={p.refreshing} onClick={p.onRefresh} aria-label="Refresh game night">↻ <span>{p.refreshing?'Refreshing…':'Refresh'}</span></button>
+      <button className="pkr-gn-refresh" type="button" disabled={p.refreshing} onClick={p.onRefresh} aria-label="Refresh game night"><PkrGlyph name="refresh"/> <span>{p.refreshing?'Refreshing…':'Refresh'}</span></button>
     </header>
     {p.refreshError&&<p className="pkr-gn-refresh-error" role="alert">{p.refreshError}</p>}
 
@@ -66,7 +67,12 @@ export default function GameNightHostHome(p:Props){
         </div>
         <div className="pkr-gn-ticket-rule"/>
         <div className="pkr-gn-ticket-footer">
-          <div className="pkr-gn-seats-summary"><strong>{p.active?'Game in progress':closed?'Results saved':finishing?'Ready to settle':confirmed?p.going.length+' confirmed':p.attendanceState==='unavailable'?'RSVPs unavailable':'Checking RSVPs'}</strong><span>{game.seats}-seat table</span>
+          <div className="pkr-gn-seats-summary">
+            {!p.active&&!closed&&!finishing&&confirmed?<RecordMetric bare className="pkr-gn-ticket-record"
+              request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:game.id,filter:'yes'}}><strong>{p.going.length} confirmed</strong></RecordMetric>:
+              <button type="button" className="pkr-record-action pkr-gn-ticket-record" onClick={p.active||closed||finishing?p.onGame:p.onRsvp}>
+                <strong>{p.active?'Game in progress':closed?'Results saved':finishing?'Ready to settle':p.attendanceState==='unavailable'?'RSVPs unavailable':'Checking RSVPs'}</strong></button>}
+            <RecordMetric bare className="pkr-gn-ticket-record" request={{kind:'seats',title:'Table seats',gameId:game.id}}><span>{game.seats}-seat table</span></RecordMetric>
             {!p.active&&!closed&&!finishing&&confirmed&&<div className="pkr-gn-seat-meter" aria-hidden="true">{Array.from({length:Math.min(game.seats,24)},(_,i)=><span className={i<p.going.length?'filled':''} key={i}/>)}</div>}
           </div>
           <button type="button" className="pkr-gn-primary" onClick={p.onGame}>{primary}</button>
@@ -82,15 +88,17 @@ export default function GameNightHostHome(p:Props){
     {game&&!closed&&<section className="pkr-gn-crew" aria-label="Confirmed guests">
       <header><h2>The table so far</h2><button type="button" onClick={p.onRsvp}>View all</button></header>
       {confirmed&&guests.length>0?<div className="pkr-gn-people-strip">{guests.map((r,i)=><button type="button" onClick={p.onRsvp} key={r.id} aria-label={'View RSVP for '+r.display_name}>
-        <span className={'pkr-gn-avatar tone-'+i}>{initials(r.display_name)}<i aria-hidden="true">✓</i></span><strong title={r.display_name}>{r.display_name.split(' ')[0]}</strong>
+        <span className={'pkr-gn-avatar tone-'+i}>{initials(r.display_name)}<i aria-hidden="true"><PkrGlyph name="check" size={12}/></i></span><strong title={r.display_name}>{r.display_name.split(' ')[0]}</strong>
       </button>)}</div>:<p className="pkr-gn-muted" role="status">{confirmed?'No confirmed RSVPs yet.':p.attendanceState==='unavailable'?'Could not check RSVPs. Open the RSVP board to retry.':'Checking the guest list…'}</p>}
-      {confirmed&&<p className="pkr-gn-seat-note">{p.seated} seat{p.seated===1?'':'s'} assigned · {p.going.length} confirmed RSVP{p.going.length===1?'':'s'}</p>}
+      {confirmed&&<p className="pkr-gn-seat-note"><RecordMetric bare request={{kind:'players',title:'Seated players',gameId:game.id,filter:'seated'}}>{p.seated} seat{p.seated===1?'':'s'} assigned</RecordMetric>
+        {' · '}<RecordMetric bare request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:game.id,filter:'yes'}}>{p.going.length} confirmed RSVP{p.going.length===1?'':'s'}</RecordMetric></p>}
     </section>}
 
     <section className="pkr-gn-attention" aria-label="Payments to review">
       <div className="pkr-gn-attention-icon"><PkrGlyph name="settle"/></div>
-      <div><h2>{hasOpenPayments?(p.paymentState==='partial'?'At least ':'')+p.payments.length+' payment'+(p.payments.length===1?'':'s')+' outstanding':p.paymentState==='loading'?'Checking payments':p.paymentState==='ready'?'Payments are up to date':'Payment records need a check'}</h2>
-        <p>{hasOpenPayments?p.paymentLabel+' across saved games'+(p.paymentState==='partial'?' · partial history':''):p.paymentState==='loading'?'Looking up the club’s saved records.':p.paymentState==='ready'?'View paid history and the full ledger.':'Open Payments to review the available records.'}</p></div>
+      <button type="button" className="pkr-record-action pkr-gn-attention-record" onClick={p.onPayments}
+        aria-label="View underlying records: Outstanding payments"><h2>{hasOpenPayments?(p.paymentState==='partial'?'At least ':'')+p.payments.length+' payment'+(p.payments.length===1?'':'s')+' outstanding':p.paymentState==='loading'?'Checking payments':p.paymentState==='ready'?'Payments are up to date':'Payment records need a check'}</h2>
+        <p>{hasOpenPayments?p.paymentLabel+' across saved games'+(p.paymentState==='partial'?' · partial history':''):p.paymentState==='loading'?'Looking up the club’s saved records.':p.paymentState==='ready'?'View paid history and the full ledger.':'Open Payments to review the available records.'}</p></button>
       <button type="button" onClick={p.onPayments}>Review</button>
     </section>
 

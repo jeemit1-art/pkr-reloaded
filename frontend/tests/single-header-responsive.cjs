@@ -42,6 +42,7 @@ const sizes=[
  {name:'small-phone',width:320,height:700},
  {name:'regular-phone',width:360,height:780},
  {name:'iphone',width:390,height:844},
+ {name:'iphone-safe-area',width:390,height:844,safeTop:59,safeBottom:34},
  {name:'large-phone',width:430,height:932},
  {name:'phone-landscape',width:844,height:390},
  {name:'tablet',width:768,height:1024},
@@ -76,6 +77,8 @@ async function check(engine,size){
   });
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
   await page.getByTestId('player-dashboard').waitFor({state:'visible'});
+  if(size.safeTop)await page.addStyleTag({content:'html.pkr-game-night{--pkr-safe-area-top:'+size.safeTop+'px!important;--pkr-safe-area-bottom:'+size.safeBottom+'px!important}'});
+  assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'default','Installed app must request an opaque native status bar');
   const geometry=await page.evaluate(()=>{
     const visible=(element)=>!!element&&getComputedStyle(element).display!=='none'&&
       element.getBoundingClientRect().width>0&&element.getBoundingClientRect().height>0;
@@ -100,7 +103,7 @@ async function check(engine,size){
     assert(geometry.primaryVisible,'Club/Account header not visible');
     assert(!geometry.sidebarVisible,'Desktop sidebar visible on phone/tablet');
     assert(geometry.bottomVisible,'Bottom primary navigation was removed');
-    assert.equal(geometry.position,'sticky');
+    assert.equal(geometry.position,'fixed');
     assert(geometry.primary.left>=-1&&geometry.primary.right<=geometry.width+1,
       'Header extends beyond viewport');
     assert(geometry.primary.top>=-1&&geometry.primary.top<=2,'Header starts outside safe viewport');
@@ -111,8 +114,32 @@ async function check(engine,size){
     await page.evaluate(()=>window.scrollTo({top:480,behavior:'instant'}));
     await page.waitForTimeout(150);
     const scrolled=await page.locator('.pkr-primary-mobile-utility').boundingBox();
-    assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Sticky header overlaps the system status area');
+    assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Fixed header moved away from the viewport top');
     assert(scrolled.x>=-1&&scrolled.x+scrolled.width<=size.width+2,'Scrolled header clipped');
+    const masks=await page.evaluate(({safeTop,safeBottom})=>{
+      const header=document.querySelector('.pkr-primary-mobile-utility');
+      const footer=document.querySelector('.pkr-primary-bottom-nav');
+      const s=getComputedStyle(header),f=getComputedStyle(footer),r=header.getBoundingClientRect();
+      const inside=(parent,x,y)=>parent.contains(document.elementFromPoint(x,y));
+      return {height:r.height,paddingTop:parseFloat(s.paddingTop),colour:s.backgroundColor,
+        image:s.backgroundImage,opacity:s.opacity,blur:s.backdropFilter,
+        cap:getComputedStyle(header,'::before').backgroundColor,
+        // Check the top inset itself after scrolling real content beneath it.
+        topCovered:[1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].every(y=>
+          [2,innerWidth/2,innerWidth-2].every(x=>inside(header,x,y))),
+        bottomCovered:inside(footer,innerWidth/2,innerHeight-2),
+        footerColour:f.backgroundColor,footerPadding:parseFloat(f.paddingBottom)};
+    },{safeTop:size.safeTop||0,safeBottom:size.safeBottom||0});
+    assert(Math.abs(masks.height-(64+(size.safeTop||0)))<=1,'Safe area must be reserved once: '+JSON.stringify(masks));
+    assert(masks.paddingTop>=(size.safeTop||0)+8,'Header controls intrude into status bar');
+    assert.equal(masks.colour,'rgb(255, 255, 255)');
+    assert.equal(masks.cap,'rgb(255, 255, 255)');
+    assert.equal(masks.image,'none');assert.equal(masks.opacity,'1');assert.equal(masks.blur,'none');
+    assert(masks.topCovered,'Scrolled content is exposed in the status-bar inset: '+JSON.stringify(masks));
+    assert(masks.bottomCovered,'Scrolled content is exposed beneath bottom navigation');
+    assert.equal(masks.footerColour,'rgb(255, 255, 255)');
+    assert(masks.footerPadding>=(size.safeBottom||0),'Footer lost home-indicator clearance');
+    await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'-scrolled.png'),fullPage:false});
     await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
     await page.getByRole('button',{name:'Account, notifications and installation'}).click();
   }else{
@@ -138,6 +165,6 @@ async function check(engine,size){
 }
 (async()=>{
   for(const size of sizes)await check(chromium,size);
-  for(const size of sizes.filter(s=>['small-phone','iphone','phone-landscape','tablet','desktop'].includes(s.name)))
+  for(const size of sizes.filter(s=>['small-phone','iphone','iphone-safe-area','phone-landscape','tablet','desktop'].includes(s.name)))
     await check(webkit,size);
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,305 @@
+/* Visual and interaction regressions for the completed Game night appearance.
+ * Run in CI against the local staging build. Every API response is fictional;
+ * unexpected external requests and all unapproved API writes are blocked. */
+'use strict';
+const {chromium,webkit}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const BASE='http://127.0.0.1:3000';
+const API='https://pkr-reloaded-worker-staging.jeemit1.workers.dev';
+const output=path.resolve(__dirname,'../../artifacts/game-night-polish');
+fs.mkdirSync(output,{recursive:true});
+const now=Math.floor(Date.now()/1000);
+const room={id:'polish-room',name:'Sample Poker Club',description:'Fictional regression fixture',status:'active',role:'host',host_id:'polish-user',member_count:4,game_count:3,buy_in:5000,created_at:now-86400*30};
+const user={id:'polish-user',name:'Alex Morgan',email:'fixture@invalid.example',avatar_url:null,plan:'pro',is_active:true,trial_active:false,trial_days_left:0};
+const photo='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#edf1f4"/><circle cx="32" cy="24" r="12" fill="#a33d28"/><path d="M12 64c0-28 40-28 40 0" fill="#a33d28"/></svg>');
+const members=[
+ {id:user.id,name:user.name,role:'host',avatar_url:photo,joined_at:room.created_at},
+ {id:'polish-jordan',name:'Jordan Lee',role:'member',avatar_url:null,joined_at:room.created_at},
+ {id:'polish-casey',name:'Casey Brooks',role:'member',avatar_url:null,joined_at:room.created_at},
+ {id:'polish-taylor',name:'Taylor Reed',role:'member',avatar_url:null,joined_at:room.created_at},
+];
+const upcoming={id:'polish-upcoming',event_id:room.id,status:'scheduled',scheduled_at:now+86400,location:'Sample venue',notes:'',seats:8,buy_in:5000,created_at:now,player_count:1,results_token:null,live_token:null};
+const finished={...upcoming,id:'polish-finished',status:'settled',scheduled_at:now-86400,player_count:2,results_token:'polish-results',variance:0};
+const older={...finished,id:'polish-older',scheduled_at:now-8*86400,results_token:'polish-older-results'};
+const playersFor=game=>[
+ {game_id:game.id,user_id:user.id,display_name:user.name,buy_ins:1,buy_in_total:5000,cashout:game.id===finished.id?12500:2500,net:game.id===finished.id?7500:-2500,seat_number:1,whatsapp:null,settled_at:game.scheduled_at},
+ {game_id:game.id,user_id:'polish-jordan',display_name:'Jordan Lee',buy_ins:2,buy_in_total:10000,cashout:game.id===finished.id?2500:12500,net:game.id===finished.id?-7500:2500,seat_number:2,whatsapp:null,settled_at:game.scheduled_at},
+];
+const leaders=[
+ {user_id:user.id,display_name:user.name,games_played:2,games_won:1,total_net:5000,biggest_win:7500,biggest_loss:-2500,last_played:finished.scheduled_at},
+ {user_id:'polish-jordan',display_name:'Jordan Lee',games_played:2,games_won:1,total_net:-5000,biggest_win:2500,biggest_loss:-7500,last_played:finished.scheduled_at},
+];
+const rsvps=[
+ {id:'polish-yes',game_id:upcoming.id,display_name:'Jordan Lee',status:'yes',arrival_option:'19:00',seat_number:1,created_at:now,updated_at:now},
+ {id:'polish-maybe',game_id:upcoming.id,display_name:'Casey Brooks',status:'maybe',arrival_option:'maybe',seat_number:null,created_at:now,updated_at:now},
+ {id:'polish-no',game_id:upcoming.id,display_name:'Riley Gray',status:'no',arrival_option:'not-coming',seat_number:null,created_at:now,updated_at:now},
+];
+const seated=[{game_id:upcoming.id,user_id:user.id,display_name:user.name,seat_number:2,buy_ins:0,buy_in_total:0,cashout:null,net:null}];
+const allTransfers=[
+ {id:'polish-own-pay',from:user.id,from_name:user.name,to:'polish-jordan',to_name:'Jordan Lee',amount:1200,status:'owed'},
+ {id:'polish-own-receive',from:'polish-casey',from_name:'Casey Brooks',to:user.id,to_name:user.name,amount:2300,status:'payer_claimed'},
+ // The display name matches the signed-in player, but its immutable ID does not.
+ {id:'polish-unrelated',from:'polish-other-alex',from_name:user.name,to:'polish-taylor',to_name:'Taylor Reed',amount:4700,status:'owed'},
+];
+
+function fixtureState(){return {layout:'command',layoutWrites:0,upcoming:true,noOwnPay:false};}
+function fixture(state,url,method,body){
+ const p=url.pathname;
+ if(method==='OPTIONS')return {};
+ if(method==='POST'&&p==='/auth/device-session/start')return {refresh_token:'b'.repeat(64),expires_in:45*86400};
+ if(method==='PUT'&&p==='/events/'+room.id+'/dashboard-layout'){
+  const value=JSON.parse(body||'{}');assert.deepEqual(Object.keys(value),['layout']);assert(['command','live'].includes(value.layout));
+  state.layout=value.layout;state.layoutWrites++;return {event_id:room.id,layout:state.layout,updated_at:now};
+ }
+ if(method!=='GET')throw new Error('Unexpected API mutation: '+method+' '+p);
+ const transfers=allTransfers.filter(item=>!state.noOwnPay||item.id!=='polish-own-pay');
+ if(p==='/auth/me')return user;
+ if(p==='/events')return [room];
+ if(p==='/events/'+room.id)return {...room,members};
+ if(p==='/events/'+room.id+'/games')return [...(state.upcoming?[upcoming]:[]),finished,older];
+ if(p==='/events/'+room.id+'/history')return [finished,older];
+ if(p==='/events/'+room.id+'/leaderboard')return leaders;
+ if(p==='/events/'+room.id+'/profiles')return {profiles:[{profile_key:'member:polish-jordan',screen_name:null,avatar_data:null,avatar_emoji:'🦊',preferred_contact:'none'}]};
+ if(p==='/events/'+room.id+'/players')return [];
+ if(p==='/events/'+room.id+'/historical-player-visibility')return {hidden_names:[]};
+ if(p==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:state.layout,updated_at:now};
+ if(p==='/events/'+room.id+'/join-requests')return {requests:[]};
+ if(p==='/events/'+room.id+'/push-registrations')return {members:[{user_id:user.id,device_count:2}],definition:'registered_devices_not_delivery_confirmation'};
+ if(p==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
+ if(p==='/events/'+room.id+'/settlement-ledger')return {games:[finished,older],transfers:transfers.map(item=>({...item,game_id:finished.id}))};
+ if(p==='/games/'+upcoming.id)return {...upcoming,players:seated,rsvps};
+ if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:rsvps,options:['19:00','20:00']};
+ for(const game of [finished,older]){
+  if(p==='/games/'+game.id)return {...game,players:playersFor(game),rsvps:[],transfers:game.id===finished.id?transfers:[]};
+  if(p==='/games/results/'+game.results_token)return {game,event:room,players:playersFor(game),transfers:game.id===finished.id?transfers:[]};
+  if(p==='/games/'+game.id+'/settlement-control')return {game_id:game.id,enabled:true,reminders_enabled:false,last_broadcast_at:null};
+ }
+ if(p==='/push/vapid-key')return {key:'synthetic-unusable-vapid-key'};
+ if(p==='/events/'+room.id+'/date-polls')return {polls:[]};
+ if(p==='/events/'+room.id+'/seasons')return {seasons:[]};
+ if(p==='/events/'+room.id+'/shared-expenses')return {expenses:[],members:members.map(m=>({user_id:m.id,display_name:m.name}))};
+ if(p==='/events/'+room.id+'/tournament-presets')return {presets:[]};
+ throw new Error('Missing synthetic fixture: '+p);
+}
+
+async function colour(locator,property){return locator.evaluate((element,key)=>getComputedStyle(element)[key],property);}
+async function readable(locator,label){
+ const result=await locator.evaluate(element=>{
+  const channels=value=>(value.match(/[\d.]+/g)||[]).map(Number);
+  const style=getComputedStyle(element),foreground=channels(style.color);
+  let background=[255,255,255],parent=element,opacity=1;
+  while(parent){
+   const css=getComputedStyle(parent),candidate=channels(css.backgroundColor);
+   opacity*=Number(css.opacity||1);
+   if(candidate.length===3||candidate[3]>=.99){background=candidate.slice(0,3);break;}
+   parent=parent.parentElement;
+  }
+  const lum=rgb=>rgb.map(value=>{value/=255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4;})
+   .reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
+  const alpha=(foreground[3]??1)*opacity;
+  const ink=foreground.slice(0,3).map((v,i)=>v*alpha+background[i]*(1-alpha));
+  const a=lum(ink),b=lum(background);
+  return {ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),colour:style.color,background,font:style.fontFamily};
+ });
+ assert(result.ratio>=4.5,label+' is hard to read: '+JSON.stringify(result));
+ assert.match(result.font,/inter/i,label+' must use the bundled Inter font');
+}
+async function loadedSheet(page){
+ await page.locator('.pkr-record-dialog .pkr-record-body[aria-busy="false"]').waitFor();
+ assert.equal(await page.locator('.pkr-record-dialog .pkr-record-error').count(),0,'Fictional records should load without warning');
+}
+async function closeSheet(page){
+ await page.locator('.pkr-record-footer').getByRole('button',{name:'Done',exact:true}).click();
+ await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
+}
+async function screenshot(page,name){await page.screenshot({path:path.join(output,name+'.png'),fullPage:false});}
+
+async function checkFullDashboards(page,state,label){
+ await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
+ await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+ const dashboard=page.getByTestId('dual-dashboard');
+ await dashboard.waitFor({state:'visible'});
+ const appearance=page.getByRole('group',{name:'Host poker room appearance'});
+ for(const mode of ['command','live']){
+  const name=mode==='command'?'Command Centre':'Live Poker';
+  await appearance.getByRole('button',{name:new RegExp(name)}).click();
+  await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
+  assert.equal(await colour(dashboard,'backgroundColor'),'rgb(244, 246, 248)',name+' root must use porcelain');
+  const selected=appearance.getByRole('button',{name:new RegExp(name)});
+  assert.equal(await selected.getAttribute('aria-pressed'),'true');
+  assert.equal(await colour(selected,'backgroundColor'),'rgb(255, 240, 235)',name+' selected control must use coral tint');
+  assert.equal(await colour(selected,'color'),'rgb(163, 61, 40)');
+  await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
+  const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
+  assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
+  await readable(cards.first().locator('strong'),name+' feature name');
+  const cta=dashboard.locator('.pkr-dual-gold-button').first();
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(242, 116, 87)',name+' primary action must use coral');
+  assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
+  await readable(cta,name+' primary action');
+  await screenshot(page,label+'-full-'+mode);
+ }
+ assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
+ await appearance.getByRole('button',{name:/Command Centre/}).click();
+ await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+}
+
+async function checkPlayers(page,label){
+ await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
+ const stage=page.getByTestId('players-command-stage');await stage.waitFor();
+ assert.equal(await stage.getByRole('button').count(),3,'All three player summary cards must be buttons');
+ const roster=page.locator('.pkr-member-roster');await roster.waitFor();
+ await page.getByRole('searchbox',{name:'Search members'}).fill('Jordan');
+ await page.getByRole('group',{name:'Filter members by role'}).getByRole('button',{name:'Admins',exact:true}).click();
+ await page.locator('.pkr-member-no-results').waitFor();
+ await stage.getByRole('button',{name:'View underlying records: Players in club',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.pkr-member-roster > div').length===4);
+ assert.equal(await page.getByRole('searchbox',{name:'Search members'}).inputValue(),'');
+ assert.equal(await page.getByRole('group',{name:'Filter members by role'}).getByRole('button',{name:'All',exact:true}).getAttribute('aria-pressed'),'true');
+ assert.deepEqual(await roster.locator('.pkr-member-history-link strong').allTextContents(),members.map(m=>m.name));
+ assert.equal(await roster.locator('img').first().getAttribute('src'),photo,'Existing avatar photo must remain intact');
+ await roster.getByText('🦊',{exact:true}).waitFor();
+ assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
+ const row=roster.locator(':scope > div').first();await row.hover();
+ assert.equal(await colour(row,'backgroundColor'),'rgb(244, 246, 248)','Hovered member row must not turn old green');
+ await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
+ const history=row.locator('.pkr-member-history-link');await history.focus();
+ await readable(history.locator('strong'),'Keyboard-focused player name');
+ await screenshot(page,label+'-players-focus');
+ await page.locator('.pkr-member-push-state').filter({hasText:'Registered on 2 devices'}).waitFor();
+ assert(await page.locator('.pkr-members-panel svg[data-pkr-icon="bell"]').count()>0);
+ assert(await page.locator('.pkr-members-shortcuts svg[data-pkr-icon="members"]').count()>0);
+ assert.doesNotMatch(await page.locator('.pkr-members-panel').innerText(),/[🔔♟♙]/u,'Interface bells/pawns must be SVG, not platform emoji');
+ assert(await page.locator('.pkr-primary-mobile-utility svg[data-pkr-icon="account"], .pkr-persistent-nav svg[data-pkr-icon="account"]').count()>0,'Account uses a person icon');
+
+ await stage.getByRole('button',{name:'View underlying records: Awaiting approval',exact:true}).click();
+ await page.locator('.pkr-member-empty-approvals').waitFor({state:'visible'});
+ assert.equal(await page.locator('.pkr-members-panel').getAttribute('data-section'),'requests');
+ assert.match(await page.locator('.pkr-member-empty-approvals').innerText(),/No approvals waiting/);
+ await readable(page.locator('.pkr-member-empty-approvals strong'),'Zero-approval state');
+ await screenshot(page,label+'-zero-approvals');
+
+ await stage.getByRole('button',{name:'View underlying records: Completed games',exact:true}).click();await loadedSheet(page);
+ assert.equal(await page.locator('.pkr-record-row').count(),2,'Completed games opens exactly the two settled records');
+ for(const detail of await page.locator('.pkr-record-row small').allTextContents())assert.match(detail,/Settled/);
+ await closeSheet(page);
+ await stage.getByRole('button',{name:'View underlying records: Players in club',exact:true}).click();
+ await roster.locator('.pkr-member-history-link').first().click();await loadedSheet(page);
+ const sheet=page.locator('.pkr-record-dialog');
+ assert(await sheet.evaluate(element=>element.matches(':modal')),'Record details must use a native modal layer');
+ assert.equal(await colour(sheet,'backgroundColor'),'rgb(255, 255, 255)','Body-level record sheet must use the light theme');
+ await readable(sheet.locator('h2'),'Record heading');
+ assert.equal(await sheet.locator('.pkr-record-row').count(),2);
+ for(const [tone,value,expectedColour] of [['positive','+$75','rgb(20, 120, 86)'],['negative','-$25','rgb(190, 57, 73)']]){
+  const amount=sheet.locator('.pkr-record-row b[data-money-tone="'+tone+'"]');
+  assert.equal(await amount.innerText(),value,'Recorded gains/losses retain explicit signs');
+  assert.equal(await colour(amount,'color'),expectedColour,'Money meaning uses the correct light-theme tone');
+  await readable(amount,tone+' result');
+ }
+ await screenshot(page,label+'-player-records');await closeSheet(page);
+}
+
+async function checkRsvps(page,state,label){
+ state.upcoming=false;
+ await page.goto(BASE+'/events/'+room.id+'?tab=night',{waitUntil:'domcontentloaded'});
+ const empty=page.locator('.pkr-night-empty').filter({hasText:'No game night to manage'});await empty.waitFor();
+ for(const selector of ['strong','p'])await readable(empty.locator(selector),'RSVP empty '+selector);
+ for(const name of [/Schedule a game/,/View completed games/,/Notification settings/]){
+  const action=empty.getByRole('button',{name});assert(await action.isVisible());await readable(action,'RSVP empty action');
+ }
+ assert.doesNotMatch(await page.locator('.pkr-night-hub').innerText(),/[🔔♟♙]/u);
+ await screenshot(page,label+'-rsvp-empty');
+ await empty.getByRole('button',{name:'Schedule a game',exact:true}).click();
+ await page.getByRole('dialog',{name:'Schedule a game',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Close game scheduler',exact:true}).click();
+ state.upcoming=true;
+ await page.goto(BASE+'/events/'+room.id+'?tab=night',{waitUntil:'domcontentloaded'});
+ await page.locator('.pkr-night-stats').waitFor();
+ assert.equal(await page.locator('.pkr-night-stats > button').count(),4);
+ for(const [title,name] of [['Confirmed RSVPs','Jordan Lee'],['Interested RSVPs','Casey Brooks'],['Not coming RSVPs','Riley Gray']]){
+  await page.getByRole('button',{name:'View underlying records: '+title,exact:true}).click();await loadedSheet(page);
+  assert.equal(await page.locator('.pkr-record-row').count(),1,title+' must open its exact status records');
+  assert.equal(await page.locator('.pkr-record-row strong').innerText(),name);
+  await closeSheet(page);
+ }
+ const unmatched=page.getByRole('button',{name:'View 1 members with no matching RSVP',exact:true});await unmatched.click();
+ assert.equal(await page.locator('#pkr-unmatched-rsvp-rows .pkr-night-followup strong').innerText(),'Taylor Reed');
+ assert(await page.locator('#pkr-unmatched-rsvp-rows').evaluate(element=>element===document.activeElement));
+ await page.getByRole('button',{name:'View seat availability: 6 of 8 places',exact:true}).click();
+ await page.waitForURL('**/games/'+upcoming.id+'/rsvp');await page.locator('.pkr-guest').waitFor();
+}
+
+async function checkPayments(page,state,label){
+ await page.goto(BASE+'/payments?room='+room.id+'&paymentsScope=mine',{waitUntil:'domcontentloaded'});
+ const totals=page.locator('.pkr-gn-payment-totals');await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ const assertAmounts=async expected=>assert.deepEqual(await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents(),expected);
+ assert.equal(await totals.getByRole('button',{name:'View underlying records: To pay',exact:true}).locator('strong').innerText(),'$12');
+ assert.equal(await totals.getByRole('button',{name:'View underlying records: To receive',exact:true}).locator('strong').innerText(),'$23');
+ // A summary deliberately clears narrower search/date/status filters so its rows reconcile to its amount.
+ await page.getByRole('searchbox',{name:/Counterparty/}).fill('nobody');
+ await totals.getByRole('button',{name:'View underlying records: To pay',exact:true}).click();
+ await page.getByRole('heading',{name:'To pay — underlying records',exact:true}).waitFor();
+ assert.equal(new URL(page.url()).searchParams.get('paymentGroup'),'pay');
+ assert.equal(await page.getByRole('searchbox',{name:/Counterparty/}).inputValue(),'');
+ await assertAmounts(['$12']);assert.doesNotMatch(await page.locator('.pkr-gn-payment-list').innerText(),/Taylor Reed/);
+ await totals.getByRole('button',{name:'View underlying records: To receive',exact:true}).click();
+ await page.getByRole('heading',{name:'To receive — underlying records',exact:true}).waitFor();
+ assert.equal(new URL(page.url()).searchParams.get('paymentGroup'),'receive');
+ await assertAmounts(['$23']);assert.match(await page.locator('.pkr-gn-payment-list').innerText(),/From Casey Brooks/);
+ await page.getByRole('button',{name:'Confirm received',exact:true}).waitFor();
+ await screenshot(page,label+'-mine-receiving-records');
+ await page.getByRole('group',{name:'Payment view'}).getByRole('button',{name:'Club',exact:true}).click();
+ await totals.getByRole('button',{name:'View underlying records: Awaiting payment',exact:true}).click();
+ await page.getByRole('heading',{name:'Awaiting payment — underlying records',exact:true}).waitFor();
+ assert.deepEqual((await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents()).sort(),['$12','$47']);
+ assert.equal(await totals.getByRole('button',{name:'View underlying records: Awaiting payment',exact:true}).locator('strong').innerText(),'$59');
+ await totals.getByRole('button',{name:'View underlying records: Awaiting receipt',exact:true}).click();
+ await page.getByRole('heading',{name:'Awaiting receipt — underlying records',exact:true}).waitFor();
+ await assertAmounts(['$23']);
+ state.noOwnPay=true;
+ await page.goto(BASE+'/payments?room='+room.id+'&paymentsScope=mine',{waitUntil:'domcontentloaded'});
+ await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ const zero=page.getByRole('button',{name:'View underlying records: To pay',exact:true});
+ assert.equal(await zero.locator('strong').innerText(),'$0');await zero.click();
+ await page.getByRole('heading',{name:'Nothing to pay',exact:true}).waitFor();
+ assert.equal(await page.locator('.pkr-gn-payment-card').count(),0,'Zero total opens an honest empty record set');
+ assert.equal(await totals.getByRole('button',{name:'View underlying records: To receive',exact:true}).locator('strong').innerText(),'$23');
+ await screenshot(page,label+'-zero-payment-records');
+}
+
+async function run(){
+ const failures=[];
+ for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
+  const browser=await type.launch({headless:true});
+  const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,serviceWorkers:'block'});
+  const state=fixtureState(),unexpected=[];
+  await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-polish-test-only');localStorage.setItem('pkr_preferred_room','polish-room');sessionStorage.setItem('pkr_setup_compact_v1','1');});
+  await context.route('**/*',async route=>{
+   const request=route.request(),url=new URL(request.url());
+   if(url.origin===BASE)return route.continue();
+   if(url.origin!==API){unexpected.push('Blocked unexpected external origin: '+url.origin);return route.abort();}
+   try{const response=fixture(state,url,request.method(),request.postData());
+    await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'},body:JSON.stringify(response)});
+   }catch(error){unexpected.push(error.message);await route.abort();}
+  });
+  const page=await context.newPage();page.setDefaultTimeout(20000);
+  page.on('pageerror',error=>unexpected.push(error.stack||error.message));
+  try{
+   await checkFullDashboards(page,state,label);
+   await checkPlayers(page,label);
+   await checkRsvps(page,state,label);
+   await checkPayments(page,state,label);
+   assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
+   // A route change can cancel the synthetic join-request poll in WebKit.
+   const actionable=unexpected.filter(message=>!(label.startsWith('webkit')&&message.includes('Fetch API cannot load')&&message.includes('/join-requests due to access control checks')));
+   assert.deepEqual(actionable,[],'Unexpected API request or runtime error');
+   console.log('PASS',label,'appearance, SVG icons, exact records and payment scope');
+  }catch(error){failures.push(label+': '+error.stack);await screenshot(page,label+'-failure').catch(()=>{});}
+  finally{await context.close();await browser.close();}
+ }
+ if(failures.length)throw new Error(failures.join('\n\n'));
+ console.log('PASS: full dashboards, preserved avatars, readable rosters and record sheets, all Players metrics, RSVP totals and Mine/Club payment groups.');
+}
+run().catch(error=>{console.error(error);process.exitCode=1;});

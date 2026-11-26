@@ -118,7 +118,7 @@ export default function PersistentNavigation(){
  const areaLabel=member?'Player navigation':'PKR main navigation';
  return <>
   <aside className="pkr-persistent-nav pkr-primary-sidebar" aria-label={areaLabel}>
-   <div className="pkr-persistent-brand"><span aria-hidden="true">♠</span> PKR</div>
+   <div className="pkr-persistent-brand"><span aria-hidden="true"><PkrGlyph name="spade" size={24}/></span> PKR</div>
    <div className="pkr-persistent-room">
     <span>YOUR POKER CLUB</span><strong title={roomLabel}>{roomLabel}</strong>
     {roomChoices.length>1&&<label htmlFor="pkr-desktop-club">Switch club</label>}
@@ -139,13 +139,13 @@ export default function PersistentNavigation(){
    <div className="pkr-primary-sidebar-footer">
     <button type="button" className={pathname==='/account'||pathname==='/install'?'active':''}
       onClick={()=>router.push('/account')} aria-label="Account and notification settings">
-      <PkrGlyph name="install"/> Account & settings
+      <PkrGlyph name="account"/> Account & settings
     </button>
     <span>PRIVATE POKER · YOUR GAME</span>
    </div>
   </aside>
   <div className="pkr-primary-mobile-utility" aria-label="Poker club and account">
-   <span className="pkr-primary-mobile-mark" aria-hidden="true">♠</span>
+   <span className="pkr-primary-mobile-mark" aria-hidden="true"><PkrGlyph name="spade" size={27}/></span>
    {roomChoices.length>1?
      <select aria-label="Switch poker club" value={roomId} onChange={e=>chooseRoom(e.target.value)}>
        {roomChoices.map(room=><option key={room.id} value={room.id}>{room.name}</option>)}
@@ -154,9 +154,10 @@ export default function PersistentNavigation(){
        aria-label="View poker clubs">{roomLabel} <span aria-hidden="true">⌄</span></button>}
    <button type="button" className="pkr-primary-account" onClick={()=>router.push('/account')}
      aria-label="Account, notifications and installation" aria-current={pathname==='/account'?'page':undefined}>
-     <PkrGlyph name="install"/> <span>Account</span>
+     <PkrGlyph name="account"/> <span>Account</span>
    </button>
   </div>
+  <div className="pkr-primary-header-space" aria-hidden="true"/>
   <nav className="pkr-universal-bottom-nav pkr-primary-bottom-nav" aria-label={areaLabel}>
    {destinations.map(item=><button key={item.name} type="button" onClick={()=>choose(item.name)}
      className={currentArea===item.name?'active':''} aria-current={currentArea===item.name?'page':undefined}>

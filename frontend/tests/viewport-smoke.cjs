@@ -295,15 +295,16 @@ async function test(){
          return {
            brandVisible:brand instanceof HTMLElement&&brand.getBoundingClientRect().width>20,
            oldTopbarHidden:!oldTopbar||getComputedStyle(oldTopbar).display==='none',
-           paymentBackground:payment?getComputedStyle(payment).backgroundImage:'',
+           paymentBackground:payment?getComputedStyle(payment).backgroundColor:'',
+           paymentText:payment?getComputedStyle(payment).color:'',
            heroArtwork:hero?getComputedStyle(hero,'::before').backgroundImage:'',
            accountVisible:!!document.querySelector('.pkr-dual-account-trigger'),
          };
        });
        if(!visualContract.brandVisible||!visualContract.oldTopbarHidden||!visualContract.accountVisible)
          errors.push(size.name+' mockup header/branding contract failed '+JSON.stringify(visualContract));
-       if(!visualContract.paymentBackground.includes('rgb(56, 29, 32)'))
-         errors.push(size.name+' approved red-black payment card not applied');
+       if(visualContract.paymentBackground!=='rgb(255, 255, 255)')
+         errors.push(size.name+' full dashboard payment card retained the previous dark palette: '+JSON.stringify(visualContract));
        if(!visualContract.heroArtwork.includes('pkr-approved-hero-desktop.webp'))
          errors.push(size.name+' approved photographic hero not applied');
 
@@ -573,10 +574,10 @@ async function test(){
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-dual-hero .pkr-dual-gold-button').first().evaluate(el=>{
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
-         return {image:style.backgroundImage,color:style.color,height:rect.height,width:rect.width};
+         return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(!primary.image.includes('linear-gradient')||primary.height<40||primary.width<85)
-         errors.push(size.name+' dual dashboard gold call-to-action is not usable: '+JSON.stringify(primary));
+       if(primary.image!=='none'||!['rgb(242, 116, 87)','rgb(230, 100, 71)'].includes(primary.background)||primary.color!=='rgb(20, 36, 44)'||primary.height<44||primary.width<85)
+         errors.push(size.name+' full dashboard coral action is unreadable or too small: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');

@@ -1,5 +1,6 @@
 'use client';
 import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter,usePathname} from 'next/navigation';
@@ -249,16 +250,16 @@ export default function InsightsPage(){
       'Every transfer accounted for. Every player settled.'}
       club={room?.name||'Your private club'}
       metrics={room?.role==='member'?[
-        {label:'Settled games',value:played.length},
-        {label:'Your payment records',value:'Private ledger'}
+        {label:'Settled games',value:played.length,request:{kind:'games',title:'Settled games',roomId:selected,filter:'settled'}},
+        {label:'Your payment records',value:'Private ledger',onClick:()=>router.push('/payments?room='+encodeURIComponent(selected)+'&paymentsScope=mine&payments=all')}
       ]:[
-        {label:'Outstanding recorded',value:pendingTotalText},
-        {label:'Awaiting payment',value:outstanding.length},
-        {label:'Marked paid',value:paid.length}
+        {label:'Outstanding recorded',value:pendingTotalText,request:{kind:'transfers',title:'Outstanding payments',roomId:selected,filter:'outstanding',period}},
+        {label:'Awaiting payment',value:outstanding.length,request:{kind:'transfers',title:'Outstanding transfers',roomId:selected,filter:'outstanding',period}},
+        {label:'Marked paid',value:paid.length,request:{kind:'transfers',title:'Paid transfers',roomId:selected,filter:'paid',period}}
       ]} />
   </div>}
   <header className={"pkr-vnext-insights-top"+(paymentsFocus?" pkr-payments-controls":"")}>
-   {!paymentsFocus&&<div className="pkr-insights-intro"><span className="pkr-eyebrow">▥ INSIGHTS & SETTLEMENT</span>
+   {!paymentsFocus&&<div className="pkr-insights-intro"><span className="pkr-eyebrow"><PkrGlyph name="insights"/> INSIGHTS & SETTLEMENT</span>
      <h1>Insights & Settlement</h1>
      <p>Track your room's results, review balances and settle up after game night.</p>
    </div>}
@@ -299,16 +300,16 @@ export default function InsightsPage(){
    {room?.role==='member' ? <PlayerRoomDashboard room={room} games={games} history={games}
       leaders={leaders} memberId={myUserId} showAllPayments paymentsOnly={paymentsFocus}/> : <>
    <section className="pkr-vnext-insights-stats pkr-insights-kpis" aria-label="Recorded poker room statistics">
-    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:selected}}><span className="pkr-insights-kpi-icon">♧</span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></RecordMetric></div>
-    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold">♛</span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
-    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'members',title:"Room members",roomId:selected}}><span className="pkr-insights-kpi-icon">♟</span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></RecordMetric></div>
-    <div className="pkr-insights-kpi"><RecordMetric request={best?{kind:'player',title:best.display_name+' — game history',roomId:selected,playerId:best.user_id,playerName:best.display_name}:{kind:'leaders',title:"Player results",roomId:selected}}><span className="pkr-insights-kpi-icon gold">♕</span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></RecordMetric></div>
-    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'transfers',title:"Outstanding payments",roomId:selected,filter:'outstanding',period}}><span className="pkr-insights-kpi-icon">＄</span><span className="pkr-insights-kpi-copy"><small>Recorded outstanding</small><strong data-testid="current-outstanding">{pendingTotalText}</strong><em>{amountsIncomplete?'Total unverified':period==='all'?'All settled games':'Last 90 days'}</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Games recorded",roomId:selected}}><span className="pkr-insights-kpi-icon"><PkrGlyph name="games" size={24}/></span><span className="pkr-insights-kpi-copy"><small>Games recorded</small><strong>{games.length}</strong><em>All game statuses</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'games',title:"Settled games",roomId:selected,filter:'settled'}}><span className="pkr-insights-kpi-icon gold"><PkrGlyph name="check" size={24}/></span><span className="pkr-insights-kpi-copy"><small>Settled games</small><strong>{played.length}</strong><em>Finalised results</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'members',title:"Room members",roomId:selected}}><span className="pkr-insights-kpi-icon"><PkrGlyph name="members" size={24}/></span><span className="pkr-insights-kpi-copy"><small>Room members</small><strong>{room?.member_count||0}</strong><em>In selected poker room</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={best?{kind:'player',title:best.display_name+' — game history',roomId:selected,playerId:best.user_id,playerName:best.display_name}:{kind:'leaders',title:"Player results",roomId:selected}}><span className="pkr-insights-kpi-icon gold"><PkrGlyph name="trophy" size={24}/></span><span className="pkr-insights-kpi-copy"><small>Top net winner</small><strong className="pkr-insights-kpi-winner">{best?best.display_name:'—'}</strong><em>{best?fmtSign(best.total_net):'No positive net result yet'}</em></span></RecordMetric></div>
+    <div className="pkr-insights-kpi"><RecordMetric request={{kind:'transfers',title:"Outstanding payments",roomId:selected,filter:'outstanding',period}}><span className="pkr-insights-kpi-icon"><PkrGlyph name="settle" size={24}/></span><span className="pkr-insights-kpi-copy"><small>Recorded outstanding</small><strong data-testid="current-outstanding">{pendingTotalText}</strong><em>{amountsIncomplete?'Total unverified':period==='all'?'All settled games':'Last 90 days'}</em></span></RecordMetric></div>
    </section>
    {loadingDetails&&<p className="pkr-insights-loader" role="status">Updating the recorded results and settlement information…</p>}
    <div className="pkr-insights-overview-grid">
     <section className="pkr-vnext-card pkr-insights-balance-summary">
-     <div className="pkr-vnext-card-heading"><div><h2>＄ Balance Summary</h2><p>Recorded outstanding transfers across {period==='all'?'all settled games':'the last 90 days'}.</p></div>
+     <div className="pkr-vnext-card-heading"><div><h2><PkrGlyph name="settle"/> Balance Summary</h2><p>Recorded outstanding transfers across {period==='all'?'all settled games':'the last 90 days'}.</p></div>
       <button type="button" onClick={()=>document.getElementById('pkr-settlement')?.scrollIntoView({behavior:'smooth'})}>View details →</button>
      </div>
      <div className="pkr-insights-balance-tiles">
@@ -319,7 +320,7 @@ export default function InsightsPage(){
      </div>
     </section>
     <section className="pkr-vnext-card pkr-insights-trend">
-     <div className="pkr-vnext-card-heading"><div><h2>▥ Games Trend</h2><p>Settled games in the last six calendar months.</p></div><span>Last 6 months</span></div>
+     <div className="pkr-vnext-card-heading"><div><h2><PkrGlyph name="insights"/> Games Trend</h2><p>Settled games in the last six calendar months.</p></div><span>Last 6 months</span></div>
      <div className="pkr-vnext-bar-chart" role="group" aria-label="Settled games by month for the last six months">
       {months.map(month=><RecordMetric key={month.key} className="pkr-vnext-bar-column" bare request={{kind:'games',title:'Settled games - '+month.label,roomId:selected,filter:'settled',month:month.key}}><strong>{month.count}</strong><div><i style={{height:(month.count/maxMonth*100)+'%'}}/></div><span>{month.label}</span></RecordMetric>)}
      </div>
@@ -327,7 +328,7 @@ export default function InsightsPage(){
    </div>
    <div className="pkr-insights-activity-grid">
     <section className="pkr-vnext-card pkr-insights-settlement" id="pkr-settlement">
-     <div className="pkr-vnext-card-heading"><div><h2>＄ Settlement Centre</h2><p>See who pays whom and track recorded payment status across your room.</p></div>
+     <div className="pkr-vnext-card-heading"><div><h2><PkrGlyph name="settle"/> Settlement Centre</h2><p>See who pays whom and track recorded payment status across your room.</p></div>
        <label style={{display:'grid',gap:5,color:'var(--ivory)',fontSize:12}}>Period
         <select aria-label="Settlement reporting period" value={period} onChange={e=>{setPeriod(e.target.value as 'all'|'90d');setTransferPage(0)}}
           style={{background:'#112b20',border:'1px solid #658260',color:'#ffe8b3',borderRadius:8,padding:'8px 11px'}}>
@@ -358,7 +359,7 @@ export default function InsightsPage(){
      {unresolvedForPeriod.length>0&&
        <details className="pkr-settlement-incomplete" data-testid="settlement-partial-note">
          <summary>
-           <span aria-hidden="true">⚠</span> {unresolvedForPeriod.length} older settled game{unresolvedForPeriod.length===1?'':'s'} could not be checked.
+           <PkrGlyph name="warning"/> {unresolvedForPeriod.length} older settled game{unresolvedForPeriod.length===1?'':'s'} could not be checked.
            {paymentFilter==='paid'?' The Paid list may be incomplete.':' Payment totals may be incomplete.'}
            <span className="pkr-settlement-review-hint">Review records</span>
          </summary>
@@ -450,10 +451,10 @@ export default function InsightsPage(){
      </div>}
     </section>
     <section className="pkr-vnext-card pkr-insights-recent">
-     <div className="pkr-vnext-card-heading"><h2>♛ Recent Settled Games</h2><button type="button" onClick={()=>router.push(roomUrl('history'))}>View all →</button></div>
+     <div className="pkr-vnext-card-heading"><h2><PkrGlyph name="history"/> Recent Settled Games</h2><button type="button" onClick={()=>router.push(roomUrl('history'))}>View all →</button></div>
      {recent.length?recent.slice(0,6).map(g=><button className="pkr-vnext-game-row" key={g.id} onClick={()=>router.push('/games/'+g.id)}>
       <span><strong>{fmtDate(g.scheduled_at)}</strong><small>{g.location||room?.name||'Poker game'} · {playerCountLabel(g.player_count)}</small></span>
-      <span className="pkr-vnext-status paid">✓ Settled</span>
+      <span className="pkr-vnext-status paid"><PkrGlyph name="check" size={14}/> Settled</span>
      </button>):<p className="pkr-vnext-empty">No completed settlements yet.</p>}
     </section>
    </div>
@@ -474,7 +475,7 @@ export default function InsightsPage(){
        </div></>:<p className="pkr-vnext-empty">Player results appear after a game is settled.</p>}
     </section>
     <section className="pkr-vnext-card pkr-insights-results">
-     <div className="pkr-vnext-card-heading"><h2>♛ Player Net Results</h2><span>All {leaders.length} recorded players · lifetime in this room</span></div>
+     <div className="pkr-vnext-card-heading"><h2><PkrGlyph name="insights"/> Player Net Results</h2><span>All {leaders.length} recorded players · lifetime in this room</span></div>
      {leaders.length?<div className="pkr-vnext-performance">{leadersByNet.map(p=><RecordMetric className="pkr-vnext-performance-row" key={p.user_id} bare request={{kind:'player',title:p.display_name+' — game history',roomId:selected,playerId:p.user_id,playerName:p.display_name}}>
       <span>{p.display_name}</span><div><i className={p.total_net<0?'loss':'gain'} style={{width:(Math.max(3,Math.abs(p.total_net)/maxNet*100))+'%'}}/></div>
       <strong className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</strong>

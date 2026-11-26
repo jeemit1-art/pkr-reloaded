@@ -1,6 +1,7 @@
 // @refresh
 'use client';
 import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 import AppDialog from '@/components/AppDialog';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -75,6 +76,9 @@ export default function EventPage() {
   const [inviteRole, setInviteRole] = useState('cohost');
   const [isGroupOwner,setIsGroupOwner]=useState(false);
   const [joinRequests,setJoinRequests]=useState([] as Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number;recovery?:boolean}>);
+  const [joinRequestsLoading,setJoinRequestsLoading]=useState(true);
+  const [joinRequestsError,setJoinRequestsError]=useState('');
+  const [joinRequestRefresh,setJoinRequestRefresh]=useState(0);
   const previousRequestCount=useRef<number|null>(null);
   const [joinDecisionNotice,setJoinDecisionNotice]=useState('');
   const memberDeepLinkScroll=useRef(false);
@@ -212,16 +216,25 @@ export default function EventPage() {
 
   useEffect(()=>{
     if(!isGroupOwner)return;
+    let active=true;
+    setJoinRequests([]);setJoinRequestsLoading(true);setJoinRequestsError('');
+    previousRequestCount.current=null;
     const refresh=()=>api.events.joinRequests(id).then(r=>{
+      if(!active)return;
       const newCount=r.requests.length;
       if(previousRequestCount.current!==null && newCount>previousRequestCount.current)
         playPkrSound('new-request');
       previousRequestCount.current=newCount;
       setJoinRequests(r.requests);
-    }).catch(()=>{});
+      setJoinRequestsLoading(false);setJoinRequestsError('');
+    }).catch(error=>{
+      if(!active)return;
+      setJoinRequestsLoading(false);
+      setJoinRequestsError(error instanceof Error?error.message:'Approval requests could not be loaded.');
+    });
     refresh();const timer=setInterval(refresh,15000);
-    return()=>clearInterval(timer);
-  },[isGroupOwner,id]);
+    return()=>{active=false;clearInterval(timer);};
+  },[isGroupOwner,id,joinRequestRefresh]);
   function focusMemberSection(section:'invite'|'requests'|'roster'){
     setTab('members');setMemberSection(section);
     window.setTimeout(()=>{
@@ -512,7 +525,7 @@ export default function EventPage() {
                 border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
                 borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
                 display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
-              {pushEnabled ? '🔔' : '🔕'}
+              <PkrGlyph name={pushEnabled?'bell':'bell-off'}/>
             </button>
           )}
           {isHost && (
@@ -537,7 +550,7 @@ export default function EventPage() {
           {canUsePush()&&<button type="button" className="btn btn-outline"
             disabled={pushLoading} aria-label={pushEnabled?'Disable club notifications':'Enable club notifications'}
             onClick={()=>void togglePush()}>
-            {pushEnabled?'🔔 Alerts on':'🔕 Alerts off'}
+            <PkrGlyph name={pushEnabled?'bell':'bell-off'}/> {pushEnabled?'Alerts on':'Alerts off'}
           </button>}
           {isHost&&<button type="button" className="btn btn-outline" onClick={()=>setShowInstall(true)}>
             Share PKR
@@ -551,9 +564,9 @@ export default function EventPage() {
               <PokerClubStage kind="games" title="Games" subtitle="Your sessions, tables and live RSVPs."
                 club={event.name}
                 metrics={[
-                  {label:'Upcoming sessions',value:upcoming.length},
-                  {label:'Live games',value:upcoming.filter(g=>isLiveGame(g)).length},
-                  {label:'Historical unfinished',value:unfinished.length}
+                  {label:'Upcoming sessions',value:upcoming.length,request:{kind:'games',title:'Upcoming sessions',roomId:id,filter:'upcoming'}},
+                  {label:'Live games',value:upcoming.filter(g=>isLiveGame(g)).length,request:{kind:'games',title:'Live games',roomId:id,filter:'live'}},
+                  {label:'Historical unfinished',value:unfinished.length,request:{kind:'games',title:'Historical unfinished games',roomId:id,filter:'unfinished'}}
                 ]} players={event.members?.map((m:{name:string})=>m.name)||[]}>
                 <div className="pkr-room-games-links">
                   {isHost&&<button type="button" className="btn btn-primary" onClick={()=>setShowCreate(true)}>+ Schedule game</button>}
@@ -562,14 +575,14 @@ export default function EventPage() {
                     <button type="button" className="btn btn-outline" onClick={()=>{
                       const next=upcoming.find(g=>['scheduled','lobby'].includes(g.status));
                       if(next)router.push('/games/'+encodeURIComponent(next.id)+'/rsvp?settings=1#pkr-rsvp-settings');
-                    }}>⚙ RSVP settings →</button>}
+                    }}><PkrGlyph name="settings"/> RSVP settings →</button>}
                   <button type="button" className="btn btn-outline" onClick={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}>Completed games →</button>
                 </div>
               </PokerClubStage>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
               <div className="empty-state">
-                <div className="empty-state-icon">♠</div>
+                <div className="empty-state-icon"><PkrGlyph name="games" size={32}/></div>
                 <div className="empty-state-text">No games scheduled yet.</div>
                 {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
               </div>
@@ -625,25 +638,28 @@ export default function EventPage() {
               <PokerClubStage kind="players" title="Players" subtitle="Your private poker club."
                 club={event.name}
                 metrics={[
-                  {label:'Players in club',value:event.members?.length||0},
-                  {label:'Awaiting approval',value:joinRequests.length},
-                  {label:'Completed games',value:settled.length}
+                  {label:'Players in club',value:event.members?.length||0,onClick:()=>{setMemberQuery('');setMemberFilter('all');focusMemberSection('roster');}},
+                  ...(isGroupOwner?[{label:'Awaiting approval',value:joinRequestsLoading?'…':joinRequestsError?'—':joinRequests.length,onClick:()=>focusMemberSection('requests')}]:[]),
+                  {label:'Completed games',value:settled.length,request:{kind:'games',title:'Completed games',roomId:id,filter:'settled'}}
                 ]} players={event.members?.map((m:{name:string})=>m.name)||[]} />
             </header>
             <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
               {([
-                {id:'roster',text:'♟ Players ('+(event.members?.length||0)+')',visible:true},
-                {id:'invite',text:'＋ Invite & QR',visible:isGroupOwner},
-                {id:'requests',text:'🔔 Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),visible:isGroupOwner},
+                {id:'roster',text:'Players ('+(event.members?.length||0)+')',icon:'members',visible:true},
+                {id:'invite',text:'Invite & QR',icon:'qr',visible:isGroupOwner},
+                {id:'requests',text:'Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),icon:'shield-check',visible:isGroupOwner},
               ] as const).filter(action=>action.visible).map(action=>
                 <button type="button" key={action.id} className={memberSection===action.id?'active':''}
-                  onClick={()=>focusMemberSection(action.id)}>{action.text}</button>)}
+                  onClick={()=>focusMemberSection(action.id)}><PkrGlyph name={action.icon}/> {action.text}</button>)}
             </nav>
 
            <div className="pkr-member-subpage" hidden={memberSection!=='requests'}>
            <div id="pkr-members-requests" className="pkr-members-anchor" />
-           {isGroupOwner&&joinRequests.length===0&&<section className="pkr-member-empty-approvals">
-             <strong>✓ No approvals waiting</strong>
+           {isGroupOwner&&joinRequestsLoading&&<p role="status" className="pkr-member-profile-notice">Checking approval requests…</p>}
+           {isGroupOwner&&joinRequestsError&&<div role="alert" className="pkr-member-profile-notice"><p>{joinRequestsError}</p>
+             <button type="button" className="btn btn-outline" onClick={()=>setJoinRequestRefresh(value=>value+1)}>Retry approval requests</button></div>}
+           {isGroupOwner&&!joinRequestsLoading&&!joinRequestsError&&joinRequests.length===0&&<section className="pkr-member-empty-approvals">
+             <strong><PkrGlyph name="check"/> No approvals waiting</strong>
              <p>When a player scans their private invitation, their request will appear here.
                If host push alerts are enabled, you will also receive a notification.</p>
            </section>}
@@ -651,7 +667,7 @@ export default function EventPage() {
             <div role="status" style={{padding:'13px 15px',marginBottom:15,border:'1px solid var(--border-hi)',borderRadius:10,background:'var(--bg2)',fontSize:13,lineHeight:1.55}}>
               {joinDecisionNotice}
             </div>}
-           {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2>🔔 Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong>{r.recovery&&<span style={{marginLeft:8,color:'var(--gold)',fontSize:12}}>Account recovery</span>}<p>{r.recovery?'Returning member':'Invited as '+r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
+           {isGroupOwner&&joinRequests.length>0&&<section className="pkr-member-request-card" style={{border:'2px solid var(--gold)',padding:18,borderRadius:12,marginBottom:18,background:'var(--bg2)'}}><h2><PkrGlyph name="user-add"/> Pending join requests ({joinRequests.length})</h2><p>Confirm the requester personally before approving. A WhatsApp link does not prove phone ownership.</p>{joinRequests.map(r=><div key={r.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border-hi)'}}><strong>{r.name}</strong>{r.recovery&&<span style={{marginLeft:8,color:'var(--gold)',fontSize:12}}>Account recovery</span>}<p>{r.recovery?'Returning member':'Invited as '+r.expected_member} · phone ending {r.phone.slice(-4)}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" onClick={()=>decideJoin(r.id,true)}>Approve</button><button className="btn btn-ghost" onClick={()=>decideJoin(r.id,false)}>Reject</button></div></div>)}</section>}
            </div>
            <div className="pkr-member-subpage" hidden={memberSection!=='invite'}>
             <div id="pkr-members-invite" className="pkr-members-anchor" />
@@ -798,7 +814,7 @@ export default function EventPage() {
                 </p>
               </div>
               <div className="pkr-invite-preview" aria-label="Private invitation preview">
-                  <span>♠ PKR · PRIVATE INVITATION</span>
+                  <span><PkrGlyph name="spade"/> PKR · PRIVATE INVITATION</span>
                   <strong>{event.name}</strong>
                   <p>Hi {phoneShare.name}, you have been invited to join our poker room on PKR. Your host will review the request before access is granted.</p>
                   <small>{phoneShare.url}</small>
@@ -834,7 +850,7 @@ export default function EventPage() {
             <div id="pkr-members-roster" className="pkr-members-anchor" />
             {roomProfileError&&<p role="status" className="pkr-member-profile-notice">Player profile editing is currently unavailable: {roomProfileError}. Existing members and game records remain available.</p>}
             <div className="pkr-member-search-tools">
-              <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span>⌕</span>
+              <label htmlFor="pkr-member-search" className="pkr-member-search-label"><span><PkrGlyph name="search"/></span>
                 <input id="pkr-member-search" type="search" aria-label="Search members" placeholder="Search members…" value={memberQuery} onChange={e=>setMemberQuery(e.target.value)}/>
               </label>
               <div className="pkr-member-role-filters" role="group" aria-label="Filter members by role">
@@ -844,7 +860,7 @@ export default function EventPage() {
             </div>
             {(!event.members || event.members.length === 0) ? (
               <div className="empty-state">
-                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-icon"><PkrGlyph name="members" size={32}/></div>
                 <div className="empty-state-text">No members yet. Use the invite button to add co-hosts or members.</div>
               </div>
             ) : (
@@ -883,13 +899,13 @@ export default function EventPage() {
                       </div>
                       {isGroupOwner&&(
                         <div className="pkr-member-push-state" aria-label={'Notification registration for '+m.name}>
-                          <span className="pkr-member-push-on">✓ Approved member</span>
+                          <span className="pkr-member-push-on"><PkrGlyph name="shield-check" size={16}/> Approved member</span>
                           <span style={{marginLeft:8}}>
                             {pushRegistrationLoading
                               ?'Checking notification setup…'
                               :pushRegistrationStatus
                                 ?(pushRegistrationStatus[m.id]||0)>0
-                                  ?'🔔 Registered on '+pushRegistrationStatus[m.id]+' device'+(pushRegistrationStatus[m.id]===1?'':'s')
+                                  ?<><PkrGlyph name="bell" size={16}/> Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</>
                                   :'Notifications not enabled on this member’s device'
                                 :'Notification setup not available'}
                           </span>
@@ -1012,7 +1028,7 @@ export default function EventPage() {
                       style={{marginTop:3,accentColor:'var(--gold)'}}/>
                     <span>I confirm these are the same person. Display their combined history under <strong>{mergeTarget.display_name}</strong>.</span>
                   </label>}
-                  {mergeMsg&&<div role="status" style={{fontSize:12,color:mergeMsg.startsWith('✅')?'var(--green)':'var(--red)',marginBottom:12,fontFamily:'var(--font-body),sans-serif'}}>{mergeMsg}</div>}
+                  {mergeMsg&&<div role="status" style={{fontSize:12,color:mergeMsg.startsWith('✅')?'var(--green)':'var(--red)',marginBottom:12,fontFamily:'var(--font-body),sans-serif'}}><PkrGlyph name={mergeMsg.startsWith('✅')?'check':'warning'} size={16}/> {mergeMsg.replace(/^[✅❌]\s*/,'')}</div>}
                   <div style={{display:'flex',gap:8}}>
                     <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowMerge(false)}>Cancel</button>
                     <button className="btn btn-primary" style={{flex:1}} disabled={!mergeSource||!mergeTarget||mergeBlocked||!mergeConfirmed||merging}
@@ -1063,7 +1079,7 @@ export default function EventPage() {
         {/* ── History tab ── */}
         {tab==='history' && (
           <div>
-            {history.length===0 && <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">No settled games yet.</div></div>}
+            {history.length===0 && <div className="empty-state"><div className="empty-state-icon"><PkrGlyph name="history" size={32}/></div><div className="empty-state-text">No settled games yet.</div></div>}
             <div style={{display:'grid',gap:8}}>
               {history.map(g=>(
                 <div key={g.id} className="card">
@@ -1072,14 +1088,14 @@ export default function EventPage() {
                       <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:400}}>{fmtDate(g.scheduled_at)}</div>
                       <span className="badge badge-settled">{playerCountLabel(g.player_count)}</span>
                     </div>
-                    {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>📍 {g.location}</div>}
+                    {g.location && <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}><PkrGlyph name="map-pin" size={16}/> {g.location}</div>}
                     {((g as any).top_players||[]).length>0 && (
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                         {((g as any).top_players||[]).slice(0,expandedHistory.includes(g.id)?undefined:3).map((p:any,i:number)=>(
                           <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
                             background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
                             border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
-                            <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}>{i===0?'♛':i===1?'♝':'♞'}</span>
+                            <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}><PkrGlyph name={i===0?"trophy":"medal"} size={16}/></span>
                             <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
                             <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
                           </div>
@@ -1320,10 +1336,10 @@ export default function EventPage() {
               {inviteUrl}
             </div>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}>📋 Copy Link</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>navigator.clipboard.writeText(inviteUrl).then(()=>alert('Copied!'))}><PkrGlyph name="copy"/> Copy Link</button>
               <a href={`https://wa.me/?text=${encodeURIComponent(`Join me on PKR: ${inviteUrl}`)}`}
                 target="_blank" rel="noopener noreferrer" className="btn btn-outline"
-                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>📱 WhatsApp</a>
+                style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}><PkrGlyph name="share"/> WhatsApp</a>
             </div>
             <button className="btn btn-ghost" style={{width:'100%',marginTop:8}} onClick={()=>setShowInvite(false)}>Close</button>
           </div>
@@ -1339,7 +1355,7 @@ export default function EventPage() {
 
             {/* Install link */}
             <div style={{marginBottom:16,padding:'14px',background:'rgba(0,255,136,0.04)',border:'1px solid rgba(0,255,136,0.15)',borderRadius:4}}>
-              <div style={{fontSize:9,letterSpacing:'0.18em',color:'var(--green)',marginBottom:6,fontFamily:'var(--font-body),sans-serif',fontWeight:600,textTransform:'uppercase'}}>📲 Player Install Link</div>
+              <div style={{fontSize:9,letterSpacing:'0.18em',color:'var(--green)',marginBottom:6,fontFamily:'var(--font-body),sans-serif',fontWeight:600,textTransform:'uppercase'}}><PkrGlyph name="phone"/> Player Install Link</div>
               <div style={{fontSize:11,color:'var(--muted)',marginBottom:10,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                 Send to new players so they can install PKR and get push notifications for every game.
               </div>
@@ -1349,7 +1365,7 @@ export default function EventPage() {
                   onClick={()=>navigator.clipboard.writeText(installLink).then(()=>alert('Install link copied!'))}>Copy</button>
                 <a href={`https://wa.me/?text=${encodeURIComponent(`Install PKR and join ${event.name}: ${installLink}`)}`}
                   target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
-                  style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>📱 WhatsApp</a>
+                  style={{flex:1,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}><PkrGlyph name="share"/> WhatsApp</a>
               </div>
             </div>
 
@@ -1358,7 +1374,7 @@ export default function EventPage() {
               <div style={{padding:'12px 14px',background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:4,marginBottom:14}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
                   <div>
-                    <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}>🔔 Your Notifications</div>
+                    <div style={{fontSize:12,color:'var(--ivory)',fontFamily:'var(--font-body),sans-serif',fontWeight:500}}><PkrGlyph name="bell"/> Your Notifications</div>
                     <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
                       {pushEnabled ? 'ON — get alerts for games, results & buy-ins.' : 'OFF — enable to stay in the loop.'}
                     </div>
@@ -1376,7 +1392,7 @@ export default function EventPage() {
 
             {!isPWA && iosDevice && safariOnly && (
               <div style={{padding:'10px 14px',background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:4,marginBottom:14}}>
-                <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}>📱 iPhone: Add to Home Screen</div>
+                <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}><PkrGlyph name="phone"/> iPhone: Add to Home Screen</div>
                 <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                   Tap <strong style={{color:'var(--ivory)'}}>Share ↑</strong> → <strong style={{color:'var(--ivory)'}}>Add to Home Screen</strong> to install PKR as a native app.
                 </div>
@@ -1451,14 +1467,14 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
   return (
     <AppDialog className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-sheet">
-        <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}>⚡ Quick Seat Players</div>
+        <div className="display" style={{fontSize:18,color:'var(--white)',marginBottom:4,fontWeight:500}}><PkrGlyph name="table"/> Quick Seat Players</div>
         <div style={{fontSize:12,color:'var(--muted)',marginBottom:18,fontFamily:'var(--font-body),sans-serif'}}>Add players before launching the table</div>
 
         {seated.length > 0 && (
           <div style={{marginBottom:14,display:'flex',flexWrap:'wrap',gap:6}}>
             {seated.map((n,i) => (
               <span key={i} style={{padding:'4px 10px',background:'rgba(76,175,125,0.1)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
-                ✓ {n}
+                <PkrGlyph name="check" size={16}/> {n}
               </span>
             ))}
           </div>
@@ -1515,13 +1531,13 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
             {!isLive && <div style={{width:7,height:7,borderRadius:'50%',background:statusDot[game.status]||'var(--faint)',flexShrink:0}}/>}
             <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>{fmtDate(game.scheduled_at)}</div>
           </div>
-          {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>📍 {game.location}</div>}
+          {game.location && <div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}><PkrGlyph name="map-pin" size={16}/> {game.location}</div>}
           {game.notes && <div style={{fontSize:11,color:'var(--faint)',fontStyle:'italic'}}>{game.notes}</div>}
           {(game as any).format && (game as any).format !== 'cash' && (
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
               background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
-              {String(({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
+              <PkrGlyph name={(game as any).format==='tournament'?'trophy':(game as any).format==='rebuy'?'refresh':'games'} size={14}/> {String(({tournament:'Tournament',rebuy:'Rebuy',freezeout:'Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
             </span>
           )}
           <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center'}}>
@@ -1538,7 +1554,7 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
         <div className="pkr-game-actions" style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',gap:6,flexWrap:'wrap'}}>
           {isLive && isHost ? (
             <button type="button" className="btn btn-primary pkr-open-table" onClick={(e)=>{e.stopPropagation();onOpenTable();}}>
-              ▶ Open Table
+              <PkrGlyph name="table"/> Open Table
             </button>
           ) : isLive && liveUrl ? (
             <button type="button" className="btn btn-primary pkr-open-table" onClick={(e)=>{e.stopPropagation();onWatchLive();}}>
@@ -1557,7 +1573,7 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
           {isHost && (game.status==='scheduled'||game.status==='lobby') && (
             <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
               className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
-              ⚡ Quick Seat
+              <PkrGlyph name="table"/> Quick Seat
             </button>
           )}
           {isHost && game.status==='scheduled' && (<>
@@ -1572,7 +1588,7 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
           </>)}
           <button type="button" onClick={e=>{e.stopPropagation();onShare();}}
             className="btn btn-outline" style={{fontSize:10,padding:'5px 10px'}}>
-            ♠ Game Night · RSVPs
+            <PkrGlyph name="members"/> Game Night · RSVPs
           </button>
         </div>
       )}

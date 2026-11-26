@@ -4,6 +4,7 @@ type OnboardStep  = 'welcome' | 'install' | 'notify' | 'done';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import PkrGlyph from '@/components/PkrGlyph';
 import { api } from '@/lib/api';
 import { isPWAInstalled, isIOS, isSafari, canUsePush, isPushSubscribedToEvent, subscribePush } from '@/lib/push';
 
@@ -126,7 +127,7 @@ export default function InvitePage() {
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',
       justifyContent:'center',padding:'40px 24px',position:'relative',overflow:'hidden'}}>
       <div style={{position:'absolute',bottom:-60,right:-40,fontSize:420,opacity:0.018,
-        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif'}}>♠</div>
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif'}}><PkrGlyph name="spade" size={420}/></div>
       <div className="card-gold" style={{padding:'36px 28px',maxWidth:400,width:'100%',position:'relative',zIndex:1}}>
         {children}
       </div>
@@ -142,7 +143,7 @@ export default function InvitePage() {
 
   if (status === 'auth') return card(
     <div style={{textAlign:'center'}}>
-      <div style={{fontSize:40,marginBottom:16}}>🔐</div>
+      <div style={{fontSize:40,marginBottom:16}}><PkrGlyph name="lock" size={40}/></div>
       <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--amber)',fontFamily:'var(--font-body),sans-serif',marginBottom:10,fontWeight:600}}>Sign In Required</div>
       <div className="display" style={{fontSize:22,color:'var(--white)',marginBottom:8,fontWeight:500}}>You've been invited</div>
       <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.8,fontFamily:'var(--font-body),sans-serif',marginBottom:24}}>
@@ -180,7 +181,7 @@ export default function InvitePage() {
   if (step === 'welcome') return card(
     <>
       <div style={{textAlign:'center',marginBottom:28}}>
-        <div style={{fontSize:48,marginBottom:12}}>🃏</div>
+        <div style={{fontSize:48,marginBottom:12}}><PkrGlyph name="cards" size={48}/></div>
         <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--green)',fontFamily:'var(--font-body),sans-serif',marginBottom:10,fontWeight:600}}>Invite Accepted</div>
         <div className="display" style={{fontSize:26,color:'var(--white)',marginBottom:8,fontWeight:500}}>Welcome to {eventName}</div>
         <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.8,fontFamily:'var(--font-body),sans-serif'}}>
@@ -190,10 +191,10 @@ export default function InvitePage() {
       <div style={{marginBottom:24}}>
         <div style={{fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:600,marginBottom:12}}>Get the full experience</div>
         {[
-          {icon:'🃏',title:'New games',    desc:'Instant alert when a game is scheduled'},
-          {icon:'💰',title:'Your buy-ins', desc:'Notified when the host records your chips'},
-          {icon:'💸',title:'Your cashout', desc:'Alert when your chips are cashed out'},
-          {icon:'✅',title:'Results',       desc:'Push when the game settles — see your P&L'},
+          {icon:<PkrGlyph name="cards"/>,title:'New games',    desc:'Instant alert when a game is scheduled'},
+          {icon:<PkrGlyph name="arrow-down-left"/>,title:'Your buy-ins', desc:'Notified when the host records your chips'},
+          {icon:<PkrGlyph name="arrow-up-right"/>,title:'Your cashout', desc:'Alert when your chips are cashed out'},
+          {icon:<PkrGlyph name="insights"/>,title:'Results',       desc:'Push when the game settles — see your P&L'},
         ].map(f=>(
           <div key={f.title} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,marginBottom:6}}>
             <span style={{fontSize:18,flexShrink:0,lineHeight:1.3}}>{f.icon}</span>
@@ -217,13 +218,13 @@ export default function InvitePage() {
   if (step === 'install') return card(
     <>
       <div style={{textAlign:'center',marginBottom:24}}>
-        <div style={{fontSize:40,marginBottom:12}}>📲</div>
+        <div style={{fontSize:40,marginBottom:12}}><PkrGlyph name="phone" size={40}/></div>
         <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',marginBottom:8,fontWeight:600}}>Step 1 of 2</div>
         <div className="display" style={{fontSize:22,color:'var(--white)',marginBottom:8,fontWeight:500}}>Add PKR to your home screen</div>
         <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>Install PKR like a native app — no App Store needed. Get push notifications straight to your lock screen.</div>
       </div>
       {!ios && installPrompt && (
-        <button className="btn btn-primary" style={{width:'100%',fontSize:13,marginBottom:10}} onClick={handleInstall}>📲 Install PKR Now</button>
+        <button className="btn btn-primary" style={{width:'100%',fontSize:13,marginBottom:10}} onClick={handleInstall}><PkrGlyph name="install"/> Install PKR Now</button>
       )}
       {ios && safari && (
         <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:3,padding:'16px',marginBottom:16}}>
@@ -267,17 +268,17 @@ export default function InvitePage() {
   if (step === 'notify') return card(
     <>
       <div style={{textAlign:'center',marginBottom:24}}>
-        <div style={{fontSize:40,marginBottom:12}}>🔔</div>
+        <div style={{fontSize:40,marginBottom:12}}><PkrGlyph name="bell" size={40}/></div>
         <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',marginBottom:8,fontWeight:600}}>Step 2 of 2</div>
         <div className="display" style={{fontSize:22,color:'var(--white)',marginBottom:8,fontWeight:500}}>Enable notifications</div>
         <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7,fontFamily:'var(--font-body),sans-serif'}}>Stay in the loop for every game — buy-ins, cashouts, and results sent straight to your lock screen.</div>
       </div>
       <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:3,padding:'14px',marginBottom:20}}>
         {[
-          {icon:'🃏',text:'New game scheduled for ' + eventName},
-          {icon:'💰',text:"Your buy-in recorded — you're at the table"},
-          {icon:'💸',text:'You cashed out $240 — results incoming'},
-          {icon:'✅',text:"Game settled! You're up +$65 tonight 🎉"},
+          {icon:<PkrGlyph name="cards"/>,text:'New game scheduled for ' + eventName},
+          {icon:<PkrGlyph name="arrow-down-left"/>,text:"Your buy-in recorded — you're at the table"},
+          {icon:<PkrGlyph name="arrow-up-right"/>,text:'You cashed out $240 — results incoming'},
+          {icon:<PkrGlyph name="check"/>,text:"Game settled! You're up +$65 tonight"},
         ].map((n,i)=>(
           <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:i<3?'1px solid var(--border-sub)':'none'}}>
             <span style={{fontSize:16,flexShrink:0}}>{n.icon}</span>
@@ -286,7 +287,7 @@ export default function InvitePage() {
         ))}
       </div>
       <button className="btn btn-primary" style={{width:'100%',fontSize:13,marginBottom:8}} disabled={subscribing} onClick={handleNotify}>
-        {subscribing ? 'Enabling…' : '🔔 Enable Notifications'}
+        <PkrGlyph name="bell"/> {subscribing ? 'Enabling…' : 'Enable Notifications'}
       </button>
       <button className="btn btn-ghost" style={{width:'100%',fontSize:12}} onClick={goToEvent}>Skip for now</button>
     </>
@@ -294,7 +295,7 @@ export default function InvitePage() {
 
   if (step === 'done') return card(
     <div style={{textAlign:'center'}}>
-      <div style={{fontSize:48,marginBottom:16}}>✅</div>
+      <div style={{fontSize:48,marginBottom:16}}><PkrGlyph name="check" size={48}/></div>
       <div className="display" style={{fontSize:24,color:'var(--white)',marginBottom:8,fontWeight:500}}>You're all set!</div>
       <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.8,fontFamily:'var(--font-body),sans-serif'}}>
         {notified ? 'Notifications enabled. ' : ''}Heading to {eventName}…

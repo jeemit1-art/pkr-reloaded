@@ -69,7 +69,7 @@ jobs:
         working-directory: frontend
         run: |
           failed=0
-          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive viewport-smoke; do
+          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive game-night-polish viewport-smoke; do
             echo "::group::${suite}"
             if ! node "tests/${suite}.cjs"; then
               echo "::error::Browser suite failed: ${suite}"

@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {api,type RoomDashboardLayout} from '@/lib/api';
+import PkrGlyph from '@/components/PkrGlyph';
 
 export default function RoomExperienceChoice({roomId,canChange}:{roomId:string;canChange:boolean}){
  const [layout,setLayout]=useState<RoomDashboardLayout>('command');
@@ -38,13 +39,13 @@ export default function RoomExperienceChoice({roomId,canChange}:{roomId:string;c
     <button type="button" onClick={()=>void choose('command')}
       disabled={!canChange||loading||saving}
       aria-pressed={!loading&&layout==='command'} className={layout==='command'?'is-active':''}>
-      <span aria-hidden="true">▦</span><strong>Command Centre</strong>
+      <span aria-hidden="true"><PkrGlyph name="grid" size={26}/></span><strong>Command Centre</strong>
       <small>Club overview · payments, results and recent activity</small>
     </button>
     <button type="button" onClick={()=>void choose('live')}
       disabled={!canChange||loading||saving}
       aria-pressed={!loading&&layout==='live'} className={layout==='live'?'is-active':''}>
-      <span aria-hidden="true">♠</span><strong>Live Poker</strong>
+      <span aria-hidden="true"><PkrGlyph name="table" size={26}/></span><strong>Live Poker</strong>
       <small>Game focus · seating, RSVPs and table shortcuts</small>
     </button>
    </div>

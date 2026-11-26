@@ -3,11 +3,13 @@ import type {RoomTransferRecord} from '@/lib/room-payment-schedule';
 
 export type PaymentScope='mine'|'club';
 export type PaymentFilter='all'|'outstanding'|'paid';
+export type PaymentGroup='all'|'pay'|'receive';
 export type PaymentStatusFilter='all'|NonNullable<Transfer['status']>;
 export type PaymentAction='sent'|'received'|'not_received'|'record_paid';
 export type PaymentControlState='enabled'|'not_started'|'unavailable';
 export type PaymentOverviewQuery={
  filter:PaymentFilter;
+ group:PaymentGroup;
  status:PaymentStatusFilter;
  search:string;
  from:string;
@@ -28,8 +30,10 @@ function dateValue(value:string|null){
 export function readPaymentOverviewQuery(params:{get:(name:string)=>string|null}):PaymentOverviewQuery{
  const requested=params.get('payments');
  const status=params.get('paymentStatus')||'';
+ const group=params.get('paymentGroup');
  return {
   filter:requested==='all'||requested==='paid'?requested:'outstanding',
+  group:group==='pay'||group==='receive'?group:'all',
   status:statuses.has(status)?status as PaymentStatusFilter:'all',
   search:params.get('paymentSearch')||'',
   from:dateValue(params.get('paymentFrom')),
@@ -44,13 +48,25 @@ export function paymentGameDay(stamp:number){
  return ['year','month','day'].map(type=>parts.find(part=>part.type===type)?.value||'').join('-');
 }
 
+/** The exact open records behind a total, with the same immutable-ID scope. */
+export function paymentSummaryRecords(
+ records:RoomTransferRecord[],scope:PaymentScope,memberId:string,group:Exclude<PaymentGroup,'all'>,
+){
+ return records.filter(({transfer})=>{
+  if(transfer.status==='paid'||transfer.status==='legacy')return false;
+  if(scope==='mine')return !!memberId&&(group==='pay'?transfer.from===memberId:transfer.to===memberId);
+  return group==='pay'?transfer.status!=='payer_claimed':transfer.status==='payer_claimed';
+ });
+}
+
 /** Presentation-only filters. The shared loader remains the financial source. */
 export function filterPaymentOverview(
  records:RoomTransferRecord[],scope:PaymentScope,memberId:string,query:PaymentOverviewQuery,
 ){
  const needle=query.search.trim().toLocaleLowerCase('en-AU');
  if(query.from&&query.to&&query.from>query.to)return [];
- return records.filter(row=>{
+ const matchingGroup=query.group==='all'?records:paymentSummaryRecords(records,scope,memberId,query.group);
+ return matchingGroup.filter(row=>{
   const {transfer}=row;
   const personal=transfer.from===memberId||transfer.to===memberId;
   if(scope==='mine'&&!personal)return false;

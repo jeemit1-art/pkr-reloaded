@@ -1,5 +1,6 @@
 'use client';
 import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 import AppDialog from '@/components/AppDialog';
 
 // Responsive site navigation is provided by PersistentNavigation.
@@ -493,7 +494,7 @@ function DashboardInner() {
           <section aria-label="Pending membership approvals" role="status"
             style={{padding:'14px 17px',marginBottom:17,border:'1px solid var(--gold)',
               background:'rgba(201,168,76,.12)',borderRadius:10,color:'var(--ivory)'}}>
-            <strong style={{color:'var(--gold)'}}>🔔 {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>
+            <strong style={{color:'var(--gold)'}}><PkrGlyph name="bell"/> {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>
             <div style={{display:'flex',gap:9,flexWrap:'wrap',marginTop:10}}>
               {activeRooms.filter(room=>pendingByRoom[room.id]>0).map(room=>(
                 <button key={room.id} type="button" className="btn btn-primary"

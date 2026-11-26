@@ -1,4 +1,5 @@
 'use client';
+import PkrGlyph from '@/components/PkrGlyph';
 import {useCallback,useEffect,useState} from 'react';
 import {api,fmt,type Game,type ClubExpenseList,type ClubTournamentPreset,
   type ClubTournamentConfig,type ClubExportKind} from '@/lib/api';
@@ -124,7 +125,7 @@ export default function ClubExtrasPanel({eventId,games=[],isManager,isOwner,user
    {notice&&<p role="status" className="pkr-club-ok">{notice}</p>}
    <div className="pkr-club-grid">
      <details className="pkr-club-card">
-       <summary>🍕 Shared costs <small>{data?.expenses.length||0} proposals</small></summary>
+       <summary><PkrGlyph name="settle"/> Shared costs <small>{data?.expenses.length||0} proposals</small></summary>
        <div className="pkr-club-body">
          <p>Hosts propose optional food, venue or supply expenses. Members consent individually.
            This feature never changes chips, game results or settlement transfers.</p>
@@ -212,7 +213,7 @@ export default function ClubExtrasPanel({eventId,games=[],isManager,isOwner,user
        </div>
      </details>}
      {isOwner&&<details className="pkr-club-card">
-       <summary>📁 Export club history <small>Owner only</small></summary>
+       <summary><PkrGlyph name="history"/> Export club history <small>Owner only</small></summary>
        <div className="pkr-club-body">
          <p>Download a complete paginated CSV for each category. Excludes contact details,
            passwords, sign-in credentials and private invite tokens. Keep downloads secure.</p>

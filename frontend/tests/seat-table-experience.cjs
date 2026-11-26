@@ -132,6 +132,31 @@ async function check(browser,name,width,height){
   assert.equal(await page.locator('#bbBanks').count(),0,'Bank count must not be repeated');
   assert.equal(await page.locator('#bbInPlay').isVisible(),false,'In Play duplicate must stay hidden');
   if(width<=700)assert.equal(await page.locator('.pkr-bank-quick').isVisible(),true);
+  if(width===390||width>=1100){
+   const beforeWrites=writes.length;
+   await page.locator('#bankBar').click();
+   for(const [measure,title,count] of [['table buy-ins','Table buy-ins',2],['table cash-outs','Table cash-outs',0],['table bank','Table bank records',2],['active table players','Active table players',2]]){
+    await page.getByRole('button',{name:'View underlying records: '+measure,exact:true}).click();
+    const details=page.getByRole('dialog',{name:title,exact:true});
+    await details.waitFor({state:'visible'});
+    assert(await details.evaluate(el=>el.matches(':modal')),'Bank records must appear above the table');
+    assert.equal(await details.locator('.pkr-bank-record-row').count(),count,'Bank total must open its matching player records');
+    assert.equal(await details.locator('.pkr-bank-record-sheet').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    if(measure==='table bank'){
+     assert.match(await details.locator('header p').innerText(),/50.00.*0.00.*50.00/);
+     await page.screenshot({path:path.join(output,name+'-bank-records.png')});
+    }
+    if(!count)assert.match(await details.innerText(),/No matching records/);
+    await details.getByRole('button',{name:'Close bank records'}).click();
+    await details.waitFor({state:'detached'});
+   }
+   await page.getByRole('button',{name:'View underlying records: table buy-ins',exact:true}).click();
+   await page.locator('.pkr-bank-record-row').filter({hasText:'Test'}).click();
+   await page.locator('.side-panel.open').waitFor();
+   await page.locator('#panelCloseBtn').click();
+   await page.locator('#bankBar').click();
+   assert.equal(writes.length,beforeWrites,'Opening underlying bank records must not write transactions');
+  }
   const tools=page.getByRole('button',{name:'Open table controls'});
   await tools.click();
   const sheet=page.locator('.pkr-table-tools-dialog');
