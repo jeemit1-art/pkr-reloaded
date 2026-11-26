@@ -279,6 +279,46 @@ export const api = {
     cancel:   (id:string) => req<{ok:boolean;message:string}>(`/games/${id}/cancel`,{method:'POST'}),
     delete:   (id:string) => req<{ok:boolean}>(`/games/${id}`,{method:'DELETE'}),
   },
+  club: {
+    polls: (eventId:string)=>req<{polls:ClubDatePoll[]}>(
+      '/events/'+encodeURIComponent(eventId)+'/date-polls'),
+    createPoll:(eventId:string,d:{title:string;options:number[];closes_at:number})=>
+      req<{ok:boolean;id:string}>('/events/'+encodeURIComponent(eventId)+'/date-polls',
+        {method:'POST',body:JSON.stringify(d)}),
+    vote:(eventId:string,pollId:string,option_index:number)=>
+      req<{ok:boolean;option_index:number}>('/events/'+encodeURIComponent(eventId)+
+        '/date-polls/'+encodeURIComponent(pollId)+'/vote',
+        {method:'PUT',body:JSON.stringify({option_index})}),
+    closePoll:(eventId:string,pollId:string,selected_index:number|null)=>
+      req<{ok:boolean;winning_date:number|null}>('/events/'+encodeURIComponent(eventId)+
+        '/date-polls/'+encodeURIComponent(pollId)+'/close',
+        {method:'POST',body:JSON.stringify({selected_index})}),
+    waitlist:(gameId:string)=>req<ClubWaitlist>(
+      '/games/'+encodeURIComponent(gameId)+'/waitlist'),
+    joinWaitlist:(gameId:string)=>req<{ok:boolean;status:string}>(
+      '/games/'+encodeURIComponent(gameId)+'/waitlist',{method:'POST'}),
+    leaveWaitlist:(gameId:string)=>req<{ok:boolean}>(
+      '/games/'+encodeURIComponent(gameId)+'/waitlist',{method:'DELETE'}),
+    offerWaitlist:(gameId:string)=>req<{ok:boolean;offered:boolean;note:string}>(
+      '/games/'+encodeURIComponent(gameId)+'/waitlist/offer-next',{method:'POST'}),
+    memberRequests:(gameId:string)=>req<ClubMemberRequests>(
+      '/games/'+encodeURIComponent(gameId)+'/member-requests'),
+    createRequest:(gameId:string,d:{kind:ClubMemberRequestKind;note?:string})=>
+      req<{ok:boolean;id:string;status:string}>(
+        '/games/'+encodeURIComponent(gameId)+'/member-requests',
+        {method:'POST',body:JSON.stringify(d)}),
+    reviewRequest:(gameId:string,requestId:string,status:'approved'|'declined'|'resolved')=>
+      req<{ok:boolean;status:string}>(
+        '/games/'+encodeURIComponent(gameId)+'/member-requests/'+encodeURIComponent(requestId),
+        {method:'PUT',body:JSON.stringify({status})}),
+    seasons:(eventId:string)=>req<{seasons:ClubLeagueSeason[]}>(
+      '/events/'+encodeURIComponent(eventId)+'/seasons'),
+    createSeason:(eventId:string,d:{name:string;starts_at:number;ends_at:number;points:ClubLeaguePoints})=>
+      req<{ok:boolean;id:string}>('/events/'+encodeURIComponent(eventId)+'/seasons',
+        {method:'POST',body:JSON.stringify(d)}),
+    seasonStandings:(eventId:string,seasonId:string)=>req<ClubSeasonStandings>(
+      '/events/'+encodeURIComponent(eventId)+'/seasons/'+encodeURIComponent(seasonId)+'/standings'),
+  },
   billing: {
     plan:     () => req<PlanStatus>('/billing/plan'),
     checkout: (plan: 'starter' | 'pro') =>
@@ -399,4 +439,37 @@ export interface RsvpBoardData {
 }
 export interface RsvpBoardReceipt {
   ok:boolean;id?:string;edit_token?:string;status:string;arrival_option:string;seat_number:number|null;
+}
+
+
+export interface ClubDatePoll {
+  id:string;event_id:string;title:string;options:number[];
+  status:'open'|'closed';closes_at:number;selected_index:number|null;
+  created_at:number;counts:number[];my_vote:number|null;
+}
+export interface ClubWaitlist {
+  game_id:string;open:boolean;seats:number;filled:number;available:number;
+  waiting:number;my_status:'waiting'|'offered'|'claimed'|'expired'|'withdrawn'|null;
+  my_offer_expires_at:number|null;
+  queue?:Array<{user_id:string;display_name:string;status:string;created_at:number;expires_at:number|null}>;
+  note:string;
+}
+export type ClubMemberRequestKind='buyin'|'cashout'|'tournament_rebuy'|'addon';
+export interface ClubMemberRequest {
+  id:string;game_id:string;user_id:string;member_name:string;kind:ClubMemberRequestKind;
+  note:string|null;status:'pending'|'approved'|'declined'|'resolved';
+  created_at:number;updated_at:number;
+}
+export interface ClubMemberRequests {
+  requests:ClubMemberRequest[];can_manage:boolean;game_status:string;note:string;
+}
+export interface ClubLeaguePoints {first:number;second:number;third:number;other:number}
+export interface ClubLeagueSeason {
+  id:string;event_id:string;name:string;starts_at:number;ends_at:number;
+  points_first:number;points_second:number;points_third:number;points_other:number;
+}
+export interface ClubSeasonStandings {
+  season:ClubLeagueSeason;settled_games:number;basis:string;
+  standings:Array<{user_id:string;display_name:string;points:number;games_played:number;
+    first_places:number;podiums:number;identity_review_required:boolean}>;
 }
