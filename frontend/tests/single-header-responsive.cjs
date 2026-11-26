@@ -26,6 +26,7 @@ const fixtures=(u,method)=>{
  if(p==='/auth/me')return user;
  if(p==='/events')return [room];
  if(p==='/events/'+room.id)return {...room,members:[]};
+ if(p==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:'command',updated_at:null};
  if(p==='/events/'+room.id+'/games')return [game];
  if(p==='/events/'+room.id+'/leaderboard')return [];
  if(p==='/events/'+room.id+'/history')return [];
