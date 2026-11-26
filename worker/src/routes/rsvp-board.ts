@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
 import { sendPushToModerators } from '../push';
+import {syncWaitlistAfterRsvp} from './club-planning';
 
 const board = new Hono<{Bindings:Env}>();
 const DEFAULT_TIMES = ['19:00','20:00','21:00'];
@@ -239,6 +240,7 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
           "UPDATE game_rsvp_guests SET display_name=?,status=?,arrival_option=?,choice_value=?,seat_number=?,updated_at=unixepoch() WHERE id=? AND game_id=? AND edit_token_hash=? AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=?)) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
         ).bind(name,storedStatus,storedArrival,arrival,seat,current.id,game.id,hash,seat,game.id,seat,game.id).run();
         if(!updated.meta.changes)return conflict(c);
+        await syncWaitlistAfterRsvp(c.env,game.id,c.get('userId'),status);
       }catch{return conflict(c);}
     }else{
       const count=await c.env.DB.prepare('SELECT COUNT(*) AS total FROM game_rsvp_guests WHERE game_id=?')
@@ -250,6 +252,7 @@ board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
           "INSERT INTO game_rsvp_guests(id,game_id,display_name,status,arrival_option,choice_value,seat_number,edit_token_hash) SELECT ?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM game_players WHERE game_id=? AND seat_number=? AND ? IS NOT NULL) AND EXISTS(SELECT 1 FROM games WHERE id=? AND status IN ('scheduled','lobby')) AND NOT EXISTS(SELECT 1 FROM game_rsvps WHERE game_id=? AND display_name=? COLLATE NOCASE)"
         ).bind(id,game.id,name,storedStatus,storedArrival,arrival,seat,hash,game.id,seat,seat,game.id,game.id,name).run();
         if(!inserted.meta.changes)return conflict(c);
+        await syncWaitlistAfterRsvp(c.env,game.id,c.get('userId'),status);
       }catch{return conflict(c);}
       c.header('Cache-Control','no-store');
       // Push is opt-in, event-scoped and already disabled by the push module in staging.
