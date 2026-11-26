@@ -20,13 +20,13 @@ describe('non-secret release capability health reporting', () => {
     const response = await health();
     expect(response.status).toBe(200);
     const body = await response.json() as any;
-    expect(body.features).toEqual({ settlement_v2: false, push_rooms_v2: false, phone_members_v1: false, native_push: false });
+    expect(body.features).toEqual({ settlement_v2: false, push_rooms_v2: false, phone_members_v1: false, native_push: false, club_planning_v1: false });
     expect(body.release).toBe('settlement-v2-github-20261028');
   });
   it('reports web and native flags only when explicitly enabled', async () => {
-    const response = await health({ PKR_SETTLEMENT_V2: '1', PKR_PUSH_ROOMS_V2: '1', PKR_PHONE_MEMBERS_V1: '1', PKR_NATIVE_PUSH_ENABLED: '1' });
+    const response = await health({ PKR_SETTLEMENT_V2: '1', PKR_PUSH_ROOMS_V2: '1', PKR_PHONE_MEMBERS_V1: '1', PKR_NATIVE_PUSH_ENABLED: '1', PKR_CLUB_PLANNING_V1:'1' });
     const body = await response.json() as any;
-    expect(body.features).toEqual({ settlement_v2: true, push_rooms_v2: true, phone_members_v1: true, native_push: true });
+    expect(body.features).toEqual({ settlement_v2: true, push_rooms_v2: true, phone_members_v1: true, native_push: true, club_planning_v1:true });
     expect(body.environment).toBe('production');
     expect(JSON.stringify(body)).not.toContain('never-expose');
   });
@@ -36,5 +36,6 @@ describe('non-secret release capability health reporting', () => {
     expect(body.features.settlement_v2).toBe(false);
     expect(body.features.push_rooms_v2).toBe(false);
     expect(body.features.native_push).toBe(false);
+    expect(body.features.club_planning_v1).toBe(false);
   });
 });
