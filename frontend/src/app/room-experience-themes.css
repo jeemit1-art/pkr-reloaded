@@ -86,7 +86,9 @@ html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-primary-view-clubs{
 }
 @media(max-width:1099px){
  html[data-pkr-room-experience] .pkr-primary-mobile-utility{
-  background:var(--pkr-ex-surface)!important;border-bottom-color:var(--pkr-ex-border)!important;
+  /* Navigation chrome must match the charcoal footer, independent of the
+     room's Command Centre/Live Poker appearance. The rest of the room is themed. */
+  background:#101a1d!important;border-bottom-color:#314449!important;
   color:var(--pkr-ex-ink)!important;
  }
  html[data-pkr-room-experience] .pkr-primary-mobile-mark{
@@ -101,8 +103,8 @@ html[data-pkr-room-experience] .pkr-primary-sidebar .pkr-primary-view-clubs{
   background:var(--pkr-ex-surface-2)!important;border-color:var(--pkr-ex-border)!important;
  }
  html[data-pkr-room-experience] .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
-  background:var(--pkr-ex-bg)!important;
-  border-top:1px solid var(--pkr-ex-border)!important;
+  background:#101a1d!important;
+  border-top:1px solid #314449!important;
  }
  html[data-pkr-room-experience] .pkr-primary-bottom-nav button{
   color:var(--pkr-ex-secondary)!important;
