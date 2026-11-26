@@ -40,7 +40,7 @@ A fresh physical iPhone screenshot confirms page content still paints behind the
 
 - Keep the document stationary on installed mobile app pages and scroll their existing content inside a bounded body. Keep the opaque header/footer fixed to the actual viewport; do not invent a status-bar offset from the 59px screen difference.
 - Preserve ordinary browser/desktop scrolling and the existing gameplay surfaces. Scope containment to installed mobile pages with the visible primary header.
-- Adapt existing page-scroll commands, route/hash navigation and Back restoration to the active scroll container. Keep native-dialog background locking and all current controls.
+- Adapt existing page-scroll commands, route/hash navigation and Back restoration to the active scroll container, including Back after refreshing another page. Retain payment search/filter positions and the existing section links' no-scroll behaviour. Keep native-dialog background locking and all current controls.
 - Include anonymous scroll-container measurements in the existing display-details copy action. No user records, URLs, identifiers or telemetry are added.
 - Acceptance checks cover a stationary root while the body scrolls, viewport clipping, header/footer hit testing, navigation/restoration, anchors, dialogs and reachable page actions. Native iPhone scrolling still needs confirmation after release.
 

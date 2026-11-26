@@ -115,10 +115,24 @@ async function installedNavigation(page,size,returnOffset){
  const signOut=page.getByRole('button',{name:'Sign out',exact:true});
  await signOut.scrollIntoViewIfNeeded();await signOut.click({trial:true});
  await unobscuredAction(signOut,'The last Account action');
- assert((await stationaryRoot(page,'Account bottom')).body>100);
+ const accountOffset=(await stationaryRoot(page,'Account bottom')).body;
+ assert(accountOffset>100);
  await page.screenshot({path:path.join(output,'webkit-'+size.name+'-account-bottom.png')});
 
+ // A refresh recreates the controller. Both this entry and the page left before
+ // it must retain their positions, including the simulated native safe area.
+ await page.addInitScript(({top,bottom})=>{
+  document.addEventListener('DOMContentLoaded',()=>{
+   document.documentElement.style.setProperty('--pkr-safe-area-top',top+'px','important');
+   document.documentElement.style.setProperty('--pkr-safe-area-bottom',bottom+'px','important');
+  },{once:true});
+ },{top:size.safeTop||0,bottom:size.safeBottom||0});
  await page.waitForLoadState('networkidle',{timeout:10000});
+ await page.reload({waitUntil:'networkidle'});
+ await page.getByRole('heading',{name:'Account & settings'}).waitFor();
+ await page.waitForFunction(offset=>document.documentElement.classList.contains('pkr-contained-scroll')&&
+  Math.abs(document.body.scrollTop-offset)<=3,accountOffset,{timeout:8000});
+ await stationaryRoot(page,'Account refresh restoration');
  await page.goBack();
  await page.getByTestId('player-dashboard').waitFor();
  await page.waitForLoadState('networkidle',{timeout:10000});
@@ -179,6 +193,38 @@ async function installedNavigation(page,size,returnOffset){
  await page.setViewportSize({width:size.width,height:size.height});
  await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll')&&Math.abs(document.body.scrollTop-240)<=3);
  await stationaryRoot(page,'Returning to installed mobile width');
+
+ // Payment filters replace the query on every keystroke; this must neither
+ // reset the body nor leave Next's search-parameter hooks behind the URL.
+ await page.locator('.pkr-primary-bottom-nav').getByRole('button',{name:'Payments',exact:true}).click();
+ const paymentSearch=page.getByPlaceholder('Search a player', {exact:true});
+ await paymentSearch.waitFor();
+ await page.waitForLoadState('networkidle',{timeout:10000});
+ await bodyWheel(page,160);
+ await paymentSearch.click();
+ const paymentOffset=(await stationaryRoot(page,'Before payment search')).body;
+ assert(paymentOffset>40,'The payment search regression must begin below the page top');
+ await paymentSearch.pressSequentially('Example',{delay:60});
+ await page.waitForFunction(()=>new URLSearchParams(location.search).get('paymentSearch')==='Example');
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal(await paymentSearch.inputValue(),'Example','Payment query hooks must update while typing');
+ assert(await paymentSearch.evaluate(element=>element===document.activeElement),'Typing must retain input focus');
+ assert(Math.abs((await stationaryRoot(page,'After payment search')).body-paymentOffset)<=2,
+  'Updating a payment query must preserve the current page position');
+
+ // These existing links explicitly opt out of route scroll resets. A small
+ // non-zero offset keeps both links visible for an ordinary user click.
+ for(const label of ['Ledger & tools','Overview']){
+  await page.evaluate(()=>document.body.scrollTo({top:12,behavior:'instant'}));
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const section=page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:label,exact:true});
+  await unobscuredAction(section,'The '+label+' section link');
+  await section.click();
+  await page.waitForURL(url=>url.searchParams.get('paymentsView')===(label==='Overview'?'overview':'ledger'));
+  await page.waitForLoadState('networkidle',{timeout:10000});
+  assert(Math.abs((await stationaryRoot(page,'Payment '+label+' navigation')).body-12)<=2,
+   'Payment section links with scroll=false must preserve the current offset');
+ }
 }
 async function check(engine,size){
  const browser=await engine.launch({headless:true});

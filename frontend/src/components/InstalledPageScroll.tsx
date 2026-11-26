@@ -3,16 +3,18 @@
 import {Suspense,useLayoutEffect,useRef} from 'react';
 import {usePathname,useSearchParams} from 'next/navigation';
 import {CONTAINED_SCROLL_CLASS,getPageScroll,markPageScrollRestoration,readPageScrollEntry,
-  withPageScrollEntry,type PageScrollEntry,type PageScrollPosition} from '@/lib/page-scroll';
+  withPageScrollEntry,loadPageScrollPositions,savePageScrollPositions,PAGE_SCROLL_POSITION_LIMIT,
+  consumePreservedPageScroll,clearPreservedPageScroll,
+  type PageScrollEntry,type PageScrollPosition} from '@/lib/page-scroll';
 
 type ScrollTarget={href:string;position:PageScrollPosition;hash:string;expires:number};
 
 /** Body scrolling keeps installed iPhone content out of the native status-bar canvas.
- * The controller does not replace browser/history APIs or store any app/user data. */
+ * It preserves native APIs and stores only per-tab scroll offsets by entry ID. */
 export function installPageScrollController(initialPathname:string){
   const root=document.documentElement,body=document.body;
   const mobile=window.matchMedia('(max-width: 1099px)');
-  const positions=new Map<string,PageScrollPosition>();
+  const positions=loadPageScrollPositions();
   let entry:PageScrollEntry|null=null;
   let active=false;
   let renderedPathname=initialPathname;
@@ -26,7 +28,11 @@ export function installPageScrollController(initialPathname:string){
   const href=()=>window.location.href;
   const nativePosition=():PageScrollPosition=>({left:window.scrollX,top:window.scrollY});
   const bodyPosition=():PageScrollPosition=>({left:body.scrollLeft,top:body.scrollTop});
-  const saveMemory=()=>{if(entry)positions.set(entry.id,lastPosition);};
+  const saveMemory=()=>{
+    if(!entry)return;
+    positions.delete(entry.id);positions.set(entry.id,lastPosition);
+    if(positions.size>PAGE_SCROLL_POSITION_LIMIT)positions.delete(positions.keys().next().value!);
+  };
   const stamp=(next:PageScrollEntry)=>{
     try{window.history.replaceState(withPageScrollEntry(window.history.state,next),'');}catch{}
   };
@@ -57,6 +63,7 @@ export function installPageScrollController(initialPathname:string){
     saveMemory();
     const saved=readPageScrollEntry(window.history.state);
     const previous=entry;
+    const preserved=consumePreservedPageScroll(previous?.href||null,currentHref);
     const traversing=traversalHref===currentHref;
     traversalHref=null;
     // Existing tab/filter controls replace the current entry. Keep its identity
@@ -70,12 +77,12 @@ export function installPageScrollController(initialPathname:string){
     }
     const restoring=Boolean(saved?.href===currentHref&&(traversing||!previous));
     const position=restoring&&saved?(positions.get(saved.id)||{left:saved.left,top:saved.top}):
-      previous?{left:0,top:0}:nativePosition();
+      preserved||(previous?{left:0,top:0}:nativePosition());
     entry=restoring&&saved?{...saved,...position}:newEntry(position);
     stamp(entry);lastPosition=position;saveMemory();
     markPageScrollRestoration(restoring?currentHref:null);
     // Traversals restore where the person left the entry, even if it has a hash.
-    queueTarget(position,restoring?'':window.location.hash);
+    queueTarget(position,restoring||preserved?'':window.location.hash);
   }
 
   function applyTarget(){
@@ -146,13 +153,17 @@ export function installPageScrollController(initialPathname:string){
       if(mobile.matches&&(window.scrollX||window.scrollY))window.scrollTo({left:0,top:0,behavior:'instant'});
     }else remember();
   };
-  const onInput=()=>{clearPending();markPageScrollRestoration(null);remember();};
+  const onInput=()=>{clearPending();clearPreservedPageScroll();markPageScrollRestoration(null);remember();};
   const onPopState=()=>{
     saveMemory();traversalHref=href();markPageScrollRestoration(traversalHref);schedule();
   };
   const onHashChange=()=>{schedule();};
   const onPageHide=()=>{
     remember();if(entry?.href===href())stamp({...entry,...lastPosition});
+    if(entry)savePageScrollPositions(positions);
+  };
+  const onVisibilityChange=()=>{
+    if(document.visibilityState==='hidden'&&entry){remember();savePageScrollPositions(positions);}
   };
   const onPageShow=()=>{schedule();};
   const headerResize=typeof ResizeObserver==='undefined'?null:new ResizeObserver(schedule);
@@ -167,6 +178,7 @@ export function installPageScrollController(initialPathname:string){
   window.addEventListener('hashchange',onHashChange);
   window.addEventListener('pagehide',onPageHide);
   window.addEventListener('pageshow',onPageShow);
+  document.addEventListener('visibilitychange',onVisibilityChange);
   const inputs=['pointerdown','wheel','touchmove','keydown'] as const;
   inputs.forEach(type=>window.addEventListener(type,onInput,{capture:true,passive:true}));
   sync();
@@ -180,6 +192,7 @@ export function installPageScrollController(initialPathname:string){
       window.removeEventListener('resize',schedule);mobile.removeEventListener('change',schedule);
       window.removeEventListener('popstate',onPopState);window.removeEventListener('hashchange',onHashChange);
       window.removeEventListener('pagehide',onPageHide);window.removeEventListener('pageshow',onPageShow);
+      document.removeEventListener('visibilitychange',onVisibilityChange);
       inputs.forEach(type=>window.removeEventListener(type,onInput,true));
       if(active){
         const position=getPageScroll();root.classList.remove(CONTAINED_SCROLL_CLASS);
@@ -187,6 +200,7 @@ export function installPageScrollController(initialPathname:string){
         window.scrollTo({...position,behavior:'instant'});
       }
       markPageScrollRestoration(null);
+      clearPreservedPageScroll();
     },
   };
 }

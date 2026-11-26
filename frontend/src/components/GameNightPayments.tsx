@@ -4,6 +4,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
 import {api,fmt,type Event} from '@/lib/api';
+import {historyStateForQueryUpdate} from '@/lib/page-scroll';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad,type RoomTransferRecord} from '@/lib/room-payment-schedule';
 import {canTakePaymentAction,filterPaymentOverview,paymentRowKey,paymentSummaryRecords,readPaymentOverviewQuery,
  type PaymentAction,type PaymentControlState,type PaymentFilter,type PaymentScope,type PaymentGroup} from '@/lib/payment-overview';
@@ -160,7 +161,7 @@ export default function GameNightPayments(){
   for(const [key,value] of Object.entries(values)){
    if(value===null||value==='')url.searchParams.delete(key);else url.searchParams.set(key,value);
   }
-  window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  window.history.replaceState(historyStateForQueryUpdate(window.history.state),'',url.pathname+url.search+url.hash);
  }
  function refresh(){
   setNotice('');
