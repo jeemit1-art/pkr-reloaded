@@ -104,11 +104,14 @@ export default function PlayerGameNightAccess({game,memberName}:Props){
         seat_number:status==='yes'&&seat?Number(seat):null,
         ...(saved.token?{edit_token:saved.token}:{})
       });
-      if(response.id&&response.edit_token){
-        const next:SavedGuest={id:response.id,token:response.edit_token,name:memberName.trim()};
-        localStorage.setItem('pkr:rsvp:v2:'+game.id,JSON.stringify(next));
-        // Old Instant links keep their edit rights during the transition.
+      if(response.edit_token){
+        // The RSVP receipt may omit the guest ID on older Workers.
+        // Always preserve the existing edit token in that case.
         localStorage.setItem('pkr:instant:rsvp:'+game.id,response.edit_token);
+        if(response.id){
+          const next:SavedGuest={id:response.id,token:response.edit_token,name:memberName.trim()};
+          localStorage.setItem('pkr:rsvp:v2:'+game.id,JSON.stringify(next));
+        }
       }
       choiceDirty.current=false;
       setNotice(status==='no'?'Your host can see that you cannot attend.':
