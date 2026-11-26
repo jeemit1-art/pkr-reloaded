@@ -22,7 +22,9 @@ database_id = "03577857-fc94-49ed-bd1b-5cd658aa0978"
 PKR_ENV = "staging"
 # Public OAuth client ID; keep the Google CLIENT SECRET and JWT SECRET in Cloudflare Secrets only.
 GOOGLE_CLIENT_ID = "385656194684-ost4dd5uumdphq17v5ostvu2ohqrrfgf.apps.googleusercontent.com"
-# Vercel-generated branch preview URL confirmed via GitHub; no production hostname.
-FRONTEND_URL = "https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app"
+# Stable Vercel branch preview alias verified 26 Nov 2026; staging-only.
+# Must be deployed to the STAGING Worker by an authorised account operator.
+# Never modify production Worker bindings for this review.
+FRONTEND_URL = "https://pkr-reloaded-git-codex-pkr-unified-f830c3-jeemit1-arts-projects.vercel.app"
 
 # No production routes, cron triggers, secrets or production bindings.
