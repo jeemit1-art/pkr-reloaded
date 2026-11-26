@@ -107,7 +107,7 @@ export default function InstallGuide(){
   const step=complete?3:installed?2:1;
   const installUrl=typeof window==='undefined'?'https://mypkr.app/install':
     window.location.origin+'/install'+(group?'?group='+encodeURIComponent(group):'');
-  const roomUrl=group?'/instant?room='+encodeURIComponent(group):'/dashboard';
+  const roomUrl=group?'/dashboard?room='+encodeURIComponent(group):'/dashboard';
 
   function showNotice(message:string){setNotice(message);}
   async function copy(value:string,message:string){
