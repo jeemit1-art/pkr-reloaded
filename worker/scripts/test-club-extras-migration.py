@@ -52,6 +52,11 @@ try:
 except sqlite3.IntegrityError:
     pass
 assert con.execute("SELECT COUNT(*) FROM games").fetchone()[0]==2
+# Free-game cancellation should not block normal game deletion or restore
+# another promotional entitlement to the same host.
+con.execute("DELETE FROM games WHERE id='g1'")
+assert con.execute("SELECT game_id FROM host_free_first_games WHERE host_id='host'").fetchone()[0]=='g1'
+assert con.execute("SELECT COUNT(*) FROM games").fetchone()[0]==1
 assert con.execute("SELECT COUNT(*) FROM settlement_transfers").fetchone()[0]==0
 assert con.execute("PRAGMA foreign_key_check").fetchall()==[]
 print("PASS optional costs, cent-exact splits, preset names and one-time host game claims")
