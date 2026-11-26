@@ -294,6 +294,9 @@ function DashboardInner() {
   function PlanBadge() {
     if (!user) return null;
     const plan = user.plan;
+    if(user.free_game_available)return <span style={{fontSize:10,padding:'2px 8px',borderRadius:4,
+      background:'rgba(100,180,100,0.15)',color:'var(--green)',fontWeight:700}}>
+      One free cash game available</span>;
     if(!user.is_active)return (
       <span style={{fontSize:10,padding:'2px 8px',borderRadius:2,
         background:'rgba(220,60,60,0.12)',color:'rgba(220,80,80,0.85)',
@@ -490,6 +493,13 @@ function DashboardInner() {
       )}
 
       {/* Expired trial banner */}
+      {user?.free_game_available&&!playerOnly&&(
+        <div className="pkr-unfinished-note" style={{marginBottom:14}} role="status">
+          Your first cash-game night is included at no charge. One group,
+          up to nine seats, and no automatic subscription. Tournaments and
+          further games require an appropriate paid host plan.
+        </div>
+      )}
       {needsUpgrade && !playerOnly && (
         <div style={{background:'rgba(220,60,60,0.08)',borderBottom:'1px solid rgba(220,60,60,0.2)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
