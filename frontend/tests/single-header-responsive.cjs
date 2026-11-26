@@ -192,16 +192,26 @@ async function installedNavigation(page,size,returnOffset,engineName){
  assert.equal(afterModal.body,beforeModal.body,'Closing records must preserve the page position');
  assert(['auto','scroll'].includes(afterModal.overflow),'Dialog close must release body scrolling');
 
- // Crossing the breakpoint transfers the offset, rather than pinning desktop
- // pages or losing the returning installed page position.
+ // Desktop receives the exact body offset. Returning to the mobile layout
+ // must retain the focused control in view without resetting to the page top.
  await page.evaluate(()=>document.body.scrollTo({top:240,behavior:'instant'}));
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const beforeBreakpoint=await stationaryRoot(page,'Before desktop breakpoint');
  await page.setViewportSize({width:1440,height:900});
  await page.waitForFunction(()=>!document.documentElement.classList.contains('pkr-contained-scroll')&&Math.abs(scrollY-240)<=3);
  assert.notEqual(await page.evaluate(()=>getComputedStyle(document.body).position),'fixed');
+ const desktopBreakpoint=await page.evaluate(()=>({window:scrollY,body:document.body.scrollTop}));
  await page.setViewportSize({width:size.width,height:size.height});
- await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll')&&Math.abs(document.body.scrollTop-240)<=3);
- await stationaryRoot(page,'Returning to installed mobile width');
+ await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll'));
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const afterBreakpoint=await stationaryRoot(page,'Returning to installed mobile width');
+ console.log('INSTALLED_BREAKPOINT '+JSON.stringify({engine:engineName,size:size.name,
+  before:{window:beforeBreakpoint.window,body:beforeBreakpoint.body},desktop:desktopBreakpoint,
+  after:{window:afterBreakpoint.window,body:afterBreakpoint.body}}));
+ assert(afterBreakpoint.body>0,'Returning to installed mobile width must not reset the page to the top');
+ assert(await trigger.evaluate(element=>document.activeElement===element),
+  'Returning to installed mobile width must preserve focus on the originating metric');
+ await unobscuredAction(trigger,'The focused metric after returning to installed mobile width');
 
  // Payment filters replace the query on every keystroke; this must neither
  // reset the body nor leave Next's search-parameter hooks behind the URL.
@@ -221,13 +231,23 @@ async function installedNavigation(page,size,returnOffset,engineName){
  assert(Math.abs((await stationaryRoot(page,'After payment search')).body-paymentOffset)<=2,
   'Updating a payment query must preserve the current page position');
 
- // These existing links explicitly opt out of route scroll resets. A small
- // non-zero offset keeps both links visible for an ordinary user click.
+ // These links explicitly opt out of route scroll resets. Keep the clicked
+ // link inside the padded scrollport so native focus need not move it first.
  for(const label of ['Ledger & tools','Overview']){
-  await page.evaluate(()=>document.body.scrollTo({top:12,behavior:'instant'}));
+  await page.evaluate(()=>document.body.scrollTo({top:0,behavior:'instant'}));
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   const section=page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:label,exact:true});
+  const target=await section.evaluate(element=>Math.floor(Math.min(12,
+   element.getBoundingClientRect().top-parseFloat(getComputedStyle(document.body).scrollPaddingTop)-2)));
+  assert(target>=3,'The section link needs a measurable non-zero offset inside the padded scrollport');
+  await page.evaluate(top=>document.body.scrollTo({top,behavior:'instant'}),target);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert(await section.evaluate(element=>element.getBoundingClientRect().top>=
+   parseFloat(getComputedStyle(document.body).scrollPaddingTop)+2),
+   'The clicked section link must stay inside the padded scrollport before navigation');
   await unobscuredAction(section,'The '+label+' section link');
+  assert(Math.abs((await stationaryRoot(page,'Before payment '+label+' navigation')).body-target)<=1,
+   'The section-link test must begin at its measured non-zero offset');
   await section.click();
   await page.waitForURL(url=>url.searchParams.get('paymentsView')===(label==='Overview'?'overview':'ledger'));
   const sectionName=label==='Overview'?'overview':'ledger';
@@ -236,7 +256,7 @@ async function installedNavigation(page,size,returnOffset,engineName){
    'main[aria-label="Payments and settlements"] [aria-label="My settlement payments"][aria-busy="false"]':
    'main[aria-label="Payments overview"] .pkr-gn-payment-totals[aria-busy="false"]').waitFor();
   await page.waitForLoadState('networkidle',{timeout:10000});
-  assert(Math.abs((await stationaryRoot(page,'Payment '+label+' navigation')).body-12)<=2,
+  assert(Math.abs((await stationaryRoot(page,'Payment '+label+' navigation')).body-target)<=1,
    'Payment section links with scroll=false must preserve the current offset');
  }
 }
