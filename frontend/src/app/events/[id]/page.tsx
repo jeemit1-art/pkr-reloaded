@@ -597,6 +597,7 @@ export default function EventPage() {
 
         {/* Host communications and live RSVP management have their own room tab. */}
         {tab==='night'&&<GameNightTools event={event} games={games} isHost={isHost}
+          isGroupOwner={isGroupOwner} userId={user?.id}
           onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}
           onScheduleDate={ts=>{
             const date=new Date(ts*1000);
