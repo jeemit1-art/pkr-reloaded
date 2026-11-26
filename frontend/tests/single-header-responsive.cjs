@@ -79,6 +79,15 @@ async function check(engine,size){
   await page.getByTestId('player-dashboard').waitFor({state:'visible'});
   if(size.safeTop)await page.addStyleTag({content:'html.pkr-game-night{--pkr-safe-area-top:'+size.safeTop+'px!important;--pkr-safe-area-bottom:'+size.safeBottom+'px!important}'});
   assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'default','Installed app must request an opaque native status bar');
+  // Mobile WebKit includes its native scrollbar in clientWidth, although fixed
+  // CSS boxes and hit testing exclude it. Measure the fixed viewport independently
+  // of the header, so a narrow header still fails without sampling browser chrome.
+  await page.evaluate(()=>{
+    const probe=document.createElement('div');
+    probe.id='pkr-browser-viewport-probe';probe.setAttribute('aria-hidden','true');
+    probe.style.cssText='position:fixed!important;inset:0 0 auto 0!important;width:auto!important;min-width:0!important;max-width:none!important;height:1px!important;margin:0!important;padding:0!important;border:0!important;visibility:hidden!important;pointer-events:none!important';
+    document.documentElement.appendChild(probe);
+  });
   const geometry=await page.evaluate(()=>{
     const visible=(element)=>!!element&&getComputedStyle(element).display!=='none'&&
       element.getBoundingClientRect().width>0&&element.getBoundingClientRect().height>0;
@@ -87,10 +96,11 @@ async function check(engine,size){
     const old=document.querySelector('.pkr-dashboard > .nav.pkr-topbar');
     const content=document.querySelector('.pkr-dashboard > .pkr-content');
     const acc=document.querySelector('.pkr-primary-account');
-    const client=document.documentElement.clientWidth;
+    const client=document.querySelector('#pkr-browser-viewport-probe').getBoundingClientRect().width;
     const rect=node=>{if(!node)return null;const r=node.getBoundingClientRect();
       return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
-    return {width:client,scrollWidth:document.documentElement.scrollWidth,
+    return {width:client,clientWidth:document.documentElement.clientWidth,innerWidth,
+      visualWidth:visualViewport?.width,scrollWidth:document.documentElement.scrollWidth,
       primaryVisible:visible(primary),primary:rect(primary),position:primary?getComputedStyle(primary).position:'',
       sidebarVisible:visible(sidebar),oldVisible:visible(old),content:rect(content),
       account:rect(acc),bottomVisible:visible(document.querySelector('.pkr-primary-bottom-nav')),
@@ -98,6 +108,8 @@ async function check(engine,size){
     };
   });
   assert(!geometry.oldVisible,'Two dashboard header bars are visible');
+  assert(geometry.width>=size.width-3&&geometry.width<=size.width+1,
+    'CSS viewport differs from the requested viewport beyond native scrollbar width: '+JSON.stringify(geometry));
   assert(geometry.scrollWidth<=geometry.width+3,'Page overflows horizontally: '+JSON.stringify(geometry));
   if(size.width<1100){
     assert(geometry.primaryVisible,'Club/Account header not visible');
@@ -107,7 +119,7 @@ async function check(engine,size){
     assert(geometry.primary.left>=-1&&geometry.primary.right<=geometry.width+1,
       'Header extends beyond viewport');
     assert(geometry.primary.left<=1&&geometry.primary.right>=geometry.width-1,
-      'Header must span the full app content width');
+      'Header must span the full app content width: '+JSON.stringify(geometry));
     assert(geometry.primary.top>=-1&&geometry.primary.top<=2,'Header starts outside safe viewport');
     assert(geometry.account.width>=41&&geometry.account.height>=42,'Account action is too small');
     assert(geometry.content.top>=geometry.primary.bottom-1,
@@ -118,20 +130,19 @@ async function check(engine,size){
     const scrolled=await page.locator('.pkr-primary-mobile-utility').boundingBox();
     assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Fixed header moved away from the viewport top');
     assert(scrolled.x>=-1&&scrolled.x+scrolled.width<=size.width+2,'Scrolled header clipped');
-    // WebKit reserves the styled 2px scrollbar; innerWidth includes that native
-    // strip and elementFromPoint returns null there. Test the full content
-    // viewport, whose width the header is independently required to fill.
+    // Use the independently measured CSS viewport for the same exact covered
+    // edge points in every engine, excluding only the native scrollbar strip.
     await page.waitForFunction(({safeTop})=>{
       const header=document.querySelector('.pkr-primary-mobile-utility');
       if(!header)return false;
-      const r=header.getBoundingClientRect(),width=document.documentElement.clientWidth;
+      const r=header.getBoundingClientRect(),width=document.querySelector('#pkr-browser-viewport-probe').getBoundingClientRect().width;
       return [1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].every(y=>
         [1,width/2,width-1].every(x=>header.contains(document.elementFromPoint(x,y))));
     },{safeTop:size.safeTop||0},{timeout:3000}).catch(()=>{});
     const masks=await page.evaluate(({safeTop,safeBottom})=>{
       const header=document.querySelector('.pkr-primary-mobile-utility');
       const footer=document.querySelector('.pkr-primary-bottom-nav');
-      const s=getComputedStyle(header),f=getComputedStyle(footer),r=header.getBoundingClientRect(),width=document.documentElement.clientWidth;
+      const s=getComputedStyle(header),f=getComputedStyle(footer),r=header.getBoundingClientRect(),width=document.querySelector('#pkr-browser-viewport-probe').getBoundingClientRect().width;
       const inside=(parent,x,y)=>parent.contains(document.elementFromPoint(x,y));
       const misses=[];
       [1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].forEach(y=>
@@ -143,7 +154,7 @@ async function check(engine,size){
       return {height:r.height,paddingTop:parseFloat(s.paddingTop),colour:s.backgroundColor,
         image:s.backgroundImage,opacity:s.opacity,blur:s.backdropFilter,
         cap:getComputedStyle(header,'::before').backgroundColor,
-        misses,viewport:{width:innerWidth,clientWidth:width,height:innerHeight,scrollY,visualTop:visualViewport?.offsetTop,visualLeft:visualViewport?.offsetLeft,scale:visualViewport?.scale},
+        misses,viewport:{width:innerWidth,clientWidth:document.documentElement.clientWidth,fixedWidth:width,height:innerHeight,scrollY,visualTop:visualViewport?.offsetTop,visualLeft:visualViewport?.offsetLeft,scale:visualViewport?.scale},
         fullWidth:r.left<=1&&r.right>=width-1,
         // Check the top inset itself after scrolling real content beneath it.
         topCovered:[1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].every(y=>
@@ -156,7 +167,7 @@ async function check(engine,size){
     assert.equal(masks.colour,'rgb(255, 255, 255)');
     assert.equal(masks.cap,'rgb(255, 255, 255)');
     assert.equal(masks.image,'none');assert.equal(masks.opacity,'1');assert.equal(masks.blur,'none');
-    assert(masks.fullWidth,'Scrolled header must cover the entire app content width');
+    assert(masks.fullWidth,'Scrolled header must cover the entire app content width: '+JSON.stringify(masks));
     await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'-scrolled.png'),fullPage:false});
     assert(masks.topCovered,'Scrolled content is exposed in the status-bar inset: '+JSON.stringify(masks));
     assert(masks.bottomCovered,'Scrolled content is exposed beneath bottom navigation');

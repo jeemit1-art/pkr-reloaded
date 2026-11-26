@@ -125,9 +125,16 @@ async function closeSheet(page){
  await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
 }
 async function screenshot(page,name){await page.screenshot({path:path.join(output,name+'.png'),fullPage:false});}
+async function gotoFixturePage(page,url){
+ // These deliberately start fresh documents. Let the routed API/preflight chain
+ // finish first so WebKit does not cancel an old document's mocked fetches.
+ await page.waitForLoadState('networkidle',{timeout:10000});
+ await page.goto(url,{waitUntil:'domcontentloaded'});
+ await page.waitForLoadState('networkidle',{timeout:10000});
+}
 
 async function checkFullDashboards(page,state,label){
- await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
  const dashboard=page.getByTestId('dual-dashboard');
  await dashboard.waitFor({state:'visible'});
@@ -165,7 +172,7 @@ async function checkFullDashboards(page,state,label){
 
 async function checkOutstandingDashboardRecords(page){
  const openDashboard=async()=>{
-  await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
+  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
   await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
   const card=page.getByTestId('dual-dashboard').getByTestId('room-outstanding');
   await card.getByRole('button',{name:'View underlying records: outstanding room payments',exact:true}).waitFor();
@@ -196,7 +203,7 @@ async function checkOutstandingDashboardRecords(page){
 }
 
 async function checkPlayers(page,label){
- await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members');
  const stage=page.getByTestId('players-command-stage');await stage.waitFor();
  assert.equal(await stage.getByRole('button').count(),3,'All three player summary cards must be buttons');
  const roster=page.locator('.pkr-member-roster');await roster.waitFor();
@@ -253,7 +260,7 @@ async function checkPlayers(page,label){
 
 async function checkRsvps(page,state,label){
  state.upcoming=false;
- await page.goto(BASE+'/events/'+room.id+'?tab=night',{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=night');
  const empty=page.locator('.pkr-night-empty').filter({hasText:'No game night to manage'});await empty.waitFor();
  for(const selector of ['strong','p'])await readable(empty.locator(selector),'RSVP empty '+selector);
  for(const name of [/Schedule a game/,/View completed games/,/Notification settings/]){
@@ -265,7 +272,7 @@ async function checkRsvps(page,state,label){
  await page.getByRole('dialog',{name:'Schedule a game',exact:true}).waitFor();
  await page.getByRole('button',{name:'Close game scheduler',exact:true}).click();
  state.upcoming=true;
- await page.goto(BASE+'/events/'+room.id+'?tab=night',{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=night');
  await page.locator('.pkr-night-stats').waitFor();
  assert.equal(await page.locator('.pkr-night-stats > button').count(),4);
  for(const [title,name] of [['Confirmed RSVPs','Jordan Lee'],['Interested RSVPs','Casey Brooks'],['Not coming RSVPs','Riley Gray']]){
@@ -282,7 +289,7 @@ async function checkRsvps(page,state,label){
 }
 
 async function checkPayments(page,state,label){
- await page.goto(BASE+'/payments?room='+room.id+'&paymentsScope=mine',{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/payments?room='+room.id+'&paymentsScope=mine');
  const totals=page.locator('.pkr-gn-payment-totals');await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
  const assertAmounts=async expected=>assert.deepEqual(await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents(),expected);
  assert.equal(await totals.getByRole('button',{name:'View underlying records: To pay',exact:true}).locator('strong').innerText(),'$12');
@@ -309,7 +316,7 @@ async function checkPayments(page,state,label){
  await page.getByRole('heading',{name:'Awaiting receipt — underlying records',exact:true}).waitFor();
  await assertAmounts(['$23']);
  state.noOwnPay=true;
- await page.goto(BASE+'/payments?room='+room.id+'&paymentsScope=mine',{waitUntil:'domcontentloaded'});
+ await gotoFixturePage(page,BASE+'/payments?room='+room.id+'&paymentsScope=mine');
  await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
  const zero=page.getByRole('button',{name:'View underlying records: To pay',exact:true});
  assert.equal(await zero.locator('strong').innerText(),'$0');await zero.click();
@@ -324,7 +331,7 @@ async function run(){
  for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
   const browser=await type.launch({headless:true});
   const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,serviceWorkers:'block'});
-  const state=fixtureState(),unexpected=[];
+  const state=fixtureState(),unexpected=[],requestFailures=[];
   await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-polish-test-only');localStorage.setItem('pkr_preferred_room','polish-room');sessionStorage.setItem('pkr_setup_compact_v1','1');});
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url());
@@ -338,7 +345,8 @@ async function run(){
    }catch(error){unexpected.push(error.message);await route.abort();}
   });
   const page=await context.newPage();page.setDefaultTimeout(20000);
-  page.on('pageerror',error=>unexpected.push(error.stack||error.message));
+  page.on('pageerror',error=>unexpected.push(new Date().toISOString()+' '+page.url()+': '+(error.stack||error.message)));
+  page.on('requestfailed',request=>{if(new URL(request.url()).origin===API)requestFailures.push({at:new Date().toISOString(),page:page.url(),url:request.url(),method:request.method(),error:request.failure()?.errorText});});
   try{
    await checkFullDashboards(page,state,label);
    await checkOutstandingDashboardRecords(page);
@@ -346,11 +354,9 @@ async function run(){
    await checkRsvps(page,state,label);
    await checkPayments(page,state,label);
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
-   // A route change can cancel the synthetic join-request poll in WebKit.
-   const actionable=unexpected.filter(message=>!(label.startsWith('webkit')&&message.includes('Fetch API cannot load')&&message.includes('/join-requests due to access control checks')));
-   assert.deepEqual(actionable,[],'Unexpected API request or runtime error');
+   assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
    console.log('PASS',label,'appearance, SVG icons, exact records and payment scope');
-  }catch(error){failures.push(label+': '+error.stack);await screenshot(page,label+'-failure').catch(()=>{});}
+  }catch(error){failures.push(label+': '+error.stack);if(requestFailures.length)console.error(label+' failed API requests: '+JSON.stringify(requestFailures));await screenshot(page,label+'-failure').catch(()=>{});}
   finally{await context.close();await browser.close();}
  }
  if(failures.length)throw new Error(failures.join('\n\n'));
