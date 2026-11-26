@@ -267,18 +267,18 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
     finally{setImageBusy(false)}
   }
 
-  const instantPanel=<section className="pkr-night-panel" aria-label="No-install player access">
+  const instantPanel=<section className="pkr-night-panel" aria-label="Approved member dashboard access">
     <div className="pkr-night-panel-heading">
-      <div><span className="pkr-night-kicker">FAST PLAYER ACCESS</span>
-        <h3>PKR Instant — no installation</h3></div>
+      <div><span className="pkr-night-kicker">APPROVED PLAYER ACCESS</span>
+        <h3>One PKR player dashboard</h3></div>
     </div>
-    <p>Approved players can RSVP, check seats and see the next game from one browser page. Membership stays private.</p>
+    <p>Approved members use the same PKR dashboard for RSVP, seats, games, results and payments. No separate installation required.</p>
     <div className="pkr-night-actions">
       <button type="button" className="pkr-night-primary"
-        onClick={()=>router.push('/instant?room='+encodeURIComponent(event.id))}>Open player view →</button>
+        onClick={()=>router.push('/dashboard?room='+encodeURIComponent(event.id))}>Open player view →</button>
       <button type="button" onClick={()=>void copied(
-        window.location.origin+'/instant?room='+encodeURIComponent(event.id),
-        'PKR Instant room link')}>Copy member link</button>
+        window.location.origin+'/dashboard?room='+encodeURIComponent(event.id),
+        'approved-member dashboard link')}>Copy member link</button>
     </div>
   </section>;
 
