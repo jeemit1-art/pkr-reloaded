@@ -91,13 +91,20 @@ async function stationaryRoot(page,label){
  assert(state.rootHeight<=state.rootClient+1,label+': body content must not make the root scrollable: '+JSON.stringify(state));
  return state;
 }
-async function bodyWheel(page,amount=480){
+async function bodyScroll(page,amount=480,useWheel=true){
  const before=await page.evaluate(()=>document.body.scrollTop),viewport=page.viewportSize();
  // The page gutter avoids accidentally scrolling a nested RSVP panel.
  await page.mouse.move(8,viewport.height/2);
- await page.mouse.wheel(0,amount);
+ if(useWheel)await page.mouse.wheel(0,amount);
+ else{
+  // Playwright mobile WebKit does not implement wheel input. Keep its mobile
+  // layout checks and exercise the native body scroll API; Chromium below
+  // separately exercises real wheel input at the same installed dimensions.
+  await page.mouse.click(8,viewport.height/2);
+  await page.evaluate(top=>document.body.scrollBy({top,behavior:'instant'}),amount);
+ }
  await page.waitForFunction(value=>document.body.scrollTop>value+40,before,{timeout:5000});
- return stationaryRoot(page,'After real wheel input');
+ return stationaryRoot(page,useWheel?'After real wheel input':'After native body scrolling');
 }
 async function unobscuredAction(locator,label){
  const placement=await locator.evaluate(element=>{
@@ -109,7 +116,8 @@ async function unobscuredAction(locator,label){
  assert(placement.top>=placement.headerBottom-1&&placement.bottom<=placement.footerTop+1&&placement.hit,
   label+' must be reachable between the fixed header and footer: '+JSON.stringify(placement));
 }
-async function installedNavigation(page,size,returnOffset){
+async function installedNavigation(page,size,returnOffset,engineName){
+ const useWheel=engineName!=='webkit';
  // Native scrolling into view must expose the final Account action without
  // signing the fictional user out or moving the document behind the status bar.
  const signOut=page.getByRole('button',{name:'Sign out',exact:true});
@@ -117,7 +125,7 @@ async function installedNavigation(page,size,returnOffset){
  await unobscuredAction(signOut,'The last Account action');
  const accountOffset=(await stationaryRoot(page,'Account bottom')).body;
  assert(accountOffset>100);
- await page.screenshot({path:path.join(output,'webkit-'+size.name+'-account-bottom.png')});
+ await page.screenshot({path:path.join(output,engineName+'-'+size.name+'-account-bottom.png')});
 
  // A refresh recreates the controller. Both this entry and the page left before
  // it must retain their positions, including the simulated native safe area.
@@ -152,7 +160,7 @@ async function installedNavigation(page,size,returnOffset){
    a.top>=header.getBoundingClientRect().bottom-1&&a.top<footer.getBoundingClientRect().top;
  },null,{timeout:8000});
  assert((await stationaryRoot(page,'Poker rooms hash anchor')).body>0);
- await page.screenshot({path:path.join(output,'webkit-'+size.name+'-rooms-anchor.png')});
+ await page.screenshot({path:path.join(output,engineName+'-'+size.name+'-rooms-anchor.png')});
 
  const trigger=page.getByRole('button',{name:'View underlying records: My game history',exact:true});
  await trigger.scrollIntoViewIfNeeded();await trigger.click({trial:true});await trigger.focus();
@@ -169,14 +177,15 @@ async function installedNavigation(page,size,returnOffset){
   'Opening a dialog must lock the body even in contained-scroll mode');
  const scrollBody=dialog.locator('.pkr-record-body'),bounds=await scrollBody.boundingBox();
  await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
- await page.mouse.wheel(0,700);
+ if(useWheel)await page.mouse.wheel(0,700);
+ else await scrollBody.evaluate(element=>element.scrollBy({top:700,behavior:'instant'}));
  await page.waitForFunction(()=>document.querySelector('.pkr-record-body').scrollTop>0);
  assert.equal((await stationaryRoot(page,'Scrolling inside records')).body,beforeModal.body,
   'Scrolling records must not move the underlying page');
  await page.keyboard.press('Tab');
  assert(await dialog.evaluate(element=>element.contains(document.activeElement)),
   'Keyboard focus must stay inside the modal');
- await page.screenshot({path:path.join(output,'webkit-'+size.name+'-records-modal.png')});
+ await page.screenshot({path:path.join(output,engineName+'-'+size.name+'-records-modal.png')});
  await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});
  assert(await trigger.evaluate(element=>document.activeElement===element),'Closing records must restore focus to the originating metric');
  const afterModal=await stationaryRoot(page,'After records close');
@@ -200,7 +209,7 @@ async function installedNavigation(page,size,returnOffset){
  const paymentSearch=page.getByPlaceholder('Search a player', {exact:true});
  await paymentSearch.waitFor();
  await page.waitForLoadState('networkidle',{timeout:10000});
- await bodyWheel(page,160);
+ await bodyScroll(page,160,useWheel);
  await paymentSearch.click();
  const paymentOffset=(await stationaryRoot(page,'Before payment search')).body;
  assert(paymentOffset>40,'The payment search regression must begin below the page top');
@@ -221,6 +230,11 @@ async function installedNavigation(page,size,returnOffset){
   await unobscuredAction(section,'The '+label+' section link');
   await section.click();
   await page.waitForURL(url=>url.searchParams.get('paymentsView')===(label==='Overview'?'overview':'ledger'));
+  const sectionName=label==='Overview'?'overview':'ledger';
+  await page.locator('.pkr-gn-payment-workspace[data-payment-section="'+sectionName+'"]').waitFor();
+  await page.locator(sectionName==='ledger'?
+   'main[aria-label="Payments and settlements"] [aria-label="My settlement payments"][aria-busy="false"]':
+   'main[aria-label="Payments overview"] .pkr-gn-payment-totals[aria-busy="false"]').waitFor();
   await page.waitForLoadState('networkidle',{timeout:10000});
   assert(Math.abs((await stationaryRoot(page,'Payment '+label+' navigation')).body-12)<=2,
    'Payment section links with scroll=false must preserve the current offset');
@@ -235,8 +249,8 @@ async function check(engine,size){
     ...(size.screen?{screen:size.screen}:{}),
     serviceWorkers:'block',
     ...(size.installed?{colorScheme:'dark'}:{}),
-    isMobile:engine===webkit&&size.width<=430,
-    hasTouch:engine===webkit&&size.width<=430
+    isMobile:(engine===webkit||size.installed)&&size.width<=430,
+    hasTouch:(engine===webkit||size.installed)&&size.width<=430
   });
   await context.addInitScript(({installed})=>{
     localStorage.setItem('pkr_token','synthetic-only-session');
@@ -338,7 +352,7 @@ async function check(engine,size){
     assert(geometry.content.top>=geometry.primary.bottom-1,
       'Dashboard content starts behind the club header');
     assert(geometry.clubText.includes('Account'),'Account action lost');
-    if(size.installed)await bodyWheel(page);
+    if(size.installed)await bodyScroll(page,480,engine!==webkit);
     else await page.evaluate(()=>window.scrollTo({top:480,behavior:'instant'}));
     await page.waitForTimeout(150);
     const scrolled=await page.locator('.pkr-primary-mobile-utility').boundingBox();
@@ -419,7 +433,7 @@ async function check(engine,size){
   await page.locator('.pkr-account-plan').waitFor({state:'visible'});
   assert.equal((await page.locator('.pkr-account-plan').innerText()).trim(),
     'Plan: LIFETIME','Account must retain the member plan');
-  if(size.containedScenario)await installedNavigation(page,size,returnOffset);
+  if(size.containedScenario)await installedNavigation(page,size,returnOffset,engine.name());
   assert.deepEqual(problems,[]);
   if(size.installed)await page.waitForLoadState('networkidle',{timeout:10000});
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
@@ -453,5 +467,6 @@ async function check(engine,size){
   for(const size of sizes.filter(s=>['small-phone','iphone','iphone-safe-area','phone-landscape','tablet','desktop'].includes(s.name)))
     await run(webkit,size);
   for(const size of installedSizes)await run(webkit,size);
+  await run(chromium,{...installedSizes[2],name:'installed-mobile-wheel-native-viewport'});
   assert.deepEqual(failures,[],'Every responsive header must cover its scrolling content');
 })().catch(error=>{console.error(error);process.exitCode=1;});
