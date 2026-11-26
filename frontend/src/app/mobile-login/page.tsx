@@ -30,7 +30,7 @@ export default function MobileLogin(){
       // session renewal. Local storage by itself cannot prove membership.
       const me=await api.auth.me();
       void ensureApprovedDevice().catch(()=>{});
-      router.replace(me.email?'/dashboard':'/instant');
+      router.replace('/dashboard');
     }catch(error){
       if(!silent)setMessage(error instanceof Error?error.message:'PKR could not confirm this login. Choose a recovery option below.');
     }finally{setChecking(false);}
