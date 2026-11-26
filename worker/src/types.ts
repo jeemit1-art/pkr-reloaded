@@ -17,6 +17,8 @@ export interface Env {
   EXPO_ACCESS_TOKEN?: string;
   // Only enable after applying/validating 20261027_settlement_v2.sql in D1.
   PKR_SETTLEMENT_V2?: string;
+  // Additive club polls, queues, requests and seasons; off until staged D1 migration.
+  PKR_CLUB_PLANNING_V1?: string;
   PKR_CONTACT_KEY?: string;
   // Hosts manually send personal WhatsApp messages. No messaging provider secrets.
   // Disabled by default; only enable after verifying optional D1 migration.
