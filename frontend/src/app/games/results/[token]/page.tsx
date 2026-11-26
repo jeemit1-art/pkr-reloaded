@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import PkrGlyph from '@/components/PkrGlyph';
 import { api, getToken, ResultsData, Transfer, fmt, fmtSign, fmtDate } from '@/lib/api';
 import { subscribePush, canUsePush, isIOS, isPWAInstalled } from '@/lib/push';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -51,8 +52,6 @@ export default function ResultsPage() {
 
   const { game, event, players, transfers } = data;
   const sorted = [...players].sort((a,b)=>(b.net||0)-(a.net||0));
-  const medals = ['♛','♝','♞'];
-
   function buildShareText() {
     // Group sharing never includes transfer instructions or individual debts.
     return buildResultsShare({room:event.name,date:fmtDate(game.scheduled_at),players:players,includeAmounts:false});
@@ -132,7 +131,7 @@ export default function ResultsPage() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
-        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}><PkrGlyph name="spade" size={420}/></div>
 
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)'}}>
         <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px',
@@ -164,7 +163,7 @@ export default function ResultsPage() {
 
         {(game.variance||0)!==0 && (
           <div className="card" style={{marginBottom:14,padding:'12px 16px',fontSize:12,color:'var(--amber)'}}>
-            ⚠ Bank variance of {fmt(Math.abs(game.variance||0))}: chips cashed out did not match chips bought in. Transfers below are scaled pro-rata so they balance.
+            <PkrGlyph name="warning" size={18}/> Bank variance of {fmt(Math.abs(game.variance||0))}: chips cashed out did not match chips bought in. Transfers below are scaled pro-rata so they balance.
           </div>
         )}
         {/* Results */}
@@ -175,7 +174,7 @@ export default function ResultsPage() {
               borderBottom:i<sorted.length-1?'1px solid var(--border-sub)':'none'}}>
               <div style={{width:28,textAlign:'center',fontSize:i<3?16:12,
                 color:i===0?'var(--gold)':i===1?'var(--ivory)':i===2?'var(--amber)':'var(--faint)'}}>
-                {medals[i]||`${i+1}`}
+                {i<3?<span role="img" aria-label={'Place '+(i+1)}><PkrGlyph name={i===0?'trophy':'medal'} size={22}/></span>:`${i+1}`}
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:15,color:'var(--white)',fontFamily:'var(--font-display),serif',
@@ -241,18 +240,19 @@ export default function ResultsPage() {
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontSize:11,padding:'2px 10px',borderRadius:10,border:'1px solid var(--border-sub)',
                         color:t.status==='paid'?'var(--green)':t.status==='not_received'?'var(--red)':'var(--amber)'}}>
-                        {t.status==='paid'?'✓ Paid · recorded':t.status==='payer_claimed'?'↗ Sent · awaiting confirmation':t.status==='not_received'?'⚠ Not received':'Owed'}
+                        <PkrGlyph name={t.status==='paid'?'check':t.status==='payer_claimed'?'arrow-up-right':t.status==='not_received'?'warning':'clock'} size={14}/>{' '}
+                        {t.status==='paid'?'Paid · recorded':t.status==='payer_claimed'?'Sent · awaiting confirmation':t.status==='not_received'?'Not received':'Owed'}
                       </span>
                       {!isBanker && t.status!=='paid' && (
                         <span style={{fontSize:11,color:'var(--muted)'}}>Ask the host to confirm payment</span>
                       )}
                       {t.status!=='paid' && (canUsePush() || isIOS()) && (
                         <button className="btn btn-ghost" onClick={()=>enableReminders()}
-                          style={{fontSize:11,padding:'5px 10px'}}>🔔 Enable my alerts</button>
+                          style={{fontSize:11,padding:'5px 10px'}}><PkrGlyph name="bell" size={16}/> Enable my alerts</button>
                       )}
                       {isBanker && t.status!=='paid' && (
                         <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'paid')}
-                          style={{fontSize:11,padding:'5px 10px'}}>✓ Mark paid</button>
+                          style={{fontSize:11,padding:'5px 10px'}}><PkrGlyph name="check" size={16}/> Mark paid</button>
                       )}
                       {isBanker && t.status==='paid' && (
                         <button className="btn btn-ghost" disabled={busy===t.id} onClick={()=>bankerSet(t,'not_received')}
@@ -271,14 +271,14 @@ export default function ResultsPage() {
                       style={{flex:1,fontSize:11,padding:'5px 10px',
                         color:copied===i?'var(--green)':'var(--muted)',
                         borderColor:copied===i?'rgba(76,175,125,0.4)':'var(--border-sub)'}}>
-                      {copied===i ? '✓ Copied!' : '📋 Copy reminder'}
+                      <PkrGlyph name={copied===i?'check':'copy'} size={16}/> {copied===i ? 'Copied!' : 'Copy reminder'}
                     </button>
                     {recipient?.whatsapp ? (
                       <a href={whatsappUrl(waMsg,recipient.whatsapp)} target="_blank" rel="noopener noreferrer"
                         className="btn btn-ghost"
                         style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
                           display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>
-                        📱 Send via WA
+                        <PkrGlyph name="share" size={16}/> Send via WA
                       </a>
                     ) : (
                       <a href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
@@ -286,7 +286,7 @@ export default function ResultsPage() {
                         className="btn btn-ghost"
                         style={{flex:1,fontSize:11,padding:'5px 10px',textDecoration:'none',
                           display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)'}}>
-                        📱 WhatsApp
+                        <PkrGlyph name="share" size={16}/> WhatsApp
                       </a>
                     )}
                   </div>}

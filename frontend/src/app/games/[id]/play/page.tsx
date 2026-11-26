@@ -3,16 +3,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
+import PkrGlyph from '@/components/PkrGlyph';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import {api,type RoomPlayerProfile,type RoomPlayerProfileInput} from '@/lib/api';
 import './player-quick.css';
 
+type BankBreakdown = {title:string;summary:string;warning:string;rows:Array<{id:string;name:string;detail:string;value:string}>};
 export default function PlayPage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params?.id as string;
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [bankRecords,setBankRecords]=useState<BankBreakdown|null>(null);
+  function openBankRecords(measure:'buyins'|'cashouts'|'bank'|'status'){
+    const detail=(window as any)._pkrBankBreakdown?.(measure) as BankBreakdown|undefined;
+    if(detail)setBankRecords(detail);
+  }
   const [quickBankHint,setQuickBankHint]=useState<number|null>(null);
   useEffect(()=>{
     const value=new URLSearchParams(window.location.search).get('quickBuyin');
@@ -223,7 +230,7 @@ export default function PlayPage() {
       if (!document.getElementById('handTrackerSheet')) {
         const d = document.createElement('div');
         d.id = 'htSheets';
-        d.innerHTML = '<div class="sheet" id="handTrackerSheet"><div class="sheet-box" style="max-height:85vh;overflow:hidden;display:flex;flex-direction:column"><div class="sheet-hdr"><h2>🃏 Hand Tracker</h2><div style="display:flex;gap:6px;align-items:center"><button id="undoActionBtn" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.htUndoAction&&window.htUndoAction()">↩ Undo</button><button style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.toggleHandHistory&&window.toggleHandHistory()">History</button><button class="panel-close" onclick="window.closeHandTracker&&window.closeHandTracker()">✕</button></div></div><div class="sheet-body" id="handTrackerBody" style="overflow-y:auto;flex:1;padding:12px 16px"></div></div></div><div class="overlay" id="winnerOverlay"><div class="modal"><h2>🏆 Who won?</h2><div id="winnerPotLabel" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></div><div id="winnerPlayerList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div><div class="modal-actions"><button class="btn-cancel" onclick="window.closeWinnerOverlay&&window.closeWinnerOverlay()">Cancel</button></div></div></div><div class="sheet" id="cardPickerSheet"><div class="sheet-box" style="width:min(720px,calc(100vw - 24px));max-height:85vh;overflow:hidden;display:flex;flex-direction:column;margin:6vh auto 0 auto"><div class="sheet-hdr"><h2 id="cardPickerTitle">Pick card</h2><button class="panel-close" onclick="window.closeCardPicker&&window.closeCardPicker()">✕</button></div><div class="sheet-body" id="cardPickerBody" style="padding:12px 16px;overflow-y:auto;flex:1"></div></div></div>';
+        d.innerHTML = '<div class="sheet" id="handTrackerSheet"><div class="sheet-box" style="max-height:85vh;overflow:hidden;display:flex;flex-direction:column"><div class="sheet-hdr"><h2><svg class="pkr-glyph" data-pkr-icon="cards" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><rect x="4" y="4" width="12" height="16" rx="2"/><path d="m8 10 2-2 2 2-2 2-2-2Zm7-2 5 2v11a2 2 0 0 1-2 2H9"/></svg> Hand Tracker</h2><div style="display:flex;gap:6px;align-items:center"><button id="undoActionBtn" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.htUndoAction&&window.htUndoAction()">↩ Undo</button><button style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem" onclick="window.toggleHandHistory&&window.toggleHandHistory()">History</button><button class="panel-close" onclick="window.closeHandTracker&&window.closeHandTracker()">✕</button></div></div><div class="sheet-body" id="handTrackerBody" style="overflow-y:auto;flex:1;padding:12px 16px"></div></div></div><div class="overlay" id="winnerOverlay"><div class="modal"><h2><svg class="pkr-glyph" data-pkr-icon="trophy" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="M7 3h10v5a5 5 0 0 1-10 0V3ZM7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4M12 13v5M8 21h8M9 18h6v3"/></svg> Who won?</h2><div id="winnerPotLabel" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></div><div id="winnerPlayerList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div><div class="modal-actions"><button class="btn-cancel" onclick="window.closeWinnerOverlay&&window.closeWinnerOverlay()">Cancel</button></div></div></div><div class="sheet" id="cardPickerSheet"><div class="sheet-box" style="width:min(720px,calc(100vw - 24px));max-height:85vh;overflow:hidden;display:flex;flex-direction:column;margin:6vh auto 0 auto"><div class="sheet-hdr"><h2 id="cardPickerTitle">Pick card</h2><button class="panel-close" onclick="window.closeCardPicker&&window.closeCardPicker()">✕</button></div><div class="sheet-body" id="cardPickerBody" style="padding:12px 16px;overflow-y:auto;flex:1"></div></div></div>';
         document.body.appendChild(d);
       }
     }
@@ -271,7 +278,7 @@ export default function PlayPage() {
             window.location.href = '/dashboard';
           }}><span aria-hidden="true">‹</span> <span className="pkr-brand-name">PKR</span></button>
           <div className="pkr-table-identity">
-            <span className="pkr-table-identity-icon" aria-hidden="true">🃏</span>
+            <span className="pkr-table-identity-icon" aria-hidden="true"><PkrGlyph name="cards"/></span>
             <span className="pkr-table-identity-copy">
               <span className="tb-title" id="topbarTitle">The Table</span>
               <span className="pkr-table-meta" id="topbarGameMeta" aria-live="off">Poker night</span>
@@ -282,7 +289,7 @@ export default function PlayPage() {
             <button className="pkr-tools-toggle" type="button" aria-expanded={toolsOpen}
               aria-haspopup="dialog" aria-label="Open table controls"
               onClick={() => { setToolsOpen(true); }} title="Table controls">
-              <span aria-hidden="true">☷</span><span className="pkr-tools-label">Tools</span>
+              <PkrGlyph name="settings"/><span className="pkr-tools-label">Tools</span>
             </button>
           </div>
         </div>
@@ -310,11 +317,11 @@ export default function PlayPage() {
             </div>
             <div className="pkr-reference-tool-grid">
               <button id="trackHandsBtn" type="button" aria-label="Hand tracker" onClick={()=>{setToolsOpen(false);(window as any).toggleHandTracking?.();}}><span aria-hidden="true">♠</span><span>Hand<br/>Tracking</span></button>
-              <button type="button" aria-label="Tournament" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}><span aria-hidden="true">🏆</span><span>Tournament<br/>Controls</span></button>
-              <button type="button" aria-label="Add seat" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}><span aria-hidden="true">♙+</span><span>Add<br/>Seat</span></button>
+              <button type="button" aria-label="Tournament" onClick={()=>{setToolsOpen(false);openTournamentReliably();}}><PkrGlyph name="trophy"/><span>Tournament<br/>Controls</span></button>
+              <button type="button" aria-label="Add seat" onClick={()=>{setToolsOpen(false);(window as any).addSeat?.();}}><PkrGlyph name="user-add"/><span>Add<br/>Seat</span></button>
               <button type="button" aria-label="Remove empty seat" onClick={()=>{setToolsOpen(false);(window as any).removeSeat?.();}}><span aria-hidden="true">−</span><span>Remove<br/>Empty Seat</span></button>
-              <button type="button" aria-label="Seat draw" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}><span aria-hidden="true">🎲</span><span>Seat<br/>Draw</span></button>
-              <button type="button" aria-label="Rabbit hunt" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}><span aria-hidden="true">🐇</span><span>Rabbit<br/>Hunt</span></button>
+              <button type="button" aria-label="Seat draw" onClick={()=>{setToolsOpen(false);(window as any).openSeatRandomiser?.();}}><PkrGlyph name="dice"/><span>Seat<br/>Draw</span></button>
+              <button type="button" aria-label="Rabbit hunt" onClick={()=>{setToolsOpen(false);(window as any).openRabbitHunt?.();}}><PkrGlyph name="rabbit"/><span>Rabbit<br/>Hunt</span></button>
             </div>
             <div className="pkr-tools-reconciliation-note">Save Results becomes available after all cash-outs are recorded, the bank balances and synchronisation is clear.</div>
           </div>
@@ -340,10 +347,10 @@ export default function PlayPage() {
         </div>
         <div className="bank-panel" id="bankPanel">
           <div className="bank-grid">
-            <div className="bank-cell"><div className="bank-cell-lbl">↗ Total Buy-ins</div><div className="bank-cell-val pos" id="bcIn">$0.00</div></div>
-            <div className="bank-cell"><div className="bank-cell-lbl">↘ Cash-outs</div><div className="bank-cell-val neg" id="bcOut">$0.00</div></div>
-            <div className="bank-cell"><div className="bank-cell-lbl">💳 In Bank</div><div className="bank-cell-val" id="bcBank">$0.00</div><div className="bank-cell-sub" id="bcBankSub"></div></div>
-            <div className="bank-cell"><div className="bank-cell-lbl">⚡ Status</div><div className="bank-cell-val" id="bcStatus">0 Active</div><div className="bank-cell-sub" id="bcStatusSub"></div></div>
+            <button type="button" className="bank-cell" aria-label="View underlying records: table buy-ins" onClick={()=>openBankRecords('buyins')}><div className="bank-cell-lbl">↗ Total Buy-ins</div><div className="bank-cell-val pos" id="bcIn">$0.00</div></button>
+            <button type="button" className="bank-cell" aria-label="View underlying records: table cash-outs" onClick={()=>openBankRecords('cashouts')}><div className="bank-cell-lbl">↘ Cash-outs</div><div className="bank-cell-val neg" id="bcOut">$0.00</div></button>
+            <button type="button" className="bank-cell" aria-label="View underlying records: table bank" onClick={()=>openBankRecords('bank')}><div className="bank-cell-lbl"><PkrGlyph name="settle" size={16}/> In Bank</div><div className="bank-cell-val" id="bcBank">$0.00</div><div className="bank-cell-sub" id="bcBankSub"></div></button>
+            <button type="button" className="bank-cell" aria-label="View underlying records: active table players" onClick={()=>openBankRecords('status')}><div className="bank-cell-lbl"><PkrGlyph name="users" size={16}/> Status</div><div className="bank-cell-val" id="bcStatus">0 Active</div><div className="bank-cell-sub" id="bcStatusSub"></div></button>
           </div>
         </div>
 
@@ -375,8 +382,8 @@ export default function PlayPage() {
           <button className="game-tab" id="publishBtn" onClick={() => (window as any).openPublish?.()}><span className="game-tab-icon" aria-hidden="true"><span className="pkr-game-night-classic-icon">⇧</span><svg className="pkr-game-night-icon" style={{display:'none'}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7"/></svg></span><span>Share</span></button>
           <button className="game-tab" id="lbInGameBtn" onClick={() => (window as any).openLeaderboard?.()}><span className="game-tab-icon" aria-hidden="true"><span className="pkr-game-night-classic-icon">🏆</span><svg className="pkr-game-night-icon" style={{display:'none'}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M5 20V11m7 9V4m7 16v-6"/></svg></span><span>Leaderboard</span></button>
           <button className="game-tab" id="settleBtn" onClick={() => (window as any).openSettleUp?.()}><span className="game-tab-icon" aria-hidden="true"><span className="pkr-game-night-classic-icon">💵</span><svg className="pkr-game-night-icon" style={{display:'none'}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4"/></svg></span><span>Settle Up</span></button>
-          <button className="game-tab pkr-save-results-action" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true">✅</span> Save Results</button>
-          <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true">🃏</span><span>Hands</span></button>
+          <button className="game-tab pkr-save-results-action" id="saveResultsBtn" onClick={() => (window as any).saveResultsToPkr?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true"><PkrGlyph name="check"/></span> Save Results</button>
+          <button className="game-tab" id="handTrackerBtn" onClick={() => (window as any).openHandTracker?.()} style={{display:'none'}}><span className="game-tab-icon" aria-hidden="true"><PkrGlyph name="cards"/></span><span>Hands</span></button>
           <button className="game-tab red" id="endGameBtn" onClick={() => (window as any).endGame?.()}><span className="game-tab-icon" aria-hidden="true"><span className="pkr-game-night-classic-icon">⚑</span><svg className="pkr-game-night-icon" style={{display:'none'}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 21V4m0 0c4-3 8 3 12 0v9c-4 3-8-3-12 0"/></svg></span><span>End Game</span></button>
         </div>
       </div>
@@ -386,7 +393,7 @@ export default function PlayPage() {
         <div className="modal">
           <h2>Seat Player</h2>
           <div id="membersWrap" style={{display:'none',marginBottom:'14px'}}>
-            <div style={{fontSize:'0.9rem',textTransform:'uppercase',letterSpacing:'2px',color:'var(--gold)',marginBottom:'8px'}}>👥 Members</div>
+            <div style={{fontSize:'0.9rem',textTransform:'uppercase',letterSpacing:'2px',color:'var(--gold)',marginBottom:'8px'}}><PkrGlyph name="users" size={16}/> Members</div>
             <div id="membersList" style={{display:'flex',flexWrap:'wrap',gap:'6px'}}></div>
           </div>
           <div id="knownWrap" style={{display:'none',marginBottom:'14px'}}>
@@ -408,7 +415,7 @@ export default function PlayPage() {
       {/* ── LEADERBOARD SHEET ── */}
       <div className="sheet" id="lbSheet">
         <div className="sheet-box">
-          <div className="sheet-hdr"><h2>🏆 Leaderboard</h2><button className="panel-close" onClick={() => (window as any).closeLbSheet?.()}>✕</button></div>
+          <div className="sheet-hdr"><h2><PkrGlyph name="trophy"/> Leaderboard</h2><button className="panel-close" onClick={() => (window as any).closeLbSheet?.()}>✕</button></div>
           <div className="sheet-tabs">
             <button className="sheet-tab" id="lbTabAll" onClick={() => (window as any).switchLbTab?.('all')}>All Time</button>
             <button className="sheet-tab active" id="lbTabGame" onClick={() => (window as any).switchLbTab?.('game')}>This Game</button>
@@ -420,7 +427,7 @@ export default function PlayPage() {
       {/* ── SHARE SHEET ── */}
       <div className="sheet" id="shareSheet">
         <div className="sheet-box">
-          <div className="sheet-hdr"><h2>⬡ Share Live Table</h2><button className="panel-close" onClick={() => (window as any).closeShare?.()}>✕</button></div>
+          <div className="sheet-hdr"><h2><PkrGlyph name="share"/> Share Live Table</h2><button className="panel-close" onClick={() => (window as any).closeShare?.()}>✕</button></div>
           <div className="sheet-body">
             <p style={{fontSize:'0.85rem',color:'var(--muted)',marginBottom:'14px',lineHeight:1.6}}>Players scan to watch live — read only.</p>
             <div className="qr-wrap"><canvas id="shareQR" style={{borderRadius:'4px',background:'#fff',padding:'6px'}}></canvas></div>
@@ -429,7 +436,7 @@ export default function PlayPage() {
             <button className="btn-primary" style={{width:'100%',marginBottom:'8px'}} onClick={() => {
               const url = document.getElementById('shareUrl')?.textContent || '';
               (window as any).shareLink?.(url, 'Join The Table: ' + url);
-            }}>📤 Share Link</button>
+            }}><PkrGlyph name="share"/> Share Link</button>
             <button className="btn-cancel" style={{width:'100%',marginBottom:'8px'}} onClick={() => {
               const url = document.getElementById('shareUrl')?.textContent || '';
               (window as any).copyText?.(url);
@@ -444,7 +451,7 @@ export default function PlayPage() {
       {/* ── TOURNAMENT SHEET ── */}
       <div className="sheet" id="tournamentSheet">
         <div className="sheet-box">
-          <div className="sheet-hdr"><h2>🏆 Tournament</h2><button className="panel-close" onClick={() => (window as any).closeTournament?.()}>✕</button></div>
+          <div className="sheet-hdr"><h2><PkrGlyph name="trophy"/> Tournament</h2><button className="panel-close" onClick={() => (window as any).closeTournament?.()}>✕</button></div>
           <div className="sheet-body" id="tournamentBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
@@ -452,7 +459,7 @@ export default function PlayPage() {
       {/* ── RABBIT HUNT SHEET ── */}
       <div className="sheet" id="rabbitSheet">
         <div className="sheet-box">
-          <div className="sheet-hdr"><h2>🐰 Rabbit Hunt</h2><button className="panel-close" onClick={() => (window as any).closeRabbitHunt?.()}>✕</button></div>
+          <div className="sheet-hdr"><h2><PkrGlyph name="rabbit"/> Rabbit Hunt</h2><button className="panel-close" onClick={() => (window as any).closeRabbitHunt?.()}>✕</button></div>
           <div className="sheet-body" id="rabbitBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
@@ -460,7 +467,7 @@ export default function PlayPage() {
       {/* ── SEAT RANDOMISER SHEET ── */}
       <div className="sheet" id="seatSheet">
         <div className="sheet-box">
-          <div className="sheet-hdr"><h2>🎲 Seat Draw</h2><button className="panel-close" onClick={() => (window as any).closeSeatRandomiser?.()}>✕</button></div>
+          <div className="sheet-hdr"><h2><PkrGlyph name="dice"/> Seat Draw</h2><button className="panel-close" onClick={() => (window as any).closeSeatRandomiser?.()}>✕</button></div>
           <div className="sheet-body" id="seatBody" style={{padding:'16px'}} suppressHydrationWarning></div>
         </div>
       </div>
@@ -470,7 +477,7 @@ export default function PlayPage() {
           <div className="sheet-body">
             <div id="publishPreview" style={{background:'rgba(4,12,5,0.85)',border:'1px solid var(--border)',borderRadius:'8px',padding:'12px',marginBottom:'14px',fontSize:'0.9rem'}}></div>
             <button id="waGroupShareBtn" onClick={() => (window as any).sharePublishResults?.()} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',background:'linear-gradient(135deg,#1e6b2a,#0f4a1a)',color:'#fff',padding:'13px',borderRadius:'10px',fontSize:'0.88rem',fontWeight:700,border:'none',cursor:'pointer',width:'100%',marginBottom:'10px'}}>
-              <span style={{fontSize:'1.1rem'}}>📤</span> Share Results
+              <PkrGlyph name="share"/> Share Results
             </button>
             <div style={{display:'flex',gap:'7px',marginBottom:'10px'}}>
               <button className="btn-primary" style={{flex:1}} onClick={() => {
@@ -490,7 +497,7 @@ export default function PlayPage() {
       {/* ── NOTIFICATION BANNER ── */}
       <div id="notifBanner" style={{display:'none',position:'fixed',bottom:'70px',left:0,right:0,zIndex:550,padding:'0 14px'}}>
         <div style={{background:'#09180a',border:'1px solid rgba(201,168,76,0.4)',borderRadius:'12px',padding:'14px 16px',display:'flex',alignItems:'center',gap:'12px',boxShadow:'0 8px 24px rgba(0,0,0,0.8)'}}>
-          <div style={{fontSize:'1.4rem'}}>🔔</div>
+          <div><PkrGlyph name="bell" size={26}/></div>
           <div style={{flex:1}}>
             <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--cream)',marginBottom:'2px'}}>Enable Notifications</div>
             <div style={{fontSize:'0.82rem',color:'var(--muted)'}}>Get notified for buy-ins, cashouts & settlements</div>
@@ -509,7 +516,7 @@ export default function PlayPage() {
         </div>
         <div className="wa-toast-msg" id="waToastMsg"></div>
         <div className="wa-toast-btns">
-          <a className="wa-toast-send" id="waToastSend" href="#" target="_blank">📤 Send via WhatsApp</a>
+          <a className="wa-toast-send" id="waToastSend" href="#" target="_blank"><PkrGlyph name="share"/> Send via WhatsApp</a>
           <button className="wa-toast-skip" onClick={() => (window as any).hideWaToast?.()}>Skip</button>
         </div>
       </div>
@@ -527,6 +534,20 @@ export default function PlayPage() {
         </div>
       </AppDialog>}
 
+      {bankRecords&&<AppDialog className="pkr-bank-record-dialog" aria-label={bankRecords.title} onDismiss={()=>setBankRecords(null)}>
+        <div className="pkr-bank-record-sheet">
+          <header><div><small>UNDERLYING RECORDS</small><h2>{bankRecords.title}</h2><p>{bankRecords.summary}</p></div>
+            <button type="button" onClick={()=>setBankRecords(null)} aria-label="Close bank records">Close</button></header>
+          <div className="pkr-bank-record-list">
+            {bankRecords.warning&&<p role="status" className="pkr-bank-record-warning">{bankRecords.warning}</p>}
+            {!bankRecords.rows.length&&<p>No matching records in this table.</p>}
+            {bankRecords.rows.map(row=><button key={row.id} type="button" className="pkr-bank-record-row" onClick={()=>{
+              setBankRecords(null);(window as any).openPanel?.(row.id);
+            }}><span><strong>{row.name}</strong><small>{row.detail}</small></span><b>{row.value}</b><PkrGlyph name="chevron-right" size={17}/></button>)}
+          </div>
+          <footer>Current table records. Select a player to inspect their activity.</footer>
+        </div>
+      </AppDialog>}
       {/* ── TOAST ── */}
       <div id="toast"></div>
     </>
@@ -731,6 +752,22 @@ function getTableJS(gameId: string, router: any) {
   return `
 (function() {
 'use strict';
+
+// Trusted UI artwork for the imperative table sheets; profile avatars stay unchanged.
+function pkrUiIcon(name) {
+  var icons={
+    'cards':'<svg class="pkr-glyph" data-pkr-icon="cards" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><rect x="4" y="4" width="12" height="16" rx="2"/><path d="m8 10 2-2 2 2-2 2-2-2Zm7-2 5 2v11a2 2 0 0 1-2 2H9"/></svg>',
+    'trophy':'<svg class="pkr-glyph" data-pkr-icon="trophy" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="M7 3h10v5a5 5 0 0 1-10 0V3ZM7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4M12 13v5M8 21h8M9 18h6v3"/></svg>',
+    'check':'<svg class="pkr-glyph" data-pkr-icon="check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="m5 12 4 4L19 6"/></svg>',
+    'account':'<svg class="pkr-glyph" data-pkr-icon="account" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5.6 18.4a7 7 0 0 1 12.8 0"/></svg>',
+    'settings':'<svg class="pkr-glyph" data-pkr-icon="settings" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 16h6M16 8h6"/></svg>',
+    'history':'<svg class="pkr-glyph" data-pkr-icon="history" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="M3 11a9 9 0 1 1 2.6 7.4M3 4v7h7M12 7v5l3 2"/></svg>',
+    'more':'<svg class="pkr-glyph" data-pkr-icon="more" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
+    'link':'<svg class="pkr-glyph" data-pkr-icon="link" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="m10 13 4-4M8 15l-2 2a3.5 3.5 0 0 1-5-5l5-5a3.5 3.5 0 0 1 5 0M16 9l2-2a3.5 3.5 0 0 1 5 5l-5 5a3.5 3.5 0 0 1-5 0"/></svg>',
+    'warning':'<svg class="pkr-glyph" data-pkr-icon="warning" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;vertical-align:middle"><path d="m12 3 10 18H2L12 3ZM12 9v5M12 17h.01"/></svg>'
+  };
+  return icons[name]||'';
+}
 
 // ── Storage keys scoped to game/user ──
 var _ctx = null;
@@ -1839,20 +1876,26 @@ window.hideWaToast = function() {
 // ── Confirm modal ──
 function showConfirmModal(title, message, confirmLabel, onConfirm, danger) {
   var overlay = document.createElement('div');
+  overlay.className = 'pkr-live-confirm';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:24px';
   var box = document.createElement('div');
+  box.className = 'pkr-live-confirm-box';
   var isDanger = danger !== false;
   box.style.cssText = 'background:#09180a;border:1px solid ' + (isDanger ? 'rgba(231,76,60,0.4)' : 'rgba(201,168,76,0.3)') + ';border-radius:16px;padding:24px;width:100%;max-width:320px';
   var t = document.createElement('div');
+  t.className = 'pkr-live-confirm-title';
   t.style.cssText = 'font-size:1rem;font-weight:700;color:' + (isDanger ? '#ff6b5b' : 'var(--gold)') + ';margin-bottom:10px';
   t.textContent = title;
   var m = document.createElement('div');
+  m.className = 'pkr-live-confirm-message';
   m.style.cssText = 'font-size:0.9rem;color:var(--cream2);margin-bottom:20px;line-height:1.6';
   m.textContent = message;
   var yesBtn = document.createElement('button');
+  yesBtn.className = 'pkr-live-confirm-primary'+(isDanger?' is-danger':'');
   yesBtn.style.cssText = 'width:100%;background:' + (isDanger ? 'linear-gradient(135deg,#c0392b,#8a2010)' : 'linear-gradient(135deg,var(--gold),#8a5c20)') + ';color:' + (isDanger ? '#fff' : '#000') + ';border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:10px;display:block';
   yesBtn.textContent = confirmLabel;
   var noBtn = document.createElement('button');
+  noBtn.className = 'pkr-live-confirm-cancel';
   noBtn.style.cssText = 'width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.8rem;cursor:pointer;display:block';
   noBtn.textContent = 'Cancel';
   yesBtn.addEventListener('click', function(){ overlay.remove(); onConfirm(); });
@@ -1869,6 +1912,30 @@ window.toggleBank = function() {
   var bar = document.getElementById('bankBar');
   if (panel) panel.classList.toggle('open');
   if (bar) { var expanded = bar.classList.toggle('open'); bar.setAttribute('aria-expanded', expanded ? 'true' : 'false'); }
+};
+
+// A read-only snapshot of the same rows used by updateBank. Never infer an
+// individual historical transaction from a buy-in count or a default amount.
+window._pkrBankBreakdown = function(measure) {
+  var entries=Object.entries(state.players).filter(function(e){return e[1]&&e[1].name;});
+  var totalIn=entries.reduce(function(sum,e){return sum+pBuyin(e[1]);},0);
+  var totalOut=entries.reduce(function(sum,e){return sum+pCash(e[1]);},0);
+  var active=entries.filter(function(e){return pBuyin(e[1])>0&&!(e[1].transactions||[]).some(function(tx){return tx.type==='cashout';});});
+  var selected=measure==='status'?active:entries.filter(function(e){
+    return measure==='buyins'?pBuyin(e[1])>0:measure==='cashouts'?(e[1].transactions||[]).some(function(tx){return tx.type==='cashout';}):pBuyin(e[1])>0||(e[1].transactions||[]).some(function(tx){return tx.type==='cashout';});
+  });
+  var pending=_offlineQueue.length>0||_flushingQueue||_syncConflict||!!_syncError;
+  return {
+    title:measure==='buyins'?'Table buy-ins':measure==='cashouts'?'Table cash-outs':measure==='status'?'Active table players':'Table bank records',
+    summary:measure==='buyins'?fmt(totalIn)+' total buy-ins':measure==='cashouts'?fmt(totalOut)+' total cash-outs':measure==='status'?active.length+' active players':fmt(totalIn)+' buy-ins − '+fmt(totalOut)+' cash-outs = '+fmt(totalIn-totalOut),
+    warning:pending?'Some table changes are awaiting synchronisation. These are the current displayed amounts.':'',
+    rows:selected.map(function(e){
+      var p=e[1],txs=p.transactions||[],saved=txs.some(function(tx){return tx.pkrReconstructed;});
+      return {id:e[0],name:p.name,
+        detail:'Seat '+e[0].replace('seat','')+' · '+(saved?'Saved aggregate amounts; original transaction details were not retained.':'Buy-ins '+fmt(pBuyin(p))+' · cash-outs '+fmt(pCash(p))),
+        value:measure==='buyins'?fmt(pBuyin(p)):measure==='cashouts'?fmt(pCash(p)):measure==='status'?'Active':fmt(pBuyin(p)-pCash(p))};
+    })
+  };
 };
 
 function updateBank() {
@@ -2280,8 +2347,9 @@ function pkrAssembleQuickPlayerView(sid,body,p){
   if(_pkrPlayerPanelView==='overview'){
     if(summary){summary.classList.add('pkr-quick-hero');root.appendChild(summary);}
     var metrics=node('div','pkr-quick-metrics');
-    function metric(label,value,hint,cls){
-      var c=node('div','pkr-quick-metric '+(cls||''));
+    function metric(label,value,hint,cls,view){
+      var c=button('',function(){go(view||'transactions');},'pkr-quick-metric '+(cls||''));
+      c.setAttribute('aria-label','View underlying records: player '+label.toLowerCase());
       c.append(node('small','',label),node('strong','',value),node('span','',hint));
       metrics.appendChild(c);
     }
@@ -2289,7 +2357,7 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     var recordedBuyins=(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';}).length;
     metric('Buy-in',fmt(bi),recordedBuyins+(recordedBuyins===1?' recorded buy-in':' recorded buy-ins'),'money-in');
     metric('Chip stack',stack&&Number.isSafeInteger(stack.chips)?stack.chips.toLocaleString('en-AU'):'—',
-      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified');
+      stack&&stack.source==='verified'?'Verified stack':stack&&stack.source==='tracked'?'Tracked chips':'Not verified','','chips');
     metric(cashed?'Final result':'Result',cashed?fmtNet(pNet(p)):'Pending',
       cashed?'Cashed out '+fmt(co):'Not yet cashed out','result '+(cashed?(pNet(p)>0?'profit':pNet(p)<0?'loss':''):'pending'));
     root.appendChild(metrics);
@@ -2332,11 +2400,12 @@ function pkrAssembleQuickPlayerView(sid,body,p){
         (cashout?'+':'−')+fmt(tx.amount)));
       root.appendChild(item);
     });
-    [['☷','Transactions',(p.transactions||[]).length,'transactions'],
-      ['⚙','Player settings',null,'settings'],
-      ['•••','More actions',null,'more']].forEach(function(item){
+    [['history','Transactions',(p.transactions||[]).length,'transactions'],
+      ['settings','Player settings',null,'settings'],
+      ['more','More actions',null,'more']].forEach(function(item){
       var row=button('',function(){go(item[3]);},'pkr-quick-link');
-      row.append(node('span','pkr-link-icon',item[0]),node('span','pkr-link-label',item[1]));
+      var icon=node('span','pkr-link-icon');icon.innerHTML=pkrUiIcon(item[0]);
+      row.append(icon,node('span','pkr-link-label',item[1]));
       if(item[2]!==null)row.appendChild(node('span','pkr-link-count',String(item[2])));
       row.appendChild(node('span','pkr-link-arrow','›'));root.appendChild(row);
     });
@@ -2387,6 +2456,57 @@ function pkrAssembleQuickPlayerView(sid,body,p){
         },false);
     });
     root.appendChild(form);
+  }else if(_pkrPlayerPanelView==='chips'){
+    root.appendChild(node('h3','pkr-quick-page-heading','Chip stack records'));
+    root.appendChild(node('p','pkr-quick-explainer',stack&&stack.reason?stack.reason:
+      stack&&stack.source==='verified'?'Current chips are taken from the saved hand stack audit.':
+      stack&&stack.source==='tracked'?'Configured chip issuance, recorded wagers, returns and pot awards determine this stack.':
+      'Chip issuance is shown only when the saved buy-ins match the configured bank.'));
+    var chipRecords=node('div','pkr-chip-records');
+    function chipLine(container,label,value){
+      var line=node('div','pkr-chip-record-row');
+      line.append(node('span','',label),node('strong','',value));container.appendChild(line);
+    }
+    var auditRow=stack&&stack.source==='verified'&&_pkrVerifiedHandAudit&&
+      (_pkrVerifiedHandAudit.stacks||[]).find(function(row){return row.seat_number===Number(sid.replace('seat',''))&&row.display_name===p.name;});
+    if(auditRow){
+      chipRecords.appendChild(node('h4','pkr-quick-page-heading','Saved stack audit'));
+      [['opening_chips','Verified opening'],['contributed_chips','Wagered'],['returned_chips','Returned'],['won_chips','Pot awards'],['closing_chips','Current stack']].forEach(function(field){
+        if(Number.isSafeInteger(auditRow[field[0]]))chipLine(chipRecords,field[1],auditRow[field[0]].toLocaleString('en-AU')+' chips');
+      });
+    }
+    chipRecords.appendChild(node('h4','pkr-quick-page-heading','Chip issuance and buy-ins'));
+    chipLine(chipRecords,'Configured bank',bank>0?fmt(bank):'Not recorded');
+    var configuredChips=Number(state.game&&state.game.starting_chips);
+    chipLine(chipRecords,'Chips per bank',Number.isSafeInteger(configuredChips)&&configuredChips>0?configuredChips.toLocaleString('en-AU'):'Not recorded');
+    chipLine(chipRecords,'Confirmed issued chips',stack&&Number.isSafeInteger(stack.issued)?stack.issued.toLocaleString('en-AU'):'Not confirmed');
+    var buyRecords=(p.transactions||[]).filter(function(tx){return tx.type!=='cashout';});
+    buyRecords.forEach(function(tx,index){chipLine(chipRecords,'Buy-in '+(index+1)+(tx.pkrReconstructed?' · reconstructed':''),fmt(tx.amount));});
+    if(!buyRecords.length)chipRecords.appendChild(node('p','pkr-quick-empty','No buy-in records for this player.'));
+    chipRecords.appendChild(button('View buy-in transactions',function(){go('transactions');},'pkr-quick-link'));
+    chipRecords.appendChild(node('h4','pkr-quick-page-heading','Saved hand activity'));
+    var playerKey=String(p.name||'').trim().toLocaleLowerCase(),handCount=0;
+    function belongs(name){return String(name||'').trim().toLocaleLowerCase()===playerKey;}
+    function list(value){return Array.isArray(value)?value:[];}
+    var ambiguous=Object.values(state.players).filter(function(player){return player&&belongs(player.name);}).length>1;
+    if(ambiguous)chipRecords.appendChild(node('p','pkr-quick-hint','Two current seats share this name. Hand records cannot be safely attributed to this player.'));
+    list(_pkrSeatHands).filter(function(hand){return !ambiguous&&hand&&!hand.voided;}).forEach(function(hand){
+      var entries=[];
+      list(hand.actions).filter(function(action){return action&&belongs(action.display_name);}).forEach(function(action){entries.push({label:action.action||'Wager',chips:action.chips});});
+      var result=hand.result||{};
+      list(result.pot_winners).filter(Boolean).forEach(function(pot){
+        list(pot.split_winners||[{winnerName:pot.winnerName,chips:pot.chips}]).filter(function(winner){return winner&&belongs(winner.winnerName);}).forEach(function(winner){entries.push({label:'Pot award',chips:winner.chips});});
+      });
+      list(result.uncalled_returns).filter(function(row){return row&&belongs(row.display_name);}).forEach(function(row){entries.push({label:'Uncalled return',chips:row.chips});});
+      if(!entries.length)return;
+      handCount++;
+      var details=node('details','pkr-chip-hand-record');
+      details.appendChild(node('summary','','Hand '+(hand.hand_no||'—')+' · '+entries.length+' recorded entries'));
+      entries.forEach(function(entry){chipLine(details,entry.label,Number.isSafeInteger(entry.chips)?entry.chips.toLocaleString('en-AU')+' chips':'Amount not recorded');});
+      chipRecords.appendChild(details);
+    });
+    if(!handCount&&!ambiguous)chipRecords.appendChild(node('p','pkr-quick-empty','No hand activity recorded for this player.'));
+    root.appendChild(chipRecords);
   }else if(_pkrPlayerPanelView==='transactions'){
     root.appendChild(node('h3','pkr-quick-page-heading','Transactions'));
     root.appendChild(node('p','pkr-quick-explainer',
@@ -2403,7 +2523,7 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     }
   }else if(_pkrPlayerPanelView==='settings'){
     root.appendChild(node('h3','pkr-quick-page-heading','Player settings'));
-    var profileBtn=button('⚙ Edit avatar, screen name and profile',function(){
+    var profileBtn=button('Edit avatar, screen name and profile',function(){
       var ctx=getPkrCtx();if(!ctx||!ctx.eventId)return;
       window.dispatchEvent(new CustomEvent('pkr:edit-player-profile',{detail:{
         name:p.name,profileKey:pkrPlayerProfileKey(p),userId:p.userId||p.user_id||p.linkedUserId||''
@@ -2663,7 +2783,7 @@ function buildPanel(sid) {
     // Self-claim: logged-in user can claim their own seat
     if (pkrCtxL && pkrCtxL.userId && !pkrCtxL.isHost) {
       var claimBtn = document.createElement('button');
-      claimBtn.className = 'add-btn g'; claimBtn.textContent = '👤 This is me';
+      claimBtn.className = 'add-btn g'; claimBtn.innerHTML = pkrUiIcon('account')+' This is me';
       claimBtn.style.cssText = 'font-size:0.88rem';
       claimBtn.addEventListener('click', async function() {
         claimBtn.disabled=true; claimBtn.textContent='Claiming…';
@@ -2671,7 +2791,7 @@ function buildPanel(sid) {
           var r = await pkrApi('/games/' + pkrCtxL.gameId + '/players/' + (currentUserId||sid) + '/link', {method:'PUT', body:JSON.stringify({real_user_id:pkrCtxL.userId})});
           if (r.players) { r.players.forEach(function(p){ if(p.seat_number) _pkrSeatedPlayers['seat'+p.seat_number]={user_id:p.user_id,name:p.display_name}; }); renderTable(); }
           closePanel(); toast('Seat linked to your account!');
-        } catch(e) { claimBtn.disabled=false; claimBtn.textContent='👤 This is me'; toast('Failed to claim seat'); }
+        } catch(e) { claimBtn.disabled=false; claimBtn.innerHTML=pkrUiIcon('account')+' This is me'; toast('Failed to claim seat'); }
       });
       linkWrap.appendChild(claimBtn);
     }
@@ -2927,7 +3047,7 @@ function renderLbSheet() {
         body.innerHTML = rows.map(function(p, i) {
           var net = p.total_net / 100;
           var netStr = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
-          return '<div class="lb-row"><div class="lb-rank">' + (i === 0 ? '🏆' : '#' + (i+1)) + '</div><div class="lb-av">' + esc(inits(p.display_name)) + '</div><div class="lb-info"><div class="lb-name">' + esc(p.display_name) + '</div><div class="lb-sub">' + p.games_played + ' game' + (p.games_played!==1?'s':'') + '</div></div><div class="lb-net ' + (net>0?'pos':net<0?'neg':'zero') + '">' + netStr + '</div></div>';
+          return '<div class="lb-row"><div class="lb-rank">' + (i === 0 ? pkrUiIcon('trophy') : '#' + (i+1)) + '</div><div class="lb-av">' + esc(inits(p.display_name)) + '</div><div class="lb-info"><div class="lb-name">' + esc(p.display_name) + '</div><div class="lb-sub">' + p.games_played + ' game' + (p.games_played!==1?'s':'') + '</div></div><div class="lb-net ' + (net>0?'pos':net<0?'neg':'zero') + '">' + netStr + '</div></div>';
         }).join('');
       }).catch(function(){ body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Could not load</div>'; });
       return;
@@ -2937,7 +3057,7 @@ function renderLbSheet() {
   var players = Object.entries(state.players || {}).filter(function(e){ return e[1] && e[1].name; }).map(function(e){ return { name: e[1].name, net: pNet(e[1]) }; }).sort(function(a,b){ return b.net - a.net; });
   if (!players.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:0.82rem">No players yet</div>'; return; }
   body.innerHTML = players.map(function(p, i) {
-    return '<div class="lb-row"><div class="lb-rank">' + (i === 0 ? '🏆' : '#' + (i+1)) + '</div><div class="lb-av">' + esc(inits(p.name)) + '</div><div class="lb-info"><div class="lb-name">' + esc(p.name) + '</div><div class="lb-sub">this game</div></div><div class="lb-net ' + nc(p.net) + '">' + fmtNet(p.net) + '</div></div>';
+    return '<div class="lb-row"><div class="lb-rank">' + (i === 0 ? pkrUiIcon('trophy') : '#' + (i+1)) + '</div><div class="lb-av">' + esc(inits(p.name)) + '</div><div class="lb-info"><div class="lb-name">' + esc(p.name) + '</div><div class="lb-sub">this game</div></div><div class="lb-net ' + nc(p.net) + '">' + fmtNet(p.net) + '</div></div>';
   }).join('');
 }
 
@@ -3171,7 +3291,7 @@ window.openShare = function() {
   var lblEl = document.getElementById('shareUrlLabel');
   var qrCanvas = document.getElementById('shareQR');
   if (urlEl) urlEl.textContent = url;
-  if (lblEl) lblEl.textContent = '🔗 Live scoreboard — read only';
+  if (lblEl) lblEl.innerHTML = pkrUiIcon('link')+' Live scoreboard — read only';
   if (qrCanvas && window.QRCode) {
     qrCanvas.width = 160; qrCanvas.height = 160;
     try {
@@ -3217,7 +3337,7 @@ window.updateSaveResultsBtn = function updateSaveResultsBtn() {
   btn.style.display=ready?'flex':'none';
   btn.setAttribute('aria-hidden',ready?'false':'true');
   btn.disabled=!ready;
-  btn.innerHTML='<span class="game-tab-icon">✅</span> Save Results';
+  btn.innerHTML='<span class="game-tab-icon">' + pkrUiIcon('check') + '</span> Save Results';
   btn.title=ready?'All players cashed out; bank balanced and synced. Save final results.':
     'Save Results unlocks only when all cash-outs and bank reconciliation are complete.';
 };
@@ -3240,7 +3360,7 @@ window.saveResultsToPkr = async function() {
     if(!finalReview.ready)throw new Error(finalReview.reason);
     var ok = await window.syncSettleToPkr();
     if (ok) {
-      if (btn) btn.innerHTML = '<span class="game-tab-icon">✅</span>Saved!';
+      if (btn) btn.innerHTML = '<span class="game-tab-icon">' + pkrUiIcon('check') + '</span>Saved!';
       toast('Results saved to PKR ✓');
       window._pkrResultsSaved = true;
       var endBtn = document.getElementById('endGameBtn');
@@ -3249,7 +3369,7 @@ window.saveResultsToPkr = async function() {
       throw new Error('No player data to save');
     }
   } catch(e) {
-    if (btn) { btn.innerHTML = '<span class="game-tab-icon">✅</span>Save Results'; btn.disabled = false; }
+    if (btn) { btn.innerHTML = '<span class="game-tab-icon">' + pkrUiIcon('check') + '</span>Save Results'; btn.disabled = false; }
     toast('⚠️ Save failed: ' + (e.message||'check connection'));
   }
 };
@@ -3262,10 +3382,12 @@ window.endGame = function() {
     var saveBtn = document.getElementById('saveResultsBtn');
     var saveVisible = saveBtn && saveBtn.style.display !== 'none' && getSettlementReadiness().ready;
     var overlay = document.createElement('div');
+  overlay.className = 'pkr-live-confirm';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:26000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;box-sizing:border-box';
     var box = document.createElement('div');
+  box.className = 'pkr-live-confirm-box';
     box.style.cssText = 'background:#1a0a0a;border:1px solid rgba(231,76,60,0.5);border-radius:16px;padding:24px;width:100%;max-width:320px;max-height:100%;overflow-y:auto;text-align:center';
-    box.innerHTML = '<div style="font-size:2rem;margin-bottom:12px">⚠️</div><div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Save Results First</div><div style="font-size:0.88rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">' + (saveVisible ? 'Tap <strong style="color:#c9a84c">Save Results ✅</strong> before ending.' : 'Cash out all players first, then tap <strong style="color:#c9a84c">Save Results ✅</strong>.') + '</div>' + (saveVisible ? '<button id="pkrGoSave" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">✅ Save Results Now</button>' : '') + '<button id="pkrEndBlockClose" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">OK</button>';
+    box.innerHTML = '<div style="font-size:2rem;margin-bottom:12px">' + pkrUiIcon('warning') + '</div><div style="font-size:1rem;font-weight:700;color:#ff6b5b;margin-bottom:10px">Save Results First</div><div style="font-size:0.88rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">' + (saveVisible ? 'Tap <strong style="color:#c9a84c">Save Results</strong> before ending.' : 'Cash out all players first, then tap <strong style="color:#c9a84c">Save Results</strong>.') + '</div>' + (saveVisible ? '<button id="pkrGoSave" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Save Results Now</button>' : '') + '<button id="pkrEndBlockClose" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">OK</button>';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     var closeBtn = document.getElementById('pkrEndBlockClose');
@@ -3276,10 +3398,12 @@ window.endGame = function() {
     return;
   }
   var overlay2 = document.createElement('div');
+  overlay2.className = 'pkr-live-confirm';
   overlay2.style.cssText = 'position:fixed;inset:0;z-index:26000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;box-sizing:border-box';
   var box2 = document.createElement('div');
+  box2.className = 'pkr-live-confirm-box';
   box2.style.cssText = 'background:#1a0a0a;border:1px solid rgba(46,204,113,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px;max-height:100%;overflow-y:auto';
-  box2.innerHTML = '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">🏁 End Game?</div><div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the table and open the game summary, where the host can send settlement notifications.</div><button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button><button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
+  box2.innerHTML = '<div style="font-size:1.1rem;font-weight:700;color:#2ecc71;margin-bottom:10px">' + pkrUiIcon('check') + ' End Game?</div><div style="font-size:0.9rem;color:#d4c4a0;margin-bottom:20px;line-height:1.6">Results are saved ✓. This will close the table and open the game summary, where the host can send settlement notifications.</div><button id="pkrEndYes" style="width:100%;background:linear-gradient(135deg,#1e6b2a,#0f4a1a);color:#fff;border:none;padding:13px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">Yes, End Game</button><button id="pkrEndNo" style="width:100%;background:none;border:1px solid rgba(201,168,76,0.2);color:#6b8c6e;padding:12px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:0.9rem;cursor:pointer">Cancel</button>';
   overlay2.appendChild(box2);
   document.body.appendChild(overlay2);
   document.getElementById('pkrEndNo').addEventListener('click', function(){ overlay2.remove(); });

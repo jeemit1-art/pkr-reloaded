@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import PkrGlyph from '@/components/PkrGlyph';
 import { api, LobbyData, fmtDate, waLink, getToken } from '@/lib/api';
 import {
   isPWAInstalled, isIOS, isSafari, canUsePush,
@@ -110,7 +111,7 @@ export default function LobbyPage() {
   return (
     <div className="pkr-classic-lobby" style={{minHeight:'100vh',background:'var(--bg)',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
-        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}><PkrGlyph name="spade" size={420}/></div>
 
       {/* Header */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',position:'relative',overflow:'hidden'}}>
@@ -119,7 +120,7 @@ export default function LobbyPage() {
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
             <div>
               <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:6}}>
-                ♠ PKR — Pre-Game Lobby
+                <PkrGlyph name="spade" size={14}/> PKR — Pre-Game Lobby
               </div>
               <div className="display" style={{fontSize:22,color:'var(--white)',fontWeight:500,lineHeight:1.1}}>{event.name}</div>
             </div>
@@ -164,7 +165,7 @@ export default function LobbyPage() {
                   router.push(`/games/${id}/play`);
                 } catch(e:any) { alert(e.message); setStarting(false); }
               }}>
-              {starting ? 'Starting…' : '🃏 Start Game'}
+              <PkrGlyph name="cards"/> {starting ? 'Starting…' : 'Start Game'}
             </button>
             <div style={{fontSize:11,color:'var(--faint)',textAlign:'center',
               fontFamily:'var(--font-body),sans-serif'}}>
@@ -179,7 +180,7 @@ export default function LobbyPage() {
               style={{width:'100%',fontSize:14,padding:'14px',
                 background:'linear-gradient(135deg,#1a8a4a,#0f5a2e)',color:'var(--white)'}}
               onClick={() => { window.location.href = `/games/${id}/play`; }}>
-              🃏 Open Table
+              <PkrGlyph name="cards"/> Open Table
             </button>
           </div>
         )}
@@ -192,7 +193,7 @@ export default function LobbyPage() {
             <div style={{padding:'16px 16px 0'}}>
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
                 <div style={{width:36,height:36,borderRadius:8,background:'var(--bg3)',border:'1px solid var(--border)',
-                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>♠</div>
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}><PkrGlyph name="spade" size={22}/></div>
                 <div>
                   <div style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
                     Install PKR on your phone
@@ -205,10 +206,10 @@ export default function LobbyPage() {
               {/* Feature list */}
               <div style={{display:'grid',gap:8,marginBottom:14}}>
                 {[
-                  {icon:'🃏', title:'New games', desc:'Instant alert when the host schedules a game'},
-                  {icon:'💰', title:'Your buy-ins', desc:'Notified when the host records your buy-in'},
-                  {icon:'💸', title:'Your cashout', desc:'Notified when your chips are cashed out'},
-                  {icon:'✅', title:'Results', desc:'Push when the game is settled — see your P&L'},
+                  {icon:<PkrGlyph name="cards"/>, title:'New games', desc:'Instant alert when the host schedules a game'},
+                  {icon:<PkrGlyph name="arrow-down-left"/>, title:'Your buy-ins', desc:'Notified when the host records your buy-in'},
+                  {icon:<PkrGlyph name="arrow-up-right"/>, title:'Your cashout', desc:'Notified when your chips are cashed out'},
+                  {icon:<PkrGlyph name="insights"/>, title:'Results', desc:'Push when the game is settled — see your P&L'},
                 ].map(f=>(
                   <div key={f.title} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'8px 10px',
                     background:'var(--bg3)',borderRadius:2,border:'1px solid var(--border-sub)'}}>
@@ -290,7 +291,7 @@ export default function LobbyPage() {
           <div style={{background:'var(--bg2)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:3,
             padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:12,position:'relative',overflow:'hidden'}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(76,175,125,0.4),transparent)'}}/>
-            <div style={{fontSize:22,flexShrink:0}}>🔔</div>
+            <div style={{fontSize:22,flexShrink:0}}><PkrGlyph name="bell" size={26}/></div>
             <div style={{flex:1}}>
               <div style={{fontSize:13,color:'var(--white)',fontFamily:'var(--font-display),serif',fontWeight:500}}>Enable notifications</div>
               <div style={{fontSize:11,color:'var(--muted)',marginTop:2,fontFamily:'var(--font-body),sans-serif',lineHeight:1.4}}>
@@ -320,7 +321,7 @@ export default function LobbyPage() {
         {installState === 'subscribed' && (
           <div style={{background:'rgba(76,175,125,0.06)',border:'1px solid rgba(76,175,125,0.2)',borderRadius:3,
             padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:14,color:'var(--green)'}}>✓</span>
+            <span style={{fontSize:14,color:'var(--green)'}}><PkrGlyph name="check" size={18}/></span>
             <div style={{fontSize:12,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
               Notifications enabled — you'll be alerted for all activity on this table.
             </div>
@@ -335,7 +336,7 @@ export default function LobbyPage() {
           <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:3,
             padding:'12px 16px',marginBottom:16,textAlign:'center'}}>
             <span style={{fontSize:13,color:'var(--green)',fontFamily:'var(--font-display),serif',fontWeight:500}}>
-              ✅ Game Settled
+              <PkrGlyph name="check"/> Game Settled
             </span>
           </div>
         )}
@@ -343,7 +344,7 @@ export default function LobbyPage() {
         {!isLive&&<button type="button" className="btn btn-primary"
           style={{width:'100%',padding:'12px',marginBottom:12,borderRadius:9}}
           onClick={()=>router.push('/games/'+id+'/rsvp')}>
-          ♟ View live RSVP & choose your seat →
+          <PkrGlyph name="table"/> View live RSVP & choose your seat →
         </button>}
 
         {/* RSVP form */}
@@ -371,11 +372,11 @@ export default function LobbyPage() {
             </div>
             <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:8}}>
               <button className="btn btn-primary" style={{fontSize:12}} disabled={!name.trim() || sending}
-                onClick={() => handleRsvp('yes')}>✓ I'm In</button>
+                onClick={() => handleRsvp('yes')}><PkrGlyph name="check" size={16}/> I'm In</button>
               <button className="btn btn-ghost" style={{fontSize:11}} disabled={!name.trim() || sending}
-                onClick={() => handleRsvp('maybe')}>? Maybe</button>
+                onClick={() => handleRsvp('maybe')}><PkrGlyph name="help" size={16}/> Maybe</button>
               <button className="btn btn-ghost" style={{fontSize:11,color:'var(--red)'}} disabled={!name.trim() || sending}
-                onClick={() => handleRsvp('no')}>✗ Can't</button>
+                onClick={() => handleRsvp('no')}><PkrGlyph name="close" size={16}/> Can't</button>
             </div>
           </div>
         )}
@@ -384,13 +385,13 @@ export default function LobbyPage() {
           <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:2,
             padding:'14px 16px',marginBottom:14,textAlign:'center'}}>
             <div style={{fontSize:13,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>
-              RSVP saved — see you at the table. 🃏
+              <PkrGlyph name="check"/> RSVP saved — see you at the table.
             </div>
             {installState === 'installed_no_push' && (
               <div style={{marginTop:10}}>
                 <button className="btn btn-outline" style={{fontSize:11,padding:'7px 14px'}}
                   disabled={subscribing} onClick={() => handleSubscribe(name.trim())}>
-                  {subscribing ? 'Enabling…' : '🔔 Enable notifications for this table'}
+                  <PkrGlyph name="bell" size={16}/> {subscribing ? 'Enabling…' : 'Enable notifications for this table'}
                 </button>
               </div>
             )}
@@ -404,9 +405,9 @@ export default function LobbyPage() {
             {rsvps.map(r => (
               <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',
                 borderBottom:'1px solid var(--border-sub)'}}>
-                <span style={{fontSize:13,
+                <span role="img" aria-label={r.status==='yes'?'Attending':r.status==='maybe'?'Maybe':'Not coming'} style={{fontSize:13,
                   color:r.status==='yes'?'var(--green)':r.status==='maybe'?'var(--amber)':'var(--red)',width:16}}>
-                  {r.status==='yes'?'✓':r.status==='maybe'?'~':'✗'}
+                  <PkrGlyph name={r.status==='yes'?'check':r.status==='maybe'?'help':'close'} size={16}/>
                 </span>
                 <span style={{flex:1,fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),serif'}}>
                   {r.display_name}

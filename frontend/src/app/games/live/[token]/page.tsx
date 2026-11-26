@@ -1,5 +1,6 @@
 'use client';
 import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
@@ -36,7 +37,7 @@ function LiveCardSubmit({ gameId, handId, apiUrl = '' }: { gameId: string; handI
 
   return (
     <div style={{background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16}}>
-      <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:8}}>🃏 Submit your hole cards</div>
+      <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:8}}><PkrGlyph name="cards"/> Submit your hole cards</div>
       <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:10}}>
         {[0,1].map(i => (
           <div key={i} onClick={() => setPicking(true)} style={{width:36,height:50,background:cards[i]?'#fff':'rgba(255,255,255,0.06)',border:'1px solid '+(cards[i]?'transparent':'rgba(201,168,76,0.3)'),borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontWeight:700,fontSize:14,color:cards[i]&&(cards[i].includes('♥')||cards[i].includes('♦'))?'#d63031':'#1a1a1a'}}>

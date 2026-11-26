@@ -1,4 +1,4 @@
-import {isCurrentGame} from '@/lib/game-status';
+import {isCurrentGame,isLiveGame,isUnfinishedGame} from '@/lib/game-status';
 import {api,fmt,fmtDate,fmtSign,type Game,type GamePlayer,type Transfer,type ResultsData} from '@/lib/api';
 
 export type RecordRequest = {
@@ -6,12 +6,14 @@ export type RecordRequest = {
   title:string;
   roomId?:string;
   gameId?:string;
+  gameIds?:string[];
   playerId?:string;
   playerName?:string;
   direction?:'from'|'to';
-  filter?:'all'|'settled'|'paid'|'outstanding'|'owing'|'receiving'|'bought-in'|'cashed-out'|'yes'|'profitable'|'upcoming';
+  filter?:'all'|'settled'|'paid'|'outstanding'|'owing'|'receiving'|'bought-in'|'cashed-out'|'yes'|'maybe'|'no'|'not-confirmed'|'seated'|'available'|'profitable'|'upcoming'|'live'|'unfinished';
   period?:'all'|'90d';
   month?:string;
+  months?:string[];
   publicToken?:string;
   measure?:'buyins'|'cashouts'|'bank';
 };
@@ -145,11 +147,17 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
     if(request.roomId){
       let games=await api.games.list(request.roomId);check(signal);
       if(request.filter==='settled')games=games.filter(game=>game.status==='settled');
-      if(request.filter==='upcoming')games=games.filter(isCurrentGame);
-      if(request.month)games=games.filter(game=>{
-        const d=new Date(game.scheduled_at*1000);return d.getFullYear()+'-'+d.getMonth()===request.month;
+      if(request.filter==='upcoming')games=games.filter(game=>isCurrentGame(game));
+      if(request.filter==='live')games=games.filter(game=>isLiveGame(game));
+      if(request.filter==='unfinished')games=games.filter(game=>isUnfinishedGame(game));
+      if(request.gameIds)games=games.filter(game=>request.gameIds!.includes(game.id));
+      if(request.month||request.months)games=games.filter(game=>{
+        const d=new Date(game.scheduled_at*1000),key=d.getFullYear()+'-'+d.getMonth();
+        return request.month?key===request.month:request.months!.includes(key);
       });
-      return {rows:gameRows(games),summary:games.length+' saved games'+(request.filter==='settled'?' - settled only':' - all statuses')};
+      const scope=request.filter==='settled'?'settled only':request.filter==='upcoming'?'upcoming and live':
+        request.filter==='live'?'live now':request.filter==='unfinished'?'historical unfinished':'all statuses';
+      return {rows:gameRows(games),summary:games.length+' saved games - '+scope};
     }
     const rooms=await api.events.list();check(signal);
     const rows:RecordRow[]=[];let missing=0;
@@ -291,20 +299,35 @@ export async function loadRecordDetail(request:RecordRequest,signal?:AbortSignal
       {id:game.id+':seats',label:'Configured seats',value:String(game.seats),href:gameUrl(game)}]};
   }
   if(request.kind==='rsvps'){
-    const rsvps=(game.rsvps||[]).filter(row=>!request.filter||request.filter==='all'||row.status===request.filter);
+    const rsvps=(game.rsvps||[]).filter(row=>!request.filter||request.filter==='all'||
+      (request.filter==='not-confirmed'?row.status!=='yes':row.status===request.filter));
     return {summary:rsvps.length+' RSVP records',rows:rsvps.map(row=>({id:row.id,label:row.display_name,
       detail:row.status==='yes'?'Attending':row.status,href:gameUrl(game)+'/rsvp'}))};
   }
   if(request.kind==='seats'){
     const seats=Number(game.seats);
     if(!Number.isInteger(seats)||seats<0||seats>1000)throw new Error('The saved seat count is invalid.');
-    return {summary:seats+' configured seats',rows:Array.from({length:seats},(_,i)=>{
+    const rows=Array.from({length:seats},(_,i)=>{
       const player=(game.players||[]).find(row=>row.seat_number===i+1);
-      return {id:String(i+1),label:'Seat '+(i+1),detail:player?.display_name||'No seated player recorded',href:gameUrl(game)};
-    })};
+      return {id:String(i+1),label:'Seat '+(i+1),detail:player?.display_name||'No seated player recorded',href:gameUrl(game),occupied:!!player};
+    }).filter(row=>request.filter!=='available'||!row.occupied).map(({occupied,...row})=>row);
+    return {summary:request.filter==='available'?rows.length+' seats without a seated player':seats+' configured seats',rows};
   }
   let players=game.players||[];
   if(request.filter==='bought-in')players=players.filter(player=>player.buy_ins>0);
   if(request.filter==='cashed-out')players=players.filter(player=>player.cashout!=null);
+  if(request.filter==='seated')players=players.filter(player=>Number.isInteger(player.seat_number)&&Number(player.seat_number)>0);
+  if(request.measure==='buyins'){
+    let total=0,missing=0;
+    const rows=players.map(player=>{
+      const amount=(player as GamePlayer&{buy_in_total?:number}).buy_in_total;
+      const recorded=typeof amount==='number'&&Number.isSafeInteger(amount);
+      if(recorded)total+=amount;else missing++;
+      return {id:game.id+':'+player.user_id,label:player.display_name,
+        detail:player.buy_ins+' recorded buy-in(s)',value:recorded?fmt(amount):'Amount not recorded',href:gameUrl(game)};
+    });
+    return {rows,summary:missing?'Recorded buy-ins — incomplete amounts':'Recorded buy-ins '+fmt(total),
+      warning:missing?'Some saved player buy-in amounts are unavailable. No amounts have been estimated.':undefined};
+  }
   return {rows:players.map(player=>playerRow(player,game)),summary:players.length+' player records'};
 }

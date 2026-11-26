@@ -1,4 +1,5 @@
 'use client';
+import PkrGlyph from '@/components/PkrGlyph';
 import {useCallback,useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {api,type ClubDatePoll,type ClubWaitlist,type ClubMemberRequests,
@@ -231,7 +232,7 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
        </div>
      </details>}
      <details className="pkr-club-card" open={seasons.length>0||undefined}>
-       <summary>🏆 Club league seasons <small>{seasons.length} seasons</small></summary>
+       <summary><PkrGlyph name="trophy"/> Club league seasons <small>{seasons.length} seasons</small></summary>
        <div className="pkr-club-body">
          {seasons.length>0?<label>Season
            <select value={seasonId} onChange={e=>setSeasonId(e.target.value)}>
@@ -246,8 +247,8 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
            {standings.standings.length?standings.standings.slice(0,20).map((s,i)=>
              <div className="pkr-club-item" key={s.user_id}>
                <span>{i+1}. {s.display_name}{s.identity_review_required?' · identity review':''}
-                 {s.games_played>=10?' · ⭐ 10+ games':''}
-                 {s.first_places>=1?' · 🏆 Top finisher':''}</span>
+                 {s.games_played>=10&&<> · <PkrGlyph name="medal" size={15}/> 10+ games</>}
+                 {s.first_places>=1&&<> · <PkrGlyph name="trophy" size={15}/> Top finisher</>}</span>
                <strong>{s.points} pts <small>· {s.games_played} games</small></strong>
              </div>):<p>No settled results in this season.</p>}
          </>}

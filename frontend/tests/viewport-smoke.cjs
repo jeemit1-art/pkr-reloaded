@@ -228,11 +228,23 @@ async function test(){
    savedPreviewLayout='command';layoutWrites=0;
    await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
    const page=await context.newPage();
+   let delayedResults=null;
+   function holdResultsResponse(){
+     let release;
+     const wait=new Promise(resolve=>{release=resolve;});
+     const requested=page.waitForRequest(request=>request.method()==='GET'&&
+       new URL(request.url()).pathname==='/events/'+room.id+'/leaderboard',{timeout:12000});
+     const gate={wait,requested,release:()=>{if(delayedResults===gate)delayedResults=null;release();}};
+     delayedResults=gate;
+     return gate;
+   }
    page.on('pageerror',e=>errors.push(size.name+' runtime exception: '+(e.stack||e.message)));
    page.on('request',request=>{if(request.url().includes('pkr-reloaded-worker.jeemit1.workers.dev'))errors.push('PRODUCTION API REQUEST BLOCKED: '+request.url());});
    await page.route('**/*.workers.dev/**',async route=>{
     const url=new URL(route.request().url());
     if(url.origin!==API){errors.push('Unexpected Worker origin: '+url.origin);return route.abort();}
+    if(delayedResults&&url.pathname==='/events/'+room.id+'/leaderboard'&&route.request().method()==='GET')
+      await delayedResults.wait;
     const response=fixture(url.pathname,route.request().method(),route.request().postData());
     const status=response?.error?404:200;
     await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS'},body:JSON.stringify(response)});
@@ -295,15 +307,16 @@ async function test(){
          return {
            brandVisible:brand instanceof HTMLElement&&brand.getBoundingClientRect().width>20,
            oldTopbarHidden:!oldTopbar||getComputedStyle(oldTopbar).display==='none',
-           paymentBackground:payment?getComputedStyle(payment).backgroundImage:'',
+           paymentBackground:payment?getComputedStyle(payment).backgroundColor:'',
+           paymentText:payment?getComputedStyle(payment).color:'',
            heroArtwork:hero?getComputedStyle(hero,'::before').backgroundImage:'',
            accountVisible:!!document.querySelector('.pkr-dual-account-trigger'),
          };
        });
        if(!visualContract.brandVisible||!visualContract.oldTopbarHidden||!visualContract.accountVisible)
          errors.push(size.name+' mockup header/branding contract failed '+JSON.stringify(visualContract));
-       if(!visualContract.paymentBackground.includes('rgb(56, 29, 32)'))
-         errors.push(size.name+' approved red-black payment card not applied');
+       if(visualContract.paymentBackground!=='rgb(255, 255, 255)')
+         errors.push(size.name+' full dashboard payment card retained the previous dark palette: '+JSON.stringify(visualContract));
        if(!visualContract.heroArtwork.includes('pkr-approved-hero-desktop.webp'))
          errors.push(size.name+' approved photographic hero not applied');
 
@@ -545,12 +558,19 @@ async function test(){
          ?'.pkr-dual-hero':'.pkr-vnext-insights-top';
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
-         return {width:r.width,height:r.height,background:s.backgroundImage,
+         return {width:r.width,height:r.height,background:s.backgroundImage,colour:s.backgroundColor,
            art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
        });
        if(item.id==='insights'){
-         if(!visual.background.includes('linear-gradient'))
-           errors.push(size.name+' insights missing designed background');
+         if(visual.colour!=='rgb(255, 255, 255)'||visual.background!=='none')
+           errors.push(size.name+' Insights header must use the solid light app surface');
+         const insightsTheme=await page.locator('.pkr-vnext-insights').evaluate(node=>{
+           const card=node.querySelector('.pkr-insights-kpi');
+           return {background:getComputedStyle(node).backgroundColor,
+             card:card?getComputedStyle(card).backgroundColor:null};
+         });
+         if(insightsTheme.background!=='rgb(244, 246, 248)'||insightsTheme.card!=='rgb(255, 255, 255)')
+           errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
          if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
            errors.push(size.name+' '+item.id+' approved poker equipment artwork missing');
@@ -573,10 +593,10 @@ async function test(){
      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-dual-hero .pkr-dual-gold-button').first().evaluate(el=>{
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
-         return {image:style.backgroundImage,color:style.color,height:rect.height,width:rect.width};
+         return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(!primary.image.includes('linear-gradient')||primary.height<40||primary.width<85)
-         errors.push(size.name+' dual dashboard gold call-to-action is not usable: '+JSON.stringify(primary));
+       if(primary.image!=='none'||!['rgb(242, 116, 87)','rgb(230, 100, 71)'].includes(primary.background)||primary.color!=='rgb(20, 36, 44)'||primary.height<44||primary.width<85)
+         errors.push(size.name+' full dashboard coral action is unreadable or too small: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
@@ -896,12 +916,55 @@ async function test(){
            errors.push(size.name+' player search missing Jordan');
          await search.fill('');
        }
-       await nav.getByRole('button',{name:'Results',exact:true}).click();
-       await page.getByRole('heading',{name:'Results',exact:true}).waitFor({state:'visible',timeout:12000});
+       const delayedInitialResults=size.name==='landscape-phone'?holdResultsResponse():null;
+       try{
+         await nav.getByRole('button',{name:'Results',exact:true}).click();
+         await page.getByRole('heading',{name:'Results',exact:true}).waitFor({state:'visible',timeout:12000});
+         if(delayedInitialResults){
+           await delayedInitialResults.requested;
+           await page.locator('.pkr-results-page[aria-busy="true"]').waitFor({state:'visible'});
+           // Model browser restoration after the initial mount/paint while saved
+           // results are still loading. No user input should cancel the reset.
+           await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+             window.scrollTo({top:140,behavior:'instant'});resolve();
+           }))));
+           await page.waitForFunction(()=>window.scrollY>24,null,{timeout:3000});
+         }
+       }finally{delayedInitialResults?.release();}
+       await page.locator('.pkr-results-page[aria-busy="false"]').waitFor({state:'visible',timeout:15000});
        await page.locator('.pkr-results-ledger-row').first().waitFor({state:'visible',timeout:15000});
         await page.waitForTimeout(180);
-        const landingScroll=await page.evaluate(()=>window.scrollY);
-        if(landingScroll>24)errors.push(size.name+' Results opened mid-page instead of at the header: '+landingScroll);
+        const resultsLanding=await page.evaluate(()=>{
+          const heading=document.querySelector('.pkr-results-page h1');
+          const utility=document.querySelector('.pkr-primary-mobile-utility');
+          return {scrollY:window.scrollY,headingTop:heading?.getBoundingClientRect().top??null,
+            headerBottom:utility&&getComputedStyle(utility).display!=='none'?utility.getBoundingClientRect().bottom:0};
+        });
+        if(resultsLanding.scrollY>24||resultsLanding.headingTop===null||
+           resultsLanding.headingTop<resultsLanding.headerBottom-1)
+          errors.push(size.name+' Results opened mid-page instead of at the header: '+JSON.stringify(resultsLanding));
+
+        if(size.name==='landscape-phone'){
+          // A deliberate user scroll during the same delayed load must win.
+          const userScrolledResults=holdResultsResponse();
+          try{
+            await page.reload({waitUntil:'domcontentloaded'});
+            await userScrolledResults.requested;
+            await page.locator('.pkr-results-page[aria-busy="true"]').waitFor({state:'visible'});
+            await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+            await page.mouse.move(size.width/2,size.height/2);
+            await page.mouse.wheel(0,140);
+            await page.waitForFunction(()=>window.scrollY>24,null,{timeout:3000});
+          }finally{userScrolledResults.release();}
+          await page.locator('.pkr-results-page[aria-busy="false"]').waitFor({state:'visible',timeout:15000});
+          await page.locator('.pkr-results-ledger-row').first().waitFor({state:'visible',timeout:15000});
+          await page.waitForTimeout(180);
+          if(await page.evaluate(()=>window.scrollY)<=24)
+            errors.push(size.name+' loaded Results overrode the user scroll');
+          // Keep exercising the existing section action and its top reset.
+          await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'Standings'}).click();
+          await page.waitForFunction(()=>window.scrollY<=24,null,{timeout:3000});
+        }
 
         if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
           errors.push(size.name+' Command Centre lost ledger players');

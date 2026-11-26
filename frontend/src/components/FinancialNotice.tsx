@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
 type Notice={kind:string;gameId:string;at:number};
 function play(kind:string){
  try{
@@ -31,10 +32,10 @@ export default function FinancialNotice(){
   return()=>window.removeEventListener('pkr:financial-update',handler);
  },[]);
  if(!notice)return null;
- const labels:Record<string,{heading:string;body:string}>={
-  buyin:{heading:'🪙 Buy-in recorded',body:'The buy-in was saved. Check the game ledger for the updated amount.'},
-  cashout:{heading:'💵 Cash-out recorded',body:'The cash-out was saved. Review the net result before settlement.'},
-  settlement:{heading:'📋 Settlement calculated',body:'Review who owes whom. Payment is not complete until confirmed.'}
+ const labels:Record<string,{heading:string;body:string;icon:PkrGlyphName}>={
+  buyin:{heading:'Buy-in recorded',icon:'settle',body:'The buy-in was saved. Check the game ledger for the updated amount.'},
+  cashout:{heading:'Cash-out recorded',icon:'settle',body:'The cash-out was saved. Review the net result before settlement.'},
+  settlement:{heading:'Settlement calculated',icon:'check',body:'Review who owes whom. Payment is not complete until confirmed.'}
  };
  const label=labels[notice.kind]||labels.settlement;
  return <div role="status" aria-live="polite" style={{
@@ -42,11 +43,11 @@ export default function FinancialNotice(){
   background:'#19241f',color:'#fff',border:'2px solid #d4ad55',borderRadius:14,
   padding:18,boxShadow:'0 15px 45px #0009'
  }} className="pkr-financial-notice">
-  <strong style={{fontSize:20,display:'block'}}>{label.heading}</strong>
+  <strong style={{fontSize:20,display:'block'}}><PkrGlyph name={label.icon}/> {label.heading}</strong>
   <p style={{fontSize:14,margin:'8px 0 14px'}}>{label.body}</p>
   <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
    <a href={'/games/'+encodeURIComponent(notice.gameId)} style={{color:'#f7d185',fontWeight:700}}>View game →</a>
-   <button onClick={()=>{const v=!sound;setSound(v);localStorage.setItem('pkr:financial-sound',v?'yes':'no');if(v)play('buyin');}} style={{padding:7,background:'transparent',border:'1px solid #cba558',color:'#fff',borderRadius:6}}>{sound?'🔊 Sound on':'🔇 Enable sounds'}</button>
+   <button onClick={()=>{const v=!sound;setSound(v);localStorage.setItem('pkr:financial-sound',v?'yes':'no');if(v)play('buyin');}} style={{padding:7,background:'transparent',border:'1px solid #cba558',color:'#fff',borderRadius:6}}><PkrGlyph name={sound?'volume':'volume-off'}/> {sound?'Sound on':'Enable sounds'}</button>
    <button onClick={()=>setNotice(null)} style={{marginLeft:'auto',padding:7,background:'transparent',color:'#fff',border:'1px solid #52645b',borderRadius:6}}>Dismiss</button>
   </div>
  </div>;

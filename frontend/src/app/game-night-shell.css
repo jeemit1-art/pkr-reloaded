@@ -1,0 +1,62 @@
+/* The mobile app chrome paints the status-bar inset as well as its controls.
+   A separate flow spacer prevents content from starting under the fixed bar. */
+@layer pkr-theme-priority {
+  html.pkr-game-night {
+    --pkr-safe-area-top:env(safe-area-inset-top,0px);
+    --pkr-safe-area-bottom:env(safe-area-inset-bottom,0px);
+    --pkr-mobile-header-height:calc(64px + var(--pkr-safe-area-top));
+  }
+  html.pkr-game-night .pkr-primary-header-space{display:none!important}
+  @media(max-width:1099px){
+    html.pkr-game-night:has(.pkr-primary-mobile-utility){
+      scroll-padding-top:calc(var(--pkr-mobile-header-height) + 12px);
+    }
+    html.pkr-game-night .pkr-primary-mobile-utility{
+      position:fixed!important;
+      inset:0 0 auto 0!important;
+      z-index:360!important;
+      box-sizing:border-box!important;
+      width:100%!important;
+      height:var(--pkr-mobile-header-height)!important;
+      min-height:var(--pkr-mobile-header-height)!important;
+      padding:calc(9px + var(--pkr-safe-area-top)) max(16px,env(safe-area-inset-right,0px))
+        10px max(16px,env(safe-area-inset-left,0px))!important;
+      background:#FFFFFF!important;
+      background-image:none!important;
+      border-bottom:1px solid #DFE5E9!important;
+      opacity:1!important;
+      backdrop-filter:none!important;
+      -webkit-backdrop-filter:none!important;
+      isolation:isolate;
+      overflow:visible!important;
+    }
+    /* Continue the same solid surface into iOS's unsafe area when the viewport
+       origin is inset by the installed-app status bar. No content can show through. */
+    html.pkr-game-night .pkr-primary-mobile-utility::before{
+      content:"";
+      position:absolute;
+      inset:calc(-1 * var(--pkr-safe-area-top)) 0 0;
+      z-index:-1;
+      background:#FFFFFF;
+      pointer-events:none;
+    }
+    html.pkr-game-night .pkr-primary-header-space{
+      display:block!important;
+      height:var(--pkr-mobile-header-height)!important;
+      min-height:var(--pkr-mobile-header-height)!important;
+      flex:0 0 var(--pkr-mobile-header-height)!important;
+    }
+    html.pkr-game-night .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
+      background:#FFFFFF!important;
+      opacity:1!important;
+      backdrop-filter:none!important;
+      -webkit-backdrop-filter:none!important;
+      padding-bottom:calc(10px + var(--pkr-safe-area-bottom))!important;
+    }
+  }
+  @media(max-width:359px){
+    html.pkr-game-night .pkr-primary-mobile-utility{
+      padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))!important;
+    }
+  }
+}

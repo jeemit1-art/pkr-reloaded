@@ -1,6 +1,7 @@
 "use client";
 import RecordMetric from '@/components/RecordMetric';
 import AppDialog from '@/components/AppDialog';
+import PkrGlyph from '@/components/PkrGlyph';
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -133,7 +134,7 @@ export default function GamePage() {
   return (
     <div className="pkr-app pkr-game-detail pkr-casino" style={{minHeight:'100vh',paddingBottom:80}}>
       <div style={{position:'fixed',bottom:-60,right:-40,fontSize:420,opacity:0.018,
-        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}>♠</div>
+        color:'var(--gold)',lineHeight:1,userSelect:'none',pointerEvents:'none',fontFamily:'serif',zIndex:0}}><PkrGlyph name="spade" size={420}/></div>
 
       {/* Header */}
       <div className="pkr-topbar" style={{background:'var(--bg2)',borderBottom:'1px solid var(--border-sub)',
@@ -175,7 +176,7 @@ export default function GamePage() {
           </div>
           {game.location && (
             <div style={{fontSize:13,color:'var(--muted)',marginBottom:8,fontFamily:'var(--font-body),sans-serif'}}>
-              📍 {game.location}
+              <PkrGlyph name="map-pin" size={16}/> {game.location}
             </div>
           )}
           {game.notes && (
@@ -187,7 +188,8 @@ export default function GamePage() {
             <span style={{fontSize:10,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',
               letterSpacing:'0.08em',textTransform:'uppercase',padding:'2px 8px',borderRadius:2,
               background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.2)'}}>
-              {({tournament:'🏆 Tournament',rebuy:'♻️ Rebuy',freezeout:'❄️ Freezeout'} as any)[game.format]||game.format}
+              <PkrGlyph name={game.format==='tournament'?'trophy':game.format==='rebuy'?'refresh':'shield-check'} size={14}/>{' '}
+              {({tournament:'Tournament',rebuy:'Rebuy',freezeout:'Freezeout'} as any)[game.format]||game.format}
             </span>
           )}
           <div className="pkr-game-metrics" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,marginTop:16,paddingTop:14,borderTop:'1px solid var(--border-sub)'}}>
@@ -226,13 +228,13 @@ export default function GamePage() {
               opacity:starting?0.7:1}}
             disabled={starting}
             onClick={doStartGame}>
-            {starting ? 'Starting…' : '🃏 Start Game'}
+            <PkrGlyph name="cards"/> {starting ? 'Starting…' : 'Start Game'}
           </button>
           <div className="pkr-game-rsvp-actions">
             <button className="btn btn-ghost" type="button"
-              onClick={()=>router.push('/games/'+id+'/rsvp')}>👥 Live RSVPs & seats</button>
+              onClick={()=>router.push('/games/'+id+'/rsvp')}><PkrGlyph name="users"/> Live RSVPs & seats</button>
             <button className="btn btn-ghost" type="button"
-              onClick={()=>router.push('/games/'+id+'/rsvp?settings=1#pkr-rsvp-settings')}>⚙ RSVP settings</button>
+              onClick={()=>router.push('/games/'+id+'/rsvp?settings=1#pkr-rsvp-settings')}><PkrGlyph name="settings"/> RSVP settings</button>
           </div>
         </>)}
 
@@ -241,7 +243,7 @@ export default function GamePage() {
           <button className="btn btn-primary"
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12}}
             onClick={()=>router.push(`/games/${id}/rsvp`)}>
-            ✋ RSVP & Choose Your Seat
+            <PkrGlyph name="table"/> RSVP & Choose Your Seat
           </button>
         )}
 
@@ -251,7 +253,7 @@ export default function GamePage() {
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
               background:'var(--gold)',color:'#06271d'}}
             onClick={()=>router.push(`/games/${id}/play`)}>
-            🃏 {unfinished?'Resume / Review Table':'Open Table'}
+            <PkrGlyph name="cards"/> {unfinished?'Resume / Review Table':'Open Table'}
           </button>
         )}
 
@@ -260,7 +262,7 @@ export default function GamePage() {
           <button className="btn btn-ghost"
             style={{width:'100%',fontSize:13,padding:'12px',marginBottom:12}}
             onClick={()=>router.push(`/games/live/${game.live_token}`)}>
-            📡 {unfinished?'View Saved Table':'Watch Live Scores'}
+            <PkrGlyph name="broadcast"/> {unfinished?'View Saved Table':'Watch Live Scores'}
           </button>
         )}
 
@@ -270,7 +272,7 @@ export default function GamePage() {
             style={{width:'100%',fontSize:14,padding:'14px',marginBottom:12,
               background:'var(--gold)',color:'#06271d'}}
             onClick={()=>router.push(`/games/results/${game.results_token}`)}>
-            ✅ View Results
+            <PkrGlyph name="insights"/> View Results
           </button>
         )}
 
@@ -317,7 +319,7 @@ export default function GamePage() {
           <div style={{display:'flex',gap:8,marginBottom:16}}>
             <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px',color:'var(--green)'}}
               onClick={()=>navigator.clipboard.writeText(`${appUrl}/games/live/${game.live_token}`).then(()=>alert('Live link copied!'))}>
-              📡 Copy Live Link
+              <PkrGlyph name="link"/> Copy Live Link
             </button>
           </div>
         )}
@@ -325,12 +327,12 @@ export default function GamePage() {
           <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
             <button className="btn btn-ghost" style={{fontSize:11,padding:'7px 12px'}}
               onClick={()=>navigator.clipboard.writeText(resultsUrl).then(()=>alert('Results link copied!'))}>
-              📋 Copy Results Link
+              <PkrGlyph name="copy"/> Copy Results Link
             </button>
             {isHost&&<button type="button" className="btn btn-ghost"
               style={{fontSize:11,padding:'7px 12px'}}
               onClick={()=>router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id))}>
-              📱 Share group-safe results
+              <PkrGlyph name="share"/> Share group-safe results
             </button>}
           </div>
         )}

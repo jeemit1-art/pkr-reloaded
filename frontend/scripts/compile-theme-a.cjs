@@ -34,7 +34,7 @@ const priority=postcss.atRule({name:'layer',params:'pkr-theme-priority'});priori
 const normal=postcss.atRule({name:'layer',params:'pkr-theme'});normal.append(select(theme,false).nodes);out.append(normal);
 const css=out.toString();fs.writeFileSync(path.join(app,'pkr-theme-a.css'),css+'\n');
 // The original cascade remains intact beneath the additive Game night styles.
-const gameNightNames=['game-night.css','game-night-secondary.css','game-night-host.css','game-night-player.css','game-night-live.css','game-night-payments.css'];
+const gameNightNames=['game-night.css','game-night-secondary.css','game-night-host.css','game-night-player.css','game-night-live.css','game-night-payments.css','game-night-complete.css','game-night-shell.css'];
 const presentationCss=css+gameNightNames.map(name=>fs.readFileSync(path.join(app,name),'utf8')).join('\n');
 const manifest={theme:'PKR Game night',cssSha256:crypto.createHash('sha256').update(presentationCss).digest('hex'),colours:{background:'#F4F6F8',surface:'#FFFFFF',raised:'#EDF1F4',line:'#DFE5E9',text:'#14242C',muted:'#64727A',primary:'#F27457',money:'#14242C',positive:'#147856',danger:'#BE3949',felt:'#14242C'},fonts:['Inter'],preservedDashboardLayouts:['Command Centre','Live Poker']};
 fs.writeFileSync(path.resolve(__dirname,'../public/design-version.json'),JSON.stringify(manifest,null,2)+'\n');

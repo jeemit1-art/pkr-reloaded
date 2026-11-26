@@ -1,5 +1,6 @@
 'use client';
 import AppDialog from '@/components/AppDialog';
+import PkrGlyph from '@/components/PkrGlyph';
 
 // frontend/src/components/UpgradeModal.tsx
 // Drop this component into any page that uses gated actions.
@@ -124,11 +125,11 @@ export default function UpgradeModal() {
   return (
     <AppDialog style={s.overlay} onClick={() => setOpen(false)} aria-label="Choose a PKR plan">
       <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <button style={s.closeBtn} onClick={() => setOpen(false)}>✕</button>
+        <button style={s.closeBtn} onClick={() => setOpen(false)} aria-label="Close plan options"><PkrGlyph name="close" size={18}/></button>
 
         {/* Header */}
         <div style={s.topBar}>
-          <div style={{fontSize:32, marginBottom:8}}>♠️</div>
+          <div style={{fontSize:32, marginBottom:8}}><PkrGlyph name="spade" size={32}/></div>
           <div style={{
             fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase',
             color:'rgba(201,168,76,0.7)', fontFamily:'DM Sans,sans-serif', marginBottom:8, fontWeight:600,

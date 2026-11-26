@@ -1,5 +1,6 @@
 'use client';
 import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 
 
 import {useMemo,useState} from 'react';
@@ -39,7 +40,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
 
   return <section className="pkr-standings-board" aria-label="Poker room player standings">
     <header className="pkr-standings-heading">
-      <div><span className="pkr-eyebrow">♛ PLAYER PERFORMANCE</span>
+      <div><span className="pkr-eyebrow"><PkrGlyph name="insights"/> PLAYER PERFORMANCE</span>
         <h2>Standings</h2>
         <p>Recorded results from settled games in this poker room. Unfinished games do not affect rankings.</p>
       </div>
@@ -51,13 +52,13 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
       <div><RecordMetric request={{kind:'sessions',title:"Player sessions",roomId}}><span>Player sessions</span><strong>{playerSessions}</strong></RecordMetric></div>
     </div>
     {!leaders.length
-      ? <div className="pkr-standings-empty"><span aria-hidden="true">🏆</span><h3>The table is waiting</h3>
+      ? <div className="pkr-standings-empty"><span aria-hidden="true"><PkrGlyph name="trophy" size={36}/></span><h3>The table is waiting</h3>
           <p>Settle your first game to begin tracking player standings. Until then, all results remain unranked.</p></div>
       : <>
         <div className="pkr-standings-podium" aria-label="Top three by all-time net results">
           {sortedByNet.slice(0,3).map((p,i)=><button type="button" key={p.user_id||p.display_name} className={'pkr-standings-podium-card pkr-standings-podium-'+(i+1)} onClick={()=>onSelectPlayer(p.display_name)}
             aria-label={'Open '+p.display_name+' game history, rank '+(i+1)}>
-            <span className="pkr-standings-medal" aria-hidden="true">{['♛','♝','♞'][i]}</span>
+            <span className="pkr-standings-medal" aria-hidden="true"><PkrGlyph name={i===0?'trophy':'medal'} size={28}/></span>
             <span className="pkr-standings-rank-label">#{i+1} ALL TIME</span>
             <strong title={p.display_name}>{p.display_name}</strong>
             <b className={p.total_net<0?'loss':'gain'}>{fmtSign(p.total_net)}</b>
@@ -79,7 +80,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
             key={p.user_id||p.display_name} onClick={()=>onSelectPlayer(p.display_name)}
             aria-label={'Open '+p.display_name+' profile, '+fmtSign(p.total_net)+' total net'}>
             <span className="pkr-standings-row-rank">{i+1}</span>
-            <span className="pkr-standings-avatar" aria-hidden="true">{p.display_name.trim().charAt(0).toUpperCase()||'♠'}</span>
+            <span className="pkr-standings-avatar" aria-hidden="true">{p.display_name.trim().charAt(0).toUpperCase()||<PkrGlyph name="account"/>}</span>
             <span className="pkr-standings-player">
               <strong>{p.display_name}</strong>
               <small>{p.games_played} games · {p.games_won} profitable · {p.games_played?Math.round(p.games_won/p.games_played*100):0}%</small>
@@ -87,7 +88,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
             </span>
             <span className="pkr-standings-money"><strong className={p.total_net<0?'loss':'gain'}>{sort==='average'?fmtSign(Math.round(getAvg(p))):fmtSign(p.total_net)}</strong>
               <small>{sort==='average'?'Average / game':sort==='net'?'Total net':sort==='games'?p.games_played+' sessions':p.games_won+' profitable'}</small></span>
-            <span className="pkr-standings-open" aria-hidden="true">›</span>
+            <span className="pkr-standings-open" aria-hidden="true"><PkrGlyph name="chevron-right" size={18}/></span>
           </button>):<div className="pkr-standings-empty"><p>No players match. Clear your search or filters.</p>
             <button type="button" onClick={()=>{setQuery('');setMinGames(false)}}>Clear filters</button></div>}
         </div>

@@ -54,3 +54,20 @@ assert.match(page,/function refreshVisibleGameFromServer\(game\)/,
 assert.match(page,/No window\.saveState\(\): a co-host/,
  'co-host hydration cannot trigger writes to bank balances');
 console.log('PASS: 9 synthetic gameplay settlement, explicit-edit and co-host safety assertions');
+
+// Bank drill-downs must reconcile to the same table, including a zero cash-out.
+vm.runInContext(between('window._pkrBankBreakdown = function(measure)', 'function updateBank()'),ctx,{timeout:2000});
+ctx.state.players={seat1:player('Example A',125.5,null),seat2:player('Example B',70,0),seat3:player('Example C',90,160)};
+const before=JSON.stringify(ctx.state);ctx.navigator.onLine=true;
+const detail=measure=>ctx.window._pkrBankBreakdown(measure);
+assert.equal(detail('buyins').rows.length,3);assert.match(detail('buyins').summary,/285.50/);
+assert.deepEqual(Array.from(detail('cashouts').rows,row=>row.id),['seat2','seat3']);
+assert.equal(detail('cashouts').rows[0].value,'$0.00','Zero cash-out is still an original record');
+assert.deepEqual(Array.from(detail('status').rows,row=>row.id),['seat1']);
+assert.match(detail('bank').summary,/285.50.*160.00.*125.50/);
+assert.equal(JSON.stringify(ctx.state),before,'Viewing a bank breakdown cannot change table amounts');
+ctx._offlineQueue.push({id:'unconfirmed'});assert.match(detail('bank').warning,/awaiting synchronisation/);ctx._offlineQueue.length=0;
+ctx.state.players.seat1.transactions[0].pkrReconstructed=true;
+assert.match(detail('buyins').rows[0].detail,/Saved aggregate/,'Do not invent individual historical transactions');
+ctx.state.players={};assert.equal(detail('bank').rows.length,0);assert.match(detail('bank').summary,/0.00/);
+console.log('PASS: live bank record totals, identity, zero cash-outs, pending edits and reconstruction disclosure');

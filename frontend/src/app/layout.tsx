@@ -12,6 +12,8 @@ import './game-night-secondary.css';
 import './game-night-host.css';
 import './game-night-player.css';
 import './game-night-live.css';
+import './game-night-complete.css';
+import './game-night-shell.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -19,11 +21,11 @@ import PersistentNavigation from '@/components/PersistentNavigation';
 const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#F4F6F8', colorScheme:'light dark',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#FFFFFF', colorScheme:'light dark',
 };
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
-  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black-translucent'},
+  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'default'},
   icons:{icon:'/icon-192.png',apple:'/icon-192.png'},
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
   description:

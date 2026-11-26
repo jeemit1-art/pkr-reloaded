@@ -2,6 +2,9 @@
 
 import {useEffect,useState,type ReactNode} from 'react';
 import type {RoomDashboardLayout} from '@/lib/api';
+import type {RecordRequest} from '@/lib/record-details';
+import RecordMetric from '@/components/RecordMetric';
+import PkrGlyph from '@/components/PkrGlyph';
 
 /** React-facing read-only mirror of the existing, host-saved room choice.
  * No extra API calls: RoomExperienceTheme already resolves this per room.
@@ -19,7 +22,9 @@ export function useRoomExperience():RoomDashboardLayout{
  return mode;
 }
 
-type StageMetric={label:string;value:string|number};
+type StageMetric={label:string;value:string|number}&(
+ {request:RecordRequest;onClick?:never}|{onClick:()=>void;request?:never}
+);
 type StageProps={
  kind:'games'|'players'|'payments';
  title:string;
@@ -37,21 +42,29 @@ type StageProps={
  */
 export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],children}:StageProps){
  const mode=useRoomExperience();
+ const metric=(item:StageMetric,index:number,live=false)=>{
+  const className=live?'pkr-experience-live-metric':'pkr-experience-command-stat stat-'+index;
+  const contents=live?<><strong>{item.value}</strong><small>{item.label}</small></>:
+   <><span>{item.label}</span><strong>{item.value}</strong></>;
+  return item.request?<RecordMetric bare key={item.label} className={className} request={item.request}>{contents}</RecordMetric>:
+   <button type="button" key={item.label} className={'pkr-record-action '+className}
+    aria-label={'View underlying records: '+item.label} onClick={item.onClick}>{contents}</button>;
+ };
  if(mode==='live'){
   return <section className={'pkr-experience-stage pkr-experience-stage-live pkr-experience-live pkr-experience-'+kind}
     data-testid={kind+'-live-stage'} aria-label={title+' — Live Poker'}>
     <div className="pkr-experience-live-copy">
-      <span className="pkr-experience-eyebrow">♠ LIVE POKER · {club}</span>
+      <span className="pkr-experience-eyebrow"><PkrGlyph name="table"/> LIVE POKER · {club}</span>
       <h1>{title}</h1><p>{subtitle}</p>
       <div className="pkr-experience-live-metrics">
-       {metrics.map(m=><span key={m.label}><strong>{m.value}</strong><small>{m.label}</small></span>)}
+       {metrics.map((item,index)=>metric(item,index,true))}
       </div>
       {children}
     </div>
     <div className="pkr-experience-felt" aria-label="Poker club atmosphere">
-      <span className="pkr-experience-chip chip-a">♠</span>
-      <span className="pkr-experience-chip chip-b">♣</span>
-      <span className="pkr-experience-chip chip-c">♦</span>
+      <span className="pkr-experience-chip chip-a"><PkrGlyph name="spade"/></span>
+      <span className="pkr-experience-chip chip-b"><PkrGlyph name="club"/></span>
+      <span className="pkr-experience-chip chip-c"><PkrGlyph name="diamond"/></span>
       <div className="pkr-experience-felt-table"><strong>PKR</strong><small>{kind==='games'?'GAME NIGHT':kind==='payments'?'SETTLE UP':'PLAYERS CLUB'}</small></div>
       {players.slice(0,4).map((name,i)=><span className={'pkr-experience-felt-seat seat-'+i} key={name+i}
         title={name}>{name.split(' ')[0]}</span>)}
@@ -61,14 +74,12 @@ export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],chil
  return <section className={'pkr-experience-stage pkr-experience-stage-command pkr-experience-command pkr-experience-'+kind}
    data-testid={kind+'-command-stage'} aria-label={title+' — Command Centre'}>
    <div className="pkr-experience-command-copy">
-     <span className="pkr-experience-eyebrow">◆ COMMAND CENTRE · {club}</span>
+     <span className="pkr-experience-eyebrow"><PkrGlyph name="grid"/> COMMAND CENTRE · {club}</span>
      <h1>{title}</h1><p>{subtitle}</p>
      {children}
    </div>
    <div className="pkr-experience-command-stats">
-     {metrics.map((m,i)=><div className={'pkr-experience-command-stat stat-'+i} key={m.label}>
-       <span>{m.label}</span><strong>{m.value}</strong>
-     </div>)}
+     {metrics.map((item,index)=>metric(item,index))}
    </div>
   </section>;
 }

@@ -2,6 +2,8 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
+import PkrGlyph from '@/components/PkrGlyph';
+import RecordMetric from '@/components/RecordMetric';
 import {
   api,fmtDate,type EventDetail,type EventMember,type Game,type GameDetail,
   type RsvpBoardData,type ResultsData,type PrivateGroupContact,type Transfer
@@ -31,6 +33,7 @@ export default function GameNightTools({event,games,isHost,isGroupOwner=false,us
     return future;
   },[games]);
   const [selectedId,setSelectedId]=useState('');
+  const unmatchedRowsRef=useRef<HTMLDivElement>(null);
   const currentGameRef=useRef('');
   const latestLoad=useRef(0);
   const [state,setState]=useState<Data|null>(null);
@@ -288,9 +291,9 @@ export default function GameNightTools({event,games,isHost,isGroupOwner=false,us
     <header className="pkr-night-heading"><div><span>RSVPs · SEATS · SHARING</span><h1>Game Night</h1>
       <p>Live RSVPs, seats and WhatsApp updates for upcoming games.</p></div></header>
     <div className="pkr-night-empty"><strong>No game night to manage</strong><p>Schedule a game to create its private RSVP board and live link.</p>
-      {isHost&&<button type="button" onClick={onSchedule}>+ Schedule a game</button>}
-      <button type="button" onClick={()=>router.push('/results?room='+encodeURIComponent(event.id)+'&view=history')}>View completed games →</button>
-      <button type="button" onClick={()=>router.push('/account')}>Notification settings →</button></div>
+      {isHost&&<button type="button" onClick={onSchedule}><PkrGlyph name="schedule"/> Schedule a game</button>}
+      <button type="button" onClick={()=>router.push('/results?room='+encodeURIComponent(event.id)+'&view=history')}><PkrGlyph name="history"/> View completed games →</button>
+      <button type="button" onClick={()=>router.push('/account')}><PkrGlyph name="bell"/> Notification settings →</button></div>
     {instantPanel}
     <ClubEngagementPanel eventId={event.id} isHost={isHost} onScheduleDate={onScheduleDate}/>
     <ClubExtrasPanel eventId={event.id} games={games} isManager={isHost}
@@ -315,25 +318,25 @@ export default function GameNightTools({event,games,isHost,isGroupOwner=false,us
           <h2>{date}</h2><p>{current?.location||'Venue to be confirmed'}</p></div>
         <div className="pkr-night-session-side">
           <span className={'pkr-night-status '+(current?.status==='active'?'live':'')}>{current?.status==='active'?'● Live':current?.status==='settled'?'Settled':'● RSVP open'}</span>
-          <button type="button" onClick={()=>void fetchSelected(selectedId)} disabled={refreshing}>{refreshing?'Refreshing…':'↻ Refresh'}</button>
+          <button type="button" onClick={()=>void fetchSelected(selectedId)} disabled={refreshing}><PkrGlyph name="refresh"/> {refreshing?'Refreshing…':'Refresh'}</button>
           <small>{checkedAt?'Checked '+new Date(checkedAt).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'}):'Not checked'}</small>
         </div>
       </div>
 
       {canRsvp&&stats&&<>
         <div className="pkr-night-stats" aria-label="Live RSVP totals">
-          <div><small>Confirmed</small><strong>{stats.confirmed}</strong><span>Playing</span></div>
-          <div><small>Available</small><strong>{stats.available}</strong><span>of {stats.totalSeats} places</span></div>
-          <div><small>Interested</small><strong>{stats.interested}</strong><span>Maybe</span></div>
-          <div><small>Not coming</small><strong>{stats.declined}</strong><span>Declined</span></div>
+          <RecordMetric request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:selectedId,filter:'yes'}}><small>Confirmed</small><strong>{stats.confirmed}</strong><span>Playing</span></RecordMetric>
+          <button type="button" onClick={openRsvp} aria-label={'View seat availability: '+stats.available+' of '+stats.totalSeats+' places'}><small>Available</small><strong>{stats.available}</strong><span>of {stats.totalSeats} places</span></button>
+          <RecordMetric request={{kind:'rsvps',title:'Interested RSVPs',gameId:selectedId,filter:'maybe'}}><small>Interested</small><strong>{stats.interested}</strong><span>Maybe</span></RecordMetric>
+          <RecordMetric request={{kind:'rsvps',title:'Not coming RSVPs',gameId:selectedId,filter:'no'}}><small>Not coming</small><strong>{stats.declined}</strong><span>Declined</span></RecordMetric>
         </div>
         <div className="pkr-night-action-panel">
           <div><span className="pkr-night-kicker">LIVE RSVP LINK</span><h3>Share once. Always up to date.</h3>
             <p>Pin the PKR RSVP link in your WhatsApp group. Members see the current arrivals and available seats whenever they open it.</p></div>
           <div className="pkr-night-actions">
             <button type="button" className="pkr-night-primary" onClick={openRsvp}>View live RSVP board ↗</button>
-            {isHost&&<button type="button" onClick={openRsvpSettings}>⚙ RSVP settings ↗</button>}
-            {isHost&&<button type="button" onClick={()=>void shareWhatsapp('invitation')}>♧ Share invitation in WhatsApp</button>}
+            {isHost&&<button type="button" onClick={openRsvpSettings}><PkrGlyph name="settings"/> RSVP settings ↗</button>}
+            {isHost&&<button type="button" onClick={()=>void shareWhatsapp('invitation')}><PkrGlyph name="share"/> Share invitation in WhatsApp</button>}
             <button type="button" onClick={()=>void copied(rsvpUrl,'Live RSVP link')}>Copy live link</button>
           </div>
         </div>
@@ -371,8 +374,9 @@ export default function GameNightTools({event,games,isHost,isGroupOwner=false,us
 
         {isHost&&<section className="pkr-night-panel">
           <div className="pkr-night-panel-heading"><div><span className="pkr-night-kicker">PRIVATE FOLLOW-UPS</span><h3>Members with no matching RSVP</h3></div>
-            <span className="pkr-night-count">{stats.unmatchedMembers.length}</span></div>
+            <button type="button" className="pkr-night-count" aria-label={'View '+stats.unmatchedMembers.length+' members with no matching RSVP'} aria-controls="pkr-unmatched-rsvp-rows" onClick={()=>{unmatchedRowsRef.current?.focus();unmatchedRowsRef.current?.scrollIntoView({block:'center',behavior:'smooth'});}}>{stats.unmatchedMembers.length}</button></div>
           <p>PKR compares RSVP display names with the room roster. Different screen names can produce an unmatched result — check before reminding a player. No bulk WhatsApp messages are sent.</p>
+          <div id="pkr-unmatched-rsvp-rows" ref={unmatchedRowsRef} tabIndex={-1} aria-label="Members with no matching RSVP">
           {!stats.unmatchedMembers.length?<p className="pkr-night-muted">Every listed player has a matching RSVP display name.</p>:
           <div className="pkr-night-followups">
             {stats.unmatchedMembers.map(member=>{
@@ -385,6 +389,7 @@ export default function GameNightTools({event,games,isHost,isGroupOwner=false,us
               </div>
             })}
           </div>}
+          </div>
           <div className="pkr-night-secondary-link"><button type="button" onClick={onMembers}>Manage new members & approvals →</button></div>
         </section>}
       </>}
