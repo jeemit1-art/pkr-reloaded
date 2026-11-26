@@ -54,6 +54,8 @@ export default function PlayerGameNightAccess({game,memberName}:Props){
       }
       setBoard(data);setError('');setLastUpdated(new Date());
     }catch(e:unknown){
+      // If membership is revoked or a private read fails, do not retain old RSVP data.
+      setBoard(null);
       setError(e instanceof Error?e.message:'Could not load the private RSVP board.');
     }finally{setRefreshing(false);}
   },[game.id,memberName]);
