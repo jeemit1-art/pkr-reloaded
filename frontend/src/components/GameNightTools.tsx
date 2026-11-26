@@ -11,9 +11,10 @@ import {buildResultsShare,buildPrivatePayment,normaliseWhatsappPhone,whatsappUrl
 import {createPkrResultsImage} from '@/lib/pkr-results-image';
 import {isCurrentGame} from '@/lib/game-status';
 import {rsvpChoiceLabel} from '@/lib/rsvp-choices';
+import ClubEngagementPanel from './ClubEngagementPanel';
 import './GameNightTools.css';
 
-type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void};
+type Props={event:EventDetail;games:Game[];isHost:boolean;onMembers:()=>void;onSchedule:()=>void;onScheduleDate?:(ts:number)=>void};
 type Data={game:GameDetail;board:RsvpBoardData|null;results:ResultsData|null;boardError:string;resultsError:string};
 type ShareKind='invitation'|'update'|'live'|'results';
 const money=(cents:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(cents/100);
@@ -21,7 +22,7 @@ const errorMessage=(error:unknown)=>error instanceof Error?error.message:'Unable
 const validTransfer=(value:Transfer)=>!!value.id&&value.amount>0&&Number.isSafeInteger(value.amount)&&
   ['owed','not_received','payer_claimed'].includes(value.status||'');
 
-export default function GameNightTools({event,games,isHost,onMembers,onSchedule}:Props){
+export default function GameNightTools({event,games,isHost,onMembers,onSchedule,onScheduleDate}:Props){
   const router=useRouter();
   const availableGames=useMemo(()=>{
     const future=games.filter(g=>isCurrentGame(g))
@@ -290,6 +291,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
       <button type="button" onClick={()=>router.push('/results?room='+encodeURIComponent(event.id)+'&view=history')}>View completed games →</button>
       <button type="button" onClick={()=>router.push('/account')}>Notification settings →</button></div>
     {instantPanel}
+    <ClubEngagementPanel eventId={event.id} isHost={isHost} onScheduleDate={onScheduleDate}/>
   </section>;
 
   return <section className="pkr-night-hub" aria-label="Game Night" data-testid="game-night-hub">
@@ -402,6 +404,7 @@ export default function GameNightTools({event,games,isHost,onMembers,onSchedule}
     </>}
 
     {instantPanel}
+    <ClubEngagementPanel eventId={event.id} game={current} isHost={isHost} onScheduleDate={onScheduleDate}/>
     <div className="pkr-night-secondary-link"><button type="button" onClick={()=>router.push('/account')}>
       Notification & sound settings →</button></div>
     {notice&&<p className="pkr-night-notice" role="status">{notice}</p>}
