@@ -6,6 +6,9 @@ import {api,type ClubDatePoll,type ClubWaitlist,type ClubMemberRequests,
 import './ClubEngagementPanel.css';
 
 type Props={eventId:string;game?:Game|null;isHost:boolean;onScheduleDate?:(ts:number)=>void};
+// The browser must also opt in. Old clients and un-migrated Workers will make
+// zero club-planning requests until the isolated staging rollout is approved.
+const CLIENT_CLUB_PLANNING_ENABLED=process.env.NEXT_PUBLIC_PKR_CLUB_PLANNING_V1==='1';
 const fmt=(seconds:number)=>new Date(seconds*1000).toLocaleString('en-AU',{
   day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Australia/Brisbane'
 });
@@ -62,6 +65,7 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
    }
  }
  const refresh=useCallback(async()=>{
+   if(!CLIENT_CLUB_PLANNING_ENABLED)return;
    try{
      const [pollResult,seasonResult]=await Promise.all([api.club.polls(eventId),api.club.seasons(eventId)]);
      setEnabled(true);setPolls(pollResult.polls);setSeasons(seasonResult.seasons);
@@ -79,6 +83,7 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
    setRequests(r.status==='fulfilled'?r.value:null);
  },[eventId,game?.id,game?.status]);
  useEffect(()=>{
+   if(!CLIENT_CLUB_PLANNING_ENABLED)return;
    void refresh();
    const onFocus=()=>{if(document.visibilityState==='visible')void refresh();};
    window.addEventListener('focus',onFocus);
@@ -98,7 +103,7 @@ export default function ClubEngagementPanel({eventId,game,isHost,onScheduleDate}
    catch(e){setError(err(e));}
    finally{setBusy(false);}
  }
- if(!enabled)return null;
+ if(!CLIENT_CLUB_PLANNING_ENABLED||!enabled)return null;
  const openPoll=polls.find(x=>x.status==='open');
  const past=polls.filter(x=>x.status==='closed'&&x.selected_index!==null);
  const waiting=queue?.my_status==='waiting',offered=queue?.my_status==='offered';
