@@ -132,14 +132,14 @@ extras.post('/events/:id/shared-expenses/:expenseId/cancel',authMiddleware,async
 
 // Read-only, host-only export in bounded pages. No emails, mobile numbers,
 // password hashes, RSVP tokens, device keys or Stripe identifiers are exported.
-type ExportKind='games'|'player_results'|'transfers'|'rsvps'|'members';
+type ExportKind='games'|'player_results'|'transfers'|'rsvps'|'rsvps_live'|'members'|'expense_splits'|'payment_events';
 extras.get('/events/:id/data-export',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
   const eventId=c.req.param('id');
   if(!await authorised(c,eventId,'host'))return c.json({error:'Only the club owner can export complete history'},403);
   const kind=c.req.query('kind');
   const offset=Number(c.req.query('offset')||'0');
-  if(!['games','player_results','transfers','rsvps','members'].includes(kind||'')||
+  if(!['games','player_results','transfers','rsvps','rsvps_live','members','expense_splits','payment_events'].includes(kind||'')||
     !Number.isSafeInteger(offset)||offset<0||offset>1000000)
     return c.json({error:'Select an export category and a valid page offset'},400);
   const pageSize=200;
@@ -160,9 +160,23 @@ extras.get('/events/:id/data-export',authMiddleware,async c=>{
     members:'SELECT em.user_id,u.name AS display_name,em.role,em.joined_at '+
       'FROM event_members em JOIN users u ON u.id=em.user_id WHERE em.event_id=? '+
       'ORDER BY em.joined_at,em.user_id LIMIT ? OFFSET ?',
+    rsvps_live:'SELECT r.game_id,g.scheduled_at,r.display_name,r.status,r.arrival_option,'+
+      'r.choice_value,r.seat_number,r.created_at,r.updated_at '+
+      'FROM game_rsvp_guests r JOIN games g ON g.id=r.game_id WHERE g.event_id=? '+
+      'ORDER BY g.scheduled_at,g.id,r.created_at,r.id LIMIT ? OFFSET ?',
+    expense_splits:'SELECT e.id AS expense_id,e.created_at,e.title,e.category,e.amount_cents,'+
+      'e.paid_by_user_id,s.user_id,s.share_cents,s.status AS consent_status,s.responded_at '+
+      'FROM room_shared_expense_splits s JOIN room_shared_expenses e ON e.id=s.expense_id '+
+      'WHERE e.event_id=? ORDER BY e.created_at,e.id,s.user_id LIMIT ? OFFSET ?',
+    payment_events:'SELECT ev.game_id,g.scheduled_at,ev.transfer_id,ev.actor_id,ev.action,'+
+      'ev.previous_status,ev.new_status,ev.created_at '+
+      'FROM settlement_confirmation_events ev JOIN games g ON g.id=ev.game_id '+
+      'WHERE g.event_id=? ORDER BY ev.created_at,ev.id LIMIT ? OFFSET ?',
   };
   try{
     const selected=kind as ExportKind;
+    if(selected==='rsvps_live'&&c.env.PKR_RSVP_V2!=='1')return disabled(c);
+    if(selected==='payment_events'&&c.env.PKR_SETTLEMENT_V2!=='1')return disabled(c);
     const rows=await c.env.DB.prepare(lookups[selected])
       .bind(eventId,pageSize+1,offset).all<Record<string,unknown>>();
     const hasMore=rows.results.length>pageSize;
