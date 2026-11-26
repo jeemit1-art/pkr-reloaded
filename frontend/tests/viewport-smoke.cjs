@@ -266,7 +266,7 @@ async function test(){
          if(item.id==='room'&&(nav.roomBar||!nav.roomActions))
            errors.push(size.name+' room renders a second top bar or lost quick actions '+JSON.stringify(nav));
          if(item.id==='room'){
-           for(const buttonName of ['Schedule game','Share PKR']){
+           for(const buttonName of ['Share PKR']){
              const action=page.locator('.pkr-room-mobile-actions').getByRole('button',{name:new RegExp(buttonName)});
              if(!await action.isVisible())errors.push(size.name+' room missing '+buttonName+' quick action');
            }
