@@ -39,10 +39,10 @@ async function capacity(env:Env,gameId:string,seats:number):Promise<{filled:numb
   // A manually seated player and that player's RSVP count once. A confirmed
   // unassigned RSVP still occupies a place, so offers cannot overbook them.
   const result=await env.DB.prepare(
-    "SELECT COUNT(*) AS filled FROM ("+
-    "SELECT LOWER(TRIM(display_name)) AS label FROM game_players WHERE game_id=? "+
-    "UNION SELECT LOWER(TRIM(display_name)) AS label FROM game_rsvp_guests "+
-    "WHERE game_id=? AND status='yes')"
+    "SELECT ((SELECT COUNT(*) FROM game_players WHERE game_id=?) + "+
+    "(SELECT COUNT(*) FROM game_rsvp_guests g WHERE g.game_id=? AND g.status='yes' "+
+    "AND NOT EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id=g.game_id "+
+    "AND LOWER(TRIM(gp.display_name))=LOWER(TRIM(g.display_name))))) AS filled"
   ).bind(gameId,gameId).first<{filled:number}>();
   const filled=Math.max(0,Number(result?.filled||0));
   return {filled,available:Math.max(0,seats-filled)};
@@ -176,10 +176,10 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
       "SELECT user_id FROM game_waitlist WHERE game_id=? AND status='waiting' "+
       "ORDER BY created_at,user_id LIMIT 1) "+
       "AND NOT EXISTS(SELECT 1 FROM game_waitlist WHERE game_id=? AND status='offered') "+
-      "AND (SELECT COUNT(*) FROM ("+
-      "SELECT LOWER(TRIM(display_name)) FROM game_players WHERE game_id=? "+
-      "UNION SELECT LOWER(TRIM(display_name)) FROM game_rsvp_guests "+
-      "WHERE game_id=? AND status='yes')) "+
+      "AND ((SELECT COUNT(*) FROM game_players WHERE game_id=?) + "+
+      "(SELECT COUNT(*) FROM game_rsvp_guests g WHERE g.game_id=? AND g.status='yes' "+
+      "AND NOT EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id=g.game_id "+
+      "AND LOWER(TRIM(gp.display_name))=LOWER(TRIM(g.display_name))))) "+
       "<(SELECT seats FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
     ).bind(gameId,gameId,gameId,gameId,gameId,gameId).run();
     if(!changed.meta.changes)return null;
