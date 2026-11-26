@@ -30,7 +30,8 @@ async function run(engine){
         if(url.origin!==API){errors.push('Unexpected API origin '+url.origin);await route.abort();return;}
         requests.push(method+' '+p);
         let data={},status=200;
-        if(method==='GET'&&p==='/auth/me')data=member;
+        if(method==='POST'&&p==='/auth/device-session/start')data={refresh_token:'b'.repeat(64),expires_in:45*86400};
+        else if(method==='GET'&&p==='/auth/me')data=member;
         else if(method==='GET'&&p==='/events')data=authorised?[firstRoom,secondRoom]:[firstRoom];
         else if(method==='GET'&&p==='/events/room-one')data={...firstRoom,members:[]};
         else if(method==='GET'&&p==='/events/room-one/games')data=[];
