@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useMemo,useState,type ReactNode} from 'react';
+import {useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useRouter} from 'next/navigation';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
@@ -42,14 +42,35 @@ export default function ResultsPage(){
  const [search,setSearch]=useState('');
  const [sort,setSort]=useState<'net'|'average'|'profitable'|'games'>('net');
  const [minGames,setMinGames]=useState(false);
+ const initialScrollPending=useRef(true);
+ const initialLoading=busy||Boolean(selected&&loading);
 
  // Open the Results main tab at its heading, never at the old page scroll offset.
- useEffect(()=>{
-  const reset=()=>window.scrollTo({top:0,behavior:'instant'});
+ useLayoutEffect(()=>{
+  initialScrollPending.current=true;
+  const reset=()=>{if(initialScrollPending.current)window.scrollTo({top:0,behavior:'instant'});};
+  const cancel=()=>{initialScrollPending.current=false;};
+  const inputs=['pointerdown','wheel','touchmove','keydown'] as const;
+  inputs.forEach(type=>window.addEventListener(type,cancel,{capture:true,passive:true}));
   reset();
   const frame=window.requestAnimationFrame(reset);
-  return()=>window.cancelAnimationFrame(frame);
+  return()=>{
+   window.cancelAnimationFrame(frame);
+   inputs.forEach(type=>window.removeEventListener(type,cancel,true));
+  };
  },[]);
+ // Club/results loading can change the page height after the first frame.
+ // Complete this initial reset after that render, unless the user has interacted.
+ // Subsequent room changes, filters and record sheets keep their own position.
+ useLayoutEffect(()=>{
+  if(initialLoading||!initialScrollPending.current)return;
+  window.scrollTo({top:0,behavior:'instant'});
+  const frame=window.requestAnimationFrame(()=>{
+   if(initialScrollPending.current)window.scrollTo({top:0,behavior:'instant'});
+   initialScrollPending.current=false;
+  });
+  return()=>window.cancelAnimationFrame(frame);
+ },[initialLoading]);
 
  useEffect(()=>{
   const query=new URLSearchParams(window.location.search);
@@ -152,7 +173,7 @@ export default function ResultsPage(){
   }catch(e){setNotice(e instanceof Error?e.message:'Unable to create image.')}
   finally{setSharing('')}
  }
- return <main className={'pkr-primary-page pkr-results-page pkr-results-v3 pkr-results-experience-'+experience}>
+ return <main className={'pkr-primary-page pkr-results-page pkr-results-v3 pkr-results-experience-'+experience} aria-busy={initialLoading}>
   <div className="pkr-primary-page-inner">
    <div className="pkr-results-room-bar">
     <span className="pkr-results-room-identity"><PkrGlyph name="spade"/> PKR <small>/ RESULTS</small></span>

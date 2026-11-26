@@ -8,6 +8,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const BASE='http://127.0.0.1:3000';
 const API='https://pkr-reloaded-worker-staging.jeemit1.workers.dev';
+const QR_LIBRARY='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
 const output=path.resolve(__dirname,'../../artifacts/game-night-polish');
 fs.mkdirSync(output,{recursive:true});
 const now=Math.floor(Date.now()/1000);
@@ -328,6 +329,9 @@ async function run(){
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url());
    if(url.origin===BASE)return route.continue();
+   // Exercise the existing offline QR fallback without fetching third-party code.
+   // Only this exact presentation script is expected; every other origin stays blocked.
+   if(request.method()==='GET'&&request.resourceType()==='script'&&url.href===QR_LIBRARY)return route.abort('blockedbyclient');
    if(url.origin!==API){unexpected.push('Blocked unexpected external origin: '+url.origin);return route.abort();}
    try{const response=fixture(state,url,request.method(),request.postData());
     await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'},body:JSON.stringify(response)});

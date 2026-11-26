@@ -208,6 +208,7 @@ async function check(browser,name,width,height){
   }
   await page.getByRole('button',{name:'View underlying records: player chip stack',exact:true}).click();
   await page.getByRole('heading',{name:'Chip stack records',exact:true}).waitFor();
+  assert.equal(await page.locator('#notifBanner').evaluate(el=>getComputedStyle(el).visibility),'hidden','Notification invitation must wait while player records are open');
   const chipRecords=page.locator('.side-panel.open .pkr-chip-records');
   assert.match(await chipRecords.innerText(),/Verified opening\s+100 chips/);
   assert.match(await chipRecords.innerText(),/Current stack\s+95 chips/);

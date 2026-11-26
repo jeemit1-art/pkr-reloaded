@@ -421,6 +421,14 @@
   html.pkr-game-night #gameScreen .pkr-chip-hand-record summary {min-height:44px !important;padding:12px 0 !important;cursor:pointer !important;color:#F4F6F8 !important;box-sizing:border-box !important}
   html.pkr-game-night #gameScreen .pkr-chip-hand-record summary:focus-visible {outline:2px solid #F27457 !important;outline-offset:2px !important}
 
+  /* The notification invitation waits while the player drawer is being used;
+     it must never cover financial controls or source records. */
+  html.pkr-game-night:has(#sidePanel.open) #notifBanner {visibility:hidden!important;pointer-events:none!important}
+  html.pkr-game-night #notifBanner>div {background:#14242C!important;border-color:#425C68!important;box-shadow:0 8px 24px #0F1D2566!important;font-family:var(--font-body),Inter,sans-serif!important}
+  html.pkr-game-night #notifBanner>div>div {color:#BACCD5!important}
+  html.pkr-game-night #notifBanner>div>div>div {color:#F4F6F8!important}
+  html.pkr-game-night #notifBanner #notifEnableBtn {background:#F27457!important;color:#14242C!important;font-family:var(--font-body),Inter,sans-serif!important;min-height:44px!important}
+
   /* Profile controls are another independently styled, retained app overlay. */
   html.pkr-game-night .pkr-player-profile-sheet {background:#FFFFFF!important;color:#14242C!important;border-color:#DFE5E9!important;box-shadow:0 18px 65px #14242C33!important}
   html.pkr-game-night .pkr-player-profile-editor {color:#14242C!important}

@@ -106,6 +106,8 @@ async function check(engine,size){
     assert.equal(geometry.position,'fixed');
     assert(geometry.primary.left>=-1&&geometry.primary.right<=geometry.width+1,
       'Header extends beyond viewport');
+    assert(geometry.primary.left<=1&&geometry.primary.right>=geometry.width-1,
+      'Header must span the full app content width');
     assert(geometry.primary.top>=-1&&geometry.primary.top<=2,'Header starts outside safe viewport');
     assert(geometry.account.width>=41&&geometry.account.height>=42,'Account action is too small');
     assert(geometry.content.top>=geometry.primary.bottom-1,
@@ -116,23 +118,24 @@ async function check(engine,size){
     const scrolled=await page.locator('.pkr-primary-mobile-utility').boundingBox();
     assert(scrolled&&scrolled.y>=-1&&scrolled.y<=2,'Fixed header moved away from the viewport top');
     assert(scrolled.x>=-1&&scrolled.x+scrolled.width<=size.width+2,'Scrolled header clipped');
-    // Allow scroll-related painting to settle, then require the same exact
-    // covered points in both engines. A persistent gap still fails below.
+    // WebKit reserves the styled 2px scrollbar; innerWidth includes that native
+    // strip and elementFromPoint returns null there. Test the full content
+    // viewport, whose width the header is independently required to fill.
     await page.waitForFunction(({safeTop})=>{
       const header=document.querySelector('.pkr-primary-mobile-utility');
       if(!header)return false;
-      const r=header.getBoundingClientRect();
+      const r=header.getBoundingClientRect(),width=document.documentElement.clientWidth;
       return [1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].every(y=>
-        [2,innerWidth/2,innerWidth-2].every(x=>header.contains(document.elementFromPoint(x,y))));
+        [1,width/2,width-1].every(x=>header.contains(document.elementFromPoint(x,y))));
     },{safeTop:size.safeTop||0},{timeout:3000}).catch(()=>{});
     const masks=await page.evaluate(({safeTop,safeBottom})=>{
       const header=document.querySelector('.pkr-primary-mobile-utility');
       const footer=document.querySelector('.pkr-primary-bottom-nav');
-      const s=getComputedStyle(header),f=getComputedStyle(footer),r=header.getBoundingClientRect();
+      const s=getComputedStyle(header),f=getComputedStyle(footer),r=header.getBoundingClientRect(),width=document.documentElement.clientWidth;
       const inside=(parent,x,y)=>parent.contains(document.elementFromPoint(x,y));
       const misses=[];
       [1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].forEach(y=>
-        [2,innerWidth/2,innerWidth-2].forEach(x=>{
+        [1,width/2,width-1].forEach(x=>{
           const hit=document.elementFromPoint(x,y);
           if(!header.contains(hit))misses.push({x,y,hit:hit?hit.tagName+'.'+hit.className:null,
             bounds:hit?hit.getBoundingClientRect().toJSON():null});
@@ -140,11 +143,12 @@ async function check(engine,size){
       return {height:r.height,paddingTop:parseFloat(s.paddingTop),colour:s.backgroundColor,
         image:s.backgroundImage,opacity:s.opacity,blur:s.backdropFilter,
         cap:getComputedStyle(header,'::before').backgroundColor,
-        misses,viewport:{width:innerWidth,height:innerHeight,scrollY,visualTop:visualViewport?.offsetTop,visualLeft:visualViewport?.offsetLeft,scale:visualViewport?.scale},
+        misses,viewport:{width:innerWidth,clientWidth:width,height:innerHeight,scrollY,visualTop:visualViewport?.offsetTop,visualLeft:visualViewport?.offsetLeft,scale:visualViewport?.scale},
+        fullWidth:r.left<=1&&r.right>=width-1,
         // Check the top inset itself after scrolling real content beneath it.
         topCovered:[1,Math.max(2,safeTop/2),Math.max(2,safeTop-1),r.bottom-2].every(y=>
-          [2,innerWidth/2,innerWidth-2].every(x=>inside(header,x,y))),
-        bottomCovered:inside(footer,innerWidth/2,innerHeight-2),
+          [1,width/2,width-1].every(x=>inside(header,x,y))),
+        bottomCovered:inside(footer,width/2,innerHeight-2),
         footerColour:f.backgroundColor,footerPadding:parseFloat(f.paddingBottom)};
     },{safeTop:size.safeTop||0,safeBottom:size.safeBottom||0});
     assert(Math.abs(masks.height-(64+(size.safeTop||0)))<=1,'Safe area must be reserved once: '+JSON.stringify(masks));
@@ -152,6 +156,7 @@ async function check(engine,size){
     assert.equal(masks.colour,'rgb(255, 255, 255)');
     assert.equal(masks.cap,'rgb(255, 255, 255)');
     assert.equal(masks.image,'none');assert.equal(masks.opacity,'1');assert.equal(masks.blur,'none');
+    assert(masks.fullWidth,'Scrolled header must cover the entire app content width');
     await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'-scrolled.png'),fullPage:false});
     assert(masks.topCovered,'Scrolled content is exposed in the status-bar inset: '+JSON.stringify(masks));
     assert(masks.bottomCovered,'Scrolled content is exposed beneath bottom navigation');
