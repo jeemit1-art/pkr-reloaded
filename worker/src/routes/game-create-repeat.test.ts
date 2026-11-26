@@ -4,7 +4,9 @@ vi.mock('../middleware',async(importOriginal)=>{
   return {...actual,
     authMiddleware:async(c:any,next:any)=>{c.set('userId','host-test');await next()},
     requireEventRole:async()=>true,
-    getPlanStatus:async()=>({is_active:true,plan:'pro',max_seats:15}),
+    getPlanStatus:async(_db:any,_host:string,free=false)=>free
+      ?({is_active:true,free_game_available:true,plan:'trial',max_seats:9})
+      :({is_active:true,free_game_available:false,plan:'pro',max_seats:15}),
   };
 });
 vi.mock('../push',()=>({sendPushToEvent:vi.fn(async()=>{}),sendPushToPlayer:vi.fn(async()=>{})}));
@@ -16,6 +18,7 @@ function fixture(){
   const tournamentStates:any[]=[];
   const tournamentLevels:any[]=[];
   const arrivalConfigs:any[]=[];
+  const freeClaims:any[]=[];
   const DB={
     prepare(sql:string){
       return {bind(...args:any[]){
@@ -33,6 +36,7 @@ function fixture(){
             else if(sql.startsWith('INSERT INTO tournament_state('))tournamentStates.push(args);
             else if(sql.startsWith('INSERT INTO tournament_levels('))tournamentLevels.push(args);
             else if(sql.startsWith('INSERT INTO game_rsvp_arrivals('))arrivalConfigs.push(args);
+            else if(sql.startsWith('INSERT INTO host_free_first_games('))freeClaims.push(args);
             else throw Error('Unexpected D1 write: '+sql);
             return {meta:{changes:1}};
           }
@@ -46,7 +50,7 @@ function fixture(){
   const post=(body:Record<string,unknown>)=>games.request('https://example.invalid/events/room-test/games',{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),
   },env,ctx);
-  return {created,tournamentStates,tournamentLevels,arrivalConfigs,post,env};
+  return {created,tournamentStates,tournamentLevels,arrivalConfigs,freeClaims,post,env};
 }
 beforeEach(()=>vi.clearAllMocks());
 
@@ -96,6 +100,25 @@ describe('bounded repeating poker-night scheduling',()=>{
     f.env.PKR_RSVP_V2='1';
     expect((await f.post({scheduled_at:start,rsvp_arrival_times:['19:00','19:00']})).status).toBe(400);
     expect(f.created).toHaveLength(0);
+  });
+  it('claims exactly one cash-game session under the gated one-free-game offer',async()=>{
+    const f=fixture();
+    f.env.PKR_FREE_FIRST_GAME_V1='1';
+    const res=await f.post({scheduled_at:start,seats:9});
+    expect(res.status).toBe(201);
+    expect(f.created).toHaveLength(1);
+    expect(f.freeClaims).toHaveLength(1);
+    expect(f.freeClaims[0]).toEqual(['host-test','room-test',f.created[0].id]);
+    expect(f.tournamentStates).toHaveLength(0);
+  });
+  it('does not allow promo tournament, repeats, or more than nine seats',async()=>{
+    const f=fixture();
+    f.env.PKR_FREE_FIRST_GAME_V1='1';
+    expect((await f.post({scheduled_at:start,format:'rebuy'})).status).toBe(402);
+    expect((await f.post({scheduled_at:start,repeat:'weekly'})).status).toBe(402);
+    expect((await f.post({scheduled_at:start,seats:10})).status).toBe(402);
+    expect(f.created).toHaveLength(0);
+    expect(f.freeClaims).toHaveLength(0);
   });
   it('rejects unknown recurrence and never creates records',async()=>{
     const f=fixture();

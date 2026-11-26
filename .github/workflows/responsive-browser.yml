@@ -73,6 +73,7 @@ jobs:
           node tests/dense-seat-layout.cjs
           node tests/app-experience.cjs
           node tests/member-access-guidance.cjs
+          node tests/unified-player-access.cjs
           node tests/room-member-profiles.cjs
           node tests/viewport-smoke.cjs
       - name: Upload synthetic-data screenshots

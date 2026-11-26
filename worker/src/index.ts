@@ -13,6 +13,8 @@ import billing from './routes/billing';
 import hands      from './routes/hands';
 import tournament from './routes/tournament';
 import analysis   from './routes/analysis';
+import clubPlanning from './routes/club-planning';
+import clubExtras from './routes/club-extras';
 import payments   from './routes/payments';
 import { sendPaymentReminders,sendGameReminders } from './reminders';
 import {reconcileNativeReceipts} from './native-push';
@@ -55,6 +57,8 @@ app.route('/',        rsvpBoard);
 app.route('/',        games);
 app.route('/',        tournament);
 app.route('/',        analysis);
+app.route('/',        clubPlanning);
+app.route('/',        clubExtras);
 
 // Only public capability booleans: never credentials or player information.
 // These report configuration, not proof of end-to-end device delivery.
@@ -71,6 +75,9 @@ app.get('/health', async (c) => {
     push_rooms_v2:c.env.PKR_PUSH_ROOMS_V2==='1',
     native_push:c.env.PKR_NATIVE_PUSH_ENABLED==='1',
     phone_members_v1:c.env.PKR_PHONE_MEMBERS_V1==='1',
+    club_planning_v1:c.env.PKR_CLUB_PLANNING_V1==='1',
+    club_extras_v1:c.env.PKR_CLUB_EXTRAS_V1==='1',
+    free_first_game_v1:c.env.PKR_FREE_FIRST_GAME_V1==='1',
   },
   ts:Date.now(),
   maintenance:{historical_roster_cleanup_complete:historicalArchiveComplete},

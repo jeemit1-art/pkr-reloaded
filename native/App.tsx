@@ -292,8 +292,8 @@ export default function App(){
   async function shareRoom(){
     if(!room)return;
     await Share.share({message:'Already approved in '+room.name+
-      '? Open your private PKR Instant page — no installation needed: '+
-      'https://mypkr.app/instant?room='+encodeURIComponent(room.id)});
+      '? Open your private PKR dashboard — no installation needed: '+
+      'https://mypkr.app/dashboard?room='+encodeURIComponent(room.id)});
   }
   const refresh=()=>{setRefreshing(true);void loadRoom(selected,true).finally(()=>setRefreshing(false));};
 

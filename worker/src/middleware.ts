@@ -41,6 +41,7 @@ export async function requireEventRole(
 
 // ── Plan status helper — used by gates in events.ts and games.ts ──────────────
 export interface PlanStatus {
+  free_game_available?:boolean;
   plan: string;
   is_active: boolean;    // verified paid subscription or grandfathered lifetime
   trial_active: boolean;
@@ -48,7 +49,24 @@ export interface PlanStatus {
   max_seats: number;
 }
 
-export async function getPlanStatus(db: D1Database, userId: string): Promise<PlanStatus> {
+/**
+ * Promotional cash game eligibility is opt-in and durable. Existing paid
+ * subscriptions continue through the original verified billing entitlement.
+ * A host with ANY saved game or a previous free claim cannot reclaim a game.
+ */
+export async function freeFirstGameEligible(db:D1Database,userId:string,enabled:boolean){
+  if(!enabled||!userId)return false;
+  const [claim,history]=await Promise.all([
+    db.prepare('SELECT game_id FROM host_free_first_games WHERE host_id=?')
+      .bind(userId).first<{game_id:string}>(),
+    db.prepare(
+      'SELECT g.id FROM games g JOIN events e ON e.id=g.event_id WHERE e.host_id=? LIMIT 1'
+    ).bind(userId).first<{id:string}>(),
+  ]);
+  return !claim&&!history;
+}
+
+export async function getPlanStatus(db: D1Database, userId: string, freeFirstEnabled=false): Promise<PlanStatus> {
   const user = await db.prepare(
     'SELECT plan, trial_started_at, plan_expires_at, stripe_subscription_id FROM users WHERE id=?'
   ).bind(userId).first<{ plan: string; trial_started_at: number | null; plan_expires_at: number | null;stripe_subscription_id:string|null }>();
@@ -80,10 +98,12 @@ export async function getPlanStatus(db: D1Database, userId: string): Promise<Pla
     Number.isSafeInteger(user.plan_expires_at) && Number(user.plan_expires_at)>now;
   const isActive = plan === 'lifetime' || isPaid;
   const isPro = plan === 'pro' || plan === 'lifetime';
+  const freeGameAvailable = !isActive && await freeFirstGameEligible(db,userId,freeFirstEnabled);
 
   return {
     plan,
-    is_active: isActive,
+    is_active: isActive||freeGameAvailable,
+    free_game_available:freeGameAvailable,
     trial_active: trialActive,
     // Pro: unlimited groups; Trial/Starter while active: unlimited; expired trial: 1
     max_groups: isPro ? null : 1,

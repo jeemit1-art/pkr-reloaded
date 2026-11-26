@@ -39,7 +39,7 @@ async function run(engine){
       });
       await page.goto(BASE+'/mobile-login',{waitUntil:'domcontentloaded'});
       if(variant==='previously-working'){
-        await page.waitForURL('**/instant',{timeout:15000});
+        await page.waitForURL('**/dashboard',{timeout:15000});
         assert(requests.includes('GET /auth/me'),'must validate old member JWT');
         await page.waitForTimeout(200);
         assert(requests.includes('POST /auth/device-session/start'),'old valid member must receive a renewable session');

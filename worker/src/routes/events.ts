@@ -37,7 +37,7 @@ events.post('/', authMiddleware, async (c) => {
   if (!name?.trim()) return c.json({error:'Name required'},400);
 
   // ── Plan gate: check group limit ──────────────────────────────────────────
-  const planStatus = await getPlanStatus(c.env.DB, userId);
+  const planStatus = await getPlanStatus(c.env.DB,userId,c.env.PKR_FREE_FIRST_GAME_V1==='1');
 
   if (!planStatus.is_active) {
     return c.json({

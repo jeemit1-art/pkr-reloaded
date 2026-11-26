@@ -14,9 +14,20 @@ const questions=[
  {q:'Does PKR charge or transfer money between players?',a:'No. PKR keeps records of game buy-ins, results and settlements. Your group handles payments independently.'}
 ];
 export default function PricingPage(){
+ const freeFirstGame=process.env.NEXT_PUBLIC_PKR_FREE_FIRST_GAME_V1==='1';
  return <main className="pkr-marketing-editorial">
   <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Pricing</span></nav>
   <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">PKR HOST SUBSCRIPTIONS</span><h1>Simple plans.<br/><em>Better game nights.</em></h1><p>Keep every buy-in, tournament blind and player result in one place. Only hosts need a hosting plan; players join their host’s private group without buying a host subscription.</p></header>
+  {freeFirstGame&&<section className="pkr-marketing-prose" aria-label="First cash game offer">
+    <span className="pkr-marketing-kicker">TRY BEFORE YOU SUBSCRIBE</span>
+    <h2>Host one cash game free.</h2>
+    <p>Eligible hosts can create one private group and run one cash-game session
+      with up to nine seats without a subscription or a card payment. The offer
+      is one-time only. Further games, repeats and tournaments require Starter
+      or Pro as applicable. Existing payment records remain yours to review.</p>
+    <a href="/dashboard" className="pkr-marketing-button primary">
+      Try your first game →</a>
+  </section>}
   <section className="pkr-marketing-plan-grid" aria-label="Host subscription plans">
    <article className="pkr-marketing-plan"><span>STARTER</span><h2>Your regular poker night.</h2><div className="pkr-marketing-price">AUD $9.99 <small>per month</small></div><p>A focused plan for a single private poker group.</p><ul><li>One active group</li><li>Up to 9 seats</li><li>Cash-game tracking and game scheduling</li><li>RSVPs, leaderboard and settlement records</li></ul><a href="/?subscribe=starter" className="pkr-marketing-button">Choose Starter <b>↗</b></a></article>
    <article className="pkr-marketing-plan featured"><span>PRO</span><h2>More games. More room.</h2><div className="pkr-marketing-price">AUD $19.99 <small>per month</small></div><p>For hosts managing multiple rooms or bigger nights.</p><ul><li>Multiple private poker groups</li><li>Up to 15 seats</li><li>Cash games and tournament controls</li><li>Extended features, history and player insights</li></ul><a href="/?subscribe=pro" className="pkr-marketing-button primary">Choose Pro <b>↗</b></a></article>

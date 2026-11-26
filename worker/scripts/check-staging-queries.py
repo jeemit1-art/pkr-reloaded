@@ -81,6 +81,13 @@ def main():
     # Validate profile queries against an IN-MEMORY upgraded schema only.
     profile_migration = ROOT / "migrations/20261029_room_player_profiles.sql"
     connection.executescript(profile_migration.read_text(encoding="utf-8"))
+    # Club engagement is also additive and gated; compile against the
+    # disposable upgraded schema only. No live D1 migration is performed.
+    club_migration = ROOT / "migrations/20261126_club_planning.sql"
+    connection.executescript(club_migration.read_text(encoding="utf-8"))
+    # Do not execute against remote D1. Optional club extras schema only.
+    extras_migration = ROOT / "migrations/20261126_club_extras.sql"
+    connection.executescript(extras_migration.read_text(encoding="utf-8"))
     checked = 0
     dynamic = []
     problems = []

@@ -597,7 +597,14 @@ export default function EventPage() {
 
         {/* Host communications and live RSVP management have their own room tab. */}
         {tab==='night'&&<GameNightTools event={event} games={games} isHost={isHost}
-          onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}/>}
+          isGroupOwner={isGroupOwner} userId={user?.id}
+          onMembers={()=>selectTab('members')} onSchedule={()=>setShowCreate(true)}
+          onScheduleDate={ts=>{
+            const date=new Date(ts*1000);
+            const local=new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
+            setForm(f=>({...f,scheduled_at:local}));
+            setShowCreate(true);
+          }}/>}
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>

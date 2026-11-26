@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const WORKER = 'https://pkr-reloaded-worker-staging.jeemit1.workers.dev';
-const FRONTEND = 'https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app';
 const source = readFileSync(new URL('../wrangler.staging.toml', import.meta.url), 'utf8');
 
 function configVar(key) {
@@ -14,9 +13,11 @@ function configVar(key) {
   return match[1];
 }
 
+const FRONTEND = configVar('FRONTEND_URL');
+
 assert.equal(new URL(WORKER).hostname, 'pkr-reloaded-worker-staging.jeemit1.workers.dev');
 assert.equal(configVar('name'), 'pkr-reloaded-worker-staging');
-assert.equal(configVar('FRONTEND_URL'), FRONTEND);
+assert.match(new URL(FRONTEND).hostname,/^pkr-reloaded-git-[a-z0-9-]+\.vercel\.app$/,'Staging frontend must be isolated Vercel Git preview');
 assert.equal(configVar('PKR_ENV'), 'staging');
 assert.notEqual(configVar('GOOGLE_CLIENT_ID'), '', 'Missing staging OAuth client ID');
 

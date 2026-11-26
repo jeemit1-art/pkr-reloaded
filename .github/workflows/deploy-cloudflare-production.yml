@@ -27,6 +27,11 @@ on:
       - '.github/workflows/deploy-cloudflare-production.yml'
   workflow_dispatch:
     inputs:
+      deploy_production_worker:
+        description: 'Explicitly authorise production Worker release AFTER staging, backup and security acceptance'
+        type: boolean
+        default: false
+        required: true
       reconcile_authorised_legacy:
         description: 'Apply the owner-authorised 326-transfer / $75,235 historical batch after backup checks'
         type: boolean
@@ -63,7 +68,9 @@ jobs:
 
   deploy-settlement-v2:
     needs: release-safety
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # Code pushes to main must not automatically deploy or migrate the PKR
+    # production Worker while new optional D1 features are still in UAT.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy_production_worker
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:

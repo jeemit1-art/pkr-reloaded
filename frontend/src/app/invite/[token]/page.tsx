@@ -110,7 +110,7 @@ export default function InvitePage() {
 
   function goToEvent() {
     router.push(role==='member'
-      ?'/instant?room='+encodeURIComponent(eventId)
+      ?'/dashboard?room='+encodeURIComponent(eventId)
       :'/events/'+encodeURIComponent(eventId));
   }
 

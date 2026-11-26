@@ -3,7 +3,7 @@
 This folder contains a **real Expo/React Native application**, not a WebView/PWA wrapper.
 
 The existing production website at https://mypkr.app remains the primary host gameplay
-console. **PKR Instant** at https://mypkr.app/instant is the no-install option for players
+console. **PKR Reloaded** at https://mypkr.app/dashboard is the browser-based option for players
 in a private poker group. The native application provides rooms, game dates, native
 RSVP and seat choice, verified host approval, personal WhatsApp invitation sharing,
 and native notification registration/test. Full game-play/financial administration
@@ -61,7 +61,7 @@ cloud builds. Remote push needs an actual signed device build.
    in the production Worker and optionally configure \`EXPO_ACCESS_TOKEN\`
    for enhanced push security; release the Worker separately from iOS store
    publishing. Tokens remain private in Cloudflare KV.
-7. Test personal invitation → host approval → PKR Instant, then native
+7. Test personal invitation → host approval → unified PKR dashboard, then native
    five-minute login transfer, RSVP, room opt-in, remote push receipt, lock
    screen display, notification tap, settings opt-out and app update.
 8. Submit through App Store Connect / Google Play when review requirements are
@@ -71,10 +71,10 @@ cloud builds. Remote push needs an actual signed device build.
 
 Host sends a *personal* invitation (not a generic link). New player taps
 the WhatsApp link, requests access, waits for host approval, then PKR
-automatically opens **/instant?room=...** in the same browser. There is
+automatically opens **/dashboard?room=...** in the same browser. There is
 no need to install the native app, a PWA or TestFlight for RSVP and results
 access through approved membership. The host can share the room's generic
-/instant link later; that generic link cannot grant membership by itself.
+/dashboard?room link later; that generic link cannot grant membership by itself.
 
 ## Release isolation
 
