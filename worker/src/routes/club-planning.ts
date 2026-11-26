@@ -209,7 +209,7 @@ export async function syncWaitlistAfterRsvp(
     if(status==='yes'){
       await env.DB.prepare(
         "UPDATE game_waitlist SET status='claimed',updated_at=unixepoch() "+
-        "WHERE game_id=? AND user_id=? AND status='offered'"
+        "WHERE game_id=? AND user_id=? AND status IN ('offered','waiting')"
       ).bind(gameId,userId).run();
     }else await offerNextWaitlisted(env,gameId);
   }catch(e){console.error('Waitlist sync deferred',e);}
@@ -255,7 +255,10 @@ club.post('/games/:id/waitlist',authMiddleware,async c=>{
     const already=await c.env.DB.prepare(
       "SELECT id FROM game_rsvp_guests WHERE game_id=? AND status='yes' AND display_name=? COLLATE NOCASE"
     ).bind(game.id,user.name).first();
-    if(already)return c.json({error:'You already have a confirmed RSVP'},409);
+    const seated=await c.env.DB.prepare(
+      'SELECT user_id FROM game_players WHERE game_id=? AND user_id=?'
+    ).bind(game.id,c.get('userId')).first();
+    if(already||seated)return c.json({error:'You are already listed for this game'},409);
     const prior=await c.env.DB.prepare(
       'SELECT status FROM game_waitlist WHERE game_id=? AND user_id=?'
     ).bind(game.id,c.get('userId')).first<{status:WaitStatus}>();
