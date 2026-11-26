@@ -4767,7 +4767,10 @@ body::before{opacity:0!important}
 .pkr-persistent-nav nav button[aria-current="page"] svg{color:var(--pkr-a-primary)!important}
 .pkr-universal-bottom-nav,
 .pkr-mobile-nav,.pkr-casino .pkr-mobile-nav{
-  background:rgba(19,26,31,.98)!important;
+  /* Match the single solid header, with no transparency for scrolling cards. */
+  background:#101a1d!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
   border-top:1px solid var(--pkr-a-line)!important;
 }
 .pkr-universal-bottom-nav button,.pkr-mobile-nav button{color:var(--pkr-a-muted)!important}
