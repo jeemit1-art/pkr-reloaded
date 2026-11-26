@@ -13,7 +13,10 @@ const columns:Record<ClubExportKind,string[]>={
   transfers:['game_id','scheduled_at','from_user','to_user','from_name','to_name',
     'amount','status','paid_at','created_at'],
   rsvps:['game_id','scheduled_at','display_name','status','created_at'],
+  rsvps_live:['game_id','scheduled_at','display_name','status','arrival_option','choice_value','seat_number','created_at','updated_at'],
   members:['user_id','display_name','role','joined_at'],
+  expense_splits:['expense_id','created_at','title','category','amount_cents','paid_by_user_id','user_id','share_cents','consent_status','responded_at'],
+  payment_events:['game_id','scheduled_at','transfer_id','actor_id','action','previous_status','new_status','created_at'],
 };
 function csvCell(value:unknown){
   const plain=String(value??'').replace(/[\r\n]+/g,' ');
@@ -217,8 +220,11 @@ export default function ClubExtrasPanel({eventId,games=[],isManager,isOwner,user
            <option value="games">Game dates and status</option>
            <option value="player_results">Game players, buy-ins and net results</option>
            <option value="transfers">Settlement transfers and confirmations</option>
-           <option value="rsvps">RSVP history</option>
+           <option value="rsvps">Legacy RSVP history</option>
+           <option value="rsvps_live">Live RSVP arrivals and seats</option>
            <option value="members">Approved members and roles</option>
+           <option value="expense_splits">Shared expense proposals and consent</option>
+           <option value="payment_events">Settlement confirmation audit events</option>
          </select></label>
          <button type="button" className="pkr-club-primary" disabled={busy}
            onClick={()=>void run(exportHistory,'CSV exported. Keep financial history private.')}>
