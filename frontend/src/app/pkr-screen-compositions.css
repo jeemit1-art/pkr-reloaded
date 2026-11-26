@@ -345,21 +345,23 @@
  outline:3px solid #e5c878;outline-offset:2px;
 }
 
-/* An installed iPhone exposes the system clock above the web view. The
-   top club utility owns this inset, and the sticky room header follows it.
-   Use higher specificity than the older Results-specific sticky rule. */
+/* Keep the Results-specific selector in sync with the global navigation.
+   The former sticky override exposed scrolling cards behind the iOS clock.
+   All phone/tablet routes share one opaque fixed header, not stacked bars. */
 @media(max-width:1099px){
  .pkr-primary-mobile-utility,
  body:has(.pkr-results-page) .pkr-primary-mobile-utility{
-  position:sticky!important;top:0!important;z-index:200!important;
-  min-height:calc(56px + env(safe-area-inset-top))!important;
-  padding-top:calc(6px + env(safe-area-inset-top))!important;
+  position:fixed!important;
+  inset:0 0 auto 0!important;
+  z-index:340!important;
+  height:var(--pkr-primary-header-height)!important;
+  min-height:var(--pkr-primary-header-height)!important;
+  padding-top:var(--pkr-primary-safe-top)!important;
+  background:#101a1d!important;
+  background-image:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
  }
- .pkr-app.pkr-event>.pkr-topbar,
- .pkr-app.pkr-dashboard>.nav.pkr-topbar{
-  top:calc(56px + env(safe-area-inset-top))!important;
- }
- .pkr-app.pkr-dashboard>.nav.pkr-topbar{padding-top:0!important}
  .pkr-results-page{
   padding-bottom:calc(var(--pkr-navigation-height,85px) + 42px)!important;
  }
