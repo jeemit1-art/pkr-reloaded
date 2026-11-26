@@ -4,8 +4,8 @@
   "description": "Private poker rooms, mobile RSVPs, buy-ins and settlement — all in one place.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0B0F12",
-  "theme_color": "#0B0F12",
+  "background_color": "#F4F6F8",
+  "theme_color": "#F4F6F8",
   "icons": [
     {
       "src": "/icon-192.png",

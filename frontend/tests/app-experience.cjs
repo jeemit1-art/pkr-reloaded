@@ -154,6 +154,8 @@ async function run(){
     await page.setViewportSize({width,height:Math.min(height,380)});await page.waitForTimeout(100);
     await hitVisible(page.getByRole('button',{name:'Close record details'}));await closeSheet(page);await page.setViewportSize({width,height});
     await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+    // Retain the full Command/Live regression coverage behind the new Home view.
+    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
     await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
     await page.locator('.pkr-dual-switch-actions button[aria-pressed="true"]').first().waitFor();
     assert.equal(await page.getByRole('button',{name:/Command Centre/}).getAttribute('aria-pressed'),'true');
@@ -236,6 +238,7 @@ async function run(){
         ['/account','.pkr-account-appearance']
       ]){
         await page.goto(BASE+route,{waitUntil:'domcontentloaded'});
+        if(route.startsWith('/payments'))await page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:'Ledger & tools',exact:true}).click();
         await page.locator(surface).first().waitFor({state:'visible',timeout:15000});
         await page.waitForFunction(()=>document.documentElement.getAttribute('data-pkr-room-experience')==='live');
         const applied=await page.locator(surface).first().evaluate(el=>{
@@ -286,6 +289,7 @@ async function run(){
     assert.equal(await page.locator('.pkr-dual-root .pkr-room-outstanding-row').count(),2);
     if(height>=700){
       await page.getByRole('button',{name:/View full payment schedule/}).click();
+      await page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:'Ledger & tools',exact:true}).click();
       await page.locator('#pkr-insights-room').waitFor();
       await page.getByTestId('current-outstanding').filter({hasText:'$100'}).waitFor();
       assert.equal(await page.locator('#pkr-insights-room').inputValue(),'test-room');
@@ -362,6 +366,7 @@ async function run(){
         'Saved game activity trend must remain visible');
       await page.screenshot({path:path.join(output,'chromium-phone-results-insights-unified.png'),fullPage:false});
       await page.goto(BASE+'/payments?room=test-room&payments=outstanding',{waitUntil:'domcontentloaded'});
+      await page.getByRole('navigation',{name:'Payment sections'}).getByRole('link',{name:'Ledger & tools',exact:true}).click();
       await page.getByRole('heading',{name:'Payments',exact:true}).waitFor();
       await page.getByRole('button',{name:/Private reminder/}).first().waitFor();
       await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});

@@ -1,38 +1,25 @@
 import type { Metadata, Viewport } from 'next';
 import AppExperience from '@/components/AppExperience';
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './pkr-theme-a.css';
 import './pkr-player-shell.css';
 import './pkr-navigation-stability.css';
 import './room-experience-themes.css';
 import './real-dual-experiences.css';
 import './pkr-screen-compositions.css';
+import './game-night.css';
+import './game-night-secondary.css';
+import './game-night-host.css';
+import './game-night-player.css';
+import './game-night-live.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
-// Theme A — Midnight Felt: exactly the three faces in the user-approved guide.
-// Font files are bundled by Next so there are no client-side Google Fonts calls.
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['400','600','700'],
-  variable: '--font-display',
-  display: 'swap',
-});
-const bodyFont = Inter({
-  subsets: ['latin'],
-  weight: ['400','500','600','700'],
-  variable: '--font-body',
-  display: 'swap',
-});
-const numberFont = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['500','700'],
-  variable: '--font-num',
-  display: 'swap',
-});
+// Bundle the app font locally so builds and installed sessions do not need a font service.
+const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#0B0F12', colorScheme:'dark',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#F4F6F8', colorScheme:'light dark',
 };
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
@@ -66,7 +53,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU" className={`${display.variable} ${bodyFont.variable} ${numberFont.variable}`}>
+    <html lang="en-AU" className={`pkr-game-night ${bodyFont.variable}`}>
       <body>
         <AppExperience>
         <PersistentNavigation/>

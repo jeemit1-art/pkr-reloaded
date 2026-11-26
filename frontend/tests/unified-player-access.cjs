@@ -86,6 +86,7 @@ async function run(engine){
         const download=page.waitForEvent('download');
         await page.getByRole('button',{name:'Add to calendar'}).click();
         assert.match((await download).suggestedFilename(),/PKR-poker-night\.ics/);
+        await page.locator('[data-testid="player-rsvp-open"]').click();
         await page.locator('.pkr-player-rsvp-choices button').first().click();
         await page.locator('.pkr-player-rsvp-seat select').selectOption('2');
         await page.getByRole('button',{name:'Save my RSVP'}).click();
@@ -99,6 +100,7 @@ async function run(engine){
         assert.equal(await page.evaluate(()=>Boolean(localStorage.getItem('pkr:instant:rsvp:upcoming-two'))),true);
         await page.goto(BASE+'/instant?room=room-two',{waitUntil:'domcontentloaded'});
         await page.waitForURL('**/dashboard*');
+        await page.locator('[data-testid="player-rsvp-open"]').click();
         await page.getByRole('button',{name:'Update my RSVP'}).waitFor();
         await page.getByRole('button',{name:'Not coming'}).click();
         await page.getByRole('button',{name:'Update my RSVP'}).click();

@@ -119,7 +119,9 @@ async function check(browser,name,width,height){
   const seatMoney=await page.locator('#seat7 .seat-money').innerText();
   if(resolvedView==='compact')assert.match(seatMoney,/\$25/);
   else assert.match(seatMoney,/1b.*\$25/);
-  await requireColour(page,'#seat7 .seat-money','rgb(255, 93, 114)');
+  await requireColour(page,'#seat7 .seat-money','rgb(189, 207, 216)');
+  assert.equal((await page.locator('#seat7 .pkr-game-seat-result').textContent()).trim(),'$25',
+    'An active investment must not be shown as a signed loss.');
   assert.equal(await page.locator('#seat7').getByText('Result pending').count(),0);
   assert.match(await page.locator('#seat3 .seat-stack').innerText(),/95 chips/);
   assert.match(await page.locator('#bbBank').innerText(),/2b/);
@@ -155,8 +157,9 @@ async function check(browser,name,width,height){
   await page.locator('.side-panel.open #pNetDisplay')
    .filter({hasText:/\$25/}).waitFor({state:'visible',timeout:15000});
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
-  await requireColour(page,'.side-panel.open #pNetDisplay','rgb(255, 93, 114)');
-  await requireColour(page,'.side-panel.open .pkr-panel-buyin','rgb(255, 93, 114)');
+  await requireColour(page,'.side-panel.open #pNetDisplay','rgb(220, 230, 234)');
+  // The visible Buy-in metric replaces the hidden legacy summary span.
+  await requireColour(page,'.side-panel.open .pkr-quick-metric.money-in strong','rgb(244, 246, 248)');
   assert.equal(await page.locator('.side-panel.open .pkr-quick-metric.result.pending').count(),1,'Pending is the correct status until cash-out');
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});

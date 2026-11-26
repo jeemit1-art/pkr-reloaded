@@ -37,6 +37,10 @@ function DashboardInner() {
   const [scanning, setScanning] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
   const [featuredGames,setFeaturedGames]=useState<Game[]>([]);
+  const [featuredRefresh,setFeaturedRefresh]=useState(0);
+  const [featuredRefreshing,setFeaturedRefreshing]=useState(false);
+  const [featuredRefreshError,setFeaturedRefreshError]=useState('');
+  const loadedFeaturedRoom=useRef('');
   const [preferredRoomId,setPreferredRoomId]=useState('');
   const [featuredHistory,setFeaturedHistory]=useState<Game[]>([]);
   const [featuredMembers,setFeaturedMembers]=useState<EventMember[]>([]);
@@ -335,16 +339,22 @@ function DashboardInner() {
   useEffect(()=>{
     if(!featuredRoom?.id){setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);return;}
     let active=true;
-    setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);
+    if(loadedFeaturedRoom.current!==featuredRoom.id){
+      setFeaturedGames([]);setFeaturedHistory([]);setFeaturedMembers([]);setFeaturedLeaders([]);
+      loadedFeaturedRoom.current=featuredRoom.id;
+    }
+    setFeaturedRefreshing(true);setFeaturedRefreshError('');
     Promise.allSettled([api.games.list(featuredRoom.id),api.events.history(featuredRoom.id),api.events.get(featuredRoom.id),api.events.leaderboard(featuredRoom.id)]).then(items=>{
       if(!active)return;
       if(items[0].status==='fulfilled')setFeaturedGames(items[0].value);
       if(items[1].status==='fulfilled')setFeaturedHistory(items[1].value);
       if(items[2].status==='fulfilled')setFeaturedMembers(items[2].value.members||[]);
       if(items[3].status==='fulfilled')setFeaturedLeaders(items[3].value);
+      if(items.some(item=>item.status==='rejected'))setFeaturedRefreshError('Some club information is unavailable. Refresh again to check the latest records.');
+      setFeaturedRefreshing(false);
     });
     return()=>{active=false};
-  },[featuredRoom?.id]);
+  },[featuredRoom?.id,featuredRefresh]);
   const upcomingGames=featuredGames.filter(g=>isCurrentGame(g)).sort((a,b)=>a.scheduled_at-b.scheduled_at);
   const unfinishedGames=featuredGames.filter(g=>isUnfinishedGame(g)).sort((a,b)=>b.scheduled_at-a.scheduled_at);
   const nextGame=upcomingGames[0];
@@ -509,18 +519,6 @@ function DashboardInner() {
             </button>
           </section>
         )}
-        {featuredRoom&&featuredRoom.role!=='member'&&<section className="pkr-player-setup-card"
-          style={{marginBottom:18,padding:'14px 18px',display:'flex',justifyContent:'space-between',
-            flexWrap:'wrap',alignItems:'center',gap:12}}>
-          <div><span className="pkr-eyebrow">ONE PKR EXPERIENCE</span>
-            <p style={{margin:'4px 0 0',fontSize:13,color:'var(--muted)'}}>
-              {previewPlayer?'Viewing the same dashboard your approved players use.':'Preview the player experience without changing your host access.'}
-            </p></div>
-          <button type="button" className="btn btn-ghost"
-            onClick={()=>router.push(previewPlayer?'/dashboard':'/dashboard?view=player&room='+encodeURIComponent(featuredRoom.id))}>
-            {previewPlayer?'Return to host controls →':'Preview player dashboard →'}
-          </button>
-        </section>}
         {featuredRoom&&(featuredRoom.role==='member'||previewPlayer
           ?<PlayerRoomDashboard room={featuredRoom} games={featuredGames} history={featuredHistory}
             leaders={featuredLeaders} memberId={user?.id} memberName={user?.name}/>
@@ -532,6 +530,7 @@ function DashboardInner() {
           userName={user?.name}
           planName={user?.plan==='trial'?'TRIAL':user?.plan==='lifetime'?'LIFETIME':(user?.plan||'').toUpperCase()}
           searchValue={search} onSearchChange={setSearch}
+          onRefreshData={()=>setFeaturedRefresh(v=>v+1)} refreshing={featuredRefreshing} refreshError={featuredRefreshError}
           onPlan={()=>{if(isPaid){void openBillingPortal();}else{
             window.dispatchEvent(new CustomEvent('pkr:upgrade_required',{detail:{error:'Select a host plan.'}}));}}}
           onSignOut={()=>{clearToken();void api.auth.logout().finally(()=>router.push('/'));}}
@@ -545,6 +544,18 @@ function DashboardInner() {
           onMembers={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}
           onHistory={()=>router.push('/events/'+featuredRoom.id+'?tab=history')}
         />)}
+        {featuredRoom&&featuredRoom.role!=='member'&&<section className="pkr-player-setup-card"
+          style={{marginBottom:18,padding:'14px 18px',display:'flex',justifyContent:'space-between',
+            flexWrap:'wrap',alignItems:'center',gap:12}}>
+          <div><span className="pkr-eyebrow">ONE PKR EXPERIENCE</span>
+            <p style={{margin:'4px 0 0',fontSize:13,color:'var(--muted)'}}>
+              {previewPlayer?'Viewing the same dashboard your approved players use.':'Preview the player experience without changing your host access.'}
+            </p></div>
+          <button type="button" className="btn btn-ghost"
+            onClick={()=>router.push(previewPlayer?'/dashboard':'/dashboard?view=player&room='+encodeURIComponent(featuredRoom.id))}>
+            {previewPlayer?'Return to host controls →':'Preview player dashboard →'}
+          </button>
+        </section>}
         {!featuredRoom&&<section className="pkr-dual-no-room" aria-label="Create your poker room">
           <span className="pkr-eyebrow">WELCOME TO PKR</span>
           <h2>Your poker nights start here.</h2>

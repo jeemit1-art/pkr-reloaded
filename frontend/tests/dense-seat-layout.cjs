@@ -54,20 +54,23 @@ async function check(browser,width){
   const inPlay=page.locator('#seat3');
   assert.equal(await inPlay.getAttribute('data-status'),'inplay');
   assert.equal(await inPlay.locator('.pkr-game-seat-status').count(),0,'Approved card has no repeated status strip');
-  assert.match(await inPlay.locator('.pkr-game-seat-result').textContent(),/-\$25/);
+  assert.equal((await inPlay.locator('.pkr-game-seat-result').textContent()).trim(),'$25',
+    'An active investment must stay unsigned until cash-out.');
   assert.equal(await inPlay.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','In-play buy-in must be red.');
+    'rgb(244, 246, 248)','In-play investment must use neutral text, not a loss colour.');
   const inPlayBank=inPlay.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
   assert.match(await inPlayBank.textContent(),/\$25/);
   assert.equal(await inPlayBank.evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','The invested dollar figure must be red while IN PLAY.');
+    'rgb(189, 207, 216)','Recorded buy-in information remains neutral while IN PLAY.');
   const cashed=page.locator('#seat7');
   assert.equal(await cashed.getAttribute('data-status'),'cashed');
   assert.equal(await cashed.locator('.pkr-game-status-dot.cashed').count(),1,'Cashed-out card uses a compact green check');
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
+  assert.equal(await cashed.locator('.pkr-game-seat-result').evaluate(el=>getComputedStyle(el).color),
+    'rgb(255, 145, 160)','A recorded cash-out loss must retain its distinct semantic colour.');
   const cashedBank=cashed.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
-  assert.notEqual(await cashedBank.evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','CASHED OUT bank amount must no longer be marked outstanding.');
+  assert.equal(await cashedBank.evaluate(el=>getComputedStyle(el).color),
+    'rgb(189, 207, 216)','The buy-in line stays neutral after CASHED OUT; the final result carries the loss.');
   assert.equal(await page.locator('#bbBankQuick').isVisible(),true,'Bank balance must be visible once');
   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true,'IN must be visible');
   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true,'OUT must be visible');
@@ -140,11 +143,11 @@ async function check(browser,width){
   assert.equal(await page.locator('.pkr-game-status-dot.cashed').count()>0,true,
     'Compact mode shows the green check without repeated CASHED OUT text.');
   assert.equal(await page.locator('.pkr-game-status-dot.inplay').count()>0,true,
-    'Compact in-play status is shown by the red indicator without repeated text.');
+    'Compact in-play status keeps its indicator without repeated text.');
   assert.equal(await page.locator('#seat3 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','Compact in-play bank amount must be red.');
-  assert.notEqual(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
-    'rgb(255, 93, 114)','Compact completed buy-in is no longer outstanding.');
+    'rgb(189, 207, 216)','Compact in-play buy-in information must remain neutral.');
+  assert.equal(await page.locator('#seat7 .pkr-game-compact-bank').evaluate(el=>getComputedStyle(el).color),
+    'rgb(189, 207, 216)','Compact completed buy-in information stays separate from the final result.');
   await page.screenshot({path:path.join(screenshots,browser.browserType().name()+'-'+width+'-compact.png')});
   if(width>=350){
     await page.evaluate(()=>window.pkrSetSeatLayout('balanced'));

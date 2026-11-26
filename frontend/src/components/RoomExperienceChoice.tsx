@@ -32,20 +32,20 @@ export default function RoomExperienceChoice({roomId,canChange}:{roomId:string;c
  }
  return <div className="pkr-experience-choice" data-testid="pkr-room-appearance" data-room-id={roomId}
    data-layout={layout}>
-   <p>Choose between the original <strong>Command Centre</strong> and <strong>Live Poker</strong> designs.
-    The choice follows this poker club across every tab and is shared with its members.</p>
+   <p>Choose the <strong>Command Centre</strong> or <strong>Live Poker</strong> layout for the Full dashboard and related club screens.
+    This is shared with your club. Game night remains available on Home.</p>
    <div className="pkr-experience-choice-options" role="group" aria-label="Poker room appearance choices">
     <button type="button" onClick={()=>void choose('command')}
       disabled={!canChange||loading||saving}
       aria-pressed={!loading&&layout==='command'} className={layout==='command'?'is-active':''}>
       <span aria-hidden="true">▦</span><strong>Command Centre</strong>
-      <small>Premium club dashboard · emerald and champagne gold</small>
+      <small>Club overview · payments, results and recent activity</small>
     </button>
     <button type="button" onClick={()=>void choose('live')}
       disabled={!canChange||loading||saving}
       aria-pressed={!loading&&layout==='live'} className={layout==='live'?'is-active':''}>
       <span aria-hidden="true">♠</span><strong>Live Poker</strong>
-      <small>Casino felt · live table styling throughout</small>
+      <small>Game focus · seating, RSVPs and table shortcuts</small>
     </button>
    </div>
    <p className="pkr-experience-choice-note">{loading?'Loading your club’s saved choice…':
