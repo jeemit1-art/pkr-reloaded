@@ -28,3 +28,29 @@ CREATE TABLE IF NOT EXISTS room_shared_expense_splits (
 CREATE INDEX IF NOT EXISTS idx_room_expense_splits_member
   ON room_shared_expense_splits(user_id,expense_id);
 -- No actual payments, balances, chips or transfers are recorded by these tables.
+
+-- Host-owned tournament setup snapshots. Config is validated on write and
+-- revalidated by the existing guarded /games/:id/tournament/setup endpoint.
+CREATE TABLE IF NOT EXISTS room_tournament_presets (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK(length(name) BETWEEN 3 AND 80),
+  config_json TEXT NOT NULL,
+  created_by TEXT NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(event_id,name COLLATE NOCASE)
+);
+CREATE INDEX IF NOT EXISTS idx_room_tournament_presets_room
+  ON room_tournament_presets(event_id,updated_at DESC);
+
+-- One durable, unrepeatable promotional game claim per host. This table never
+-- records a transfer, subscription, buy-in or settlement amount.
+CREATE TABLE IF NOT EXISTS host_free_first_games (
+  host_id TEXT PRIMARY KEY REFERENCES users(id),
+  event_id TEXT NOT NULL REFERENCES events(id),
+  game_id TEXT NOT NULL UNIQUE REFERENCES games(id),
+  claimed_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_host_free_games_game
+  ON host_free_first_games(game_id);
