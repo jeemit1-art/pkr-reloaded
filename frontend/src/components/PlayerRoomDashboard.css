@@ -54,3 +54,27 @@
 .pkr-player-recent button span:last-child{color:#ecd08c}
 @media(max-width:800px){.pkr-player-columns{grid-template-columns:1fr}.pkr-player-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){.pkr-player-feature{grid-template-columns:minmax(0,1fr) 70px}.pkr-player-feature-content{padding:18px 15px}.pkr-player-feature-chip{width:85px;height:85px;font-size:42px;border-width:5px;outline-width:3px;transform:translateX(9px) rotate(-12deg)}.pkr-player-buttons{margin-top:13px}.pkr-player-buttons button{font-size:12px}.pkr-player-actions{gap:8px;margin:12px 0}.pkr-player-actions button{min-height:99px;padding:12px}.pkr-player-panel{padding:15px}}
+
+/* PKR Instant actions are now inside the single role-aware player dashboard. */
+.pkr-player-utility{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin:10px 0}
+.pkr-player-utility .pkr-player-fineprint{margin:0}
+.pkr-player-rsvp{margin:14px 0}
+.pkr-player-rsvp .pkr-player-panel-head h4{margin:0}
+.pkr-player-rsvp-current{margin:16px 0 6px;padding:12px 14px;border:1px solid #427654;border-radius:10px;background:#153629;color:#c6ebd0;font-size:13px}
+.pkr-player-rsvp-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:17px 0}
+.pkr-player-rsvp-choices button{min-height:48px;border:1px solid #52705e;background:#1a3326;border-radius:10px;color:#eaf1e9;padding:10px 12px;text-align:center;font-size:13px}
+.pkr-player-rsvp-choices button.selected{border-color:#e0c27b;background:#3b3824;color:#ffe5a1}
+.pkr-player-rsvp-seat{display:grid;gap:9px;color:#cad9cb;font-size:13px;margin:12px 0}
+.pkr-player-rsvp-seat select{background:#173227;color:#f0f4ed;border:1px solid #52705e;border-radius:9px;min-height:45px;padding:10px 12px;font-size:14px}
+.pkr-player-rsvp-save{width:100%;min-height:48px}
+.pkr-player-rsvp-save:disabled{opacity:.48;cursor:not-allowed}
+.pkr-player-rsvp-people{margin-top:22px;border-top:1px solid #305343;padding-top:15px}
+.pkr-player-rsvp-list{display:grid;gap:8px;margin:11px 0}
+.pkr-player-rsvp-list>div{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #294636;padding:8px 0;color:#dbe8df;font-size:13px}
+.pkr-player-rsvp-list>div span{color:#c0d1c4;text-align:right;font-size:12px}
+.pkr-player-rsvp-notice{border:1px solid #478862;border-radius:9px;background:#193f2c;color:#c9f0cd;font-size:13px;padding:12px}
+@media(max-width:540px){
+  .pkr-player-utility{gap:6px 14px}
+  .pkr-player-rsvp-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pkr-player-rsvp-list>div{align-items:flex-start}
+}
