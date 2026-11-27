@@ -386,7 +386,15 @@ export default function EventPage() {
     finally{setLinkBusy(false);}
   }
   async function removeMobileContact(contactId:string,name:string){
-    if(!window.confirm('Remove '+name+' from this group? Access and outstanding invitations will be revoked. A linked former member retains their original identity and history for a future rejoin.'))return;
+    const contact=phoneContacts.find(c=>c.id===contactId);
+    // Older Workers delete the phone-to-account link. Never promise safe
+    // same-account rejoin before the lifecycle-aware Worker is deployed.
+    const warning=contact?.returning===undefined
+      ?' Access and outstanding invitations will be revoked. This server has not enabled account-preserving removal; a fresh invitation may not restore the original account. Cancel if you need to retain the link for rejoin.'
+      :contact.user_id
+      ?' Access and outstanding invitations will be revoked. A linked former member retains their original identity and history for a future rejoin.'
+      :' The invitation and outstanding requests will be revoked.';
+    if(!window.confirm('Remove '+name+' from this group?'+warning))return;
     setPhoneBusy(true);
     try{
       await api.events.removePhoneContact(id,contactId);
