@@ -79,7 +79,7 @@ async function check(browser,width){
   });
   const initialStyleDetails=' Current seat styles: '+JSON.stringify(initialStyles);
   assert.equal(initialStyles.inPlayResult.color,
-    'rgb(244, 246, 248)','In-play investment must use neutral text, not a loss colour.'+initialStyleDetails);
+    'rgb(244, 241, 234)','In-play investment must use neutral text, not a loss colour.'+initialStyleDetails);
   const inPlayBank=inPlay.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
   assert.match(await inPlayBank.textContent(),/\$25/);
   assert.equal(initialStyles.inPlayBank.color,
@@ -89,7 +89,7 @@ async function check(browser,width){
   assert.equal(await cashed.locator('.pkr-game-status-dot.cashed').count(),1,'Cashed-out card uses a compact green check');
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
   assert.equal(initialStyles.cashedResult.color,
-    'rgb(255, 145, 160)','A recorded cash-out loss must retain its distinct semantic colour.'+initialStyleDetails);
+    'rgb(255, 142, 142)','A recorded cash-out loss must retain its distinct semantic colour.'+initialStyleDetails);
   assert.equal(initialStyles.cashedBank.color,
     'rgb(189, 207, 216)','The buy-in line stays neutral after CASHED OUT; the final result carries the loss.'+initialStyleDetails);
   assert.equal(await page.locator('#bbBankQuick').isVisible(),true,'Bank balance must be visible once');

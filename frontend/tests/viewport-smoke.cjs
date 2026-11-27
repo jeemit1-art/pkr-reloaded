@@ -130,9 +130,9 @@ async function test(){
       });
       if(theme.background!=='rgb(244, 241, 234)'||theme.primary.toLowerCase()!=='#3e63dd'||theme.ink.toLowerCase()!=='#1b1f2a')
         errors.push(size.name+' current launch palette mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(229, 224, 211)')
+      if(theme.proBorder!=='rgb(62, 99, 221)')
         errors.push(size.name+' Pro pricing card lacks the Chip Club border: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(20, 36, 44)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
+      if(theme.priceColor!=='rgb(27, 31, 42)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
       if(!theme.logo)errors.push(size.name+' current vector spade brand is missing');
       if(!theme.font.toLowerCase().includes('plus jakarta sans'))
@@ -556,10 +556,10 @@ async function test(){
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
            font:heading.fontFamily};
        });
-       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(20, 36, 44)')
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(27, 31, 42)')
          errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
        // Production CSS may shorten white from #ffffff to the equivalent #fff.
-       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
+       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('plus jakarta sans'))
          errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){

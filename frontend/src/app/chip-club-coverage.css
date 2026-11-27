@@ -718,3 +718,14 @@ html.pkr-game-night.pkr-chip-club body .pkr-table-tools-sheet button[aria-presse
  html.pkr-game-night.pkr-chip-club .pkr-results-page .pkr-results-trend-col>div>span{background:linear-gradient(180deg,#3E63DD,#2F4BB8)!important}
  html.pkr-game-night.pkr-chip-club .pkr-gn-home .pkr-gn-ticket-record:hover{text-decoration-color:#B6C7FF!important}
 }
+
+/* Contrast fix: retained Command Centre/Live Poker CTA must have white ink on blue. */
+@layer pkr-theme-priority{
+html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero button.pkr-dual-gold-button,
+html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root button.pkr-dual-gold-button,
+html.pkr-game-night.pkr-chip-club body .pkr-dual-root :is(.pkr-dual-gold-button,.pkr-dual-wide-link){
+ background:#3E63DD!important;background-image:none!important;
+ border-color:#3E63DD!important;color:#FFFFFF!important;
+}
+html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero button.pkr-dual-gold-button:hover{background:#2F4BB8!important;border-color:#2F4BB8!important;color:#FFFFFF!important;}
+}
