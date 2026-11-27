@@ -546,18 +546,10 @@ function DashboardInner() {
           onMembers={()=>router.push('/events/'+featuredRoom.id+'?tab=members')}
           onHistory={()=>router.push('/events/'+featuredRoom.id+'?tab=history')}
         />)}
-        {featuredRoom&&featuredRoom.role!=='member'&&<section className="pkr-player-setup-card"
-          style={{marginBottom:18,padding:'14px 18px',display:'flex',justifyContent:'space-between',
-            flexWrap:'wrap',alignItems:'center',gap:12}}>
-          <div><span className="pkr-eyebrow">ONE PKR EXPERIENCE</span>
-            <p style={{margin:'4px 0 0',fontSize:13,color:'var(--muted)'}}>
-              {previewPlayer?'Viewing the same dashboard your approved players use.':'Preview the player experience without changing your host access.'}
-            </p></div>
-          <button type="button" className="btn btn-ghost"
-            onClick={()=>router.push(previewPlayer?'/dashboard':'/dashboard?view=player&room='+encodeURIComponent(featuredRoom.id))}>
-            {previewPlayer?'Return to host controls →':'Preview player dashboard →'}
-          </button>
-        </section>}
+        {previewPlayer&&<div className="pkr-player-preview-notice" role="status">
+          <span><strong>Player preview</strong><small>Viewing this club as an approved player. Your host permissions are unchanged.</small></span>
+          <button type="button" onClick={()=>router.push('/dashboard?room='+encodeURIComponent(featuredRoom!.id))}>Return to host view</button>
+        </div>}
         {!featuredRoom&&<section className="pkr-dual-no-room" aria-label="Create your poker room">
           <span className="pkr-eyebrow">WELCOME TO PKR</span>
           <h2>Your poker nights start here.</h2>
