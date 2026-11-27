@@ -26,8 +26,8 @@ html.pkr-chip-club :is(.pkr-primary-page,.pkr-schedule-page,.pkr-app.pkr-event,.
 html.pkr-chip-club :is(.pkr-primary-page,.pkr-schedule-page,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-results-page,.pkr-vnext-insights,.pkr-gn-home,.pkr-player-home){
   --bg:var(--paper)!important;--bg2:var(--card)!important;--bg3:#F0EDE6!important;
   --white:var(--ink)!important;--ivory:var(--ink)!important;
-  --muted:var(--muted)!important;--gold:var(--blue)!important;
-  --green:var(--green)!important;--red:var(--red)!important;
+  --muted:#5A6172!important;--gold:var(--blue)!important;
+  --green:#0E7C4F!important;--red:#C9302C!important;
   --border-hi:var(--line)!important;--border-sub:var(--line)!important;
   background:var(--paper)!important;color:var(--ink)!important;
 }
@@ -104,7 +104,7 @@ html.pkr-chip-club .pkr-dual-root :is(.pkr-dual-gold-button,.pkr-dual-wide-link)
 html.pkr-chip-club :is(.pkr-record-dialog,.pkr-app.pkr-dialog-root,.pkr-bank-record-sheet,.pkr-player-history-dialog){
  --bg:var(--paper)!important;--bg2:#fff!important;--bg3:#F0EDE6!important;
  --white:var(--ink)!important;--ivory:var(--ink)!important;
- --muted:var(--muted)!important;--gold:var(--blue)!important;
+ --muted:#5A6172!important;--gold:var(--blue)!important;
  --border-sub:var(--line)!important;
  color:var(--ink)!important;font-family:var(--font-ui)!important;
 }
