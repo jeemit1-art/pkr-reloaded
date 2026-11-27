@@ -418,6 +418,9 @@ async function checkReportedVisualIssues(page,state,label){
   assert.equal(await colour(crew,'backgroundColor'),'rgb(216, 240, 231)','Attendance has a recognisably green surface');
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
   assert.equal(await colour(nav,'backgroundColor'),'rgb(8, 19, 36)','Shared navigation must use opaque navy');
+  const activeNavLabel=page.locator('.pkr-primary-bottom-nav:visible button.active small,.pkr-primary-sidebar:visible nav button.active span').first();
+  assert.equal(await colour(activeNavLabel,'color'),'rgb(255, 241, 204)','Selected label is readable gold-ivory on navy');
+  await readable(activeNavLabel,'Selected navigation label');
   await readable(crew.locator('h2'),'Attendance heading');
   await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
   for(const b of await crew.locator('.pkr-gn-seat-note>button').all())await readable(b,'Attendance count action');

@@ -45,6 +45,14 @@ html.pkr-game-night.pkr-chip-club.pkr-lounge body :is(.pkr-primary-bottom-nav,.p
 html.pkr-game-night.pkr-chip-club.pkr-lounge body :is(.pkr-primary-bottom-nav,.pkr-primary-sidebar nav) button.active svg {
   color:#FFC53D!important;
 }
+/* The older nav palette styles the label element directly. Preserve the
+   new high-contrast ink on the actual label, not merely its parent. */
+html.pkr-game-night.pkr-chip-club.pkr-lounge body :is(.pkr-primary-bottom-nav,.pkr-primary-sidebar nav) button :is(small,span) {
+  color:#C6D7EC!important;
+}
+html.pkr-game-night.pkr-chip-club.pkr-lounge body :is(.pkr-primary-bottom-nav,.pkr-primary-sidebar nav) button.active :is(small,span) {
+  color:#FFF1CC!important;
+}
 html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-primary-sidebar :is(.pkr-persistent-brand,.pkr-persistent-room strong,.pkr-primary-view-clubs,.pkr-room-switcher,.pkr-primary-sidebar-footer button,.pkr-primary-sidebar-footer>span,.pkr-persistent-room label) {
   color:#D9E7FA!important;
 }

@@ -176,17 +176,24 @@ async function captureApp(browser){
     {id:prefix+'table-13',title:'Live table · 13 players',category:'Live gameplay',route:'/games/'+denseGame.id+'/play',ready:'#seat13 .pkr-game-seat-card',action:async page=>page.waitForFunction(()=>document.querySelectorAll('.seat-chip.seated').length===13)},
    ])await captureCase(page,size,item,errors);
    if(label==='mobile'){
-    await captureCase(page,size,{id:'mobile-table-13-lower',title:'13-player table · lower seats after scrolling',category:'Live gameplay',ready:'#seat13 .pkr-game-seat-card',action:async page=>{
+    await captureCase(page,size,{id:'mobile-table-13-lower',title:'13-player table · lower seats',category:'Live gameplay',ready:'#seat13 .pkr-game-seat-card',action:async page=>{
      await page.locator('#tableArea').evaluate(element=>{element.scrollTop=element.scrollHeight;});
      await page.waitForTimeout(220);
      const lowerSeats=await page.locator('#tableArea').evaluate(element=>{
       const area=element.getBoundingClientRect();
-      return {scrollTop:element.scrollTop,visible:[7,8,9].every(number=>{
+
+      const scrollMax=Math.max(0,element.scrollHeight-element.clientHeight);
+      const balanceVisible=number=>{
        const balance=document.querySelector('#seat'+number+' .pkr-game-seat-result')?.getBoundingClientRect();
-       return balance&&balance.top>=area.top&&balance.bottom<=area.bottom;
-      })};
+       return !!balance&&balance.top>=area.top-1&&balance.bottom<=area.bottom+1&&balance.left>=area.left-1&&balance.right<=area.right+1;
+      };
+      return {scrollTop:element.scrollTop,scrollMax,visible:[7,8,9].every(balanceVisible),
+       allVisible:Array.from({length:13},(_,i)=>i+1).every(balanceVisible)};
      });
-     assert(lowerSeats.scrollTop>0&&lowerSeats.visible,'Lower 13-player balances must be reachable by ordinary table scrolling');
+     // A compact table may fit all 13 players without scrolling. Verify all
+     // balances then; otherwise require real scrolling and visible lower seats.
+     assert(lowerSeats.visible&&(lowerSeats.scrollMax<=1?lowerSeats.allVisible:lowerSeats.scrollTop>=lowerSeats.scrollMax-1),
+      'All fitting balances, or lower balances after reaching the end, must be visible: '+JSON.stringify(lowerSeats));
      manifest.checks.push({id:'mobile-table-13-lower',...lowerSeats});
     },top:false},errors);
     await captureCase(page,size,{id:'mobile-payment-records',title:'Open payment records and confirmations',category:'Payments',route:'/payments?room='+room.id,ready:'.pkr-gn-payment-card',action:async page=>{
