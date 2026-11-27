@@ -2105,8 +2105,7 @@ function renderTable() {
     // Allow extra vertical lines rather than shrinking it to an initial or
     // increasing card width beyond the available table geometry.
     var visibleName=String(pkrSeatDisplayName(player)||'').trim();
-    var nameSize=compact?(wideTable?10:vpW<355?10:11):(wideTable?gNameWide():vpW<355?10:11);
-    function gNameWide(){return tightWide?10:13;}
+    var nameSize=compact?(wideTable?10:vpW<355?10:11):(wideTable?(tightWide?10:13):vpW<355?10:11);
     var availableNameWidth=Math.max(24,cardWidth-(compact?16:wideTable?54:44));
     var nameLines=Math.max(1,Math.ceil(visibleName.length*nameSize*.60/availableNameWidth));
     var nameExtra=Math.max(0,nameLines-1)*Math.ceil(nameSize*1.18);
