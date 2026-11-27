@@ -176,13 +176,13 @@
     text-shadow:0 0 8px #FF778A20!important;
   }
   html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .seat .pkr-game-seat-result.pkr-invested {
-    color:#F5F6FB!important;text-shadow:none!important;
+    color:#F4F1EA!important;text-shadow:none!important;
   }
   html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .seat .pkr-game-seat-result.zero {
-    color:#DDE6F3!important;text-shadow:none!important;
+    color:#E0E6F1!important;text-shadow:none!important;
   }
   html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .seat :is(.pkr-game-seat-bank,.pkr-game-compact-bank) {
-    color:#C0D4E1!important;letter-spacing:-.045em!important;
+    color:#BDCFD8!important;letter-spacing:-.045em!important;
   }
   html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .seat .pkr-game-seat-avatar {
     border:2px solid #BDAD7A!important;background:#284357!important;
