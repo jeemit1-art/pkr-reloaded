@@ -290,8 +290,8 @@ async function check(browser,width,height,count){
    // Chromium: 9 and 13 players on every practical device size.
    // WebKit: phone and tablet cross-browser regression coverage.
    const dimensions=engine===chromium?[
-    [320,720],[390,844],[844,390],[768,1024],[1024,768],[1440,900],[1780,864]
-   ]:[[390,844],[768,1024]];
+    [320,720],[360,780],[390,844],[430,932],[844,390],[768,1024],[1024,768],[1440,900],[1780,864]
+   ]:[[360,780],[390,844],[430,932],[768,1024]];
    for(const [w,h] of dimensions){
     for(const count of [9,13])await check(browser,w,h,count);
    }
