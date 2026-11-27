@@ -71,6 +71,22 @@ assert(premiumCss.includes('.pkr-gn-quick-heading h2'),'Home section heading mus
 assert(premiumCss.includes('.pkr-gn-quick-grid>button'),'Home must use compact card styling');
 assert(premiumCss.includes('repeat(2,minmax(0,1fr))'),'Mobile Home grid must use two columns');
 assert(premiumCss.includes('margin-bottom:15px!important'),'Mobile heading must be clearly separated from cards');
+const account=fs.readFileSync(path.join(root,'src/app/account/page.tsx'),'utf8');
+const accountHome=fs.readFileSync(path.join(root,'src/components/PersonalHomeViewSettings.tsx'),'utf8');
+const accountDashboard=fs.readFileSync(path.join(root,'src/app/dashboard/page.tsx'),'utf8');
+const player=fs.readFileSync(path.join(root,'src/components/PlayerRoomDashboard.tsx'),'utf8');
+assert(account.includes('data-testid="host-home-settings"'),'Hosts must be able to find personal Home preferences in Account');
+assert(account.includes('Preview the player experience'),'Host preview must remain available from Account');
+assert(accountHome.includes("const KEY='pkr_home_view:v1'"),'Home preference must preserve existing saved key');
+assert(accountHome.includes("CustomEvent('pkr:home-view-preference'"),'Personal Home choice must announce local changes');
+assert(accountDashboard.includes('previewPlayer&&<div className="pkr-player-preview-notice"'),
+ 'Player preview explanation should be conditional, not a persistent Home card');
+assert(!accountDashboard.includes('ONE PKR EXPERIENCE'),'Do not restore the duplicate player-preview card on Home');
+assert(home.includes("game?p.onGame:p.onRoom"),'Current game should be accessible directly from Home');
+assert(!home.includes('Full dashboard</button>'),'Do not duplicate the Home view toggle in utility shortcuts');
+assert(player.includes('gn-player-more-list'),'Players must retain direct access to existing shortcuts');
+const experienceCss=fs.readFileSync(path.join(app,'pkr-experience-consolidation.css'),'utf8');
+assert(experienceCss.includes('.gn-player-more-list>button'),'Player shortcuts must have consistent theme styling');
 const dashboard=fs.readFileSync(path.join(root,'src/components/RoomDashboardDual.tsx'),'utf8');
 assert.equal(dashboard.split('{featureHub}').length-1,2,'Each dashboard view should include exactly one shortcuts hub');
-console.log('PASS premium themes: six contrasting palettes, personal settings, reload restore, gameplay exclusion and organised navigation');
+console.log('PASS premium themes: palettes, Account preferences, host preview isolation, host/player navigation and game-data boundaries');

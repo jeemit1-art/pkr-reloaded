@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "predev": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs",
-    "prebuild": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs && node tests/premium-theme.cjs"
+    "prebuild": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs && node tests/premium-theme.cjs && node tests/experience-consolidation.cjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

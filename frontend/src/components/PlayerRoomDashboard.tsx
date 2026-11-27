@@ -260,14 +260,12 @@ export default function PlayerRoomDashboard({
     </section>}
 
     {!paymentsOnly&&<section className="gn-player-more" aria-label="Player tools and preferences">
-      <h3>Your club tools</h3>
+      <h3>Quick links</h3>
       <div className="gn-player-more-list">
         {next&&!live&&<button type="button" onClick={()=>downloadCalendar(next,room)}><span>Add to calendar</span><span aria-hidden="true">›</span></button>}
         {next&&<button type="button" onClick={goRsvp}><span>Full RSVP board &amp; alert settings</span><span aria-hidden="true">›</span></button>}
-        <button type="button" onClick={()=>goTab('games')}><span>All games</span><span aria-hidden="true">›</span></button>
         <button type="button" onClick={goProfile}><span>My profile</span><span aria-hidden="true">›</span></button>
         <button type="button" onClick={()=>void shareRoom()}><span>Share member link</span><span aria-hidden="true">›</span></button>
-        <button type="button" onClick={()=>router.push('/install?group='+encodeURIComponent(room.id))}><span>Phone setup &amp; alerts</span><span aria-hidden="true">›</span></button>
       </div>
       {shareNotice&&<p role="status" className="gn-player-muted">{shareNotice}</p>}
     </section>}

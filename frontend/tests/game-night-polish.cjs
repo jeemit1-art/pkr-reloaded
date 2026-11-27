@@ -216,9 +216,9 @@ async function checkFullDashboards(page,state,label){
    assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(22, 94, 66)');
   }
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
-  const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
-  assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
-  await readable(cards.first().locator('strong'),name+' feature name');
+  const tools=dashboard.locator('.pkr-dual-secondary-tools .pkr-dual-utility-strip button');
+  assert(await tools.count()>=3,'Both layouts retain contextual club-management shortcuts');
+  await readable(tools.first(),name+' club management action');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
   assert.equal(await colour(cta,'backgroundColor'),'rgb(22, 101, 72)',name+' primary action must use forest primary');
   assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
@@ -635,7 +635,7 @@ async function checkPersonalAppearance(page,state,label){
   }
  }
  await gotoFixturePage(page,BASE+'/account');
- await page.getByRole('button',{name:'System',exact:true}).click();
+ await modes.getByRole('button',{name:'Follow device',exact:true}).click();
  await page.emulateMedia({colorScheme:'light'});
  await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
  await page.emulateMedia({colorScheme:'dark'});

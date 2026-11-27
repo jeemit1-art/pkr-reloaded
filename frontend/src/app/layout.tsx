@@ -23,6 +23,7 @@ import './chip-club-coverage.css';
 import './pkr-table-readable.css';
 import './pkr-visual-qa.css';
 import './pkr-premium-styles.css';
+import './pkr-experience-consolidation.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

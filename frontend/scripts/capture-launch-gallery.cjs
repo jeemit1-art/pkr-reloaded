@@ -85,11 +85,20 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
  if(/^(mobile|tablet|desktop)-home$/.test(id)){
   const paint=await page.evaluate(()=>{
    const ticket=document.querySelector('.pkr-gn-game-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
-   return {ticket:ticket?getComputedStyle(ticket).backgroundColor:null,nav:nav?getComputedStyle(nav).backgroundColor:null};
+   const sample=document.createElement('span');
+    sample.style.backgroundColor='var(--pkr-personal-nav)';
+    document.body.appendChild(sample);
+    const expectedNav=getComputedStyle(sample).backgroundColor;
+    sample.remove();
+    return {ticket:ticket?getComputedStyle(ticket).backgroundColor:null,
+      ticketImage:ticket?getComputedStyle(ticket).backgroundImage:null,
+      nav:nav?getComputedStyle(nav).backgroundColor:null,expectedNav};
   });
   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light',id+' first-load must resolve the personal light palette');
-  assert.equal(paint.ticket,'rgb(25, 77, 56)',id+' first-load Game Night must use the canonical forest live-ticket colour');
-  assert.equal(paint.nav,'rgb(255, 255, 255)',id+' first-load navigation must use the opaque light palette surface');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'noir',id+' should use the premium default style');
+   assert(paint.ticket&&paint.ticket!=='rgba(0, 0, 0, 0)',id+' ticket must be opaque');
+   assert(paint.ticketImage&&paint.ticketImage.includes('linear-gradient'),id+' ticket needs a premium hero gradient');
+   assert.equal(paint.nav,paint.expectedNav,id+' nav must use the selected theme surface');
  }
  if(/^(mobile|tablet|desktop)-(command-centre|live-dashboard)$/.test(id)){
   const layers=await page.locator('.pkr-dual-hero').evaluate(node=>['::before','::after'].map(p=>{

@@ -5,6 +5,7 @@ import {api,clearToken,getToken,type Event,type User} from '@/lib/api';
 import {canUsePush,ensurePushForRoom,isPWAInstalled,subscribePush,unsubscribePush,sendRealTestNotification} from '@/lib/push';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import RoomExperienceChoice from '@/components/RoomExperienceChoice';
+import PersonalHomeViewSettings from '@/components/PersonalHomeViewSettings';
 import {PersonalAppearanceSettings} from '@/components/PersonalAppearance';
 import {useAppUpdate} from '@/components/AppUpdateContext';
 import {collectDisplayDetails} from '@/lib/app-display-details';
@@ -124,8 +125,15 @@ export default function AccountSettings(){
     </div>
    </section>
    <PersonalAppearanceSettings/>
+   {canManage&&<section className="pkr-primary-panel pkr-account-appearance" data-testid="host-home-settings">
+    <h2>Your Home display</h2>
+    <PersonalHomeViewSettings/>
+    <div className="pkr-account-actions pkr-account-preview-action">
+     <button type="button" className="pkr-primary-outline" onClick={()=>router.push('/dashboard?view=player&room='+encodeURIComponent(selected))}>Preview the player experience</button>
+    </div>
+   </section>}
    <section className="pkr-primary-panel pkr-account-appearance">
-    <h2>Club dashboard layout</h2>
+    <h2>Club dashboard design</h2>
     {selected?<RoomExperienceChoice roomId={selected} canChange={room?.role==='host'}/>:
       <p>Join a poker club to see its selected experience.</p>}
    </section>
