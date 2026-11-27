@@ -241,6 +241,15 @@ async function checkOutstandingDashboardRecords(page){
 async function checkPlayers(page,label){
  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members');
  const stage=page.getByTestId('players-command-stage');await stage.waitFor();
+ assert.equal(await colour(stage,'backgroundColor'),'rgb(36, 59, 121)','Players needs a rich blue hero, not a white/grey panel');
+ assert(Number(await colour(stage.locator('h1'),'fontWeight'))>=780,'Players heading should have a clear, bold visual hierarchy');
+ await readable(stage.locator('h1'),'Players heading on navy');
+ await readable(stage.locator('.pkr-experience-eyebrow'),'Players section label on navy');
+ for(const metric of await stage.locator('.pkr-experience-command-stat').all()){
+  await readable(metric.locator('strong'),'Player metric figure');
+  await readable(metric.locator('span'),'Player metric label');
+  assert(Number(await colour(metric.locator('strong'),'fontWeight'))>=780,'Metric figures must be visually stronger than labels');
+ }
  assert.equal(await stage.getByRole('button').count(),3,'All three player summary cards must be buttons');
  const roster=page.locator('.pkr-member-roster');await roster.waitFor();
  await page.getByRole('searchbox',{name:'Search members'}).fill('Jordan');
@@ -258,6 +267,7 @@ async function checkPlayers(page,label){
  await waitForColour(page,row,'backgroundColor','rgb(244, 241, 234)');
  assert.equal(await colour(row,'backgroundColor'),'rgb(244, 241, 234)','Hovered member row must not turn old green');
  await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
+ assert(Number(await colour(row.locator('.pkr-member-history-link strong'),'fontWeight'))>=750,'Player names must be bold and readable');
  const history=row.locator('.pkr-member-history-link');await history.focus();
  await readable(history.locator('strong'),'Keyboard-focused player name');
  await screenshot(page,label+'-players-focus');
@@ -415,6 +425,10 @@ async function checkReportedVisualIssues(page,state,label){
   const ticket=page.locator('.pkr-gn-game-ticket');
   assert.equal(await colour(ticket,'backgroundColor'),'rgb(11, 89, 70)','Game Night uses an emerald ticket');
   await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
+ assert(Number(await colour(ticket.locator('.pkr-gn-when h2'),'fontWeight'))>=780,'Game night headline needs a deliberate heavy weight');
+ const activeLabel=page.locator('.pkr-primary-bottom-nav button.active small:visible,.pkr-primary-sidebar nav button.active span:visible').first();
+ await readable(activeLabel,'Selected navigation label');
+ assert(Number(await colour(activeLabel,'fontWeight'))>=750,'Active navigation must be bold as well as high contrast');
   assert.equal(await colour(crew,'backgroundColor'),'rgb(216, 240, 231)','Attendance has a recognisably green surface');
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
   assert.equal(await colour(nav,'backgroundColor'),'rgb(8, 19, 36)','Shared navigation must use opaque navy');
