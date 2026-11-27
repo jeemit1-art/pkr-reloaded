@@ -1,0 +1,97 @@
+/* PKR Experience Consolidation
+   One set of visual contracts for host settings, player preview and advanced
+   host links. Never changes live gameplay, the service worker or settlement values. */
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-choice p{
+  color:var(--pkr-personal-muted);font-size:13px;line-height:1.5;margin:0 0 13px;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options button{
+  min-width:0;min-height:82px;display:flex;flex-direction:column;align-items:start;
+  text-align:left;gap:6px;cursor:pointer;padding:15px 16px;border-radius:14px;
+  border:1px solid var(--pkr-personal-line);
+  color:var(--pkr-personal-ink);background:var(--pkr-personal-surface);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options button[aria-pressed=true]{
+  border:2px solid var(--pkr-personal-accent);background:var(--pkr-personal-accent-surface);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options button:focus-visible,
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip button:focus-visible,
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice button:focus-visible{
+  outline:3px solid var(--pkr-personal-accent);outline-offset:2px;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options strong{
+  font-size:14px;line-height:1.25;color:var(--pkr-personal-ink);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options small{
+  font-size:12px;line-height:1.4;color:var(--pkr-personal-muted);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-account-preview-action{margin-top:13px}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  flex-wrap:wrap;width:100%;margin:0 auto 14px;padding:11px 15px;
+  border:1px solid var(--pkr-personal-accent-line);
+  border-radius:13px;background:var(--pkr-personal-accent-surface);color:var(--pkr-personal-ink);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice>span{
+  display:flex;flex-direction:column;gap:3px;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice strong{font-size:13px}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice small{
+  font-size:11px;line-height:1.4;color:var(--pkr-personal-muted);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice button{
+  min-height:44px;border:1px solid var(--pkr-personal-accent-line);
+  border-radius:11px;padding:10px 14px;background:var(--pkr-personal-surface);
+  color:var(--pkr-personal-ink);font-size:12px;font-weight:750;cursor:pointer;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-tools{
+  box-sizing:border-box;margin-top:22px!important;padding:18px 0 4px!important;
+  border:0!important;border-top:1px solid var(--pkr-personal-line)!important;
+  background:transparent!important;box-shadow:none!important;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-heading{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:0 0 12px;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-heading h3{
+  margin:0!important;padding:0!important;font:750 15px/1.35 var(--font-body),system-ui,sans-serif!important;
+  color:var(--pkr-personal-ink)!important;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-heading small{
+  font-size:11px;color:var(--pkr-personal-muted);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip{
+  display:flex;align-items:center;flex-wrap:wrap;gap:9px;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip button{
+  box-sizing:border-box;min-height:44px;display:flex;align-items:center;gap:8px;
+  padding:10px 13px;border-radius:12px;border:1px solid var(--pkr-personal-line);
+  background:var(--pkr-personal-surface);color:var(--pkr-personal-ink);
+  font-size:12px;font-weight:650;line-height:1.3;cursor:pointer;
+  text-align:left;
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip button svg{
+  width:18px;height:18px;flex:0 0 18px;color:var(--pkr-personal-accent);
+}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip button:hover{
+  border-color:var(--pkr-personal-accent-line);
+}
+@media(max-width:600px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-home-options{
+    grid-template-columns:minmax(0,1fr);
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice{
+    margin-bottom:12px;padding:11px 13px;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-player-preview-notice button{width:100%}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-tools{
+    margin-top:16px!important;padding-top:16px!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-secondary-heading small{display:none}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip{gap:7px}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-utility-strip button{
+    flex:1 1 calc(50% - 7px);min-width:0;white-space:normal;
+  }
+}
