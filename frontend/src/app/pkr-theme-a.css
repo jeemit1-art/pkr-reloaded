@@ -3034,6 +3034,212 @@ body:not(:has(.pkr-persistent-nav)) #gameScreen{margin-left:0!important;max-widt
  .pkr-host-push-overview-head button{width:100%}
  .pkr-member-push-state span{font-size:10px}
 }
+.pkr-member-profile-edit,.pkr-member-history-mini{
+ flex:none!important;border:1px solid #315F58!important;background:#122C2A!important;
+ color:#8BE5BA!important;border-radius:9px!important;font-size:11px!important;
+ font-weight:700!important;padding:9px 11px!important;min-height:35px!important;
+ cursor:pointer;white-space:nowrap;
+}
+.pkr-member-profile-edit:disabled{opacity:.45;cursor:not-allowed}
+.pkr-member-profile-identity{color:#B3C3C5!important;line-height:1.25}
+.pkr-member-profile-notice{
+ margin:12px 0;padding:12px;background:#31281A;border:1px solid #8E6E33;
+ color:#F2D28A;border-radius:10px;font-size:12px;line-height:1.5;
+}
+.pkr-historical-player-roster{
+ border:1px solid #2B4946;border-radius:12px;background:#0D201F;padding:14px;
+ margin:18px 0;display:grid;gap:7px;
+}
+.pkr-historical-player-roster>header{padding:5px 3px 12px}
+.pkr-historical-player-roster h3{margin:0;color:#EAF0F2;font-size:16px}
+.pkr-historical-player-roster header p{margin:6px 0 0;line-height:1.5;color:#A4BDB8;font-size:12px}
+.pkr-historical-player-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid #314540}
+.pkr-historical-player-avatar{flex:0 0 38px;width:38px;height:38px;border-radius:50%;
+ background:#123D33;border:1px solid #46715C;display:grid;place-items:center;overflow:hidden;
+ font-size:19px;color:#C6F6DD}
+.pkr-historical-player-avatar img{width:100%;height:100%;object-fit:cover}
+.pkr-historical-player-name{flex:1;min-width:0;display:grid;gap:3px}
+.pkr-historical-player-name strong{font-size:13px;color:#EAF0F2;overflow-wrap:anywhere}
+.pkr-historical-player-name small{font-size:10px;color:#A3B4B7}
+.pkr-player-profile-overlay{z-index:1000!important;padding:10px!important;
+ align-items:center!important;justify-content:center!important;overflow-y:auto!important}
+.pkr-player-profile-sheet{width:min(100%,540px);min-width:0;max-height:calc(100dvh - 30px);
+ overflow-y:auto;overscroll-behavior:contain;border:1px solid #3C5B57;border-radius:16px;
+ background:#111C21;box-shadow:0 20px 85px #000D;}
+.pkr-player-profile-editor{width:100%;display:flex;flex-direction:column;color:#EAF0F2;font-family:var(--font-body),Inter,sans-serif}
+.pkr-player-profile-header{padding:20px;display:flex;gap:15px;justify-content:space-between;border-bottom:1px solid #2E4546}
+.pkr-player-profile-header h2{font-size:22px;line-height:1.15;margin:5px 0 8px}
+.pkr-player-profile-header p{font-size:12px;line-height:1.5;color:#A8BEBA;max-width:430px;margin:0}
+.pkr-player-profile-header>button{align-self:flex-start;flex:none;border:1px solid #3C5356;border-radius:9px;background:#1E2A30;color:#EAF0F2;padding:8px 11px;cursor:pointer}
+.pkr-player-profile-body{padding:17px 20px;display:grid;gap:14px}
+.pkr-player-profile-picture{display:flex;align-items:center;gap:15px}
+.pkr-player-profile-avatar{width:77px;height:77px;flex:0 0 77px;border-radius:50%;
+ border:2px solid #3DDC97;display:grid;place-items:center;background:#17372F;overflow:hidden;
+ font-size:35px;font-weight:700}
+.pkr-player-profile-avatar img{width:100%;height:100%;object-fit:cover}
+.pkr-player-profile-avatar-copy{display:grid;gap:4px;min-width:0}
+.pkr-player-profile-avatar-copy strong{font-size:14px}
+.pkr-player-profile-avatar-copy small,.pkr-player-profile-field small{font-size:11px;line-height:1.5;color:#9FB0B9}
+.pkr-player-profile-upload,.pkr-player-profile-reset{color:#3DDC97;cursor:pointer;font-size:12px;font-weight:650}
+.pkr-player-profile-upload input{display:block;margin-top:5px;max-width:100%;font-size:11px}
+.pkr-player-profile-reset{background:transparent;text-align:left;border:0;padding:2px 0}
+.pkr-player-profile-presets{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.pkr-player-profile-presets button{min-width:0;min-height:38px;background:#1D3030;
+ border:1px solid #3A5752;border-radius:9px;color:#F6FAF8;font-size:20px;
+ cursor:pointer}
+.pkr-player-profile-presets button[aria-pressed="true"]{border-color:#3DDC97;background:#17533D}
+.pkr-player-profile-field{display:grid;gap:6px;font-size:12px;font-weight:700}
+.pkr-player-profile-field span{font-weight:400;color:#9FB0B9}
+.pkr-player-profile-field input,.pkr-player-profile-field select,.pkr-player-profile-field textarea{
+ width:100%;min-height:44px;resize:vertical;box-sizing:border-box;
+ color:#EAF0F2;background:#1C2A30;border:1px solid #3B5558;border-radius:9px;
+ font:500 15px/1.3 var(--font-body),Inter,sans-serif;padding:10px 12px;
+}
+.pkr-player-profile-field textarea{min-height:85px}
+.pkr-player-profile-error{border:1px solid #C15B65;background:#371C22;color:#FFC8CD;
+ font-size:12px;padding:10px;border-radius:8px}
+.pkr-player-profile-footer{position:sticky;bottom:0;background:#111C21;
+ border-top:1px solid #345053;padding:13px 20px;display:flex;justify-content:flex-end;gap:9px}
+.pkr-player-profile-footer button{border:1px solid #48645F;border-radius:10px;
+ padding:11px 16px;min-height:42px;background:#203235;color:#F0F6F3;font-weight:750;cursor:pointer}
+.pkr-player-profile-footer button[type="submit"]{background:#3DDC97;color:#06241D;border-color:#3DDC97}
+.pkr-player-profile-footer button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:560px){
+ .pkr-player-profile-overlay{align-items:flex-end!important;padding:0!important}
+ .pkr-player-profile-sheet{width:100%;max-height:calc(100dvh - 17px);border-radius:17px 17px 0 0}
+ .pkr-player-profile-header{padding:16px}.pkr-player-profile-body{padding:14px 16px}
+ .pkr-player-profile-presets{grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+ .pkr-player-profile-presets button{font-size:17px;min-height:36px}
+ .pkr-player-profile-avatar{width:60px;height:60px;flex-basis:60px;font-size:28px}
+ .pkr-player-profile-footer{padding-bottom:calc(13px + env(safe-area-inset-bottom))}
+ .pkr-historical-player-row{gap:7px}.pkr-historical-player-avatar{width:32px;height:32px;flex-basis:32px}
+ .pkr-member-profile-edit,.pkr-member-history-mini{padding:7px 8px!important;font-size:10px!important}
+}
+.pkr-dialog-root .pkr-native-dialog.pkr-player-profile-overlay{
+ width:100vw!important;max-width:100vw!important;overflow-x:hidden!important;
+ padding:10px!important;box-sizing:border-box!important;
+}
+.pkr-dialog-root .pkr-native-dialog.pkr-player-profile-overlay .pkr-player-profile-sheet{
+ box-sizing:border-box!important;flex:0 1 min(540px,calc(100vw - 20px))!important;
+ width:min(540px,calc(100vw - 20px))!important;
+ max-width:calc(100vw - 20px)!important;min-width:0!important;
+ overflow-x:hidden!important;
+}
+.pkr-player-profile-editor,
+.pkr-player-profile-header,
+.pkr-player-profile-body,
+.pkr-player-profile-picture,
+.pkr-player-profile-avatar-copy,
+.pkr-player-profile-field,
+.pkr-player-profile-presets{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+.pkr-player-profile-editor p,
+.pkr-player-profile-editor small,
+.pkr-player-profile-editor label,
+.pkr-player-profile-editor .pkr-player-profile-avatar-copy{
+ white-space:normal!important;overflow-wrap:anywhere!important;
+}
+.pkr-player-profile-upload input[type=file]{width:100%!important;max-width:100%!important;
+ min-width:0!important;font-size:11px!important;overflow:hidden!important}
+.pkr-player-profile-presets button{min-width:0!important;width:100%!important}
+@media(max-width:560px){
+ .pkr-dialog-root .pkr-native-dialog.pkr-player-profile-overlay{
+  padding:0!important;align-items:flex-end!important;
+ }
+ .pkr-dialog-root .pkr-native-dialog.pkr-player-profile-overlay .pkr-player-profile-sheet{
+  width:100vw!important;max-width:100vw!important;flex:0 1 100vw!important;
+  border-radius:17px 17px 0 0!important;
+ }
+ .pkr-player-profile-header{gap:9px!important}
+ .pkr-player-profile-header h2{font-size:19px!important;overflow-wrap:anywhere!important}
+ .pkr-player-profile-picture{gap:10px!important}
+}
+.pkr-historical-player-roster .pkr-historical-player-row{
+  display:grid!important;
+  grid-template-columns:38px minmax(0,1fr) max-content max-content;
+  align-items:center;
+  column-gap:12px;
+  min-height:64px;
+  padding:10px 4px;
+}
+.pkr-historical-player-roster .pkr-historical-player-name{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  min-width:0;
+  width:100%;
+  line-height:1.4;
+}
+.pkr-historical-player-roster .pkr-historical-player-name strong{
+  display:block;
+  width:100%;
+  font-size:14px;
+  overflow-wrap:break-word;
+  word-break:normal;
+}
+.pkr-historical-player-roster .pkr-historical-player-name small{
+  display:block;
+  font-size:12px;
+  line-height:1.4;
+  white-space:normal;
+}
+.pkr-historical-player-roster .pkr-historical-player-row .pkr-member-history-mini,
+.pkr-historical-player-roster .pkr-historical-player-row .pkr-member-profile-edit{
+  width:auto!important;
+  min-width:72px;
+  max-width:none;
+  margin:0!important;
+  justify-self:end;
+  align-self:center;
+  text-align:center;
+}
+@media(max-width:560px){
+  .pkr-historical-player-roster .pkr-historical-player-row{
+    grid-template-columns:32px minmax(0,1fr) auto;
+    column-gap:9px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-row .pkr-member-history-mini{
+    grid-column:3;
+    grid-row:1;
+    min-width:60px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-row .pkr-member-profile-edit{
+    grid-column:3;
+    grid-row:2;
+    min-width:60px;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-name{
+    grid-column:2;
+    grid-row:1 / span 2;
+  }
+  .pkr-historical-player-roster .pkr-historical-player-avatar{
+    grid-column:1;
+    grid-row:1 / span 2;
+  }
+}
+.pkr-historical-player-roster .pkr-historical-player-row{
+ grid-template-columns:38px minmax(0,1fr) max-content max-content max-content;
+}
+.pkr-historical-player-archived{
+ padding:12px 14px;border:1px solid #314540;border-radius:12px;
+ color:#b9cbc7;background:#0b211c;
+}
+.pkr-historical-player-archived summary{cursor:pointer;font-size:13px;font-weight:600;color:#e6efeb}
+.pkr-historical-player-archived p{font-size:12px;line-height:1.5}
+.pkr-historical-player-archived .pkr-historical-player-row{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+}
+@media(max-width:560px){
+ .pkr-historical-player-roster .pkr-historical-player-row{
+  grid-template-columns:32px minmax(0,1fr) auto;
+ }
+ .pkr-historical-player-roster .pkr-historical-player-row .pkr-historical-archive-action{
+  grid-column:3;grid-row:3;min-width:60px;
+ }
+ .pkr-historical-player-roster .pkr-historical-player-name,
+ .pkr-historical-player-roster .pkr-historical-player-avatar{
+  grid-row:1 / span 3;
+ }
+}
 .pkr-landing-v2 {
   --l2-green: #071d16;
   --l2-green-2: #102d22;
@@ -5393,6 +5599,473 @@ body::before{opacity:0!important}
  }
  #gameScreen.pkr-casino-live-table .game-tabs{background:#121B20!important}
 }
+#gameScreen.pkr-casino-live-table .seat-money,
+#gameScreen.pkr-casino-live-table .seat-stack{
+ font:650 clamp(9px,1.7vw,11px)/1.32 var(--font-num),monospace!important;
+}
+#gameScreen.pkr-casino-live-table .seat-money{color:#EAF0F2!important}
+#gameScreen.pkr-casino-live-table .seat-stack{color:#F2B84B!important}
+#gameScreen.pkr-casino-live-table .seat-stack.tracked,
+#gameScreen.pkr-casino-live-table .seat-stack.verified{color:#3DDC97!important}
+#gameScreen.pkr-casino-live-table .seat-stack.review{color:#FFD47C!important}
+#gameScreen.pkr-casino-live-table .side-panel .p-net{
+ font-size:clamp(12px,1.5vw,17px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar{
+ overflow:visible!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle{
+ display:inline-flex!important;align-items:center!important;gap:7px!important;
+ width:auto!important;min-width:76px!important;height:42px!important;
+ padding:0 11px!important;border-radius:11px!important;
+ font:700 12px/1.15 var(--font-body),Inter,sans-serif!important;
+ letter-spacing:0!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle span{
+ transform:none!important;font-size:15px!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-table-head-actions .pkr-tools-label{
+ display:inline!important;
+}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .bank-right>.bank-pill.g,
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-out{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.bank-bar{
+  min-height:53px!important;height:53px!important;padding:6px 12px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right{justify-content:flex-end!important}
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current{
+  display:flex!important;border:none!important;padding:0!important;
+  margin:0!important;gap:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current .pkr-bank-metric{
+  display:flex!important;flex-direction:row!important;align-items:baseline!important;gap:7px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current b{
+  font-size:13px!important;
+ }
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current small{font-size:10px!important}
+ #gameScreen.pkr-casino-live-table .pkr-approved-topbar .tb-title{
+  font-size:clamp(13px,3.7vw,16px)!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-approved-topbar.pkr-approved-topbar .pkr-table-head-actions button.pkr-tools-toggle{
+  min-width:58px!important;padding:0 7px!important;font-size:11px!important;
+ }
+}
+@media(max-width:360px){
+ #gameScreen.pkr-casino-live-table .pkr-table-identity-icon{display:none!important}
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current .pkr-bank-visual{display:none!important}
+ #gameScreen.pkr-casino-live-table .seat-money,#gameScreen.pkr-casino-live-table .seat-stack{
+  font-size:9px!important;
+ }
+}
+#gameScreen .pkr-dense-result.pos,#gameScreen .pkr-balance.pos{color:#3DDC97!important}
+#gameScreen .pkr-dense-result.neg,#gameScreen .pkr-balance.neg{color:#FF6876!important}
+#gameScreen .pkr-dense-result.zero,#gameScreen .pkr-balance.zero{color:#C5D3D7!important}
+#gameScreen .pkr-seat-summary[hidden]{display:none!important}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .pkr-seat-summary{
+ position:relative!important;top:auto!important;left:auto!important;right:auto!important;
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .table-wrap{
+ position:relative!important;inset:auto!important;
+}
+@media (max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat{
+  min-height:32px!important;
+  gap:3px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-info{
+  padding:2px 4px!important;
+  gap:0!important;
+  font:650 9px/1.06 var(--font-num),monospace!important;
+  min-height:0!important;
+  max-height:36px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-name{
+  font:750 10px/1.08 var(--font-body),Inter,sans-serif!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-bank,
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-result{
+  font-size:9px!important;
+  line-height:1.06!important;
+ }
+}
+#gameScreen.pkr-casino-live-table .pkr-seat-summary,
+#gameScreen.pkr-casino-live-table #pkrSeatSummary{display:none!important}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on{
+ display:block!important;
+}
+#gameScreen.pkr-casino-live-table .table-wrap{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat{
+ width:var(--pkr-card-width,105px)!important;
+ height:var(--pkr-card-height,75px)!important;max-width:none!important;display:block!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat:focus-visible{
+ outline:2px solid #3DDC97!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.pos{color:#3DDC97!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.neg{color:#FF5D72!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.zero{color:#D5E3E5!important}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-layout-compact{
+ width:min(59px,calc(var(--pkr-card-width,110px) * .58))!important;
+ height:var(--pkr-card-height,75px)!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.bank-bar.pkr-mockup-bank{
+ display:flex!important;align-items:center!important;
+ min-width:0!important;height:58px!important;min-height:58px!important;
+ margin:5px 8px 4px!important;padding:5px 7px!important;gap:3px!important;
+ border:1px solid #37676A!important;border-radius:12px!important;
+ background:#05191C!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{
+ display:flex!important;gap:4px!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{width:23px!important;height:23px!important;
+ background:#06352C!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{color:#DCEBE8!important;
+ font:750 10px/1.08 var(--font-body),sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right{
+ flex:1 1 0!important;display:grid!important;
+ align-items:center!important;gap:0!important;justify-content:stretch!important;min-width:0!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.bank-pill.g,
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.pkr-bank-out,
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right>.pkr-bank-current{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;gap:1px!important;min-width:0!important;
+ height:40px!important;margin:0!important;padding:0 2px!important;
+ border:0!important;border-left:1px solid #285258!important;
+ border-radius:0!important;background:transparent!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-visual{
+ display:inline-block!important;flex:0 0 11px!important;
+ width:11px!important;height:11px!important;margin:0!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-metric{
+ display:grid!important;align-items:center!important;justify-items:center!important;
+ gap:2px!important;min-width:0!important;width:100%!important;text-align:center!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill small{
+ font:700 9px/1 var(--font-body),sans-serif!important;color:#A9C1C4!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{
+ font:850 clamp(8px,2.1vw,10px)/1.12 var(--font-num),monospace!important;white-space:nowrap!important;
+ overflow:visible!important;max-width:none!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill.g b{color:#3DDC97!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-out b{color:#F28FA9!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-current b{color:#F2B84B!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-caret{
+ font-size:12px!important;justify-self:center!important;color:#A8C8CB!important;
+}
+@media(max-width:380px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank{
+  margin:4px 5px!important;padding:4px 4px!important;gap:2px!important;
+ }
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{font-size:9px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{
+  font-size:clamp(7px,2vw,9px)!important;
+ }
+}
+#gameScreen.pkr-casino-live-table #tableStats{
+ white-space:nowrap!important;overflow:visible!important;
+ font-size:clamp(9px,2.2vw,11px)!important;letter-spacing:.06em!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:clamp(10px,2.7vw,12px)!important;line-height:1.14!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.inplay .pkr-game-seat-bank,
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.inplay .pkr-game-compact-bank,
+#gameScreen.pkr-casino-live-table .pkr-inplay-seat>.seat-money,
+#gameScreen.pkr-casino-live-table .side-panel .pkr-panel-buyin.inplay,
+#gameScreen.pkr-casino-live-table .side-panel .p-net.inplay{
+ color:#FF5D72!important;
+ font-weight:800!important;
+}
+.pkr-dialog-root .pkr-responsive-view-select{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;padding:10px 13px 12px!important}
+.pkr-dialog-root .pkr-responsive-view-select button{display:grid!important;gap:3px!important;min-height:56px!important;padding:9px 10px!important;border:1px solid #38636B!important;border-radius:11px!important;background:#132A31!important;color:#EAF0F2!important;text-align:left!important}
+.pkr-dialog-root .pkr-responsive-view-select button[aria-pressed="true"]{border-color:#3DDC97!important;box-shadow:inset 0 0 0 1px #3DDC9770!important;background:#103A31!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar{display:flex!important;align-items:center!important;justify-content:center!important;min-height:42px!important;height:42px!important;padding:4px 10px!important;margin:4px 8px!important;border:1px solid #31565D!important;border-radius:10px!important;background:#08191E!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick{display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-total-hidden,#gameScreen.pkr-casino-live-table .pkr-bank-detail-pills{display:none!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar>.bank-caret{display:block!important}
+#gameScreen.pkr-casino-live-table .table-area{overflow:auto!important}
+#gameScreen.pkr-casino-live-table .table-wrap{position:relative!important;inset:auto!important;width:100%!important;height:var(--pkr-canvas-height,100%)!important;min-height:100%!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile{width:var(--pkr-card-width,70px)!important;height:var(--pkr-card-height,84px)!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-mobile-rail-card{display:flex!important;align-items:center!important;justify-content:flex-start!important;flex-direction:column!important;gap:1px!important;width:100%!important;height:100%!important;padding:1px 2px 2px!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-number{top:3px!important;left:8px!important;transform:none!important;min-width:17px!important;height:15px!important;padding:0 3px!important;font-size:8px!important;border-radius:7px!important;background:#0C1B20!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-avatar{width:var(--pkr-avatar-size,40px)!important;height:var(--pkr-avatar-size,40px)!important;flex:0 0 var(--pkr-avatar-size,40px)!important;border-width:2px!important;background:#15342E!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-card.inplay .pkr-game-seat-avatar{border-color:#FF5D72!important;box-shadow:0 0 0 2px #451924,0 3px 10px #0009!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-card.cashed .pkr-game-seat-avatar{border-color:#3DDC97!important;box-shadow:0 0 0 2px #0A4433,0 3px 10px #0009!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-name{display:block!important;max-width:100%!important;background:transparent!important;border:0!important;padding:0!important;margin:0!important;text-align:center!important;color:#F0FAF6!important;font:800 var(--pkr-name-size,11px)/1.05 var(--font-body),Inter,sans-serif!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-bank{background:transparent!important;border:0!important;padding:0!important;margin:0!important;font:800 var(--pkr-bank-size,10px)/1.05 var(--font-num),monospace!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-result{font:900 var(--pkr-result-size,14px)/1.05 var(--font-num),monospace!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-mobile-rail-status{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-status-dot{right:-5px!important;bottom:-3px!important;width:16px!important;height:16px!important;background:#08251F!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-stack-readout{margin-top:1px!important;max-width:70px!important;padding:1px 3px!important;font-size:7px!important;background:#091E1BEB!important;border-radius:5px!important;text-align:center!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table.pkr-view-mobile #tableFelt{border-radius:46% / 12%!important}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-tools-label{display:none!important}
+ #gameScreen.pkr-casino-live-table .pkr-tools-toggle{min-width:40px!important;width:40px!important;padding:0!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar{margin:3px 6px!important}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick{gap:7px!important}
+}
+@media(max-width:350px){
+ #gameScreen.pkr-casino-live-table .pkr-table-identity-icon{display:none!important}
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar{justify-content:space-between!important;gap:6px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick{flex:1!important;max-width:none!important;justify-content:space-evenly!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-item{flex:1 1 0!important;gap:3px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-count .bank-icon{width:21px!important;height:21px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-count .bank-icon img{width:100%!important;height:100%!important;object-fit:contain!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count{
+ display:grid!important;grid-template-columns:auto auto!important;grid-template-rows:auto auto!important;
+ column-gap:5px!important;row-gap:1px!important;align-items:center!important;justify-content:center!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count .bank-icon{
+ grid-column:1!important;grid-row:1 / 3!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count small{
+ grid-column:2!important;grid-row:1!important;justify-self:start!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-count strong{
+ grid-column:2!important;grid-row:2!important;justify-self:start!important;line-height:1!important;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills{display:flex!important;flex:2 1 0!important;min-width:0!important;justify-content:space-evenly!important;gap:0!important;grid-template-columns:none!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.pkr-bank-current{display:none!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.bank-pill{flex:1 1 0!important;min-width:0!important;padding:0 4px!important;flex-direction:row!important;gap:5px!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-divider{display:none!important}
+#gameScreen.pkr-casino-live-table .pkr-bank-inplay-quick{display:none!important}
+#gameScreen.pkr-casino-live-table #tableOuter,#gameScreen.pkr-casino-live-table #tableFelt{max-height:100%!important}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills>.bank-pill{padding:0 2px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{gap:1px!important;justify-items:start!important;text-align:left!important;width:auto!important;flex:1 1 auto!important;margin-left:0!important}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-dot{
+ display:inline-block!important;width:10px!important;height:10px!important;margin-right:4px!important;
+ border-radius:50%!important;vertical-align:-1px!important;box-sizing:border-box!important;
+ border:1.5px dashed #C8F8E4!important;box-shadow:0 1px 0 #092C22!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-in{background:#237E5F!important}
+#gameScreen.pkr-casino-live-table .pkr-inline-bank-out{background:#9B3442!important;border-color:#FFD2D5!important;box-shadow:0 1px 0 #561F2A!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .bank-pill b{font-size:11px!important}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:10px!important}
+}
+@media(max-width:350px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-visual{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right.pkr-bank-detail-pills .pkr-bank-metric{margin-left:0!important}
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-seat-avatar{
+ flex:0 0 var(--pkr-avatar-size,34px)!important;height:var(--pkr-avatar-size,34px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar .pkr-game-status-dot{
+ right:-4px!important;bottom:-3px!important;width:15px!important;height:15px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-empty-seat{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:4px!important;width:64px!important;height:64px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip{
+ width:34px!important;height:34px!important;flex:0 0 34px!important;
+ border:1px solid #35645E!important;background:#0B2423!important;box-shadow:0 2px 7px #0006!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip.empty .seat-inner{
+ color:#D8E7E5!important;font:700 18px/1 var(--font-body),sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-label{
+ display:block!important;max-width:64px!important;padding:0!important;background:transparent!important;
+ color:#8FA5A5!important;text-shadow:none!important;font:650 9px/1.1 var(--font-body),sans-serif!important;
+}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
+ #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
+}
+@media(min-width:350px) and (max-width:430px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-main{gap:3px!important;padding:3px 3px 2px!important}
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{font-size:9px!important;letter-spacing:-.01em!important}
+}
+.pkr-dialog-root .pkr-approved-view-controls{
+ display:grid!important;gap:9px!important;padding:12px 14px!important;
+ border-bottom:1px solid #2B4F53!important;
+}
+.pkr-dialog-root .pkr-approved-view-caption{display:grid!important;gap:3px!important}
+.pkr-dialog-root .pkr-approved-view-caption strong{
+ font:800 12px/1.2 var(--font-body),sans-serif!important;color:#EAF2F2!important;
+}
+.pkr-dialog-root .pkr-approved-view-caption small{
+ color:#A9C0C4!important;font:500 10px/1.35 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-approved-view-buttons{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+.pkr-dialog-root .pkr-approved-view-buttons button{
+ min-width:0!important;min-height:37px!important;padding:8px 4px!important;
+ border:1px solid #38636B!important;border-radius:9px!important;
+ background:#14282F!important;color:#E2EEEF!important;
+ font:800 12px/1.15 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-approved-view-buttons button[aria-pressed="true"]{
+ background:#0B4032!important;border-color:#4CE6A8!important;color:#8DFBC6!important;
+ box-shadow:inset 0 0 0 1px #45E5A350!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat.pkr-layout-compact{
+ width:var(--pkr-card-width,82px)!important;
+ height:var(--pkr-card-height,82px)!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+ padding:4px 4px 3px!important;gap:2px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-avatar{
+ height:26px!important;min-height:26px!important;flex:0 0 26px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-avatar .pkr-game-seat-avatar{
+ width:26px!important;height:26px!important;flex:0 0 26px!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-name{
+ display:block!important;width:100%!important;min-width:0!important;
+ font:800 clamp(8px,1.25vw,11px)/1.13 var(--font-body),Inter,sans-serif!important;
+ color:#EBF6F3!important;text-align:center!important;
+ white-space:nowrap!important;text-overflow:ellipsis!important;
+ overflow:hidden!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-bank{
+ font-size:clamp(9px,1.12vw,11px)!important;max-width:100%!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:clamp(10px,1.3vw,13px)!important;max-width:100%!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+@media(max-width:600px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-name{
+  font-size:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+  padding:3px 2px 2px!important;gap:1px!important;
+ }
+}
+@media(orientation:portrait) and (min-width:701px) and (max-width:950px){
+ #gameScreen.pkr-casino-live-table #tableOuter{border-radius:46% / 12%!important}
+ #gameScreen.pkr-casino-live-table #tableFelt{border-radius:44% / 12%!important}
+}
+@media(max-width:355px){
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
+  gap:0!important;justify-content:center!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name,
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-bank{
+  white-space:normal!important;overflow-wrap:anywhere!important;
+  text-overflow:clip!important;line-height:1.13!important;
+  font-size:9px!important;
+ }
+ #gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-main{
+  padding:2px 2px 1px!important;gap:2px!important;
+ }
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-name{
+ padding:0!important;margin:0!important;border:0!important;
+ background:transparent!important;box-shadow:none!important;
+ text-shadow:none!important;text-align:left!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced .pkr-game-seat-copy{
+ min-width:0!important;overflow:hidden!important;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-status-dot{
+ top:-5px!important;right:-6px!important;bottom:auto!important;
+ width:14px!important;height:14px!important;
+ font-size:10px!important;
+}
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableOuter{
+ border-radius:24% / 50%!important;
+}
+#gameScreen.pkr-casino-live-table.pkr-wide-table #tableFelt{
+ border-radius:24% / 50%!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid{
+ grid-auto-rows:minmax(94px,auto)!important;
+ align-items:stretch!important;
+ margin-bottom:4px!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-reference-tool-grid button{
+ height:auto!important;min-height:94px!important;
+ padding:7px 3px 10px!important;overflow:visible!important;
+}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-reconciliation-note{
+ position:relative!important;display:block!important;inset:auto!important;
+ margin:14px 0 0!important;padding:11px 0 0!important;
+ background:transparent!important;clear:both!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat{
+ display:flex!important;position:absolute!important;align-items:center!important;
+ justify-content:center!important;flex-direction:column!important;flex-wrap:nowrap!important;
+ gap:4px!important;
+ width:100px!important;height:70px!important;
+ min-width:0!important;min-height:0!important;
+ padding:0!important;margin:0!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ transform:translate(-50%,-50%)!important;
+ text-align:center!important;white-space:nowrap!important;
+ color:#B4CECB!important;outline-offset:2px!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat .pkr-empty-seat-add{
+ position:static!important;display:grid!important;place-items:center!important;
+ flex:0 0 38px!important;width:38px!important;height:38px!important;
+ min-width:38px!important;min-height:38px!important;
+ padding:0!important;margin:0!important;
+ border:1px solid #4C8276!important;border-radius:50%!important;
+ background:linear-gradient(145deg,#102B28,#091E20)!important;
+ box-shadow:0 3px 10px #0007!important;color:#E8F9F4!important;
+ font:700 19px/1 var(--font-body),Inter,sans-serif!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat .pkr-empty-seat-number{
+ position:static!important;display:block!important;
+ flex:0 0 auto!important;width:auto!important;
+ max-width:100%!important;min-width:0!important;
+ padding:0!important;margin:0!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ color:#A8C2BE!important;text-shadow:0 1px 5px #000B!important;
+ font:650 10px/1.2 var(--font-body),Inter,sans-serif!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat:hover .pkr-empty-seat-add,
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat:focus-visible .pkr-empty-seat-add{
+ border-color:#3DDC97!important;background:#14503D!important;
+ box-shadow:0 0 0 3px #3DDC9730,0 3px 10px #0008!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat:focus-visible{
+ outline:2px solid #3DDC97!important;border-radius:9px!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact{
+ flex-direction:row!important;gap:3px!important;
+ width:76px!important;height:52px!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-add{
+ flex-basis:27px!important;width:27px!important;height:27px!important;
+ min-width:27px!important;min-height:27px!important;font-size:16px!important;
+}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-number{
+ width:auto!important;max-width:45px!important;font-size:9px!important;text-align:left!important;
+}
+@media(max-width:360px){
+ #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat{
+  width:90px!important;height:62px!important;gap:3px!important;
+ }
+ #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat .pkr-empty-seat-add{
+  flex-basis:34px!important;width:34px!important;height:34px!important;
+  min-width:34px!important;min-height:34px!important;font-size:17px!important;
+ }
+ #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact{
+  width:70px!important;height:49px!important;flex-direction:row!important;
+ }
+ #gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-empty-seat.pkr-layout-compact .pkr-empty-seat-add{
+  flex-basis:26px!important;width:26px!important;height:26px!important;
+  min-width:26px!important;min-height:26px!important;
+ }
+}
 .pkr-dashboard .pkr-mobile-featured {
   background:#15251F!important;
   background-image:linear-gradient(132deg,#193F33 0%,#172A29 38%,#131A1F 100%)!important;
@@ -5704,6 +6377,191 @@ body:has(#gameScreen) #toast{white-space:normal!important}
  .pkr-dashboard .pkr-pro-home .pkr-pro-stats>div{display:block!important;padding:13px!important}
  .pkr-dashboard .pkr-pro-home .pkr-pro-stats .pkr-metric-trigger{display:flex!important}
 }
+@media (max-width:700px){
+ .pkr-insights-refresh .pkr-insights-player-mobile-row{
+  display:block!important;padding:0!important;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger{
+  display:grid!important;
+  align-items:center!important;justify-content:stretch!important;gap:12px!important;
+  width:100%!important;
+  padding:13px 12px!important;text-align:left!important;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>:is(.pkr-vnext-positive,.pkr-vnext-negative){font-size:clamp(13px,3.5vw,19px)!important;
+ }
+}
+@media (max-width:370px){
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger{gap:8px 12px!important;
+ }
+}
+.pkr-dialog-root .pkr-table-tools-dialog.pkr-native-dialog .pkr-mockup-tools-sheet{
+ display:block!important;width:min(448px,100%)!important;max-width:448px!important;
+ min-height:0!important;padding:0!important;overflow-y:auto!important;
+ border:1px solid #3F7775!important;border-radius:19px!important;
+ background:linear-gradient(150deg,#10292D,#07181D)!important;
+ box-shadow:0 25px 75px #000D,0 0 0 1px #14534F!important;
+ color:#EAF0F2!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header{
+ display:flex!important;align-items:start!important;gap:12px!important;
+ padding:20px 16px 16px!important;margin:0!important;
+ border-bottom:1px solid #2C5960!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header h2{
+ font:800 clamp(22px,6vw,29px)/1.2 var(--font-head),Inter,sans-serif!important;
+ margin:5px 0!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header p{
+ color:#9DB8C0!important;font-size:12px!important;margin-top:5px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-close{min-width:46px!important;flex:0 0 46px!important;
+ margin:0!important;background:#1E353A!important;border:1px solid #56BEA3!important;color:#DAEFF1!important;
+ border-radius:13px!important;font-size:25px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-group{
+ margin:0!important;padding:11px 0 1px!important;
+ border-bottom:1px solid #2A4B51!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-section-title{margin:0 14px 9px!important;
+ color:#A8C3C7!important;letter-spacing:.16em!important;
+ font:850 11px/1.15 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tools-grid{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:9px!important;margin:0 13px 11px!important;width:auto!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile{
+ display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;
+ grid-template-rows:1fr!important;align-items:center!important;
+ column-gap:8px!important;text-align:left!important;
+ width:100%!important;min-width:0!important;height:auto!important;
+ min-height:67px!important;padding:10px!important;margin:0!important;
+ border:1px solid #376A70!important;border-radius:12px!important;
+ background:#112A31!important;color:#EAF0F2!important;
+ font-family:var(--font-body),Inter,sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile:hover,
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile:focus-visible{
+ background:#16403C!important;border-color:#3DDC97!important;outline-offset:1px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile.is-selected{
+ background:linear-gradient(120deg,#144338,#0C312F)!important;
+ border:2px solid #3DDC97!important;
+ box-shadow:inset 0 0 0 1px #3DDC9750!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{
+ grid-row:auto!important;
+ background:#18373C!important;color:#A8D7D0!important;
+ font:800 17px/1 var(--font-body),sans-serif!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile>span:last-child{
+ min-width:0!important;display:grid!important;gap:4px!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile strong{color:#EAF0F2!important;line-height:1.2!important;
+ font:750 clamp(10px,3vw,13px)/1.2 var(--font-body),sans-serif!important;
+ white-space:normal!important;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{color:#A2BFC4!important;
+ font:500 10px/1.25 var(--font-body),sans-serif!important;
+ white-space:normal!important;
+}
+@media(max-width:360px){
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tools-grid{gap:6px!important;margin:0 8px 8px!important}
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile{padding:6px!important;column-gap:5px!important;grid-template-columns:28px minmax(0,1fr)!important}
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{font-size:9px!important}
+}
+.pkr-record-dialog .pkr-record-row b[data-money-tone="positive"],
+.pkr-record-dialog .pkr-record-heading p[data-money-tone="positive"]{
+ color:#3DDC97!important;
+}
+.pkr-record-dialog .pkr-record-row b[data-money-tone="negative"],
+.pkr-record-dialog .pkr-record-heading p[data-money-tone="negative"]{
+ color:#FF5D72!important;
+}
+.pkr-record-dialog .pkr-record-row b[data-money-tone="neutral"]{color:var(--pkr-a-money)!important}
+.pkr-app .pkr-money-positive,
+.pkr-player-history-dialog .pkr-money-positive{color:#3DDC97!important}
+.pkr-app .pkr-money-negative,
+.pkr-player-history-dialog .pkr-money-negative{color:#FF5D72!important}
+.pkr-app .pkr-money-neutral,
+.pkr-player-history-dialog .pkr-money-neutral{color:#B8C8C5!important}
+#gameScreen.pkr-casino-live-table .table-area{overflow-y:auto!important;overflow-x:hidden!important}
+#gameScreen.pkr-casino-live-table .table-wrap{position:relative!important;inset:auto!important;width:100%!important;height:var(--pkr-canvas-height,100%)!important;min-height:var(--pkr-canvas-height,100%)!important;flex:none!important}
+#gameScreen.pkr-casino-live-table #pkrSeatSummary{display:none!important}
+#gameScreen.pkr-casino-live-table #tableOuter{border-radius:999px!important;box-shadow:inset 0 0 0 3px #11191f,inset 0 0 0 7px #83969b55,0 9px 28px #0009!important}
+#gameScreen.pkr-casino-live-table #tableFelt{border-radius:999px!important;background:radial-gradient(ellipse at 48% 42%,#176B56 0%,#0F5C4A 50%,#094837 100%)!important}
+#gameScreen.pkr-casino-live-table #tableCenter{padding:6px!important}
+#gameScreen.pkr-casino-live-table #tableName{font-size:clamp(10px,2.7vw,15px)!important;line-height:1.3!important;letter-spacing:.14em!important}
+#gameScreen.pkr-casino-live-table #tableStats{font-size:clamp(9px,2.3vw,12px)!important;line-height:1.5!important;letter-spacing:.04em!important;white-space:nowrap!important}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat{position:absolute!important;display:block!important;transform:translate(-50%,-50%)!important;box-sizing:border-box!important;min-width:0!important;max-width:none!important;min-height:0!important;width:var(--pkr-card-width,112px)!important;height:var(--pkr-card-height,72px)!important;padding:0!important;gap:0!important}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat.pkr-layout-compact{width:var(--pkr-card-width,60px)!important;height:var(--pkr-card-height,82px)!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card{display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:stretch!important;width:100%!important;height:100%!important;padding:5px 5px 3px!important;box-sizing:border-box!important;border:1px solid #294950!important;border-radius:14px!important;background:linear-gradient(145deg,#06171aef,#031013ed)!important;box-shadow:0 4px 11px #0008!important;overflow:visible!important;color:#eef6f3!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.inplay{border-color:#55343f!important;background:linear-gradient(145deg,#101a1fef,#071115f2)!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.cashed{border-color:#2d6257!important;background:linear-gradient(145deg,#06221def,#041411f2)!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-number{position:absolute!important;left:50%!important;top:-9px!important;transform:translateX(-50%)!important;display:grid!important;place-items:center!important;min-width:22px!important;height:15px!important;box-sizing:border-box!important;padding:1px 6px!important;border:1px solid #6e9c9d!important;border-radius:6px!important;background:#041217!important;color:#dff4f1!important;font:700 9px/1 var(--font-num),monospace!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-main{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;padding:0!important;flex:1 1 auto!important;width:100%!important;min-height:0!important;overflow:visible!important}
+#gameScreen.pkr-casino-live-table .seat-chip.pkr-game-seat-avatar{position:relative!important;display:grid!important;place-items:center!important;flex:0 0 var(--pkr-avatar-size,33px)!important;width:var(--pkr-avatar-size,33px)!important;height:var(--pkr-avatar-size,33px)!important;border:1.5px solid #7fb6a5!important;border-radius:50%!important;background:radial-gradient(circle at 25% 20%,#1e8e70,#125d4c)!important;box-shadow:0 2px 7px #0008!important;overflow:hidden!important;padding:0!important;min-width:0!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .seat-inner{position:static!important;display:grid!important;place-items:center!important;width:100%!important;height:100%!important;line-height:1!important;font:750 14px/1 var(--font-body),sans-serif!important;color:#f0faf6!important;transform:none!important;overflow:hidden!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .pkr-avatar-fallback{display:grid!important;place-items:center!important;position:static!important;transform:none!important;width:100%!important;height:100%!important;line-height:1!important;color:inherit!important;font:inherit!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;border-radius:50%!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar img+.pkr-avatar-fallback[style]{display:none!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar img[hidden]{display:none!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar::before,#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar::after{display:none!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-copy{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;min-width:0!important;gap:2px!important;flex:1!important;overflow:visible!important}
+#gameScreen.pkr-casino-live-table .seat-label.pkr-game-seat-name{font:750 var(--pkr-name-size,11px)/1.2 var(--font-body),Inter,sans-serif!important;letter-spacing:0!important;color:#eef6f3!important;white-space:nowrap!important;text-align:left!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;background:none!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important;text-shadow:none!important;margin:0!important}
+#gameScreen.pkr-casino-live-table.pkr-casino-live-table .seat.pkr-mockup-player-seat .seat-label.pkr-game-seat-name{position:static!important;inset:auto!important;transform:none!important;float:none!important;text-align:left!important}
+#gameScreen.pkr-casino-live-table .seat-money.pkr-game-seat-bank,#gameScreen.pkr-casino-live-table .seat-money.pkr-game-compact-bank{display:block!important;max-width:100%!important;min-width:0!important;font:650 var(--pkr-bank-size,10px)/1.2 var(--font-num),monospace!important;letter-spacing:-.055em!important;color:#d6e5df!important;white-space:nowrap!important;overflow:visible!important;border:0!important;background:transparent!important;padding:0!important;margin:0!important;text-align:left!important;border-radius:0!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result{font:800 var(--pkr-result-size,14px)/1.18 var(--font-num),monospace!important;letter-spacing:-.055em!important;white-space:nowrap!important;max-width:100%!important;overflow:visible!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.pos{color:#3ddc97!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.neg,#gameScreen.pkr-casino-live-table .pkr-inplay-seat .pkr-game-seat-bank,#gameScreen.pkr-casino-live-table .pkr-inplay-seat .pkr-game-compact-bank{color:#ff5d72!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result.zero{color:#e2e8e5!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:3px!important;flex:0 0 11px!important;min-height:0!important;height:11px!important;width:auto!important;max-width:100%!important;margin:2px 0 0!important;padding:0 2px!important;border:0!important;background:none!important;border-radius:0!important;font:750 7px/1 var(--font-body),sans-serif!important;letter-spacing:.03em!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.cashed{color:#3ddc97!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.inplay{color:#ff5d72!important}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status>span{display:inline-grid!important;place-items:center!important;width:10px!important;height:10px!important;border:1px solid currentColor!important;border-radius:50%!important;font:800 8px/1 sans-serif!important;margin:0!important;background:none!important}
+#gameScreen.pkr-casino-live-table .pkr-game-stack-readout.seat-stack{display:block!important;font:650 8px/1.2 var(--font-num),monospace!important;letter-spacing:-.04em!important;color:#e5c875!important;background:none!important;border:0!important;border-top:1px solid #26434a!important;border-radius:0!important;padding:2px 0 0!important;margin:2px 0 0!important;width:100%!important;max-width:100%!important;white-space:normal!important;text-align:center!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{display:flex!important;align-items:center!important;justify-content:center!important;gap:1px!important;padding:5px 3px 3px!important;border-radius:14px!important}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-avatar{position:relative!important;display:grid!important;place-items:center!important;height:28px!important;flex:0 0 28px!important;margin:0!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .seat-chip.pkr-game-seat-avatar{width:28px!important;height:28px!important;flex-basis:28px!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-compact-bank{font-size:11px!important;text-align:center!important}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{font-size:14px!important;line-height:1.12!important}
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot{width:13px!important;height:13px!important;right:-4px!important;bottom:-2px!important;font-size:10px!important;box-shadow:0 0 0 2px #041317!important}
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.cashed{color:#3ddc97!important;background:#07382a!important}
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.inplay{color:#ff5d72!important;background:#351421!important}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status{font:750 7px/1.1 var(--font-body),sans-serif!important;letter-spacing:.04em!important;color:#ff5d72!important;flex:0 0 auto!important}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-chip.empty{width:34px!important;height:34px!important;min-width:34px!important;border:1px solid #3e625e!important;background:#0d2423d9!important;color:#b1c9c2!important;box-shadow:none!important}
+#gameScreen.pkr-casino-live-table .pkr-empty-seat .seat-label{font:550 9px/1.2 var(--font-body),sans-serif!important;background:transparent!important;border:0!important;padding:0!important;opacity:.65!important;color:#9ab7ad!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank{height:57px!important;min-height:57px!important;margin:5px 7px 4px!important;padding:5px 5px!important;background:#031519!important;border-color:#315f63!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{flex:0 0 77px!important;gap:5px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{display:flex!important;width:22px!important;height:22px!important;flex-basis:22px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{font-size:10px!important;gap:5px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{font-size:12px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill{position:relative!important;display:block!important;height:35px!important;padding:2px 3px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-metric{display:grid!important;gap:6px!important;align-items:center!important;justify-items:center!important;height:100%!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-visual{position:absolute!important;top:2px!important;left:12%!important;display:block!important;width:11px!important;height:11px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill small{font:600 9px/1 var(--font-body),sans-serif!important;padding-left:13px!important}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{font:750 10px/1.1 var(--font-num),monospace!important;letter-spacing:-.075em!important}
+@media(min-width:850px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{flex-basis:160px!important;gap:10px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{font-size:12px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill small{font-size:11px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{font-size:14px!important;letter-spacing:0!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-visual{left:calc(50% - 37px)!important}
+}
+@media(max-width:360px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{flex-basis:57px!important;gap:3px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{display:none!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{font-size:9px!important}
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{font-size:11px!important}
+ #gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{font-size:13px!important}
+}
+.pkr-dialog-root .pkr-native-dialog.pkr-table-tools-dialog .pkr-reference-tools{width:min(570px,100%)!important;max-width:570px!important;border-radius:18px!important;border:1px solid #3f7775!important;background:linear-gradient(150deg,#0e292c,#06151a)!important;padding:16px!important;box-shadow:0 24px 64px #000b!important;overflow-y:auto!important;color:#eef6f5!important}
+.pkr-dialog-root .pkr-reference-tools .pkr-table-tools-sheet-header{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0 0 15px!important;padding:0 0 13px!important;gap:12px!important;border-bottom:1px solid #2c5056!important}
+.pkr-dialog-root .pkr-reference-tools .pkr-table-tools-sheet-header h2{font-size:23px!important;line-height:1.2!important;margin:3px 0!important}
+.pkr-dialog-root .pkr-reference-tools .pkr-table-tools-sheet-header p{font-size:11px!important;color:#aac2c4!important;margin:0!important}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-close{width:44px!important;height:44px!important;min-width:44px!important;border:1px solid #4e7f7b!important;border-radius:12px!important;background:#162e35!important;color:#c7dedb!important;font-size:25px!important}
+@media(prefers-reduced-motion:reduce){#gameScreen.pkr-casino-live-table .pkr-game-seat-card{transition:none!important}}
 }
 
 @layer pkr-theme{html{color-scheme:dark;scrollbar-color:#3B4D59 var(--pkr-a-bg)}
@@ -6109,6 +6967,291 @@ body{
 @media(max-width:700px){
  #gameScreen.pkr-casino-live-table :is(.bank-label,.bank-pill){font-size:inherit}
 }
+#gameScreen.pkr-casino-live-table .seat-money,
+#gameScreen.pkr-casino-live-table .seat-stack{
+ display:block;max-width:min(112px,33vw);min-width:0;
+ padding:3px 5px;border-radius:6px;border:1px solid #44675E;
+ background:#10231EDC;text-align:center;line-height:1.3;
+ overflow-wrap:normal;white-space:normal;
+ font-variant-numeric:tabular-nums;
+}
+#gameScreen.pkr-casino-live-table .seat-money{border-color:#476A5C}
+#gameScreen.pkr-casino-live-table .seat-stack{border-color:#6E683F}
+#gameScreen.pkr-casino-live-table .seat-stack.tracked,
+#gameScreen.pkr-casino-live-table .seat-stack.verified{border-color:#367F60}
+#gameScreen.pkr-casino-live-table .seat-stack.review{border-color:#9A6D3E}
+#gameScreen.pkr-casino-live-table .side-panel .p-chip-summary{
+ margin-top:5px;font:650 12px/1.35 var(--font-num),monospace;
+ color:#3DDC97;
+}
+#gameScreen.pkr-casino-live-table .side-panel .p-net{
+ font-family:var(--font-num),monospace;
+}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .bank-right>.pkr-bank-current b{max-width:160px;
+  overflow:hidden;text-overflow:ellipsis;
+ }
+}
+@media(max-width:360px){
+ #gameScreen.pkr-casino-live-table .seat-money,#gameScreen.pkr-casino-live-table .seat-stack{
+  max-width:96px;
+ }
+}
+#gameScreen .pkr-seat-photo,#gameScreen .pkr-avatar-fallback{
+ width:100%;height:100%;border-radius:50%;object-fit:cover;align-items:center;justify-content:center;
+}
+#gameScreen .seat-inner:has(.pkr-seat-photo),#gameScreen .seat-inner:has(.pkr-avatar-fallback){
+ display:grid;place-items:center;width:100%;height:100%;overflow:hidden;border-radius:50%;
+}
+#gameScreen .pkr-dense-seat{display:flex;flex-direction:row;gap:4px;align-items:center;min-height:38px;max-width:none;}
+#gameScreen .pkr-dense-seat .pkr-dense-portrait{flex:0 0 auto}
+#gameScreen .pkr-dense-seat .pkr-dense-info{
+ display:flex;flex-direction:column;align-items:flex-start;
+ min-width:0;max-width:95px;padding:4px 5px;
+ border-radius:8px;background:#101b1deD;border:1px solid #385858;
+ box-shadow:0 3px 10px #0006;
+ font:650 10px/1.3 var(--font-num),monospace;
+}
+#gameScreen .pkr-dense-seat[data-side="right"]{flex-direction:row-reverse;}
+#gameScreen .pkr-dense-seat .pkr-dense-name{
+ display:block;overflow:hidden;max-width:100%;white-space:nowrap;text-overflow:ellipsis;
+ font:750 11px/1.25 var(--font-body),Inter,sans-serif;color:#EAF0F2;
+}
+#gameScreen .pkr-dense-seat .pkr-dense-bank{
+ font-size:10px;color:#DCE9E5;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+#gameScreen .pkr-dense-seat.pkr-layout-full .pkr-dense-info{max-width:86px}
+#gameScreen .pkr-dense-seat.pkr-layout-full .pkr-dense-result{display:none}
+#gameScreen .pkr-dense-seat.pkr-layout-compact .pkr-dense-info{max-width:89px}
+#gameScreen .pkr-seat-summary{
+ position:absolute;top:4px;left:0;right:0;z-index:12;
+ display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;
+ padding:3px 10px 9px;scroll-snap-type:x proximity;
+ scrollbar-width:thin;pointer-events:auto;
+}
+#gameScreen .pkr-seat-summary-card{
+ flex:0 0 155px;display:flex;align-items:center;gap:8px;padding:7px 9px;
+ background:#102324;box-shadow:0 4px 15px #0007;
+ border:1px solid #39665F;border-radius:12px;color:#EAF0F2;
+ text-align:left;scroll-snap-align:start;
+}
+#gameScreen .pkr-summary-photo{width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;background:#213E37;border-radius:50%;font-weight:750}
+#gameScreen .pkr-summary-photo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+#gameScreen .pkr-summary-copy{display:grid;min-width:0;gap:2px}
+#gameScreen .pkr-summary-copy>b{font:750 12px/1.2 var(--font-body),sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#gameScreen .pkr-summary-copy>small{font:600 10px/1.2 var(--font-num),monospace;color:#B1C6C2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#gameScreen .pkr-summary-copy>strong{font:800 13px/1.25 var(--font-num),monospace}
+@media(max-width:700px){
+ #gameScreen .pkr-dense-seat .pkr-dense-info{max-width:76px}
+ #gameScreen .pkr-dense-seat .pkr-dense-name{font-size:10px}
+ #gameScreen .pkr-dense-seat .pkr-dense-bank{font-size:9px}
+ #gameScreen .pkr-dense-seat .pkr-dense-result{font-size:10px;font-weight:800}
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on{
+ display:flex;flex-direction:column;
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .pkr-seat-summary{
+ flex:0 0 auto;min-height:0;max-width:100%;z-index:12;
+ padding:5px 9px 10px;overflow-x:auto;overflow-y:hidden;
+}
+#gameScreen.pkr-casino-live-table .table-area.pkr-table-summary-on .table-wrap{
+ flex:1 1 auto;min-height:0;width:100%;
+}
+#gameScreen.pkr-casino-live-table .pkr-summary-status{
+ color:#A7BAB7;font-size:10px;line-height:1.3;font-weight:650;
+}
+@media (max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-dense-seat .pkr-dense-info{
+  box-sizing:border-box;
+ }
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat{
+ min-width:0;min-height:0;
+ position:absolute;box-sizing:border-box;
+ z-index:9;touch-action:manipulation;outline-offset:3px;
+}
+#gameScreen.pkr-casino-live-table .pkr-mockup-player-seat:focus-visible{border-radius:11px;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card{
+ display:flex;flex-direction:column;position:relative;
+ height:100%;width:100%;min-width:0;min-height:0;
+ border-radius:12px;border:1px solid #315F58;
+ background:linear-gradient(150deg,#0D2525F2,#071416FA);
+ box-shadow:0 5px 15px #0009, inset 0 0 0 1px #09382C;
+ color:#EAF0F2;overflow:visible;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.cashed{
+ border-color:#258A69;background:linear-gradient(155deg,#0D2B25F5,#081D1CF9);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-card.inplay{
+ border-color:#6E3C45;background:linear-gradient(155deg,#18252AFA,#10171BFA);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-number{
+ position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+ min-width:23px;height:16px;padding:1px 5px;z-index:3;
+ border:1px solid #668A91;border-radius:6px;
+ background:#0B181D;color:#EAF0F2;display:grid;place-items:center;
+ font:800 10px/1 var(--font-num),monospace;white-space:nowrap;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-main{
+ display:flex;align-items:center;gap:5px;width:100%;flex:1;min-height:0;
+ padding:4px 4px 2px;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{
+ display:flex;align-items:center;justify-content:center;
+ flex:0 0 clamp(25px,3.2vw,32px);height:clamp(25px,3.2vw,32px);
+ background:#1A5245;border:2px solid #64B79A;
+ border-radius:50%;overflow:hidden;min-width:0;box-shadow:0 2px 5px #0007;
+ color:#F0F9F5;font:800 11px/1 var(--font-body),sans-serif;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar img,
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .pkr-seat-photo,
+#gameScreen.pkr-casino-live-table .pkr-game-seat-avatar .pkr-avatar-fallback{
+ width:100%;height:100%;min-width:0;object-fit:cover;border-radius:50%;display:grid;place-items:center;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-copy{
+ min-width:0;display:flex;flex-direction:column;align-items:flex-start;
+ justify-content:center;gap:1px;flex:1;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-name{
+ display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;font:800 10px/1.16 var(--font-body),Inter,sans-serif;
+ color:#F0FAF6;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-bank{
+ display:block;max-width:100%;overflow:hidden;white-space:nowrap;
+ font:650 9px/1.18 var(--font-num),monospace;color:#D4E4E0;
+ letter-spacing:-.035em;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result{
+ display:block;max-width:100%;font:900 12px/1.2 var(--font-num),monospace;
+ font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.04em;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status{
+ flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+ width:100%;min-width:0;min-height:14px;height:17px;
+ border-top:1px solid #36665D;border-radius:0 0 11px 11px;
+ font:800 8px/1.15 var(--font-body),Inter,sans-serif;letter-spacing:.035em;
+ white-space:nowrap;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.cashed,
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.cashed{
+ color:#3FF0AE;background:#043B2B;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.inplay,
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot.inplay{
+ color:#FF6078;background:#32121F;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status.waiting{color:#B5C8C9;background:#192830}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status>span{
+ display:inline-grid;place-items:center;width:12px;height:12px;
+ margin-right:3px;border-radius:50%;
+ border:1px solid currentColor;font:900 9px/1 sans-serif;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-card{
+ align-items:center;justify-content:center;gap:1px;padding:4px 2px 2px;
+ border-radius:12px;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-avatar{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ height:clamp(23px,3.6vw,32px);flex:0 0 auto;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-avatar .pkr-game-seat-avatar{
+ flex-basis:clamp(23px,3.6vw,32px);height:clamp(23px,3.6vw,32px);
+}
+#gameScreen.pkr-casino-live-table .pkr-game-status-dot{
+ position:absolute;right:-5px;bottom:-2px;display:grid;place-items:center;
+ width:15px;height:15px;border:1px solid currentColor;border-radius:50%;
+ font:900 11px/1 sans-serif;box-shadow:0 0 0 2px #112426;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-bank{
+ color:#DCEAE8;font:800 9px/1.15 var(--font-num),monospace;
+ letter-spacing:-.04em;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+#gameScreen.pkr-casino-live-table .pkr-layout-compact .pkr-game-seat-result{
+ font-size:11px;line-height:1.12;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status{
+ display:block;font:800 7px/1.12 var(--font-body),sans-serif;
+ max-width:100%;white-space:nowrap;overflow:hidden;
+}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status.cashed{color:#3FF0AE}
+#gameScreen.pkr-casino-live-table .pkr-game-compact-status.inplay{color:#FF6078}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-left{min-width:0;flex:0 0 auto;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-icon{
+ flex:0 0 23px;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-label{
+ display:grid;gap:3px;line-height:1.05;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{
+ color:#F2B84B;font:900 11px/1.05 var(--font-num),monospace;
+ white-space:nowrap;letter-spacing:-.04em;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-right{grid-template-columns:repeat(3,minmax(0,1fr)) 9px;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-visual{border-radius:50%;
+}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .bank-pill b{
+ letter-spacing:-.045em;
+}
+@media(max-width:380px){
+ #gameScreen.pkr-casino-live-table #bankBar.pkr-mockup-bank .pkr-bank-total{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-main{gap:3px;padding:3px 2px 1px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{flex-basis:24px;height:24px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-name{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-bank{font-size:8px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-size:10px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-status{height:13px;font-size:7px}
+}
+@media(max-height:690px){
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-main{padding-top:2px;padding-bottom:0}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-status{height:13px;font-size:7px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-avatar{flex-basis:23px;height:23px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-name{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-bank{font-size:8px}
+ #gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-size:10px}
+}
+#gameScreen.pkr-casino-live-table .pkr-table-head-actions{display:flex;align-items:center;gap:7px;min-width:0}
+#gameScreen.pkr-casino-live-table .pkr-table-view-toolbar{display:flex;align-items:center;gap:5px;min-width:0;height:40px;padding:0 7px;border:1px solid #42616A;border-radius:11px;background:#17272D;color:#D7E7EA;font:750 11px/1.1 var(--font-body),Inter,sans-serif}
+#gameScreen.pkr-casino-live-table .pkr-table-view-toolbar select{min-width:74px;max-width:112px;border:0;outline:0;background:transparent;color:#EAF0F2;font:750 11px/1.1 var(--font-body),Inter,sans-serif}
+#gameScreen.pkr-casino-live-table .pkr-table-view-toolbar option{background:#102127;color:#EAF0F2}
+#gameScreen.pkr-casino-live-table .pkr-view-toolbar-icon{color:#3DDC97;font-size:14px}
+.pkr-dialog-root .pkr-responsive-view-select strong{font:800 12px/1.2 var(--font-body),sans-serif}
+.pkr-dialog-root .pkr-responsive-view-select small{font:500 9px/1.25 var(--font-body),sans-serif;color:#A7C1C6}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick{min-width:0;max-width:420px;flex:1}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-item{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;white-space:nowrap;font-family:var(--font-body),Inter,sans-serif}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{color:#BDD0D4;font-size:10px;font-weight:700}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-item strong{font:900 13px/1 var(--font-num),monospace;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+#gameScreen.pkr-casino-live-table .pkr-bank-count strong{color:#F2B84B}
+#gameScreen.pkr-casino-live-table .pkr-bank-inplay-quick strong.pos{color:#3DDC97}
+#gameScreen.pkr-casino-live-table .pkr-bank-inplay-quick strong.neg{color:#FF5D72}
+#gameScreen.pkr-casino-live-table .pkr-bank-quick-divider{width:1px;height:20px;background:#31535B}
+#gameScreen.pkr-casino-live-table #bankBar.pkr-bank-quickbar>.bank-caret{color:#9DB8C0;margin-left:4px}
+#gameScreen.pkr-casino-live-table .table-area{overscroll-behavior:contain;scrollbar-width:none}
+#gameScreen.pkr-casino-live-table .table-area::-webkit-scrollbar{display:none}
+#gameScreen.pkr-casino-live-table .table-wrap{flex:0 0 auto}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile{transform:translate(-50%,-50%)}
+#gameScreen.pkr-casino-live-table .pkr-layout-mobile .pkr-game-seat-number{z-index:6}
+#gameScreen.pkr-casino-live-table .pkr-mobile-rail-avatar{position:relative;display:flex;align-items:center;justify-content:center;height:var(--pkr-avatar-size,40px);flex:0 0 var(--pkr-avatar-size,40px)}
+#gameScreen.pkr-casino-live-table.pkr-view-mobile #tableCenter{transform:translate(-50%,-50%) scale(.92)}
+#gameScreen.pkr-casino-live-table .pkr-layout-balanced,#gameScreen.pkr-casino-live-table .pkr-layout-compact{transform:translate(-50%,-50%)}
+@media(max-width:700px){
+ #gameScreen.pkr-casino-live-table .pkr-table-view-toolbar{padding:0 5px;height:38px}
+ #gameScreen.pkr-casino-live-table .pkr-view-toolbar-label{display:none}
+ #gameScreen.pkr-casino-live-table .pkr-table-view-toolbar select{min-width:62px;max-width:74px;font-size:10px}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick-item strong{font-size:12px}
+}
+@media(max-width:350px){
+ #gameScreen.pkr-casino-live-table .pkr-table-view-toolbar select{min-width:54px;max-width:58px;font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick-item small{font-size:9px}
+ #gameScreen.pkr-casino-live-table .pkr-bank-quick-item strong{font-size:11px}
+}
+#gameScreen.pkr-casino-live-table .pkr-game-full-avatar{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ flex:0 0 var(--pkr-avatar-size,34px);height:var(--pkr-avatar-size,34px);
+}
 .pkr-app.pkr-game-detail .pkr-casino-game-summary .pkr-game-metrics strong {
   font-variant-numeric:tabular-nums;
 }
@@ -6254,4 +7397,168 @@ body:has(#gameScreen):has(.sheet.open,.sheet.show,.overlay.open,.overlay.show) .
  .pkr-dashboard .pkr-pro-home .pkr-pro-stats>div{min-width:0}
  .pkr-dashboard .pkr-pro-home .pkr-pro-stats .pkr-metric-trigger{min-height:78px;align-items:flex-start}
 }
+@media (max-width:700px){
+ .pkr-insights-refresh .pkr-insights-player-mobile-row{min-width:0;min-height:0;overflow:hidden;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger{grid-template-columns:32px minmax(0,1fr) max-content;min-width:0;height:auto;min-height:80px;border-radius:10px;
+  touch-action:manipulation;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-rank{
+  width:32px;height:32px;flex:none;justify-self:center;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-player-mobile-info{
+  display:grid;gap:4px;min-width:0;width:100%;flex:none;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-info strong{
+  font-size:14px;line-height:1.35;overflow-wrap:break-word;word-break:normal;white-space:normal;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-info small{
+  display:block;line-height:1.4;white-space:normal;
+ }
+ .pkr-insights-refresh .pkr-insights-history-hint{
+  display:block;font-size:10px;font-style:normal;font-weight:650;color:var(--pkr-a-primary);
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>:is(.pkr-vnext-positive,.pkr-vnext-negative){
+  font-family:var(--font-num),monospace;
+  font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap;
+  justify-self:end;min-width:max-content;text-align:right;
+ }
+}
+@media (max-width:370px){
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger{
+  grid-template-columns:32px minmax(0,1fr);
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-rank{
+  grid-column:1;grid-row:1/span 2;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>.pkr-insights-player-mobile-info{
+  grid-column:2;grid-row:1;
+ }
+ .pkr-insights-refresh .pkr-insights-player-mobile-row>.pkr-metric-trigger>:is(.pkr-vnext-positive,.pkr-vnext-negative){
+  grid-column:2;grid-row:2;justify-self:start;text-align:left;
+ }
+}
+.pkr-dialog-root .pkr-native-dialog.pkr-table-tools-dialog{
+ color:var(--pkr-a-text);
+}
+.pkr-dialog-root .pkr-table-tools-dialog .pkr-table-tools-sheet{
+ width:min(452px,100%);max-width:452px;
+ margin:auto;flex:none;
+ border:1px solid #405B62;border-radius:19px;
+ background:linear-gradient(155deg,#15262B,#0D191F);
+ color:#EAF0F2;
+ box-shadow:0 24px 72px #000C;
+ padding:18px;
+ font-family:var(--font-body),Inter,sans-serif;
+}
+.pkr-table-tools-sheet-header{
+ display:flex;justify-content:space-between;gap:15px;align-items:start;
+ border-bottom:1px solid #31484E;padding-bottom:14px;margin-bottom:14px;
+}
+.pkr-table-tools-sheet-header>div{min-width:0}
+.pkr-table-tools-sheet-header span{
+ display:block;color:#3DDC97;font-size:10px;font-weight:750;
+ letter-spacing:.12em;
+}
+.pkr-table-tools-sheet-header h2{
+ margin:4px 0;font:750 22px/1.25 var(--font-head),Inter,sans-serif;
+ color:#EAF0F2;
+}
+.pkr-table-tools-sheet-header p{margin:0;color:#9FB4BB;font-size:12px;line-height:1.4}
+.pkr-table-tools-sheet-header>button{
+ flex:none;min-width:44px;border:1px solid #405B62;border-radius:12px;
+ background:#223039;color:#C4D5DD;font-size:16px;
+}
+.pkr-tools-group+.pkr-tools-group{margin-top:16px}
+.pkr-tools-section-title{
+ display:block;margin-bottom:9px;
+ color:#91ACA8;font:750 10px/1.2 var(--font-body),sans-serif;
+ letter-spacing:.15em;
+}
+.pkr-tools-action-grid,.pkr-tools-seat-actions{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.pkr-table-tools-sheet button.pkr-tool-action{
+ display:grid;grid-template-columns:24px minmax(0,1fr);
+ grid-template-rows:auto auto;
+ align-content:center;align-items:center;
+ column-gap:10px;row-gap:4px;
+ min-height:80px;padding:12px 11px;text-align:left;
+ border:1px solid #3B5555;border-radius:12px;
+ background:#1B3033;color:#EAF0F2;
+}
+.pkr-tool-action>span{
+ grid-row:1 / span 2;align-self:center;font-size:22px;
+}
+.pkr-tool-action>strong{
+ display:block;font-weight:750;font-size:13px;
+}
+.pkr-tool-action>small{
+ grid-column:2;color:#9AB5B8;line-height:1.35;font-size:10px;
+}
+.pkr-tools-seat-actions button{
+ border:1px solid #405B62;border-radius:11px;
+ background:#1A292F;color:#EAF0F2;
+ font:650 12px/1.25 var(--font-body),Inter,sans-serif;
+ padding:11px 8px;
+}
+.pkr-table-tools-sheet button:hover{border-color:#3DDC97;background:#25403B}
+.pkr-table-tools-sheet button:focus-visible{outline:3px solid #3DDC97;outline-offset:2px}
+@media(max-width:380px){
+ .pkr-dialog-root .pkr-table-tools-dialog .pkr-table-tools-sheet{padding:14px}
+ .pkr-tools-action-grid{grid-template-columns:1fr}
+ .pkr-table-tools-sheet button.pkr-tool-action{min-height:65px}
+ .pkr-tools-seat-actions{gap:7px}
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-table-tools-sheet-header h2{letter-spacing:-.025em;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-close{
+ height:46px;
+ outline:1px solid #193B41;
+ box-shadow:0 0 0 3px #113933;cursor:pointer;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-section-title{
+ display:block;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile{cursor:pointer;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{display:grid;place-items:center;
+ width:34px;height:34px;min-width:0;
+ border:1px solid #316366;border-radius:9px;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile strong{
+ display:block;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-tile small{
+ display:block;overflow-wrap:break-word;
+}
+.pkr-dialog-root .pkr-mockup-tools-sheet .pkr-tools-reconciliation-note{
+ display:flex;align-items:center;gap:5px;
+ margin:10px 13px 14px;padding:11px 12px;
+ background:#0D2930;border:1px solid #27545A;border-radius:10px;
+ color:#B4D1D5;font:500 11px/1.4 var(--font-body),sans-serif;
+}
+@media(max-width:360px){
+ .pkr-dialog-root .pkr-mockup-tools-sheet .pkr-mockup-tool-icon{width:28px;height:28px}
+}
+.pkr-record-dialog .pkr-record-error button{margin-top:8px;display:block;font-weight:700}
+.pkr-record-dialog .pkr-record-row b{font-variant-numeric:tabular-nums}
+#gameScreen.pkr-casino-live-table .table-area{overscroll-behavior:contain;scrollbar-width:thin}
+#gameScreen.pkr-casino-live-table #tableCenter{max-width:100%}
+#gameScreen.pkr-casino-live-table .seat.pkr-mockup-player-seat{z-index:9}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-number{box-shadow:0 2px 4px #0009;z-index:3}
+#gameScreen.pkr-casino-live-table .seat-money.pkr-game-seat-bank,#gameScreen.pkr-casino-live-table .seat-money.pkr-game-compact-bank{font-variant-numeric:tabular-nums}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-result{font-variant-numeric:tabular-nums}
+#gameScreen.pkr-casino-live-table .pkr-game-seat-status{color:#c6d8d8}
+.pkr-dialog-root .pkr-native-dialog.pkr-table-tools-dialog .pkr-reference-tools{font-family:var(--font-body),Inter,sans-serif}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-close{cursor:pointer}
+.pkr-dialog-root .pkr-reference-view-select{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:4px;background:#031318;border:1px solid #28494d;border-radius:12px;margin-bottom:17px}
+.pkr-dialog-root .pkr-reference-view-select button{min-height:44px;border:1px solid transparent;border-radius:8px;padding:8px;color:#a8c4c6;background:transparent;font:700 12px/1.2 var(--font-body),sans-serif;cursor:pointer}
+.pkr-dialog-root .pkr-reference-view-select button[aria-pressed="true"]{background:#103c32;border-color:#36b98d;color:#d8fff0}
+.pkr-dialog-root .pkr-reference-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 8px}
+.pkr-dialog-root .pkr-reference-tool-grid button{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;min-height:77px;padding:6px 3px;border:1px solid transparent;border-radius:11px;background:transparent;color:#d8e9e8;font:600 11px/1.35 var(--font-body),sans-serif;text-align:center;cursor:pointer}
+.pkr-dialog-root .pkr-reference-tool-grid button>span:first-child{display:grid;place-items:center;width:38px;height:38px;border:1px solid #365d63;border-radius:12px;background:#092028;font-size:22px;line-height:1}
+.pkr-dialog-root .pkr-reference-tool-grid button:hover,.pkr-dialog-root .pkr-reference-tool-grid button:focus-visible{outline:2px solid #3ddc97;outline-offset:1px;background:#10332d}
+.pkr-dialog-root .pkr-reference-tools .pkr-tools-reconciliation-note{font:500 10px/1.5 var(--font-body),sans-serif;color:#9fbbbd;border-top:1px solid #29484f;margin:16px 0 0;padding-top:12px}
+@media(min-width:540px){.pkr-dialog-root .pkr-reference-tool-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
 }

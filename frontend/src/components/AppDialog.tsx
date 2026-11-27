@@ -3,13 +3,16 @@
 import {useEffect,useId,useRef,useState,type HTMLAttributes} from 'react';
 import {createPortal} from 'react-dom';
 import {lockPageScroll} from '@/lib/overlay-scroll';
+import {useSwipeDismiss} from './useSwipeDismiss';
+import './swipe-dismiss.css';
 
 /** Top-layer dialog: never trapped by a page's z-index, transform or bottom nav. */
-export default function AppDialog({children,className='',onDismiss,...props}:
-  HTMLAttributes<HTMLDialogElement>&{onDismiss?:()=>void}){
+export default function AppDialog({children,className='',onDismiss,swipeToDismiss=false,...props}:
+  HTMLAttributes<HTMLDialogElement>&{onDismiss?:()=>void;swipeToDismiss?:boolean}){
   const [mounted,setMounted]=useState(false);
   const ref=useRef<HTMLDialogElement>(null);
   const headingId=useId();
+  useSwipeDismiss(ref,onDismiss,mounted&&swipeToDismiss,true);
   useEffect(()=>{setMounted(true);},[]);
   useEffect(()=>{
     const dialog=ref.current;

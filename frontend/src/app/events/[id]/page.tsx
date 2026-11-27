@@ -5,6 +5,7 @@ import {lockPageScroll} from '@/lib/overlay-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import AppDialog from '@/components/AppDialog';
+import SwipeDismissHandle from '@/components/SwipeDismissHandle';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -1642,10 +1643,11 @@ function PlayerHistoryDialog({ player, history, leader, onClose }: {
     };
   },[]);
   return (
-    <AppDialog className="modal-overlay pkr-player-history-overlay"
+    <AppDialog className="modal-overlay pkr-player-history-overlay" swipeToDismiss onDismiss={onClose}
       onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}} aria-label={'Player history for '+player}>
       <section ref={dialogRef} className="pkr-player-history-dialog"
           >
+        <SwipeDismissHandle/>
         <PlayerHistoryCard player={player} history={history} leader={leader} onClose={onClose}/>
       </section>
     </AppDialog>
@@ -1691,7 +1693,7 @@ function PlayerHistoryCard({ player, history, leader, onClose }: {
         const pp = (g.top_players||[]).find((p:any)=>p.display_name===player);
         const net = pp?.net ?? null;
         return (
-          <button type="button" key={g.id}
+          <button type="button" key={g.id} data-pkr-swipe-row
             aria-label={'View saved game results for '+player+' on '+new Date(g.scheduled_at*1000).toLocaleDateString('en-AU')}
             onClick={()=>{onClose();router.push(g.results_token?'/games/results/'+encodeURIComponent(g.results_token):'/games/'+encodeURIComponent(g.id));}}
             style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',width:'100%',textAlign:'left',
