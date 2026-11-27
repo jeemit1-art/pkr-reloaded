@@ -357,7 +357,7 @@ export default function RoomDashboardDual({
         </div>
         <section className="pkr-dual-hero pkr-dual-hero-command">
           <div className="pkr-dual-hero-text">
-            <div className="pkr-dual-eyebrow"><span><PkrGlyph name="grid"/> CURRENT ROOM</span><span className="pkr-dual-status">{liveLabel}</span></div>
+            <div className="pkr-dual-eyebrow"><span><PkrGlyph name="grid"/> CURRENT ROOM</span><span className="pkr-dual-status" data-game-state={active?'live':featured?'upcoming':'empty'}>{liveLabel}</span></div>
             <h3>{room.name}</h3>
             <p><PkrGlyph name="spade" size={16}/> Private room · <RecordMetric bare request={{kind:'members',title:'Room members',roomId:room.id}}>{roomMembers} members</RecordMetric> · {featured?<RecordMetric bare
               request={{kind:'seats',title:'Table seats',gameId:featured.id}}>{seatText}</RecordMetric>:seatText}</p>
@@ -423,7 +423,7 @@ export default function RoomDashboardDual({
           <h2>The table is <em>calling.</em></h2></div>
         <section className="pkr-dual-hero pkr-dual-hero-live">
           <div className="pkr-dual-hero-text">
-            <div className="pkr-dual-eyebrow"><span>TONIGHT'S GAME</span><span className="pkr-dual-status">{liveLabel}</span></div>
+            <div className="pkr-dual-eyebrow"><span>TONIGHT'S GAME</span><span className="pkr-dual-status" data-game-state={active?'live':featured?'upcoming':'empty'}>{liveLabel}</span></div>
             <h3>{room.name}</h3>
             <p>{featured?niceDate(featured.scheduled_at):'No game has been scheduled'}</p>
             <p className="pkr-dual-seatline"><PkrGlyph name="members"/> {featured?<RecordMetric bare request={{kind:'seats',title:'Table seats',gameId:featured.id}}>{seatText}</RecordMetric>:seatText}
