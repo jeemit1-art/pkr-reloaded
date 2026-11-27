@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole } from '../middleware';
@@ -9,7 +10,7 @@ const payments = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 // A secure payer-confirmation workflow requires verified player identity.
 // Host / co-host sets status (received, not received, back to owed)
 payments.put('/games/:id/transfers/:tid/status', authMiddleware, async (c) => {
-  const { id: gameId, tid } = c.req.param();
+  const gameId = requiredRouteParam(c.req.param('id')), tid = requiredRouteParam(c.req.param('tid'));
   const { status } = await c.req.json<{ status: string }>();
   if (!['owed', 'paid', 'not_received'].includes(status)) return c.json({ error: 'Invalid status' }, 400);
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?')
@@ -80,7 +81,7 @@ const privateData=(game:PayGame,kind:string,tid?:string)=>({
 // returns no subscription secrets or guessed identity assignments.
 payments.get('/games/:id/settlement-control',authMiddleware,async(c)=>{
   if(!v2(c))return c.json({error:'Settlement acknowledgements are not activated',code:'SETTLEMENT_V2_NOT_READY'},503);
-  const game=await settledGame(c,c.req.param('id'));
+  const game=await settledGame(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Room membership required'},403);
   if(game.status!=='settled')return c.json({error:'Save the final results before sending settlements'},409);
@@ -104,7 +105,7 @@ payments.get('/games/:id/settlement-control',authMiddleware,async(c)=>{
 // A push acceptance count is NOT proof of end-user delivery or receipt.
 payments.post('/games/:id/settlement-control/broadcast',authMiddleware,async(c)=>{
   if(!v2(c))return c.json({error:'Settlement v2 not activated'},503);
-  const game=await settledGame(c,c.req.param('id'));
+  const game=await settledGame(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'cohost'))return c.json({error:'Host or co-host only'},403);
   if(game.status!=='settled')return c.json({error:'Settle and save game results first'},409);
@@ -156,7 +157,7 @@ payments.post('/games/:id/settlement-control/broadcast',authMiddleware,async(c)=
 // Host can pause or resume daily reminders without changing any payment.
 payments.put('/games/:id/settlement-control/reminders',authMiddleware,async(c)=>{
   if(!v2(c))return c.json({error:'Settlement v2 not activated'},503);
-  const game=await settledGame(c,c.req.param('id'));
+  const game=await settledGame(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'cohost'))return c.json({error:'Host or co-host only'},403);
   if(game.status!=='settled')return c.json({error:'Game not settled'},409);
@@ -176,7 +177,7 @@ payments.put('/games/:id/settlement-control/reminders',authMiddleware,async(c)=>
 // Guests represented by "manual_x" IDs cannot claim another person's transfer.
 payments.post('/games/:id/transfers/:tid/respond',authMiddleware,async(c)=>{
   if(!v2(c))return c.json({error:'Settlement v2 not activated'},503);
-  const game=await settledGame(c,c.req.param('id'));
+  const game=await settledGame(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Room membership required'},403);
   if(game.status!=='settled')return c.json({error:'Game not settled'},409);
@@ -191,7 +192,7 @@ payments.post('/games/:id/transfers/:tid/respond',authMiddleware,async(c)=>{
   const action=body.action;
   if(action!=='sent'&&action!=='received'&&action!=='not_received')
     return c.json({error:'Choose sent, received or not_received'},400);
-  const tid=c.req.param('tid');
+  const tid=requiredRouteParam(c.req.param('tid'));
   const transfer=await c.env.DB.prepare(
     'SELECT * FROM settlement_transfers WHERE id=? AND game_id=?'
   ).bind(tid,game.id).first<PayTransfer>();
@@ -228,7 +229,7 @@ payments.post('/games/:id/transfers/:tid/respond',authMiddleware,async(c)=>{
 // transfers. No "all historical games" side effects; requires explicit IDs.
 payments.post('/games/:id/transfers/bulk-status',authMiddleware,async(c)=>{
   if(!v2(c))return c.json({error:'Settlement v2 not activated'},503);
-  const game=await settledGame(c,c.req.param('id'));
+  const game=await settledGame(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'cohost'))return c.json({error:'Host or co-host only'},403);
   if(game.status!=='settled')return c.json({error:'Game not settled'},409);

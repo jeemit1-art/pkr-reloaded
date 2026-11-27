@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 // Shareable poker-night RSVP board. This is NOT a WhatsApp bot: WhatsApp
 // transports the link; RSVP choices and live status are hosted by PKR.
 // v2 is feature-gated until the additive migration is verified on staging.
@@ -107,7 +108,7 @@ function failed(c:any,e:unknown) {
 /** Safe public projection: never reveal edit token hashes or contact data. */
 board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
   if(!flagOn(c.env))return notReady(c);
-  const game=await gameFor(c.env,c.req.param('id'));
+  const game=await gameFor(c.env,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   try {
@@ -156,7 +157,7 @@ board.get('/games/:id/rsvp-board',authMiddleware,async(c)=>{
  */
 board.put('/games/:id/rsvp-arrivals',authMiddleware,async(c)=>{
   if(!flagOn(c.env))return notReady(c);
-  const game=await gameFor(c.env,c.req.param('id'));
+  const game=await gameFor(c.env,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'cohost'))
     return c.json({error:'Only a host or co-host can change RSVP choices'},403);
@@ -195,7 +196,7 @@ board.put('/games/:id/rsvp-arrivals',authMiddleware,async(c)=>{
 /** A guest can create a response once and then edit ONLY with their edit token. */
 board.post('/games/:id/rsvp-board',authMiddleware,async(c)=>{
   if(!flagOn(c.env))return notReady(c);
-  const game=await gameFor(c.env,c.req.param('id'));
+  const game=await gameFor(c.env,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Game not found'},404);
   if(!await requireEventRole(c,game.event_id,'member'))return c.json({error:'Group membership required'},403);
   if(closed(game))return c.json({error:'RSVPs are closed for this game'},409);

@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole } from '../middleware';
@@ -42,7 +43,7 @@ async function existingProfile(db:D1Database,eventId:string,key:string){
 }
 
 profiles.get('/:id/profiles',authMiddleware,async c=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   const manager=await requireEventRole(c,eventId,'cohost');
   const userId=c.get('userId');
@@ -67,7 +68,7 @@ profiles.get('/:id/profiles',authMiddleware,async c=>{
 });
 
 profiles.put('/:id/profiles',authMiddleware,async c=>{
-  const eventId=c.req.param('id'),userId=c.get('userId');
+  const eventId=requiredRouteParam(c.req.param('id')),userId=c.get('userId');
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   const manager=await requireEventRole(c,eventId,'cohost');
   const headerLength=Number(c.req.header('content-length')||0);

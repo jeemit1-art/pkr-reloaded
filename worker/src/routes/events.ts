@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
@@ -80,7 +81,7 @@ events.post('/', authMiddleware, async (c) => {
 
 // IMPORTANT: /invite/:token MUST be before /:id
 events.get('/invite/:token', authMiddleware, async (c) => {
-  const token = c.req.param('token');
+  const token = requiredRouteParam(c.req.param('token'));
   const raw = await c.env.KV.get(`invite:${token}`);
   if (!raw) return c.json({error:'This invite link has expired or already been used. Ask the host to generate a new one.'},404);
   const { eventId, role, email } = JSON.parse(raw);
@@ -109,7 +110,7 @@ events.get('/invite/:token', authMiddleware, async (c) => {
 });
 
 events.get('/:id', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const event = await c.env.DB.prepare(`
     SELECT e.*,
@@ -137,7 +138,7 @@ events.get('/:id', authMiddleware, async (c) => {
 const DASHBOARD_KEY_PREFIX = 'room-dashboard-layout:v1:';
 type DashboardLayoutName = 'command' | 'live';
 events.get('/:id/dashboard-layout', authMiddleware, async (c) => {
-  const id=c.req.param('id');
+  const id=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,id,'member'))return c.json({error:'Room membership required'},403);
   const raw=await c.env.KV.get(DASHBOARD_KEY_PREFIX+id);
   let value:{layout:DashboardLayoutName;updated_at:number}|null=null;
@@ -156,7 +157,7 @@ events.get('/:id/dashboard-layout', authMiddleware, async (c) => {
     updated_at:value?.updated_at||null});
 });
 events.put('/:id/dashboard-layout', authMiddleware, async (c) => {
-  const id=c.req.param('id');
+  const id=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Only the room host can change the dashboard'},403);
   const data=await c.req.json().catch(()=>null) as {layout?:unknown}|null;
   if(!data||(data.layout!=='command'&&data.layout!=='live')||
@@ -170,7 +171,7 @@ events.put('/:id/dashboard-layout', authMiddleware, async (c) => {
 });
 
 events.get('/:id/settlement-ledger', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   // D1 batch executes these reads in a consistent transaction. Use the
   // existing settled-game records, including games with no recorded transfers.
@@ -197,7 +198,7 @@ events.get('/:id/settlement-ledger', authMiddleware, async (c) => {
 });
 
 events.put('/:id', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
   const { name, description, buy_in, master_password } = await c.req.json();
   const hashedPw = master_password ? await hashPassword(master_password) : null;
@@ -208,7 +209,7 @@ events.put('/:id', authMiddleware, async (c) => {
 
 // Verify master password
 events.post('/:id/verify-password', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const { password } = await c.req.json();
   const event = await c.env.DB.prepare('SELECT master_password FROM events WHERE id=?').bind(eventId).first<{master_password:string|null}>();
@@ -219,7 +220,7 @@ events.post('/:id/verify-password', authMiddleware, async (c) => {
 });
 
 events.post('/:id/invite', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'host')) return c.json({error:'Only host can invite'},403);
   const body = await c.req.json().catch(()=>({})) as {role?:string;email?:string};
   const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
@@ -233,7 +234,7 @@ events.post('/:id/invite', authMiddleware, async (c) => {
 
 // Member PIN join — player enters event PIN to access leaderboard/results without Google login
 events.post('/:id/join', async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   const { pin } = await c.req.json();
   if (!pin) return c.json({error:'PIN required'},400);
   const event = await c.env.DB.prepare('SELECT id,name,master_password FROM events WHERE id=?').bind(eventId).first<any>();
@@ -248,7 +249,7 @@ events.post('/:id/join', async (c) => {
 // Separate, verified native-device transport. Never accept user IDs from
 // clients, and never make this available in untrusted staging.
 events.post('/:id/native-push',authMiddleware,async c=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!nativePushReady(c.env))
     return c.json({error:'Native notifications are awaiting App Store credentials'},503);
   if(!await requireEventRole(c,eventId,'member'))
@@ -261,7 +262,7 @@ events.post('/:id/native-push',authMiddleware,async c=>{
   return c.json({ok:true,registered:true});
 });
 events.post('/:id/native-push-status',authMiddleware,async c=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
   const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
   if(!validNativeToken(body?.token))return c.json({error:'Invalid token'},400);
@@ -269,7 +270,7 @@ events.post('/:id/native-push-status',authMiddleware,async c=>{
     await hasNativeDevice(c.env,eventId,c.get('userId'),body.token)});
 });
 events.delete('/:id/native-push',authMiddleware,async c=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
   const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
   if(!validNativeToken(body?.token))return c.json({error:'Invalid token'},400);
@@ -278,7 +279,7 @@ events.delete('/:id/native-push',authMiddleware,async c=>{
   return c.json({ok:true});
 });
 events.post('/:id/native-test-push',authMiddleware,async c=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!nativePushReady(c.env))return c.json({error:'Native push not configured'},503);
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Not a member'},403);
   const body=await c.req.json().catch(()=>null) as {token?:unknown}|null;
@@ -292,7 +293,7 @@ events.post('/:id/native-test-push',authMiddleware,async c=>{
 });
 
 events.post('/:id/subscribe', optionalAuth, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   const { endpoint, keys, userId, display_name } = await c.req.json();
   if(c.env.PKR_PUSH_ROOMS_V2==='1'&&c.env.PKR_PHONE_MEMBERS_V1!=='1')
     return c.json({error:'Verified membership is required for multi-room push'},503);
@@ -323,7 +324,7 @@ events.post('/:id/subscribe', optionalAuth, async (c) => {
 // A database registration is NOT proof the device permission remains granted
 // or that a push notification will be delivered. Never expose endpoints/keys.
 events.get('/:id/push-registrations', authMiddleware, async(c)=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'host'))
     return c.json({error:'Only the room host can view member notification registrations'},403);
   if(c.env.PKR_PUSH_ROOMS_V2!=='1')
@@ -344,7 +345,7 @@ events.get('/:id/push-registrations', authMiddleware, async(c)=>{
 });
 
 events.post('/:id/subscribe-status', authMiddleware, async(c)=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Private group membership required'},403);
   const body=await c.req.json().catch(()=>({})) as {endpoint?:unknown};
   const endpoint=typeof body.endpoint==='string'?body.endpoint:'';
@@ -359,7 +360,7 @@ events.post('/:id/subscribe-status', authMiddleware, async(c)=>{
 // A real end-to-end push test. The caller can only target their own previously
 // registered endpoint, and tests are rate-limited to avoid notification spam.
 events.post('/:id/test-push', authMiddleware, async(c)=>{
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))
     return c.json({error:'Private group membership required'},403);
   if(c.env.PKR_ENV==='staging')
@@ -384,16 +385,16 @@ events.post('/:id/unsubscribe', optionalAuth, async (c) => {
   const { endpoint } = await c.req.json();
   if (!endpoint) return c.json({error:'endpoint required'},400);
   if(c.env.PKR_PUSH_ROOMS_V2==='1'){
-    if(c.env.PKR_PHONE_MEMBERS_V1!=='1'||!await requireEventRole(c as any,c.req.param('id'),'member'))
+    if(c.env.PKR_PHONE_MEMBERS_V1!=='1'||!await requireEventRole(c as any,requiredRouteParam(c.req.param('id')),'member'))
       return c.json({error:'Private group membership required'},403);
     await c.env.DB.prepare('DELETE FROM push_room_subscriptions WHERE endpoint=? AND event_id=? AND user_id=?')
-      .bind(endpoint,c.req.param('id'),c.get('userId')).run();
+      .bind(endpoint,requiredRouteParam(c.req.param('id')),c.get('userId')).run();
     return c.json({ok:true});
   }
   if(c.env.PKR_PHONE_MEMBERS_V1==='1'){
-    if(!await requireEventRole(c as any,c.req.param('id'),'member'))return c.json({error:'Private group membership required'},403);
+    if(!await requireEventRole(c as any,requiredRouteParam(c.req.param('id')),'member'))return c.json({error:'Private group membership required'},403);
     await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=? AND event_id=? AND user_id=?')
-      .bind(endpoint,c.req.param('id'),c.get('userId')).run();
+      .bind(endpoint,requiredRouteParam(c.req.param('id')),c.get('userId')).run();
   }else{
     await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(endpoint).run();
   }
@@ -404,7 +405,7 @@ events.post('/:id/unsubscribe', optionalAuth, async (c) => {
 // the same player. The saved game_player and settlement rows are immutable.
 // A preview must match the current settled ledger before the action is saved.
 events.get('/:id/players/merges',authMiddleware,async c=>{
-  const roomId=c.req.param('id');
+  const roomId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,roomId,'host'))return c.json({error:'Only the room host may review combined player histories'},403);
   try{
     const merges=await listRoomPlayerMerges(c.env.KV,roomId);
@@ -416,7 +417,7 @@ events.get('/:id/players/merges',authMiddleware,async c=>{
 });
 
 events.post('/:id/players/merge',authMiddleware,async c=>{
-  const roomId=c.req.param('id');
+  const roomId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,roomId,'host'))
     return c.json({error:'Only the room host can combine player histories'},403);
   const body=await c.req.json().catch(()=>null) as Record<string,unknown>|null;
@@ -468,7 +469,7 @@ events.post('/:id/players/merge',authMiddleware,async c=>{
 });
 
 events.delete('/:id/players/merge/:fromId',authMiddleware,async c=>{
-  const roomId=c.req.param('id'),fromId=c.req.param('fromId');
+  const roomId=requiredRouteParam(c.req.param('id')),fromId=requiredRouteParam(c.req.param('fromId'));
   if(!await requireEventRole(c,roomId,'host'))
     return c.json({error:'Only the room host can undo a player history link'},403);
   try{
@@ -492,7 +493,7 @@ events.delete('/:id/players/merge/:fromId',authMiddleware,async c=>{
 });
 
 events.get('/:id/leaderboard', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   // Calculate directly from immutable settled-game rows. The older cached
   // leaderboard grouped by name; a renamed player could appear twice while
@@ -503,7 +504,7 @@ events.get('/:id/leaderboard', authMiddleware, async (c) => {
 
 // Game history with top 3 player results per game
 events.get('/:id/history', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const games = await c.env.DB.prepare(`
     SELECT g.*,
@@ -526,7 +527,7 @@ events.get('/:id/history', authMiddleware, async (c) => {
 
 // Known players for this event (for seat autocomplete)
 events.get('/:id/players', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const rows = await c.env.DB.prepare(`
     SELECT DISTINCT gp.display_name,
@@ -549,22 +550,22 @@ events.get('/:id/players', authMiddleware, async (c) => {
 });
 
 events.post('/:id/end', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Only host can end event'},403);
   await c.env.DB.prepare("UPDATE events SET status='ended' WHERE id=?").bind(eventId).run();
   return c.json({ok:true});
 });
 
 events.post('/:id/reopen', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
+  const eventId = requiredRouteParam(c.req.param('id'));
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Only host can reopen event'},403);
   await c.env.DB.prepare("UPDATE events SET status='active' WHERE id=?").bind(eventId).run();
   return c.json({ok:true});
 });
 
 events.delete('/:id/members/:userId', authMiddleware, async (c) => {
-  const eventId = c.req.param('id');
-  const targetId = c.req.param('userId');
+  const eventId = requiredRouteParam(c.req.param('id'));
+  const targetId = requiredRouteParam(c.req.param('userId'));
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
   const me = (c as any).get('userId');
   if (targetId === me) return c.json({error:'Cannot remove yourself'},400);

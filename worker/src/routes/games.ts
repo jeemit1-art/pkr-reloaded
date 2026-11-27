@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env, SettleRequest, Transfer } from '../types';
 import { authMiddleware, optionalAuth, requireEventRole, generateId, getPlanStatus } from '../middleware';
@@ -42,7 +43,7 @@ const initialTournamentLevels = [
 ═══════════════════════════════════════════ */
 
 games.get('/events/:eventId/games', authMiddleware, async (c) => {
-  const eventId = c.req.param('eventId');
+  const eventId = requiredRouteParam(c.req.param('eventId'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const { status } = c.req.query();
   // Count saved game participants, not room members, RSVPs or seat capacity.
@@ -59,7 +60,7 @@ games.get('/events/:eventId/games', authMiddleware, async (c) => {
 });
 
 games.post('/events/:eventId/games', authMiddleware, async (c) => {
-  const eventId = c.req.param('eventId');
+  const eventId = requiredRouteParam(c.req.param('eventId'));
   if (!await requireEventRole(c,eventId,'cohost')) return c.json({error:'Forbidden'},403);
   const body=await c.req.json().catch(()=>null) as any;
   if(!body||typeof body!=='object')return c.json({error:'Valid game details required'},400);
@@ -174,7 +175,7 @@ games.post('/events/:eventId/games', authMiddleware, async (c) => {
 
 /* ── Get single game (with players + rsvps) ── */
 games.get('/games/:id', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare("SELECT g.*,CASE WHEN EXISTS(SELECT 1 FROM tournament_state t WHERE t.game_id=g.id) THEN 'tournament' ELSE 'cash' END AS format FROM games g WHERE g.id=?").bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'member')) return c.json({error:'Forbidden'},403);
@@ -214,7 +215,7 @@ games.get('/games/:id', authMiddleware, async (c) => {
 
 /* ── Update game ── */
 games.put('/games/:id', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT event_id,status,scheduled_at,location FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled' || game.status==='cancelled') {
@@ -270,7 +271,7 @@ games.put('/games/:id', authMiddleware, async (c) => {
 
 /* ── Cancel a game; settled games must first go through explicit unsettle ── */
 games.post('/games/:id/cancel', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?')
     .bind(gameId).first<{event_id:string;status:string}>();
   if (!game) return c.json({error:'Game not found'},404);
@@ -296,7 +297,7 @@ games.post('/games/:id/cancel', authMiddleware, async (c) => {
 
 /* ── Delete an unused/cancelled game only; never erase financial history ── */
 games.delete('/games/:id', authMiddleware, async(c)=>{
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await c.env.DB.prepare(
     'SELECT event_id,status FROM games WHERE id=?'
   ).bind(gameId).first<{event_id:string;status:string}>();
@@ -341,7 +342,7 @@ games.delete('/games/:id', authMiddleware, async(c)=>{
 ═══════════════════════════════════════════ */
 
 games.get('/games/:id/lobby', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare(
     'SELECT id,event_id,scheduled_at,location,notes,seats,status FROM games WHERE id=?'
   ).bind(gameId).first<any>();
@@ -358,7 +359,7 @@ games.get('/games/:id/lobby', authMiddleware, async (c) => {
 });
 
 games.get('/games/live/:token', optionalAuth, async (c) => {
-  const token = c.req.param('token');
+  const token = requiredRouteParam(c.req.param('token'));
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status FROM games WHERE live_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,game.event_id,'member'))return c.json({error:'Group membership required'},403);
@@ -371,7 +372,7 @@ games.get('/games/live/:token', optionalAuth, async (c) => {
 });
 
 games.get('/games/results/:token', optionalAuth, async (c) => {
-  const token = c.req.param('token');
+  const token = requiredRouteParam(c.req.param('token'));
   const game = await c.env.DB.prepare('SELECT id,event_id,scheduled_at,location,seats,status,results_token,variance FROM games WHERE results_token=?').bind(token).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if(c.env.PKR_PHONE_MEMBERS_V1==='1'&&!await requireEventRole(c as any,game.event_id,'member'))return c.json({error:'Group membership required'},403);
@@ -411,7 +412,7 @@ games.post('/games/:id/rsvp', async (c) => {
   if(c.env.PKR_RSVP_V2==='1')return c.json({
     error:'Use the updated RSVP board to respond.',code:'RSVP_V2_REQUIRED'
   },409);
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Game not found'},404);
   if (game.status==='settled'||game.status==='cancelled') return c.json({error:'Game already ended'},400);
@@ -433,7 +434,7 @@ games.post('/games/:id/rsvp', async (c) => {
 ═══════════════════════════════════════════ */
 
 games.post('/games/:id/start', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   try {
     const game=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
     if (!game) return c.json({error:'Game not found'},404);
@@ -524,7 +525,7 @@ games.post('/games/:id/start', authMiddleware, async (c) => {
 
 /* ── Conditional seating: reject stale edits and duplicate seat claims ── */
 games.post('/games/:id/seat', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await c.env.DB.prepare('SELECT event_id,status,seats FROM games WHERE id=?')
     .bind(gameId).first<{event_id:string;status:string;seats:number}>();
   if (!game) return c.json({error:'Game not found'},404);
@@ -660,8 +661,8 @@ games.post('/games/:id/seat', authMiddleware, async (c) => {
 
 /* ── Removing a player must not erase money or hand history ── */
 games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
-  const userId=c.req.param('userId');
+  const gameId=requiredRouteParam(c.req.param('id'));
+  const userId=requiredRouteParam(c.req.param('userId'));
   const game=await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?')
     .bind(gameId).first<{event_id:string;status:string}>();
   if (!game) return c.json({error:'Game not found'},404);
@@ -713,8 +714,8 @@ games.delete('/games/:id/seat/:userId', authMiddleware, async (c) => {
 
 /* ── Exact buy-in update with an atomic expected-value guard ── */
 games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const userId = requiredRouteParam(c.req.param('userId'));
   const body = await c.req.json().catch(() => null) as {
     count:number;total:number;expected_count:number;expected_total:number;
     expected_revision?:number;
@@ -798,8 +799,8 @@ games.put('/games/:id/buyin/:userId', authMiddleware, async (c) => {
 
 /* ── Exact cash-out update using null-safe compare-and-swap ── */
 games.put('/games/:id/cashout/:userId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const userId = requiredRouteParam(c.req.param('userId'));
   const body = await c.req.json().catch(() => null) as {
     cashout:number|null;expected_cashout:number|null;expected_revision?:number;
   } | null;
@@ -894,8 +895,8 @@ games.post('/games/:id/buyin/:userId', authMiddleware, async (c) => {
 });
 
 games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const userId = requiredRouteParam(c.req.param('userId'));
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled' || game.status==='cancelled') {
@@ -943,7 +944,7 @@ games.post('/games/:id/cashout/:userId', authMiddleware, async (c) => {
 
 /* ── Event known players (quick-select) ── */
 games.get('/events/:eventId/players', authMiddleware, async (c) => {
-  const eventId = c.req.param('eventId');
+  const eventId = requiredRouteParam(c.req.param('eventId'));
   if (!await requireEventRole(c,eventId,'member')) return c.json({error:'Forbidden'},403);
   const players = await c.env.DB.prepare('SELECT id,event_id,display_name,user_id,games_played,created_at FROM event_players WHERE event_id=? ORDER BY games_played DESC').bind(eventId).all();
   return c.json(players.results);
@@ -954,8 +955,8 @@ games.get('/events/:eventId/players', authMiddleware, async (c) => {
 ═══════════════════════════════════════════ */
 
 games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const userId = requiredRouteParam(c.req.param('userId'));
   const { real_user_id } = await c.req.json<{real_user_id:string}>();
   if (!real_user_id) return c.json({error:'real_user_id required'},400);
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
@@ -981,8 +982,8 @@ games.put('/games/:id/players/:userId/link', authMiddleware, async (c) => {
 });
 
 games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const userId = c.req.param('userId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const userId = requiredRouteParam(c.req.param('userId'));
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (game.status==='settled' || game.status==='cancelled') {
@@ -1000,7 +1001,7 @@ games.put('/games/:id/players/:userId/unlink', authMiddleware, async (c) => {
 ═══════════════════════════════════════════ */
 
 games.post('/games/:id/settle', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const body = await c.req.json().catch(() => null) as SettleRequest | null;
   if (!body || typeof body !== 'object') return c.json({error:'Invalid settlement request'},400);
   const { idempotency_key, results } = body;
@@ -1116,7 +1117,7 @@ games.post('/games/:id/settle', authMiddleware, async (c) => {
 
 /* ── UNSETTLE ── */
 games.post('/games/:id/unsettle', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({error:'Not found'},404);
   if (!await requireEventRole(c,game.event_id,'host')) return c.json({error:'Only host can unsettle'},403);

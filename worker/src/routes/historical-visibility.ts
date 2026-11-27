@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import {Hono} from 'hono';
 import type {Env} from '../types';
 import {authMiddleware,requireEventRole} from '../middleware';
@@ -22,7 +23,7 @@ export async function archivedHistoricalNames(kv:KVNamespace,roomId:string):Prom
 // Archiving changes only the visible, historical room roster. Settled
 // results, accounts, paid statuses, buy-ins and cash-outs remain untouched.
 visibility.get('/:id/historical-player-visibility',authMiddleware,async c=>{
-  const id=c.req.param('id');
+  const id=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,id,'member'))return c.json({error:'Forbidden'},403);
   try{
     const names=await archivedHistoricalNames(c.env.KV,id);
@@ -32,7 +33,7 @@ visibility.get('/:id/historical-player-visibility',authMiddleware,async c=>{
 });
 
 visibility.put('/:id/historical-player-visibility',authMiddleware,async c=>{
-  const id=c.req.param('id');
+  const id=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Only host can manage historical players'},403);
   const body=await c.req.json().catch(()=>null) as {name?:unknown;hidden?:unknown}|null;
   if(!body||Object.keys(body).sort().join(',')!=='hidden,name'||
