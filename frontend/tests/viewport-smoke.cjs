@@ -551,12 +551,13 @@ async function test(){
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
-         return {height:r.height,image:s.backgroundImage,
+         const heading=getComputedStyle(el.querySelector('h1,h2,.display')||el);
+         return {height:r.height,image:s.backgroundImage,background:s.backgroundColor,colour:heading.color,
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
-           font:getComputedStyle(el.querySelector('h1,h2,.display')||el).fontFamily};
+           font:heading.fontFamily};
        });
-       if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
-         errors.push(size.name+' game detail header lost its retained gradient or geometry: '+JSON.stringify(summary));
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(20, 36, 44)')
+         errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
        // Production CSS may shorten white from #ffffff to the equivalent #fff.
        if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
          errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));

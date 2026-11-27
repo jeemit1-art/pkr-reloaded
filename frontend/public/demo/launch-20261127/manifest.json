@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "sourceCommit": "b937953d5eeea8129625f12475b000b116920d02",
+  "sourceCommit": "884bc11fbe638c82314a95b438f90a4efd4f319a",
   "fixtureDate": "2026-11-27T09:15:00.000Z",
   "sampleData": true,
   "description": "Actual PKR screens, rendered from the application with fictional River City Poker records. No production data or device status bars are simulated.",
-  "captureWorkflow": "https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45915058439",
+  "captureWorkflow": "https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45916112601",
   "screens": [
     {
       "id": "mobile-home",
@@ -132,6 +132,20 @@
       "webImage": "mobile-tournament.webp",
       "publicPath": "/demo/launch-20261127/mobile-tournament.webp",
       "route": "/games/launch-live/play"
+    },
+    {
+      "id": "mobile-appearance",
+      "title": "Room appearance and layout choices",
+      "category": "Settings & access",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-appearance.webp",
+      "publicPath": "/demo/launch-20261127/mobile-appearance.webp",
+      "route": "/account"
     },
     {
       "id": "desktop-home",

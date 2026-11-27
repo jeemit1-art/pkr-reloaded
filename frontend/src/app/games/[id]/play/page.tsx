@@ -21,6 +21,7 @@ export default function PlayPage() {
   useEffect(()=>{
     const panel=document.getElementById('sidePanel');
     const leaderboard=document.querySelector<HTMLElement>('#lbSheet .sheet-box');
+    const publishedResults=document.querySelector<HTMLElement>('#publishSheet .sheet-box');
     const cleanups:Array<()=>void>=[];
     if(panel)cleanups.push(installSwipeDismiss(panel,()=>(window as any).closePanel?.(),{
       isEnabled:()=>panel.classList.contains('open')&&!panel.querySelector('form,input,textarea,select,[contenteditable="true"]')
@@ -29,7 +30,26 @@ export default function PlayPage() {
     if(leaderboard)cleanups.push(installSwipeDismiss(leaderboard,()=>(window as any).closeLbSheet?.(),{
       isEnabled:()=>!!document.getElementById('lbSheet')?.classList.contains('show'),
     }));
-    return()=>cleanups.forEach(cleanup=>cleanup());
+    if(publishedResults)cleanups.push(installSwipeDismiss(publishedResults,()=>(window as any).closePublish?.(),{
+      isEnabled:()=>!!document.getElementById('publishSheet')?.classList.contains('show'),
+    }));
+    // Settlement reviews are created by the legacy table engine after a tap.
+    // Give only that read-only window the same controller, retaining its close
+    // path for focus and scroll restoration and releasing it on route cleanup.
+    const activeReviews=new Map<()=>void,()=>void>();
+    const attachReview=(surface:HTMLElement,onClose:()=>void)=>{
+      const detach=installSwipeDismiss(surface,onClose);
+      const release=()=>{detach();activeReviews.delete(onClose);};
+      activeReviews.set(onClose,release);
+      return release;
+    };
+    (window as any)._pkrInstallSettlementReviewSwipe=attachReview;
+    return()=>{
+      cleanups.forEach(cleanup=>cleanup());
+      Array.from(activeReviews.keys()).forEach(close=>close());
+      if((window as any)._pkrInstallSettlementReviewSwipe===attachReview)
+        delete (window as any)._pkrInstallSettlementReviewSwipe;
+    };
   },[gameId]);
   function openBankRecords(measure:'buyins'|'cashouts'|'bank'|'status'){
     const detail=(window as any)._pkrBankBreakdown?.(measure) as BankBreakdown|undefined;
@@ -489,6 +509,7 @@ export default function PlayPage() {
       </div>
       <div className="sheet" id="publishSheet">
         <div className="sheet-box">
+          <SwipeDismissHandle/>
           <div className="sheet-hdr"><h2>♠ Results</h2><button className="panel-close" onClick={() => (window as any).closePublish?.()}>✕</button></div>
           <div className="sheet-body">
             <div id="publishPreview" style={{background:'rgba(4,12,5,0.85)',border:'1px solid var(--border)',borderRadius:'8px',padding:'12px',marginBottom:'14px',fontSize:'0.9rem'}}></div>
@@ -3116,6 +3137,9 @@ function _doOpenSettleUp(review) {
   overlay.style.cssText='position:fixed;inset:0;z-index:26000;background:rgba(0,0,0,0.88);display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);box-sizing:border-box';
   var box=document.createElement('div');
   box.style.cssText='background:#101e1d;border:1px solid #365450;border-radius:16px 16px 0 0;width:100%;max-width:580px;max-height:calc(100dvh - 20px - env(safe-area-inset-top));overflow:hidden;display:flex;flex-direction:column;color:#eaf0f2';
+  var grip=document.createElement('div');grip.className='pkr-swipe-handle';
+  grip.setAttribute('aria-hidden','true');grip.setAttribute('data-pkr-swipe-handle','');
+  grip.appendChild(document.createElement('span'));box.appendChild(grip);
   var hdr=document.createElement('div');
   hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #365450;flex-shrink:0';
   var caption=document.createElement('div');
@@ -3130,8 +3154,9 @@ function _doOpenSettleUp(review) {
   closeBtn.style.cssText='background:#243637;border:1px solid #45605b;color:#fff;border-radius:9px;min-height:44px;padding:8px 14px;cursor:pointer';
   var originalFocus=document.activeElement;
   var priorOverflow=document.body.style.overflow;
+  var releaseSwipe=function(){},closed=false;
   var onKey=function(e){if(e.key==='Escape'){e.preventDefault();close();}};
-  function close(){overlay.remove();document.removeEventListener('keydown',onKey);document.body.style.overflow=priorOverflow;if(originalFocus&&originalFocus.focus)originalFocus.focus();}
+  function close(){if(closed)return;closed=true;releaseSwipe();overlay.remove();document.removeEventListener('keydown',onKey);document.body.style.overflow=priorOverflow;if(originalFocus&&originalFocus.focus)originalFocus.focus();}
   closeBtn.addEventListener('click',close);
   hdr.append(caption,closeBtn);box.appendChild(hdr);
   var body=document.createElement('div');
@@ -3198,6 +3223,8 @@ function _doOpenSettleUp(review) {
   pkrListen(document,'keydown',onKey);
   document.body.style.overflow='hidden';
   document.body.appendChild(overlay);
+  if(typeof window._pkrInstallSettlementReviewSwipe==='function')
+    releaseSwipe=window._pkrInstallSettlementReviewSwipe(box,close);
   closeBtn.focus();
 }
 

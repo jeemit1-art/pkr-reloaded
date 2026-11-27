@@ -43,7 +43,7 @@ const items:TourItem[]=[
   points:['Personal and club payment views','Open payments and payment history','Search and filter saved records'],href:'/home-poker-settlement',cta:'Explore settlements'},
  {id:'settings',tab:'Your setup',icon:'settings',eyebrow:'MAKE PKR FIT YOUR CLUB',title:'Your club, your preferences.',
   description:'Choose the club dashboard layout, manage notifications and keep your installed app up to date from Account.',
-  image:'mobile-account.webp',portrait:true,alt:'PKR Account screen with club layout choices, notification preferences and app settings',
+  image:'mobile-appearance.webp',portrait:true,alt:'PKR room appearance settings showing Command Centre and Live Poker layout choices, with club notification settings below',
   points:['Command Centre and Live Poker layouts','Club notification preferences','Home Screen installation and updates'],href:'/install',cta:'Use PKR on your phone'},
 ];
 

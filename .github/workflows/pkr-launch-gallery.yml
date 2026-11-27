@@ -39,9 +39,11 @@ jobs:
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
           npx --no-install playwright install --with-deps chromium
       - name: Build exact application
+        id: build_app
         working-directory: frontend
         run: npm run build
       - name: Start isolated application
+        id: start_app
         working-directory: frontend
         run: |
           npm run start -- --hostname 127.0.0.1 > /tmp/pkr-launch-next.log 2>&1 &
@@ -55,7 +57,27 @@ jobs:
         timeout-minutes: 8
         working-directory: frontend
         run: node scripts/capture-launch-gallery.cjs app
+      - name: Check homepage image availability
+        id: homepage_assets
+        if: ${{ !cancelled() && steps.build_app.outcome == 'success' && steps.start_app.outcome == 'success' }}
+        working-directory: frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const names = ['desktop-home', 'mobile-home', 'desktop-live-table', 'mobile-live-table',
+            'mobile-rsvp', 'mobile-tournament', 'mobile-players', 'mobile-results', 'mobile-payments',
+            'mobile-records', 'mobile-account', 'mobile-appearance', 'desktop-command-centre', 'desktop-live-dashboard'];
+          const files = names.map(name => name + '.webp').concat(['desktop-home.png', 'mobile-home.png']);
+          const missing = files.filter(name => {
+            const file = 'public/demo/launch-20261127/' + name;
+            return !fs.existsSync(file) || fs.statSync(file).size === 0;
+          });
+          if (missing.length) throw new Error('Missing homepage images: ' + missing.join(', '));
+          console.log('Homepage screenshot assets ready: ' + files.length);
+          NODE
       - name: Restart with newly captured launch images
+        id: restart_app
+        if: ${{ !cancelled() && steps.homepage_assets.outcome == 'success' }}
         working-directory: frontend
         run: |
           fuser -k 3000/tcp || true
@@ -66,6 +88,7 @@ jobs:
           done
           exit 1
       - name: Verify launch homepage uses working screenshots
+        if: ${{ !cancelled() && steps.restart_app.outcome == 'success' }}
         timeout-minutes: 4
         working-directory: frontend
         run: node scripts/capture-launch-gallery.cjs marketing

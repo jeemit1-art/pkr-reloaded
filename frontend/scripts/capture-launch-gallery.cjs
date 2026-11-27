@@ -15,14 +15,13 @@ fs.mkdirSync(PUBLIC,{recursive:true});
 const manifest={schema:1,sourceCommit:process.env.GITHUB_SHA||'unpublished',fixtureDate:FIXED_TIME,sampleData:true,
  description:'Actual PKR screens, rendered from the application with fictional River City Poker records. No production data or device status bars are simulated.',screens:[],boards:[],checks:[],errors:[]};
 const sizes={mobile:{width:430,height:873,dpr:2,installed:true},desktop:{width:1440,height:900,dpr:1,installed:false},tablet:{width:1024,height:1366,dpr:1,installed:true}};
+const BLOCKED_NOTIFICATION_GUIDANCE='Notifications are blocked in your phone settings. On iPhone, open Settings → Notifications → PKR, allow alerts, then return to this screen. On Android, check the Chrome or PKR app notification permission.';
 const html=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function contextFor(browser,size,{signedIn=true,role='host'}={}){
  const fixture=createFixture();fixture.state.role=role;
  const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:size.dpr,
   isMobile:size.installed,hasTouch:size.installed,serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU',timezoneId:'Australia/Brisbane'});
- // The launch gallery shows the permission-granted installation pathway.
- // Granting this isolated browser permission never subscribes or sends an alert.
- await context.grantPermissions(['notifications'],{origin:BASE});
+ // Keep the browser's genuine permission state; no push subscription is created.
  await context.addInitScript(({storage,installed,signedIn})=>{
   if(signedIn)Object.entries(storage).forEach(([key,value])=>localStorage.setItem(key,value));
   if(installed)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
@@ -60,7 +59,7 @@ async function focusSection(page,selector){
  await target.evaluate(element=>element.scrollIntoView({block:'start',behavior:'instant'}));
  await page.waitForTimeout(220);
 }
-async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute}={}){
+async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,allowedAlerts=[]}={}){
  await settle(page);
  const checks=await page.evaluate(()=>{
   const header=document.querySelector('.pkr-primary-mobile-utility');
@@ -78,7 +77,9 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute}
  });
  assert(checks.scrollWidth<=size.width+3,id+' has horizontal document overflow');
  assert(checks.bodyScrollWidth<=size.width+3,id+' has horizontal body overflow');
- assert.deepEqual(checks.visibleAlerts,[],id+' has a visible error');
+ // The installation screen also documents denied OS notification permission.
+ // Capture that real guidance unchanged; only its exact notice is expected.
+ assert.deepEqual(checks.visibleAlerts.filter(notice=>!allowedAlerts.includes(notice)),[],id+' has an unexpected visible error');
  assert.deepEqual(checks.brokenImages,[],id+' has a broken image');
  const png=path.join(OUTPUT,id+'.png');
  await page.screenshot({path:png,fullPage,animations:'disabled'});
@@ -88,7 +89,7 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute}
  fs.copyFileSync(webp,path.join(OUTPUT,id+'.webp'));
  const screen={id,title,category,viewport:{width:size.width,height:size.height},width:info.width,height:info.height,
   image:id+'.png',webImage:id+'.webp',publicPath:'/demo/launch-20261127/'+id+'.webp',route:sourceRoute||new URL(page.url()).pathname+new URL(page.url()).search};
- manifest.screens.push(screen);manifest.checks.push({id,...checks});
+ manifest.screens.push(screen);manifest.checks.push({id,...checks,allowedAlerts});
  console.log('CAPTURE '+id+' '+info.width+'x'+info.height);
 }
 async function captureCase(page,size,item,errors){
@@ -100,7 +101,7 @@ async function captureCase(page,size,item,errors){
   await settle(page);
   if(item.focus)await focusSection(page,item.focus);else if(item.top!==false)await top(page);
   assert.deepEqual(errors.slice(before),[],item.id+' encountered fixture/runtime errors');
-  await snapshot(page,item.id,item.title,item.category,size,{sourceRoute:item.route});
+  await snapshot(page,item.id,item.title,item.category,size,{sourceRoute:item.route,allowedAlerts:item.allowedAlerts});
  }catch(error){
   manifest.errors.push(item.id+': '+error.stack);console.error('FAIL '+item.id+': '+error.message);
   await page.screenshot({path:path.join(OUTPUT,'failure-'+item.id+'.png'),fullPage:false}).catch(()=>{});
@@ -144,7 +145,7 @@ async function captureApp(browser){
     {id:prefix+'payment-ledger',title:'Payment ledger and tools',category:'Payments',route:'/payments?room='+room.id+'&paymentsView=ledger',ready:'.pkr-vnext-insights'},
     {id:prefix+'account',title:'Account and appearance settings',category:'Settings & access',route:'/account',ready:'.pkr-account-appearance'},
     {id:prefix+'notifications',title:'Club notifications and device settings',category:'Settings & access',route:'/account',ready:'.pkr-account-status',focus:'.pkr-account-status'},
-    {id:prefix+'install',title:'Install and reconnect PKR',category:'Settings & access',route:'/install?group='+room.id,ready:'.pkr-install-vnext'}
+    {id:prefix+'install',title:'Install, reconnect and notification guidance',category:'Settings & access',route:'/install?group='+room.id,ready:'.pkr-install-vnext',allowedAlerts:label==='mobile'?[BLOCKED_NOTIFICATION_GUIDANCE]:[]}
    );
    for(const item of items)await captureCase(page,size,item,errors);
    for(const item of [

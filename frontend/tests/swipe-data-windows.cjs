@@ -4,7 +4,7 @@
 // All records are fictional and every external API request is intercepted.
 const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {BASE,API,FIXED_TIME,room,liveGame,createFixture,initialStorage}=require('../scripts/launch-fixture.cjs');
+const {BASE,API,FIXED_TIME,room,liveGame,settled,createFixture,initialStorage}=require('../scripts/launch-fixture.cjs');
 const output=path.resolve(__dirname,'../../artifacts/swipe-data-windows');fs.mkdirSync(output,{recursive:true});
 
 async function touchGesture(page,engine,locator,{dx=0,dy=120,cancel=false}={}){
@@ -144,6 +144,52 @@ async function run(engine,type){
   await panel.getByRole('button',{name:'Back to player',exact:false}).click();
   await touchGesture(page,engine,panel.locator('.panel-hdr'));
   await page.waitForFunction(()=>!document.getElementById('sidePanel').classList.contains('open'));
+
+  // A settlement review is a read-only preview, including its not-ready state.
+  // Dismiss through the existing close path so the table's scroll and focus stay intact.
+  const liveBefore=await page.evaluate(()=>({players:JSON.stringify(window.state.players),overflow:document.body.style.overflow}));
+  const settleTrigger=page.locator('#settleBtn');await settleTrigger.focus();await settleTrigger.click();
+  const review=page.locator('.pkr-game-review-overlay');await review.waitFor({state:'visible'});
+  assert.match(await review.locator('[role="alert"]').innerText(),/Cash-out still needed/);
+  await touchGesture(page,engine,review.locator('.pkr-swipe-handle'),{dy:125,cancel:true});
+  assert(await review.isVisible(),'Cancelling a settlement preview swipe must leave the review open');
+  await touchGesture(page,engine,review.locator('.pkr-swipe-handle'));await review.waitFor({state:'detached'});
+  assert(await settleTrigger.evaluate(el=>el===document.activeElement),'Settlement swipe restores the existing trigger focus');
+  assert.deepEqual(await page.evaluate(()=>({players:JSON.stringify(window.state.players),overflow:document.body.style.overflow})),liveBefore,
+   'Settlement dismissal must preserve player records and the existing scroll lock');
+  await settleTrigger.click();await review.waitFor({state:'visible'});
+  await review.getByRole('button',{name:'Close',exact:true}).click();await review.waitFor({state:'detached'});
+  await settleTrigger.click();await review.waitFor({state:'visible'});
+  await page.keyboard.press('Escape');await review.waitFor({state:'detached'});
+
+  // Open a saved fixture game: the real boot path restores the saved-results
+  // flag and exact transactions from GET data. No save action or injected flag.
+  await page.goto(BASE+'/games/'+settled[0].id+'/play',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window._pkrResultsSaved===true&&window.getSettlementReadiness?.().ready===true);
+  const savedBefore=await page.evaluate(()=>JSON.stringify(window.state.players));
+  await page.locator('#publishBtn').click();const published=page.locator('#publishSheet');
+  await page.waitForFunction(()=>document.getElementById('publishSheet').classList.contains('show'));
+  assert.match(await published.locator('#publishPreview').innerText(),/Alex Morgan/);
+  const savedUrl=published.locator('#publishUrl');
+  await page.waitForFunction(()=>document.getElementById('publishUrl').value.includes('/games/results/launch-results-0'));
+  const urlBefore=await savedUrl.inputValue();
+  await touchGesture(page,engine,published.locator('.pkr-swipe-handle'),{dy:125,cancel:true});
+  assert(await published.isVisible(),'Cancelling a saved-results swipe must leave the preview open');
+  await touchGesture(page,engine,savedUrl,{dy:105});
+  assert(await published.isVisible(),'Selecting the read-only results link must not dismiss its window');
+  assert.equal(await savedUrl.inputValue(),urlBefore);
+  assert(await published.getByRole('button',{name:'Share Results',exact:true}).isVisible());
+  assert(await published.getByRole('button',{name:'Copy Link',exact:true}).isVisible());
+  await touchGesture(page,engine,published.locator('.pkr-swipe-handle'));
+  await page.waitForFunction(()=>!document.getElementById('publishSheet').classList.contains('show'));
+  await page.locator('#publishBtn').click();await published.waitFor({state:'visible'});
+  await published.locator('.panel-close').click();await published.waitFor({state:'hidden'});
+  // The ready settlement view uses the same swipe controller and does not share automatically.
+  await page.locator('#settleBtn').click();await review.waitFor({state:'visible'});
+  assert.equal(await review.locator('[role="alert"]').count(),0);
+  assert(await review.getByRole('button',{name:'Share payment instructions',exact:true}).isVisible());
+  await touchGesture(page,engine,review.locator('.pkr-swipe-handle'));await review.waitFor({state:'detached'});
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.state.players)),savedBefore,'Saved-result gestures must not change records');
   assert.equal(fixture.state.writes.length,0,'Closing read-only windows must not write records or settings');
   assert.deepEqual(errors,[]);
   console.log(engine+': data-window swipe passed ('+(engine==='chromium'?'native CDP touch input':'synthetic touch-event integration, reduced motion')+').');
