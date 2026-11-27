@@ -37,6 +37,13 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          # Ubuntu runner's optional packages.microsoft.com feed can return 403,
+          # blocking the unrelated browser dependency install on clean runners.
+          for source in /etc/apt/sources.list.d/*; do
+            if [ -f "$source" ] && grep -q 'packages.microsoft.com' "$source"; then
+              sudo mv "$source" "$source.disabled"
+            fi
+          done
           npx --no-install playwright install --with-deps chromium
       - name: Build exact application
         id: build_app
