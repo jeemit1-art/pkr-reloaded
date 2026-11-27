@@ -40,9 +40,12 @@ INSERT INTO settlement_transfers VALUES ('g2',0);
 """)
 db.execute("PRAGMA query_only=ON")
 def inventory():
-    results = db.execute(sql).fetchall()
-    assert all(len(row)==2 and isinstance(row[0],str) and type(row[1]) is int for row in results)
-    return dict(results)
+    cursor = db.execute(sql)
+    row = cursor.fetchone()
+    assert row is not None and cursor.fetchone() is None
+    names = [item[0] for item in cursor.description]
+    assert len(names) == 8 and all(type(value) is int for value in row)
+    return dict(zip(names, row))
 
 expected = {
  "settled_player_records":4,
