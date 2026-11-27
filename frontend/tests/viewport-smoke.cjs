@@ -465,7 +465,7 @@ async function test(){
          }
          if(visual.head.bottom>visual.bank.top+2||visual.bank.bottom>visual.dock.top)
            errors.push(size.name+' gameplay chrome overlaps: '+JSON.stringify(visual));
-         if(visual.theme.toLowerCase()!=='#78ddb3')errors.push(size.name+' gameplay chrome Game night accent missing: '+visual.theme);
+         if(visual.theme.toLowerCase()!=='#4ade9a')errors.push(size.name+' gameplay chrome Chip Club win accent mismatch: '+visual.theme);
          if(!visual.chipsLoaded)errors.push(size.name+' real poker chips asset not loaded in bank summary');
          if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
            errors.push(size.name+' gameplay settlement/end-game control missing');
