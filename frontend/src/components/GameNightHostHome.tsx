@@ -1,7 +1,6 @@
 'use client';
 
-import {useState} from 'react';
-import PkrGlyph, {type PkrGlyphName} from '@/components/PkrGlyph';
+import PkrGlyph from '@/components/PkrGlyph';
 import RecordMetric from '@/components/RecordMetric';
 import type {Event, Game, Rsvp} from '@/lib/api';
 import type {RoomTransferRecord} from '@/lib/room-payment-schedule';
@@ -26,7 +25,6 @@ const datePart = (ts:number,options:Intl.DateTimeFormatOptions)=>new Date(ts*100
 
 /** Focused home view using the same games, RSVP records and saved ledger as the full dashboard. */
 export default function GameNightHostHome(p:Props){
-  const [search,setSearch] = useState('');
   const game = p.featured;
   const closed = game?.status==='settled';
   const finishing = game?.status==='completed';
@@ -36,22 +34,6 @@ export default function GameNightHostHome(p:Props){
   const startTime = game?new Date(game.scheduled_at*1000).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit',timeZone:tz}):'';
   const phase = p.active?'At the table':closed||finishing?'After the game':'Before the game';
   const primary = p.active?'Open live table':closed?'View game results':finishing?'Review settlement':game?'Prepare game':p.canManageGames?'Schedule a game':'Open club';
-  type ToolGroup = 'Games & attendance' | 'Players & invitations' | 'Results & payments' | 'Personal settings';
-  const tools:Array<{group:ToolGroup;label:string;detail:string;icon:PkrGlyphName;run:()=>void;show?:boolean}> = [
-    {group:'Games & attendance',label:'Game sessions',detail:'Dates, tables and game details',icon:'games',run:p.onRoom},
-    {group:'Games & attendance',label:'Calendar',detail:'Upcoming and unfinished games',icon:'schedule',run:p.onCalendar},
-    {group:'Games & attendance',label:'RSVPs & sharing',detail:'Attendance, seats and WhatsApp',icon:'members',run:p.onSharing},
-    {group:'Games & attendance',label:'RSVP settings',detail:'Arrival times and custom replies',icon:'settings',run:p.onRsvpSettings,show:p.canManageGames},
-    {group:'Players & invitations',label:'Players & invitations',detail:'Profiles, approvals and QR codes',icon:'members',run:p.onMembers},
-    {group:'Players & invitations',label:'Scan invitation',detail:'Join a club using its QR code',icon:'qr',run:p.onScan},
-    {group:'Results & payments',label:'Results & history',detail:'Standings, graphs and past games',icon:'insights',run:p.onResults},
-    {group:'Results & payments',label:'Payments',detail:'Saved records, reminders and ledger',icon:'settle',run:p.onPayments},
-    {group:'Personal settings',label:'Account & notifications',detail:'Install, alerts, sound and appearance',icon:'account',run:p.onAccount},
-    {group:'Personal settings',label:'Full club dashboard',detail:'Command Centre and Live Poker',icon:'grid',run:p.onAppearance},
-  ];
-  const toolGroups:ToolGroup[]=['Games & attendance','Players & invitations','Results & payments','Personal settings'];
-  const query = search.trim().toLocaleLowerCase('en-AU');
-  const matches = tools.filter(t=>t.show!==false&&(!query||(t.label+' '+t.detail).toLocaleLowerCase('en-AU').includes(query)));
 
   return <section className="pkr-gn-home" data-testid="game-night-host-home">
     <header className="pkr-gn-page-head">
@@ -105,26 +87,41 @@ export default function GameNightHostHome(p:Props){
       <button type="button" onClick={p.onPayments}>Review</button>
     </section>
 
-    <section className="pkr-gn-club-links" aria-label="Club shortcuts">
-      <button type="button" onClick={p.canInvite?p.onInvite:p.onMembers}><PkrGlyph name="members"/><span><strong>{p.canInvite?'Bring your people':'Your club'}</strong><small>{p.canInvite?'Invitations & player profiles':'Players & game history'}</small></span></button>
-      <button type="button" onClick={p.canManageGames?p.onSchedule:p.onCalendar}><PkrGlyph name="schedule"/><span><strong>{p.canManageGames?'Plan the next one':'Your calendar'}</strong><small>{p.canManageGames?'Schedule a game':'View upcoming games'}</small></span></button>
-    </section>
 
-    <section className="pkr-gn-tools" aria-label="All club tools">
-      <div className="pkr-gn-tools-heading"><div><span className="pkr-gn-eyebrow">EVERYTHING IN ONE PLACE</span><h2>Your club tools</h2></div>
-        <label><span>Find a tool</span><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tools…"/></label></div>
-      {toolGroups.map(group=>{
-        const entries=matches.filter(tool=>tool.group===group);
-        return entries.length>0?<section key={group} className="pkr-gn-tool-group" aria-label={group}>
-          <h3>{group}</h3>
-          <div className="pkr-gn-tool-grid">{entries.map(t=><button type="button" key={t.label} onClick={t.run}>
-            <PkrGlyph name={t.icon}/><span><strong>{t.label}</strong><small>{t.detail}</small></span>
-            <b aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M6 18 18 6M6 6h12v12"/></svg></b>
-          </button>)}</div>
-        </section>:null;
-      })}
-      {matches.length===0&&<p className="pkr-gn-muted" role="status">No tools match “{search}”. Try payments, RSVP, calendar or players.</p>}
+    {/* Home is for decisions, not a duplicate directory of every tab. */}
+    <section className="pkr-gn-quick" aria-labelledby="pkr-home-quick-heading">
+      <div className="pkr-gn-quick-heading">
+        <div><span className="pkr-gn-eyebrow">ONE TAP AWAY</span><h2 id="pkr-home-quick-heading">Quick actions</h2></div>
+        <span className="pkr-gn-quick-note">Your everyday club tools</span>
+      </div>
+      <div className="pkr-gn-quick-grid">
+        <button type="button" onClick={p.canManageGames?p.onSchedule:p.onCalendar}>
+          <span className="pkr-gn-quick-icon"><PkrGlyph name="schedule"/></span>
+          <span><strong>{p.canManageGames?'Schedule game':'View calendar'}</strong><small>{p.canManageGames?'Set up the next session':'Upcoming sessions'}</small></span>
+          <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" onClick={p.onSharing}>
+          <span className="pkr-gn-quick-icon"><PkrGlyph name="members"/></span>
+          <span><strong>RSVPs &amp; sharing</strong><small>Attendance and WhatsApp</small></span>
+          <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" onClick={p.canInvite?p.onInvite:p.onMembers}>
+          <span className="pkr-gn-quick-icon"><PkrGlyph name="members"/></span>
+          <span><strong>{p.canInvite?'Invite players':'Player profiles'}</strong><small>{p.canInvite?'Add someone to the club':'Your club members'}</small></span>
+          <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" onClick={p.onRoom}>
+          <span className="pkr-gn-quick-icon"><PkrGlyph name="games"/></span>
+          <span><strong>Game sessions</strong><small>View and manage your tables</small></span>
+          <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
+      <div className="pkr-gn-quick-utilities" aria-label="Additional club tools">
+        <button type="button" onClick={p.onCalendar}><PkrGlyph name="schedule"/> Calendar</button>
+        {p.canManageGames&&<button type="button" onClick={p.onRsvpSettings}><PkrGlyph name="settings"/> RSVP settings</button>}
+        <button type="button" onClick={p.onScan}><PkrGlyph name="qr"/> Scan invitation</button>
+        <button type="button" onClick={p.onAppearance}><PkrGlyph name="grid"/> Full dashboard</button>
+      </div>
     </section>
   </section>;
 }

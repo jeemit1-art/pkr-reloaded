@@ -58,8 +58,19 @@ assert(bootstrap.includes('pkr_personal_visual_style_v1'),'Reload must restore p
 assert(lib.includes('!/^\\/games\\/[^/]+\\/(play|tv)'),'Live poker table must be excluded from personal themes');
 assert(layout.includes("import './pkr-premium-styles.css';"),'Premium palette CSS must be bundled');
 const home=fs.readFileSync(path.join(root,'src/components/GameNightHostHome.tsx'),'utf8');
-for(const section of ['Games & attendance','Players & invitations','Results & payments','Personal settings'])
- assert(home.includes(section),'Home tools must be grouped: '+section);
+assert(home.includes('aria-labelledby="pkr-home-quick-heading"'),'Home must include an accessible compact action hub');
+assert(home.includes('Quick actions'),'Home should expose essential actions without being a directory');
+assert.equal((home.match(/pkr-gn-quick-arrow/g)||[]).length,4,'Home should contain four focused quick action cards');
+assert(!home.includes('pkr-gn-tool-group')&&!home.includes('pkr-gn-tool-grid')&&!home.includes('pkr-gn-club-links'),
+ 'The oversized tool directory and duplicate club links must not return');
+for(const action of ['p.onSchedule','p.onSharing','p.onInvite','p.onRoom']){
+ assert(home.includes(action),'Home must preserve its existing working navigation action: '+action);
+}
+const premiumCss=fs.readFileSync(path.join(app,'pkr-premium-styles.css'),'utf8');
+assert(premiumCss.includes('.pkr-gn-quick-heading h2'),'Home section heading must have an explicit typography rule');
+assert(premiumCss.includes('.pkr-gn-quick-grid>button'),'Home must use compact card styling');
+assert(premiumCss.includes('repeat(2,minmax(0,1fr))'),'Mobile Home grid must use two columns');
+assert(premiumCss.includes('margin-bottom:15px!important'),'Mobile heading must be clearly separated from cards');
 const dashboard=fs.readFileSync(path.join(root,'src/components/RoomDashboardDual.tsx'),'utf8');
 assert.equal(dashboard.split('{featureHub}').length-1,2,'Each dashboard view should include exactly one shortcuts hub');
 console.log('PASS premium themes: six contrasting palettes, personal settings, reload restore, gameplay exclusion and organised navigation');

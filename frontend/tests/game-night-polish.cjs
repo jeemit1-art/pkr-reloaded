@@ -161,6 +161,35 @@ async function gotoFixturePage(page,url){
  await waitForFixtureApi(page);
 }
 
+async function checkCompactHomeActions(page,label){
+ const original=page.viewportSize();
+ try{
+  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
+  const hub=page.locator('[data-testid="game-night-host-home"] .pkr-gn-quick');
+  await hub.waitFor({state:'visible'});
+  assert.equal(await hub.locator('.pkr-gn-quick-grid>button').count(),4,'Exactly four Home quick actions');
+  assert.equal(await page.locator('.pkr-gn-tool-group,.pkr-gn-club-links').count(),0,'Old directory must be removed');
+  for(const [width,mode] of [[320,'dark'],[390,'dark'],[430,'dark'],[430,'light'],[768,'dark'],[1440,'dark']]){
+   await page.setViewportSize({width,height:844});
+   await page.evaluate(m=>{document.documentElement.dataset.pkrPersonalTheme=m;document.documentElement.dataset.pkrPersonalStyle='noir';},mode);
+   await hub.scrollIntoViewIfNeeded();
+   const g=await hub.evaluate(el=>{
+    const rect=node=>{const r=node.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
+    const head=el.querySelector('.pkr-gn-quick-heading'),grid=el.querySelector('.pkr-gn-quick-grid'),utilities=el.querySelector('.pkr-gn-quick-utilities');
+    return {head:rect(head),grid:rect(grid),utilities:rect(utilities),cards:[...grid.querySelectorAll('button')].map(rect),
+      columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length};
+   });
+   assert(g.head.bottom+9<=g.grid.top,label+' '+width+' heading overlaps cards '+JSON.stringify(g));
+   assert.equal(g.columns,width>900?4:2,label+' '+width+' wrong grid columns');
+   assert(g.cards.every(c=>c.width>90&&c.height>=75&&c.height<175&&c.left>=-1&&c.right<=width+1),
+    label+' '+width+' card clipped or oversized '+JSON.stringify(g));
+   assert(g.utilities.top>=g.grid.bottom+8,label+' '+width+' utilities overlap grid');
+   if(width===430&&mode==='dark')await screenshot(page,label+'-noir-home-430');
+  }
+ }finally{await page.setViewportSize(original);}
+}
+
 async function checkFullDashboards(page,state,label){
  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
@@ -697,7 +726,7 @@ async function run(){
   const browser=await type.launch({headless:true});
   const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,serviceWorkers:'block'});
   const state=fixtureState(),unexpected=[],requestFailures=[];
-  await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-polish-test-only');localStorage.setItem('pkr_preferred_room','polish-room');sessionStorage.setItem('pkr_setup_compact_v1','1');});
+  await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-polish-test-only');localStorage.setItem('pkr_preferred_room','polish-room');localStorage.setItem('pkr_personal_visual_style_v1','standard');sessionStorage.setItem('pkr_setup_compact_v1','1');});
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url());
    if(url.origin===BASE)return route.continue();
@@ -719,6 +748,7 @@ async function run(){
     console.log('PASS',label,'empty and scheduled dashboard card bounds and contrast');
     continue;
    }
+   await checkCompactHomeActions(page,label);
    await checkFullDashboards(page,state,label);
    await checkDashboardStatusContrast(page,state,label);
    await checkOutstandingDashboardRecords(page);

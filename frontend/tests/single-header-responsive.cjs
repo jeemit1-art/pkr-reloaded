@@ -280,6 +280,8 @@ async function check(engine,size){
   });
   await context.addInitScript(({installed})=>{
     localStorage.setItem('pkr_token','synthetic-only-session');
+     // Legacy white-header contract applies to Classic, not the premium cream/Noir variants.
+     localStorage.setItem('pkr_personal_visual_style_v1','standard');
     if(installed)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
   },{installed:!!size.installed});
   page=await context.newPage();
