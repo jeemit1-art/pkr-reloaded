@@ -63,15 +63,15 @@ function fixture(state,url,method,body){
  if(p==='/events/'+room.id+'/history')return [finished,older];
  if(p==='/events/'+room.id+'/leaderboard')return leaders;
  if(p==='/events/'+room.id+'/profiles')return {profiles:[{profile_key:'member:polish-jordan',screen_name:null,avatar_data:null,avatar_emoji:'🦊',preferred_contact:'none'}]};
- if(p==='/events/'+room.id+'/players')return [];
+ if(p==='/events/'+room.id+'/players')return state.historical?[{display_name:'Christopher Nguyen',games_played:8},{display_name:'Historical Guest',games_played:8}]:[];
  if(p==='/events/'+room.id+'/historical-player-visibility')return {hidden_names:[]};
  if(p==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:state.layout,updated_at:now};
  if(p==='/events/'+room.id+'/join-requests')return {requests:[]};
  if(p==='/events/'+room.id+'/push-registrations')return {members:[{user_id:user.id,device_count:2}],definition:'registered_devices_not_delivery_confirmation'};
  if(p==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
  if(p==='/events/'+room.id+'/settlement-ledger')return {games:[finished,older],transfers:transfers.map(item=>({...item,game_id:finished.id}))};
- if(p==='/games/'+upcoming.id)return {...upcoming,players:seated,rsvps};
- if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:rsvps,options:['19:00','20:00']};
+ if(p==='/games/'+upcoming.id)return {...upcoming,players:seated,rsvps:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps};
+ if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps,options:['19:00','20:00']};
  for(const game of [finished,older]){
   if(p==='/games/'+game.id)return {...game,players:playersFor(game),rsvps:[],transfers:game.id===finished.id?transfers:[]};
   if(p==='/games/results/'+game.results_token)return {game,event:room,players:playersFor(game),transfers:game.id===finished.id?transfers:[]};
@@ -353,6 +353,55 @@ async function checkPayments(page,state,label){
  await screenshot(page,label+'-zero-payment-records');
 }
 
+async function checkReportedVisualIssues(page,state,label){
+ const original=page.viewportSize();
+ state.historical=true;
+ try{
+  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members&view=roster');
+  const cards=page.locator('.pkr-history-player-card');
+  await cards.first().waitFor({state:'visible'});
+  assert.equal(await cards.count(),2);
+  const historical=cards.filter({hasText:'Christopher Nguyen'});
+  for(const width of [320,360,390,430,768,1440]){
+   await page.setViewportSize({width,height:844});
+   await readable(historical.locator('.pkr-historical-player-name strong'),'Saved player name at '+width);
+   await readable(historical.locator('.pkr-historical-player-name small'),'Saved game count at '+width);
+   const actions=historical.locator('.pkr-history-player-actions>button');
+   assert.equal(await actions.count(),3);
+   for(const button of await actions.all())await readable(button,'Saved player action at '+width);
+   const geometry=await historical.evaluate(node=>{
+    const c=node.getBoundingClientRect(),buttons=[...node.querySelectorAll('.pkr-history-player-actions>button')];
+    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3};
+   });
+   assert(geometry.within&&!geometry.overflow,'Saved player controls outside card at '+width+': '+JSON.stringify(geometry));
+  }
+  await page.setViewportSize(original);await screenshot(page,label+'-historical-player-polish');
+  state.historical=false;state.upcoming=false;state.layout='command';
+  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+  const schedule=page.locator('.pkr-dual-nextgame .pkr-schedule-cta');
+  await schedule.waitFor();
+  assert.match(await schedule.innerText(),/Schedule a game/);
+  await readable(schedule,'No-session schedule CTA');
+  assert.equal(await colour(schedule,'color'),'rgb(255, 255, 255)');
+  await screenshot(page,label+'-no-session-contrast');
+  state.upcoming=true;state.noConfirmed=true;
+  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
+  const crew=page.locator('.pkr-attendance-card');
+  await crew.getByText('No confirmed RSVPs yet.',{exact:true}).waitFor();
+  assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
+  assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
+  await readable(crew.locator('h2'),'Attendance heading');
+  await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
+  for(const b of await crew.locator('.pkr-gn-seat-note>button').all())await readable(b,'Attendance count action');
+  await screenshot(page,label+'-assigned-with-no-rsvps');
+ }finally{
+  state.historical=false;state.upcoming=true;state.noConfirmed=false;
+  await page.setViewportSize(original);
+ }
+}
+
 async function run(){
  const failures=[];
  for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
@@ -379,6 +428,7 @@ async function run(){
    await checkOutstandingDashboardRecords(page);
    await checkPlayers(page,label);
    await checkRsvps(page,state,label);
+   await checkReportedVisualIssues(page,state,label);
    await checkPayments(page,state,label);
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');

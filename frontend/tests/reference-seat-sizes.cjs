@@ -158,6 +158,10 @@ async function check(browser,width,height,count){
    assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(189, 207, 216)',
     'Active buy-ins are neutral records, not a cash-out loss.');
    assert.equal((await page.locator('#seat1 .pkr-game-seat-result').textContent()).trim(),'$25');
+   assert.equal(await page.locator('#seat1 .pkr-game-seat-result').getAttribute('data-pkr-amount-label'),'Invested');
+   assert.equal(await page.locator('#seat2 .pkr-game-seat-result').getAttribute('data-pkr-amount-label'),'Net result');
+   assert.equal(await page.locator('#seat1 '+bank+' .pkr-seat-bank-unit').textContent(),'1b');
+   assert.equal(await page.locator('#seat1 '+bank+' .pkr-seat-bank-value').textContent(),'$25');
    assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(244, 241, 234)');
    assert.equal(await page.locator('#seat2 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(74, 222, 154)');
    assert.match(await page.locator('#seat2 .pkr-game-seat-result').textContent(),/\+\$15/);

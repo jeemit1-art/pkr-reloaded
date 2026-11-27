@@ -371,7 +371,7 @@ export default function RoomDashboardDual({
         </section>
         <RoomOutstandingCard roomId={room.id}/>
         {featureHub}
-        <section className="pkr-dual-nextgame">
+        <section className={'pkr-dual-nextgame'+(!featured?' pkr-nextgame-empty':'')}>
           <div><span className="pkr-dual-kicker"><PkrGlyph name="schedule"/> NEXT GAME NIGHT</span>
             <h3>{featured?niceDate(featured.scheduled_at):'No session scheduled'}</h3>
             <p>{featured?.location||'Choose a date for the next game'}</p>
@@ -382,7 +382,7 @@ export default function RoomDashboardDual({
             {featured&&<span><RecordMetric bare request={{kind:'rsvps',title:'All RSVP responses',gameId:featured.id}}>{rsvps.length} responses</RecordMetric>
               {' · '}<RecordMetric bare request={{kind:'rsvps',title:'Interested RSVPs',gameId:featured.id,filter:'maybe'}}>{maybe.length} maybe</RecordMetric></span>}
             {featured&&<div className="pkr-dual-progress"><span style={{width:(rsvps.length?100*going.length/rsvps.length:0)+'%'}}/></div>}
-            <button type="button" onClick={featured?goRsvp:goCreate}>{featured?'RSVP & game details':'Schedule a game'} →</button>
+            <button className="pkr-schedule-cta" type="button" onClick={featured?goRsvp:goCreate}><PkrGlyph name="schedule"/><span>{featured?'RSVP & game details':'Schedule a game'}</span><span aria-hidden="true">→</span></button>
           </div>
         </section>
         <div className="pkr-dual-metrics">
