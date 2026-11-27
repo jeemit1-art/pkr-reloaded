@@ -189,3 +189,9 @@ html.pkr-chip-club #gameScreen :is(button,input,select):focus-visible{outline:3p
  html.pkr-game-night.pkr-chip-club body .pkr-record-dialog :is(.pkr-record-row b,.pkr-record-heading p)[data-money-tone=negative]{color:#C9302C!important}
  html.pkr-game-night.pkr-chip-club body .pkr-record-dialog :is(button,input):focus-visible{outline:3px solid #3E63DD!important;outline-offset:2px!important}
 }
+
+/* Felt rail paint, numeric readouts. No geometry changes. */
+@layer pkr-theme-priority{
+html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table #tableOuter{background-color:#3A2A1E!important;border-color:#3A2A1E!important}
+html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .bank-pill b{font-family:'JetBrains Mono',ui-monospace,monospace!important;font-variant-numeric:tabular-nums}
+}

@@ -104,3 +104,18 @@ html.pkr-game-night .pkr-gn-tool-grid button>b{margin-left:auto!important;font-s
 html.pkr-game-night .pkr-gn-refresh-error{grid-column:1/-1!important;padding:12px 15px!important;border:1px solid #E6B7BD!important;border-radius:12px!important;background:#FFF1F2!important;color:#962E3C!important;font-size:14px!important;line-height:1.5!important}
 @media(max-width:599px){html.pkr-game-night .pkr-gn-tool-grid{grid-template-columns:1fr!important}html.pkr-game-night .pkr-gn-tools-heading label{width:100%!important}}
 }
+
+/* Chip Club opt-in paint values for the retained Game night home.
+   Co-located with legacy rules to keep the default override deterministic. */
+@layer pkr-theme-priority {
+html.pkr-game-night.pkr-chip-club .pkr-gn-home{color:#1B1F2A!important;font-family:'Plus Jakarta Sans',var(--font-body),sans-serif!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-game-ticket{background:#3E63DD!important;color:#fff!important;border-color:#2F4BB8!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-game-ticket :is(h2,p,small,span){color:#fff!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-game-ticket .pkr-gn-date strong{color:#FFC53D!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-game-ticket .pkr-gn-ticket-footer .pkr-gn-primary{background:#FFC53D!important;color:#1B1F2A!important;border-color:#FFC53D!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-attention{background:#FFEFC4!important;border-color:#E5E0D3!important;color:#5C3D00!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-attention :is(h2,p){color:#5C3D00!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-attention>button{background:#3E63DD!important;color:#fff!important;border-color:#3E63DD!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-page-head>h1 span{color:#2F4BB8!important}
+html.pkr-game-night.pkr-chip-club .pkr-gn-club-links>button{background:#fff!important;border-color:#E5E0D3!important;color:#1B1F2A!important}
+}
