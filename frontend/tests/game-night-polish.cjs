@@ -178,7 +178,7 @@ async function checkCompactHomeActions(page,label){
     const rect=node=>{const r=node.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
     const head=el.querySelector('.pkr-gn-quick-heading'),grid=el.querySelector('.pkr-gn-quick-grid'),utilities=el.querySelector('.pkr-gn-quick-utilities');
     return {head:rect(head),grid:rect(grid),utilities:rect(utilities),cards:[...grid.querySelectorAll('button')].map(rect),
-      columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length};
+      columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length};
    });
    assert(g.head.bottom+9<=g.grid.top,label+' '+width+' heading overlaps cards '+JSON.stringify(g));
    assert.equal(g.columns,width>900?4:2,label+' '+width+' wrong grid columns');
