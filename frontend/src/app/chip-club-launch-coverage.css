@@ -1,0 +1,61 @@
+/* Chip Club marketing style coverage. Visual-only, same page links and pricing. */
+html.pkr-chip-club .pkr-launch{--launch-ink:#1B1F2A!important;--launch-accent:#2F4BB8!important;--launch-coral:#3E63DD!important;--launch-paper:#F4F1EA!important;--launch-line:#E5E0D3!important}
+html.pkr-chip-club .pkr-launch :is(h1,h2,h3){font-family:var(--font-ui)!important}
+html.pkr-chip-club .pkr-launch :is(button,a,input,summary):focus-visible{outline:3px solid #2F4BB8!important}
+html.pkr-chip-club .pkr-launch-skip{border:2px solid #2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-btn-gold{background:#3E63DD!important;color:#1B1F2A!important;border-color:#3E63DD!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-btn-gold:hover{background:#2F4BB8!important;border-color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch :is(.pkr-l2-btn-outline,.pkr-l2-btn-glass):hover{background:#F4F1EA!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-hero{background:linear-gradient(123deg,#FFFFFF 20%,#F4F1EA 83%)!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-hero-trust svg{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-hero-copy>p.pkr-launch-availability{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-hero-desktop-header>span:first-child{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-hero-real-label svg{color:#0E7C4F!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-ribbon>div>svg{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-tab{background:#F4F1EA!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-tab.selected{background:#E3E9FF!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-panel{background:#F4F1EA!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-copy li svg{color:#0E7C4F!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-nav{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-nav button{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-screen-top{border-bottom:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-tour-sample-note{border-top:1px solid #E5E0D3!important;color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-proof-card{border:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-proof-card-image{background:#F0EDE6!important;border-bottom:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-proof-card-copy>span:first-child{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-proof-enlarge{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-launch-step-icon{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-mobile-device figcaption small{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-pricing{background:#F4F1EA!important;border-block:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-plan-featured{border-color:#3E63DD!important;box-shadow:0 0 0 1px #3E63DD!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-price{color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-price small{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-plan ul{border-top:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-plan li{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-plan li::before{color:#0E7C4F!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-plan-badge{background:#3E63DD!important;color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-pricing-note{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-join-form{background:#F4F1EA!important;border:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-join-form input{color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-join-form button{background:#3E63DD!important;color:#1B1F2A!important;border:1px solid #3E63DD!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-faq-item summary b{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-last-call{background:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-last-call>.pkr-launch-closing-screen{background:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-footer p{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch .pkr-l2-footer nav a:hover{color:#2F4BB8!important}
+html.pkr-chip-club .pkr-launch-signin{color:#1B1F2A!important;font-family:var(--font-ui)!important}
+html.pkr-chip-club .pkr-launch-signin h2{color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch-signin-mark{background:#E3E9FF!important}
+html.pkr-chip-club .pkr-launch-dialog-close{background:#F4F1EA!important}
+html.pkr-chip-club .pkr-launch-signin-primary{border:1px solid #3E63DD!important;background:#3E63DD!important;color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch-preview{background:#F4F1EA!important;color:#1B1F2A!important;font-family:var(--font-ui)!important}
+html.pkr-chip-club .pkr-launch-preview>header{border-bottom:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch-preview>header h2{color:#1B1F2A!important}
+html.pkr-chip-club .pkr-launch-preview>header p{color:#5A6172!important}
+html.pkr-chip-club .pkr-launch-preview>header button{background:#F4F1EA!important;color:#5A6172!important}
+@media(max-width:620px){html.pkr-chip-club .pkr-launch .pkr-l2-ribbon>div:not(:last-child){border-bottom:1px solid #E5E0D3!important}
+html.pkr-chip-club .pkr-launch .pkr-proof-card-image{border-right:1px solid #E5E0D3!important}}
+html.pkr-chip-club .pkr-launch{background:#F4F1EA!important;color:#1B1F2A!important;--launch-accent:#2F4BB8;--launch-coral:#3E63DD;--launch-paper:#F4F1EA;--launch-ink:#1B1F2A;--launch-muted:#5A6172;--launch-line:#E5E0D3}
+html.pkr-chip-club .pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary){background:#3E63DD!important;border-color:#3E63DD!important;color:#FFFFFF!important}
+html.pkr-chip-club .pkr-launch :is(h1,h2,h3,.pkr-l2-price){font-family:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important}
+html.pkr-chip-club .pkr-launch :is(a,button,input,summary):focus-visible{outline:3px solid #3E63DD!important;outline-offset:2px!important}

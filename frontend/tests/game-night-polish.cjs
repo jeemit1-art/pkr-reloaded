@@ -241,8 +241,8 @@ async function checkPlayers(page,label){
  await roster.getByText('🦊',{exact:true}).waitFor();
  assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
  const row=roster.locator(':scope > div').first();await row.hover();
- await waitForColour(page,row,'backgroundColor','rgb(244, 246, 248)');
- assert.equal(await colour(row,'backgroundColor'),'rgb(244, 246, 248)','Hovered member row must not turn old green');
+ await waitForColour(page,row,'backgroundColor','rgb(244, 241, 234)');
+ assert.equal(await colour(row,'backgroundColor'),'rgb(244, 241, 234)','Hovered member row must not turn old green');
  await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
  const history=row.locator('.pkr-member-history-link');await history.focus();
  await readable(history.locator('strong'),'Keyboard-focused player name');
@@ -271,7 +271,7 @@ async function checkPlayers(page,label){
  assert.equal(await colour(sheet,'backgroundColor'),'rgb(255, 255, 255)','Body-level record sheet must use the light theme');
  await readable(sheet.locator('h2'),'Record heading');
  assert.equal(await sheet.locator('.pkr-record-row').count(),2);
- for(const [tone,value,expectedColour] of [['positive','+$75','rgb(20, 120, 86)'],['negative','-$25','rgb(190, 57, 73)']]){
+ for(const [tone,value,expectedColour] of [['positive','+$75','rgb(14, 124, 79)'],['negative','-$25','rgb(201, 48, 44)']]){
   const amount=sheet.locator('.pkr-record-row b[data-money-tone="'+tone+'"]');
   assert.equal(await amount.innerText(),value,'Recorded gains/losses retain explicit signs');
   assert.equal(await colour(amount,'color'),expectedColour,'Money meaning uses the correct light-theme tone');

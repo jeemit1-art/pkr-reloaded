@@ -15,6 +15,7 @@ import './game-night-live.css';
 import './game-night-complete.css';
 import './game-night-shell.css';
 import './chip-club.css';
+import './chip-club-coverage.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
