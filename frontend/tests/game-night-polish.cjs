@@ -57,7 +57,7 @@ function fixture(state,url,method,body){
  if(method!=='GET')throw new Error('Unexpected API mutation: '+method+' '+p);
  const transfers=allTransfers.filter(item=>!state.noOwnPay||item.id!=='polish-own-pay');
  if(p==='/auth/me')return user;
- if(p==='/events')return [room];
+ if(p==='/events')return [state.memberMode?{...room,role:'member'}:room];
  if(p==='/events/'+room.id)return {...room,members};
  if(p==='/events/'+room.id+'/games')return [...(state.upcoming?[state.live?{...upcoming,status:'active'}:upcoming]:[]),finished,older];
  if(p==='/events/'+room.id+'/history')return [finished,older];
@@ -79,7 +79,7 @@ function fixture(state,url,method,body){
  if(p==='/games/'+upcoming.id)return {...upcoming,status:state.live?'active':upcoming.status,players:seated,rsvps:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps};
  if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps,options:['19:00','20:00']};
  for(const game of [finished,older]){
-  if(p==='/games/'+game.id)return {...game,players:playersFor(game),rsvps:[],transfers:game.id===finished.id?transfers:[]};
+  if(p==='/games/'+game.id){const players=playersFor(game);if(state.integrityIssue&&game.id===finished.id)players[0]={...players[0],net:8000};return {...game,players,rsvps:[],transfers:game.id===finished.id?transfers:[]};}
   if(p==='/games/results/'+game.results_token){state.resultReads=(state.resultReads||0)+1;return {game:state.unreconciled?{...game,variance:100}:game,event:room,players:playersFor(game),transfers:game.id===finished.id?transfers:[]};}
   if(p==='/games/'+game.id+'/settlement-control')return {game_id:game.id,enabled:true,reminders_enabled:false,last_broadcast_at:null};
  }
@@ -460,6 +460,38 @@ async function checkPayments(page,state,label){
  await screenshot(page,label+'-zero-payment-records');
 }
 
+async function checkFinancialIntegrityReview(page,state,label){
+ state.integrityIssue=false;state.memberMode=false;
+ await gotoFixturePage(page,BASE+'/payments?room='+room.id+'&paymentsScope=club');
+ await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ const toggle=page.getByRole('button',{name:/Saved game integrity review/});
+ await toggle.waitFor({state:'visible'});
+ assert.equal(await toggle.getAttribute('aria-expanded'),'false','Host audit is collapsed by default');
+ assert.equal(await page.getByTestId('pkr-finance-integrity').count(),0,'No audit requests until the host opens it');
+ await toggle.click();
+ const review=page.getByTestId('pkr-finance-integrity');
+ await review.waitFor({state:'visible'});
+ await page.waitForFunction(()=>document.querySelector('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-metrics strong')?.textContent==='2 / 2');
+ await review.getByText('No calculation exceptions found in the games reviewed.',{exact:false}).waitFor();
+ assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+ assert.equal(await review.getByRole('link',{name:'Open saved game'}).count(),0);
+ await screenshot(page,label+'-payments-host-integrity-balanced');
+ // Synthetic in-memory mismatch only: no production data, no Worker writes.
+ state.integrityIssue=true;
+ await review.getByRole('button',{name:'Recheck'}).click();
+ await page.waitForFunction(()=>document.querySelector('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-metrics strong')?.textContent==='2 / 2'
+  && document.querySelectorAll('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-row').length===1);
+ assert.equal(await review.getByRole('link',{name:'Open saved game'}).count(),1);
+ assert.match(await review.innerText(),/1 net difference/);
+ await screenshot(page,label+'-payments-host-integrity-review');
+ state.integrityIssue=false;state.memberMode=true;
+ await gotoFixturePage(page,BASE+'/payments?room='+room.id);
+ await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ assert.equal(await page.getByRole('button',{name:/Saved game integrity review/}).count(),0,
+  'Ordinary member must not see the host audit');
+ state.memberMode=false;
+}
+
 async function checkInviteDirectory(page,state,label){
  state.inviteAudit=true;
  try{
@@ -758,6 +790,7 @@ async function run(){
    await checkReportedVisualIssues(page,state,label);
    await checkSettledResultShare(page,state,label);
    await checkPayments(page,state,label);
+   await checkFinancialIntegrityReview(page,state,label);
    const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
    assert.equal(canvas.colour,'rgb(244, 245, 242)','Payments shares the lounge canvas');
    assert.equal(canvas.image,'none','Payments shares the neutral canvas');
