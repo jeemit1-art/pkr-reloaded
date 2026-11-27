@@ -1098,3 +1098,39 @@ html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-results-page .pkr-section
   color:#FFFFFF!important;
 }
 }
+
+/* Shared lounge canvas for signed-in, non-game routes. Keep the body and
+   html white for the native iOS status area. Only paint page containers;
+   layout, scrolling, individual card colours and game CSS are unchanged. */
+@layer pkr-lounge {
+  html.pkr-game-night.pkr-chip-club.pkr-lounge:has(.pkr-primary-sidebar):not(:has(#gameScreen)) body :is(
+    .pkr-app.pkr-dashboard, .pkr-app.pkr-event, .pkr-app.pkr-game-detail,
+    .pkr-primary-page, .pkr-schedule-page, .pkr-vnext-insights,
+    .pkr-gn-payment-workspace, .pkr-install-vnext
+  ) {
+    background-color:#E5ECEF!important;
+    background-image:
+      radial-gradient(ellipse at 100% 0%,#D4E5E0 0%,transparent 64%),
+      radial-gradient(ellipse at 0% 0%,#D6E0EF 0%,transparent 67%),
+      linear-gradient(180deg,#EDF2F4 0%,#E5ECEF 100%)!important;
+    background-size:100% 640px,100% 560px,100% 100%!important;
+    background-position:top center!important;
+    background-repeat:no-repeat!important;
+    background-attachment:scroll!important;
+  }
+  /* Keep one continuous canvas instead of restarting it in nested pages. */
+  html.pkr-game-night.pkr-chip-club.pkr-lounge:has(.pkr-primary-sidebar):not(:has(#gameScreen)) body :is(
+    .pkr-app.pkr-dashboard .pkr-dual-root,
+    .pkr-gn-payment-workspace :is(.pkr-gn-payments,.pkr-vnext-insights),
+    .pkr-primary-page .pkr-primary-page-inner
+  ) {
+    background:transparent!important;
+  }
+  /* Restrained depth on neutral cards; financial and status fills remain. */
+  html.pkr-game-night.pkr-chip-club.pkr-lounge:has(.pkr-primary-sidebar):not(:has(#gameScreen)) body :is(
+    .pkr-primary-panel,.pkr-dual-data-card,.pkr-history-player-card,
+    .pkr-room-outstanding,.pkr-account-card,.pkr-schedule-game
+  ) {
+    box-shadow:0 2px 5px #14243A08,0 8px 22px #14243A0D!important;
+  }
+}

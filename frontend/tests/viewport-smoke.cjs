@@ -625,6 +625,19 @@ async function test(){
          await scheduler.waitFor({state:'hidden',timeout:5000});
        }
      }
+     // Verify the actual shared page canvas across the existing viewport matrix.
+     const canvasSelectors={dashboard:'.pkr-app.pkr-dashboard',insights:'.pkr-vnext-insights',schedule:'.pkr-schedule-page',room:'.pkr-app.pkr-event','game-detail':'.pkr-app.pkr-game-detail',install:'.pkr-install-vnext'};
+     if(canvasSelectors[item.id]){
+       await page.locator('.pkr-primary-sidebar').waitFor({state:'attached'});
+       const canvas=await page.locator(canvasSelectors[item.id]).first().evaluate(node=>{
+         const s=getComputedStyle(node);
+         return {colour:s.backgroundColor,image:s.backgroundImage,repeat:s.backgroundRepeat,attachment:s.backgroundAttachment};
+       });
+       if(canvas.colour!=='rgb(229, 236, 239)'||!canvas.image.includes('212, 229, 224')||
+          !canvas.image.includes('214, 224, 239')||!canvas.image.includes('radial-gradient')||
+          !canvas.repeat.includes('no-repeat')||!canvas.attachment.includes('scroll'))
+         errors.push(size.name+' '+item.id+' shared lounge canvas missing: '+JSON.stringify(canvas));
+     }
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
@@ -662,7 +675,7 @@ async function test(){
            return {background:getComputedStyle(node).backgroundColor,
              card:card?getComputedStyle(card).backgroundColor:null};
          });
-         if(insightsTheme.background!=='rgb(244, 241, 234)'||insightsTheme.card!=='rgb(255, 255, 255)')
+         if(insightsTheme.background!=='rgb(229, 236, 239)'||insightsTheme.card!=='rgb(255, 255, 255)')
            errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
          const isCommand=visual.colour==='rgb(19, 44, 83)'&&visual.background.includes('54, 91, 157');
@@ -865,6 +878,9 @@ async function test(){
          errors.push(size.name+' live table is not full-viewport: '+JSON.stringify(geometry));
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
+       const liveCanvas=await page.evaluate(()=>({body:getComputedStyle(document.body).backgroundColor,image:getComputedStyle(document.body).backgroundImage}));
+       if(liveCanvas.body!=='rgb(8, 19, 36)'||liveCanvas.image!=='none')
+         errors.push(size.name+' live-game page canvas changed: '+JSON.stringify(liveCanvas));
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
        if(chrome!=='rgb(8, 19, 36)')errors.push(size.name+' live table header should use the Lounge navy surface: '+chrome);
        const share=page.locator('#gameScreen #publishBtn');

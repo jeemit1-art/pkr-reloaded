@@ -165,7 +165,10 @@ async function checkFullDashboards(page,state,label){
   const name=mode==='command'?'Command Centre':'Live Poker';
   await appearance.getByRole('button',{name:new RegExp(name)}).click();
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
-  assert.equal(await colour(dashboard,'backgroundColor'),'rgb(244, 241, 234)',name+' root must use Chip Club paper');
+  assert.equal(await colour(dashboard,'backgroundColor'),'rgba(0, 0, 0, 0)',name+' must expose the shared lounge canvas, not paint a separate panel');
+  const canvas=await dashboard.evaluate(node=>{const parent=node.closest('.pkr-app.pkr-dashboard');if(!parent)throw new Error('Dashboard canvas missing');const style=getComputedStyle(parent);return {colour:style.backgroundColor,image:style.backgroundImage};});
+  assert.equal(canvas.colour,'rgb(229, 236, 239)',name+' must share the slate-and-sage canvas');
+  assert.match(canvas.image,/radial-gradient/,name+' must retain the lounge light pools');
   const selected=appearance.getByRole('button',{name:new RegExp(name)});
   assert.equal(await selected.getAttribute('aria-pressed'),'true');
   await waitForColour(page,selected,'backgroundColor','rgb(227, 233, 255)');
@@ -513,6 +516,9 @@ async function run(){
    await checkRsvps(page,state,label);
    await checkReportedVisualIssues(page,state,label);
    await checkPayments(page,state,label);
+   const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
+   assert.equal(canvas.colour,'rgb(229, 236, 239)','Payments shares the lounge canvas');
+   assert(canvas.image.includes('radial-gradient'),'Payments shares the lounge light pools');
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
    console.log('PASS',label,'appearance, SVG icons, exact records and payment scope');
