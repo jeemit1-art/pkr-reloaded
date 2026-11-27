@@ -92,7 +92,7 @@ events.get('/invite/:token', authMiddleware, async (c) => {
   const existing = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
     .bind(eventId,userId).first<{role:string}>();
   if (!existing) {
-    await c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)').bind(eventId,userId,role).run();
+    await c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?) ON CONFLICT(event_id,user_id) DO NOTHING').bind(eventId,userId,role).run();
   } else if (existing.role==='member' && role==='cohost') {
     await c.env.DB.prepare('UPDATE event_members SET role=? WHERE event_id=? AND user_id=?').bind(role,eventId,userId).run();
   }
@@ -103,7 +103,9 @@ events.get('/invite/:token', authMiddleware, async (c) => {
       (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
     FROM events e WHERE e.id=?
   `).bind(eventId).first();
-  return c.json({ok:true,event: event ? clientSafeEvent(event) : null,role});
+  const effective=await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId,userId).first<{role:string}>();
+  return c.json({ok:true,event: event ? clientSafeEvent(event) : null,role:effective?.role||role});
 });
 
 events.get('/:id', authMiddleware, async (c) => {
@@ -566,8 +568,17 @@ events.delete('/:id/members/:userId', authMiddleware, async (c) => {
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
   const me = (c as any).get('userId');
   if (targetId === me) return c.json({error:'Cannot remove yourself'},400);
-  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
-    .bind(eventId, targetId).run();
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'){
+    // Removing access must invalidate every outstanding phone/recovery link
+    // before the member can rejoin. Keep their linked identity and history.
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id IN (SELECT id FROM group_phone_contacts WHERE event_id=? AND user_id=?)').bind(eventId,eventId,targetId),
+      c.env.DB.prepare("DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!='host'").bind(eventId,targetId)
+    ]);
+  }else{
+    await c.env.DB.prepare("DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!='host'")
+      .bind(eventId,targetId).run();
+  }
   return c.json({ok:true});
 });
 

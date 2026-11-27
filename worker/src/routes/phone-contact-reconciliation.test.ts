@@ -14,8 +14,9 @@ function fixture(){
     members:new Map([['host-1','host'],['member-1','member'],['cohost-1','cohost']]),
   };
   const kv=new Map<string,string>([
-    ['join-request:room-1:claim1',JSON.stringify({event_id:'room-1',contact_id:'contact-1',display_name:'Test Player'})],
+    ['join-request:room-1:claim1',JSON.stringify({event_id:'room-1',invite_id:'invite-1',contact_id:'contact-1',display_name:'Test Player',claim_hash:'claim1'})],
     ['approved-contact:room-1:contact-1','1'],
+    ['approved-join:claim1',JSON.stringify({event_id:'room-1',invite_id:'invite-1',contact_id:'contact-1',display_name:'Test Player',claim_hash:'claim1'})],
   ]);
   const statement=(sql:string,args:any[])=>({
     async first(){
@@ -32,6 +33,7 @@ function fixture(){
       return null;
     },
     async all(){
+      if(sql.includes('SELECT id,contact_id,role,expires_at FROM group_phone_invites'))return {results:state.revoked?[]:[{id:'invite-1',contact_id:'contact-1',role:'member',expires_at:Math.floor(Date.now()/1000)+3600}]};
       if(sql.includes('SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts')){
         return {results:[{id:'contact-1',event_id:'room-1',display_name:'Test Player',
           phone_cipher:await encryptPhone({PKR_CONTACT_KEY:contactKey} as any,'+61400000000'),

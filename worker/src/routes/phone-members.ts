@@ -26,6 +26,97 @@ async function getInvite(env:Env,token:string):Promise<Invite|null>{
     'SELECT i.*,c.display_name,c.phone_cipher,e.name AS event_name FROM group_phone_invites i JOIN group_phone_contacts c ON c.id=i.contact_id AND c.event_id=i.event_id JOIN events e ON e.id=i.event_id WHERE i.token_hash=? AND i.consumed_at IS NULL AND i.expires_at>unixepoch()'
   ).bind(hash).first<Invite>();
 }
+type JoinState={event_id:string;invite_id:string;contact_id:string;role:string;display_name:string;claim_hash:string;requested_at:number;approved_at?:number;purpose?:'join'|'recovery'|'rejoin'};
+type CurrentInvite={id:string;contact_id:string;role:string;expires_at:number};
+const requestPrefix=(eventId:string)=>'join-request:'+eventId+':';
+function readState(raw:string|null):JoinState|null{
+  if(!raw)return null;
+  try{
+    const r=JSON.parse(raw);
+    return r&&typeof r.event_id==='string'&&typeof r.contact_id==='string'&&typeof r.invite_id==='string'&&typeof r.claim_hash==='string'?r:null;
+  }catch{return null;}
+}
+async function listKeys(env:Env,prefix:string){
+  const keys:Array<{name:string}>=[];
+  let cursor:string|undefined;
+  // Each room is capped at 100 pending requests. Support paginated KV
+  // responses, including legacy approved-join entries.
+  for(let page=0;page<20;page++){
+    const result=await env.KV.list({prefix,...(cursor?{cursor}:{})});
+    keys.push(...result.keys);
+    if(result.list_complete||!('cursor' in result)||!result.cursor)break;
+    cursor=result.cursor;
+  }
+  return keys;
+}
+async function currentInvites(env:Env,eventId:string){
+  const rows=await env.DB.prepare(
+    'SELECT id,contact_id,role,expires_at FROM group_phone_invites WHERE event_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+  ).bind(eventId).all<CurrentInvite>();
+  return new Map(rows.results.map(r=>[r.id,r]));
+}
+function validState(state:JoinState|null,eventId:string,invites:Map<string,CurrentInvite>):state is JoinState{
+  return !!state&&state.event_id===eventId&&invites.get(state.invite_id)?.contact_id===state.contact_id;
+}
+async function approvedRequests(env:Env,eventId:string,invites:Map<string,CurrentInvite>,includeLegacy=true){
+  const result=new Map<string,JoinState>();
+  // An old contact index is not authority for a new invitation. Verify the
+  // claim and its exact, still-live invite ID before using it.
+  await Promise.all([...invites.values()].map(async i=>{
+    const pointer=readState(await env.KV.get('approved-contact:'+eventId+':'+i.contact_id));
+    if(validState(pointer,eventId,invites)&&pointer.invite_id===i.id){
+      const approved=readState(await env.KV.get('approved-join:'+pointer.claim_hash));
+      if(validState(approved,eventId,invites)&&approved.invite_id===i.id)result.set(i.id,approved);
+    }
+  }));
+  // Compatibility for outstanding approvals made by the previous Worker.
+  // No name or mobile matching is performed.
+  if(includeLegacy&&result.size<invites.size&&invites.size){
+    const keys=await listKeys(env,'approved-join:');
+    await Promise.all(keys.map(async k=>{
+      const state=readState(await env.KV.get(k.name));
+      if(validState(state,eventId,invites))result.set(state.invite_id,state);
+    }));
+  }
+  return result;
+}
+async function pendingRequests(env:Env,eventId:string,invites:Map<string,CurrentInvite>,approved:Map<string,JoinState>){
+  const keys=await listKeys(env,requestPrefix(eventId));
+  const rows=await Promise.all(keys.map(async k=>{
+    const state=readState(await env.KV.get(k.name));
+    if(!validState(state,eventId,invites)||approved.has(state.invite_id))return null;
+    if(k.name!==requestPrefix(eventId)+state.claim_hash)return null;
+    if(await env.KV.get('rejected-join:'+state.claim_hash))return null;
+    return {key:k.name,state};
+  }));
+  return rows.filter((r):r is {key:string;state:JoinState}=>r!==null);
+}
+async function claimInvite(env:Env,state:JoinState){
+  return env.DB.prepare(
+    'SELECT id,expires_at FROM group_phone_invites WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
+  ).bind(state.invite_id,state.event_id,state.contact_id).first<{id:string;expires_at:number}>();
+}
+async function rememberClaim(env:Env,state:JoinState,status:string){
+  await env.KV.put('join-claim:'+state.claim_hash,JSON.stringify({...state,status}),{expirationTtl:172800});
+}
+async function clearContactRequests(env:Env,eventId:string,contactId:string){
+  // D1 revocation is authoritative; KV clean-up is best effort and the
+  // read/decision routes independently reject all superseded invitations.
+  try{
+    const live=await currentInvites(env,eventId);
+    const keys=await listKeys(env,requestPrefix(eventId));
+    await Promise.all(keys.map(async k=>{
+      const state=readState(await env.KV.get(k.name));
+      if(state?.event_id===eventId&&state.contact_id===contactId&&!validState(state,eventId,live)){
+        await rememberClaim(env,state,'revoked');
+        await env.KV.delete(k.name);
+      }
+    }));
+    const pointerKey='approved-contact:'+eventId+':'+contactId;
+    const pointer=await env.KV.get(pointerKey);
+    if(pointer&&!validState(readState(pointer),eventId,live))await env.KV.delete(pointerKey);
+  }catch{}
+}
 function privateHeaders(c:any){
   c.header('Cache-Control','no-store, private');
   c.header('Referrer-Policy','no-referrer');
@@ -42,49 +133,24 @@ router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
       'SELECT user_id FROM event_members WHERE event_id=?'
     ).bind(eventId).all<{user_id:string}>();
     const activeMemberIds=new Set(roomMemberships.results.map(m=>m.user_id));
-    // Host approval is a separate state from actual room membership. A player
-    // must still redeem their own private claim before event_members is created.
-    // Always show this distinction instead of calling approved joins "pending".
-    const pendingKeys=await c.env.KV.list({prefix:'join-request:'+eventId+':'});
-    const pendingContactIds=new Set<string>();
-    await Promise.all(pendingKeys.keys.map(async k=>{
-      const raw=await c.env.KV.get(k.name);
-      if(!raw)return;
-      try{
-        const state=JSON.parse(raw);
-        if(state.event_id===eventId&&typeof state.contact_id==='string')
-          pendingContactIds.add(state.contact_id);
-      }catch{}
-    }));
-    // Existing approvals (created before the contact-index improvement) only
-    // have approved-join:<claim-hash>. Include them so a recent real approval
-    // displays correctly after this hotfix, without modifying membership.
-    const legacyApprovedContactIds=new Set<string>();
-    let approvedCursor:string|undefined;
-    for(let page=0;page<5;page++){
-      const listed=await c.env.KV.list({prefix:'approved-join:',...(approvedCursor?{cursor:approvedCursor}:{})});
-      await Promise.all(listed.keys.map(async k=>{
-        const raw=await c.env.KV.get(k.name);
-        if(!raw)return;
-        try{
-          const state=JSON.parse(raw);
-          if(state.event_id===eventId&&typeof state.contact_id==='string')
-            legacyApprovedContactIds.add(state.contact_id);
-        }catch{}
-      }));
-      if(listed.list_complete||!listed.cursor)break;
-      approvedCursor=listed.cursor;
-    }
+    // Actual membership is authoritative, even during a fresh recovery.
+    // An expired, consumed or replaced link can never produce a pending row.
+    const invites=await currentInvites(c.env,eventId);
+    const approved=await approvedRequests(c.env,eventId,invites);
+    const pending=await pendingRequests(c.env,eventId,invites,approved);
+    const pendingContactIds=new Set(pending.map(r=>r.state.contact_id));
+    const approvedContactIds=new Set([...approved.values()].map(r=>r.contact_id));
+    const openContacts=new Set([...invites.values()].map(r=>r.contact_id));
     const contacts=await Promise.all(result.results.map(async row=>{
-      const approved=await c.env.KV.get('approved-contact:'+eventId+':'+row.id);
       const joined=!!row.user_id&&activeMemberIds.has(row.user_id);
       const status=joined?'joined'
-        :approved||legacyApprovedContactIds.has(row.id)?'approved_awaiting_member'
-        :pendingContactIds.has(row.id)?'awaiting_host_approval':'invited';
+        :approvedContactIds.has(row.id)?'approved_awaiting_member'
+        :pendingContactIds.has(row.id)?'awaiting_host_approval'
+        :openContacts.has(row.id)?'invited'
+        :row.user_id?'removed':'expired';
       return {id:row.id,display_name:row.display_name,
         phone:await decryptPhone(c.env,row.phone_cipher),
-        user_id:joined?row.user_id:null,
-        status,created_at:row.created_at};
+        user_id:row.user_id,status,returning:!!row.user_id&&!joined,created_at:row.created_at};
     }));
     privateHeaders(c);
     return c.json({contacts});
@@ -105,21 +171,34 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
     const id=generateId();
     await c.env.DB.prepare(
       'INSERT INTO group_phone_contacts(id,event_id,display_name,phone_lookup,phone_cipher) VALUES(?,?,?,?,?) '+
-      'ON CONFLICT(event_id,phone_lookup) DO UPDATE SET display_name=excluded.display_name,updated_at=unixepoch()'
+      'ON CONFLICT(event_id,phone_lookup) DO NOTHING'
     ).bind(id,eventId,name,lookup,cipher).run();
-    const contact=await c.env.DB.prepare('SELECT id,user_id FROM group_phone_contacts WHERE event_id=? AND phone_lookup=?')
-      .bind(eventId,lookup).first<{id:string;user_id:string|null}>();
+    const contact=await c.env.DB.prepare('SELECT id,user_id,display_name FROM group_phone_contacts WHERE event_id=? AND phone_lookup=?')
+      .bind(eventId,lookup).first<{id:string;user_id:string|null;display_name:string}>();
     if(!contact)return failed(c);
-    if(contact.user_id)return c.json({error:'This contact is already linked to a member in this group.'},409);
+    if(contact.user_id){
+      const member=await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+        .bind(eventId,contact.user_id).first<{role:string}>();
+      if(member)return c.json({error:'This player is already a member. Use Recover access if they have lost their sign-in.'},409);
+      // A new host-issued invitation for a former member preserves their
+      // original user ID. It must still be approved and redeemed.
+    }else{
+      await c.env.DB.prepare('UPDATE group_phone_contacts SET display_name=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL')
+        .bind(name,eventId,contact.id).run();
+    }
     // Creating a fresh invitation revokes prior outstanding links for this contact.
     const token=randomToken(),tokenHash=await phoneLookup(c.env,'invite',token);
     const inviteId=generateId(),expires=Math.floor(Date.now()/1000)+48*3600;
-    await c.env.DB.batch([
-      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND consumed_at IS NULL')
-        .bind(eventId,contact.id),
-      c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES(?,?,?,?,?,?)')
-        .bind(inviteId,eventId,contact.id,tokenHash,role,expires)
+    const issueGuard='EXISTS (SELECT 1 FROM group_phone_contacts c WHERE c.event_id=? AND c.id=? AND c.user_id IS ? AND NOT EXISTS (SELECT 1 FROM event_members m WHERE m.event_id=c.event_id AND m.user_id=c.user_id))';
+    const issueArgs=[eventId,contact.id,contact.user_id];
+    const results=await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND consumed_at IS NULL AND '+issueGuard)
+        .bind(eventId,contact.id,...issueArgs),
+      c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) SELECT ?,?,?,?,?,? WHERE '+issueGuard)
+        .bind(inviteId,eventId,contact.id,tokenHash,role,expires,...issueArgs)
     ]);
+    if(!results[1].meta.changes)return c.json({error:'The contact membership changed. Refresh before creating another invitation.'},409);
+    await clearContactRequests(c.env,eventId,contact.id);
     const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
     const group=await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
       .bind(eventId).first<{name:string}>();
@@ -127,7 +206,7 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
       ' on PKR. Open this one-time link and request to join; I will approve your request: '+url+
       '\nThis link expires in 48 hours.';
     privateHeaders(c);
-    return c.json({ok:true,contact:{id:contact.id,display_name:name,phone:mobile,status:'invited'},
+    return c.json({ok:true,contact:{id:contact.id,display_name:contact.user_id?contact.display_name:name,phone:mobile,status:'invited',user_id:contact.user_id,returning:!!contact.user_id},
       invite:{url,expires_at:expires,role},whatsapp_url:'https://wa.me/'+mobile.slice(1)+'?text='+encodeURIComponent(message)},201);
   }catch{return failed(c);}
 });
@@ -163,28 +242,15 @@ router.post('/events/:id/phone-contacts/:contactId/link-member',authMiddleware,a
     // that could create a second account for the same contact.
     const updates=[];
     if(!contact.user_id)updates.push(c.env.DB.prepare(
-      'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL'
-    ).bind(userId,eventId,contactId));
+      'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL AND EXISTS (SELECT 1 FROM event_members WHERE event_id=? AND user_id=? AND role!=\'host\') AND NOT EXISTS (SELECT 1 FROM group_phone_contacts WHERE event_id=? AND user_id=? AND id!=?)'
+    ).bind(userId,eventId,contactId,eventId,userId,eventId,userId,contactId));
     updates.push(c.env.DB.prepare(
       'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE event_id=? AND contact_id=? AND consumed_at IS NULL AND EXISTS (SELECT 1 FROM group_phone_contacts WHERE event_id=? AND id=? AND user_id=?)'
     ).bind(eventId,contactId,eventId,contactId,userId));
     const results=await c.env.DB.batch(updates);
     if(!contact.user_id&&results[0].meta.changes!==1)
       return c.json({error:'Contact changed. Refresh and retry.'},409);
-    // Pending KV requests can outlive membership. Best-effort clean-up only.
-    try{
-      const listed=await c.env.KV.list({prefix:'join-request:'+eventId+':'});
-      await Promise.all(listed.keys.map(async key=>{
-        const raw=await c.env.KV.get(key.name);
-        if(!raw)return;
-        try{
-          const state=JSON.parse(raw);
-          if(state.event_id===eventId&&state.contact_id===contactId)
-            await c.env.KV.delete(key.name);
-        }catch{}
-      }));
-      await c.env.KV.delete('approved-contact:'+eventId+':'+contactId);
-    }catch{}
+    await clearContactRequests(c.env,eventId,contactId);
     privateHeaders(c);
     return c.json({ok:true,status:'joined',user_id:userId});
   }catch{return failed(c);}
@@ -203,12 +269,18 @@ router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
         .bind(id,contact.user_id).first<{role:string}>();
       if(member?.role==='host')return c.json({error:'Cannot remove the group host'},403);
     }
-    await c.env.DB.batch([
-      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=?').bind(id,contactId),
-      c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!=?')
-        .bind(id,contact.user_id||'', 'host'),
-      c.env.DB.prepare('DELETE FROM group_phone_contacts WHERE event_id=? AND id=?').bind(id,contactId)
+    // Revoke links and access in one transaction. Keep a former member's
+    // original account mapping. Guard against a simultaneous claim/link.
+    const removeGuard='EXISTS (SELECT 1 FROM group_phone_contacts c WHERE c.event_id=? AND c.id=? AND c.user_id IS ?)';
+    const removeArgs=[id,contactId,contact.user_id];
+    const removed=await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND '+removeGuard).bind(id,contactId,...removeArgs),
+      c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!=? AND '+removeGuard)
+        .bind(id,contact.user_id||'', 'host',...removeArgs),
+      ...(!contact.user_id?[c.env.DB.prepare('DELETE FROM group_phone_contacts WHERE event_id=? AND id=? AND user_id IS NULL').bind(id,contactId)]:[])
     ]);
+    if(!contact.user_id&&!removed[2]?.meta.changes)return c.json({error:'This contact has changed or joined. Refresh and review their membership.'},409);
+    await clearContactRequests(c.env,id,contactId);
     return c.json({ok:true});
   }catch{return failed(c);}
 });
@@ -222,13 +294,21 @@ router.post('/events/:id/phone-contacts/:contactId/recovery',authMiddleware,asyn
     'SELECT id,display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
   ).bind(contactId,eventId).first<Contact>();
   if(!contact?.user_id)return c.json({error:'Only existing members can recover access'},409);
+  const membership=await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId,contact.user_id).first<{role:string}>();
+  if(!membership||membership.role==='host')
+    return c.json({error:'This player does not currently have recoverable membership. Send a fresh rejoin invitation instead.'},409);
   const token=randomToken(),hash=await phoneLookup(c.env,'invite',token);
   const expiry=Math.floor(Date.now()/1000)+48*3600;
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM group_phone_invites WHERE contact_id=? AND event_id=? AND consumed_at IS NULL').bind(contactId,eventId),
-    c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES(?,?,?,?,?,?)')
-      .bind(generateId(),eventId,contactId,hash,'member',expiry)
+  const recoveryGuard='EXISTS (SELECT 1 FROM group_phone_contacts c JOIN event_members m ON m.event_id=c.event_id AND m.user_id=c.user_id WHERE c.event_id=? AND c.id=? AND c.user_id=? AND m.role=? AND m.role!=\'host\')';
+  const recoveryArgs=[eventId,contactId,contact.user_id,membership.role];
+  const issued=await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM group_phone_invites WHERE contact_id=? AND event_id=? AND consumed_at IS NULL AND '+recoveryGuard).bind(contactId,eventId,...recoveryArgs),
+    c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) SELECT ?,?,?,?,?,? WHERE '+recoveryGuard)
+      .bind(generateId(),eventId,contactId,hash,membership.role,expiry,...recoveryArgs)
   ]);
+  if(!issued[1].meta.changes)return c.json({error:'Membership changed. Refresh the player list and use the correct recovery or rejoin action.'},409);
+  await clearContactRequests(c.env,eventId,contactId);
   const phone=await decryptPhone(c.env,contact.phone_cipher);
   const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
   privateHeaders(c);
@@ -257,17 +337,23 @@ router.post('/phone-invites/:token/request-approval',async c=>{
   const name=typeof body?.display_name==='string'?body.display_name.trim():'';
   if(name.length<2||name.length>60||/[\u0000-\u001f<>]/.test(name))
     return c.json({error:'Enter the name the host will recognise'},400);
-  // Limit one outstanding claim per invitation, including a newly approved claim.
+  // A fresh link, not a repeated tap, is required for another request.
   const rateKey='join-invite-rate:'+invite.id;
-  if(await c.env.KV.get(rateKey))return c.json({error:'A join request is already pending for this invitation. Ask the host to review it.'},429);
+  const invites=await currentInvites(c.env,invite.event_id);
+  if(!invites.has(invite.id))return c.json({error:'Invitation expired or unavailable'},409);
+  const approved=await approvedRequests(c.env,invite.event_id,invites,false);
+  const existing=await pendingRequests(c.env,invite.event_id,invites,approved);
+  const legacyMarker=await c.env.KV.get('approved-contact:'+invite.event_id+':'+invite.contact_id);
+  if(await c.env.KV.get(rateKey)||approved.has(invite.id)||legacyMarker==='1'||existing.some(r=>r.state.invite_id===invite.id))
+    return c.json({error:'A join request is already pending or approved for this invitation. Return to your original browser or ask the host for a fresh link.'},429);
+  if(existing.length>=100)return c.json({error:'Too many pending requests'},429);
   const claim=randomToken(),hash=await phoneLookup(c.env,'claim',claim);
-  const existing=await c.env.KV.list({prefix:'join-request:'+invite.event_id+':'});
-  if(existing.keys.length>=100)return c.json({error:'Too many pending requests'},429);
-  await c.env.KV.put('join-request:'+invite.event_id+':'+hash,JSON.stringify({
-    event_id:invite.event_id,invite_id:invite.id,contact_id:invite.contact_id,
-    role:invite.role,display_name:name,claim_hash:hash,requested_at:Date.now()
-  }),{expirationTtl:86400});
-  await c.env.KV.put(rateKey,'1',{expirationTtl:300});
+  const state:JoinState={event_id:invite.event_id,invite_id:invite.id,contact_id:invite.contact_id,
+    role:invite.role,display_name:name,claim_hash:hash,requested_at:Date.now()};
+  const ttl=Math.max(60,Math.min(172800,invite.expires_at-Math.floor(Date.now()/1000)));
+  await rememberClaim(c.env,state,'pending');
+  await c.env.KV.put(requestPrefix(invite.event_id)+hash,JSON.stringify(state),{expirationTtl:ttl});
+  await c.env.KV.put(rateKey,'1',{expirationTtl:ttl});
   // An invite is only a request, not a membership. Notify the authorised
   // room host after writing the pending approval, never a name-only recipient.
   try {
@@ -286,17 +372,19 @@ router.get('/events/:id/join-requests',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
   const id=c.req.param('id');
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
-  const listed=await c.env.KV.list({prefix:'join-request:'+id+':'});
-  const requests=await Promise.all(listed.keys.slice(0,100).map(async k=>{
-    const raw=await c.env.KV.get(k.name);if(!raw)return null;
-    const r=JSON.parse(raw);
+  const invites=await currentInvites(c.env,id);
+  const approved=await approvedRequests(c.env,id,invites);
+  const pending=await pendingRequests(c.env,id,invites,approved);
+  const requests=await Promise.all(pending.slice(0,100).map(async ({state:r})=>{
     const contact=await c.env.DB.prepare(
       'SELECT display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
     ).bind(r.contact_id,id).first<{display_name:string;phone_cipher:string;user_id:string|null}>();
-    if(!contact)return null; // Recovery requests for already-linked members must be visible to their host.
-    return {id:k.name.slice(('join-request:'+id+':').length),name:r.display_name,
+    if(!contact)return null;
+    const membership=contact.user_id?await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+      .bind(id,contact.user_id).first<{role:string}>():null;
+    return {id:r.claim_hash,name:r.display_name,contact_id:r.contact_id,
       expected_member:contact.display_name,phone:maskMobile(await decryptPhone(c.env,contact.phone_cipher)),
-      requested_at:r.requested_at,recovery:!!contact.user_id};
+      requested_at:r.requested_at,recovery:!!membership,rejoin:!!contact.user_id&&!membership};
   }));
   privateHeaders(c);
   return c.json({requests:requests.filter(Boolean)});
@@ -306,72 +394,101 @@ router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async
   const id=c.req.param('id'),key='join-request:'+id+':'+c.req.param('requestId');
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
   const body=await c.req.json().catch(()=>null) as {approve?:unknown}|null;
-  const raw=await c.env.KV.get(key);
-  if(!raw)return c.json({error:'Request expired'},404);
-  const state=JSON.parse(raw);
-  if(body?.approve===true){
-    // Final membership is created only when the approved claimant redeems their
-    // own secret; the request ID alone does not authenticate that claimant.
-    const invite=await c.env.DB.prepare(
-      'SELECT id,expires_at FROM group_phone_invites WHERE id=? AND event_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
-    ).bind(state.invite_id,id).first<{id:string;expires_at:number}>();
-    if(!invite)return c.json({error:'Original invitation expired; resend it'},409);
-    // Cloudflare KV requires at least 60 seconds. Approval must remain visible
-    // until the original invitation expires, not disappear after one hour.
-    const approvalTtl=Math.max(60,Math.min(172800,invite.expires_at-Math.floor(Date.now()/1000)));
-    await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify({...state,approved_at:Date.now()}),{expirationTtl:approvalTtl});
-    // Read-only visibility for the room host; this is not membership.
-    await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,'1',{expirationTtl:approvalTtl});
+  if(typeof body?.approve!=='boolean')return c.json({error:'Select approve or reject'},400);
+  const state=readState(await c.env.KV.get(key));
+  if(!state||state.event_id!==id||key!==requestPrefix(id)+state.claim_hash)
+    return c.json({error:'Request expired or already reviewed. Refresh approvals.'},404);
+  const invite=await claimInvite(c.env,state);
+  if(!invite){
+    await rememberClaim(c.env,state,'revoked');
+    await c.env.KV.delete(key);
+    return c.json({error:'Original invitation expired or was replaced. Refresh approvals.'},409);
   }
-  if(body?.approve!==true){
-    // Do not leave rejected claimants polling indefinitely as if waiting for approval.
-    const ttl=3600;
-    await c.env.KV.put('rejected-join:'+state.claim_hash,'1',{expirationTtl:ttl});
+  const invites=await currentInvites(c.env,id);
+  const approved=await approvedRequests(c.env,id,invites);
+  if(approved.has(state.invite_id)){
+    if(approved.get(state.invite_id)?.claim_hash!==state.claim_hash)
+      return c.json({error:'Another request for this invitation was already approved.'},409);
+    return c.json({ok:true,approved:true,contact_id:state.contact_id});
+  }
+  const ttl=Math.max(60,Math.min(172800,invite.expires_at-Math.floor(Date.now()/1000)));
+  if(body.approve){
+    const decision={...state,approved_at:Date.now()};
+    await c.env.KV.put('approved-join:'+state.claim_hash,JSON.stringify(decision),{expirationTtl:ttl});
+    await c.env.KV.put('approved-contact:'+id+':'+state.contact_id,JSON.stringify(decision),{expirationTtl:ttl});
+    await rememberClaim(c.env,state,'approved');
+  }else{
+    // A rejected personal link is terminal. The host must issue a new link.
+    await c.env.DB.prepare('UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL')
+      .bind(state.invite_id,id,state.contact_id).run();
+    await c.env.KV.put('rejected-join:'+state.claim_hash,'1',{expirationTtl:172800});
+    await rememberClaim(c.env,state,'rejected');
   }
   await c.env.KV.delete(key);
-  return c.json({ok:true,approved:body?.approve===true,contact_id:state.contact_id});
+  privateHeaders(c);
+  return c.json({ok:true,approved:body.approve,contact_id:state.contact_id});
 });
 router.post('/phone-invites/complete-approval',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const body=await c.req.json().catch(()=>null) as {claim?:unknown}|null;
+  const body=await c.req.json().catch(()=>null) as {claim?:unknown;invite_token?:unknown}|null;
   const claim=typeof body?.claim==='string'?body.claim:'';
   if(!/^[a-f0-9]{64}$/.test(claim))return c.json({error:'Invalid request'},400);
   const hash=await phoneLookup(c.env,'claim',claim);
-  const raw=await c.env.KV.get('approved-join:'+hash);
-  if(!raw){
+  const state=readState(await c.env.KV.get('approved-join:'+hash));
+  if(!state){
     if(await c.env.KV.get('rejected-join:'+hash))
       return c.json({status:'rejected',error:'The host declined this request. Ask for a new invitation.'},403);
+    const raw=await c.env.KV.get('join-claim:'+hash);
+    const meta=readState(raw);
+    if(meta&&raw){
+      const status=JSON.parse(raw).status;
+      if(status==='rejected')return c.json({status:'rejected',error:'The host declined this request. Ask for a new invitation.'},403);
+      if(status==='redeemed'||status==='revoked'||!await claimInvite(c.env,meta))
+        return c.json({status:'closed',error:'Invitation no longer valid or already redeemed. Open your existing account or ask the host for recovery.'},409);
+    }
+    // Old claims did not have a reverse index. The original link lets the
+    // browser distinguish an expired/consumed invitation from a pending one.
+    if(typeof body?.invite_token==='string'&&!await getInvite(c.env,body.invite_token))
+      return c.json({status:'closed',error:'Invitation expired or already redeemed. Open your existing account or ask the host for recovery.'},409);
     return c.json({status:'pending'},202);
   }
-  const state=JSON.parse(raw);
-  const invite=await c.env.DB.prepare(
-    'SELECT id FROM group_phone_invites WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
-  ).bind(state.invite_id,state.event_id,state.contact_id).first();
+  if(state.claim_hash!==hash)return c.json({error:'Invalid request'},400);
+  const invite=await claimInvite(c.env,state);
   if(!invite)return c.json({error:'Invitation no longer valid'},409);
   const contact=await c.env.DB.prepare(
     'SELECT user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
   ).bind(state.contact_id,state.event_id).first<{user_id:string|null}>();
   if(!contact)return c.json({error:'Invitation no longer valid'},409);
-  const userId=contact.user_id||generateId(),name=state.display_name;
-  // D1 batch is transactional: all account, membership, contact and invite
-  // changes commit together or roll back together. No orphan users on failure.
+  const userId=contact.user_id||generateId();
+  const account=contact.user_id?await c.env.DB.prepare('SELECT name,email FROM users WHERE id=?').bind(userId).first<{name:string;email:string}>():null;
+  const name=account?.name||state.display_name;
+  // Every statement is guarded by the same still-live invitation AND exact
+  // contact identity. D1 serialises the batch. A racing second claimant or
+  // revoked/replaced invitation cannot insert a user or membership.
+  const liveGuard='EXISTS (SELECT 1 FROM group_phone_invites i JOIN group_phone_contacts c ON c.id=i.contact_id AND c.event_id=i.event_id WHERE i.id=? AND i.event_id=? AND i.contact_id=? AND i.consumed_at IS NULL AND i.expires_at>unixepoch() AND c.user_id IS ?)';
+  const guardArgs=[state.invite_id,state.event_id,state.contact_id,contact.user_id];
   const writes=[];
   if(!contact.user_id)writes.push(c.env.DB.prepare(
-    'INSERT INTO users(id,google_sub,email,name,plan,trial_started_at) VALUES(?,?,?,?,?,unixepoch())'
-  ).bind(userId,'approval:'+generateId(),'',name,'trial'));
+    'INSERT INTO users(id,google_sub,email,name,plan,trial_started_at) SELECT ?,?,?,?,?,unixepoch() WHERE '+liveGuard
+  ).bind(userId,'approval:'+generateId(),'',name,'trial',...guardArgs));
+  // The existing role wins for recovery. A former member can only rejoin
+  // after the host creates and approves a new invitation with that role.
   writes.push(c.env.DB.prepare(
-    'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND consumed_at IS NULL AND expires_at>unixepoch()'
-  ).bind(state.invite_id));
+    "INSERT INTO event_members(event_id,user_id,role) SELECT ?,?,i.role FROM group_phone_invites i WHERE i.id=? AND "+liveGuard+" ON CONFLICT(event_id,user_id) DO NOTHING"
+  ).bind(state.event_id,userId,state.invite_id,...guardArgs));
   writes.push(c.env.DB.prepare(
-    "INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?) ON CONFLICT(event_id,user_id) DO NOTHING"
-  ).bind(state.event_id,userId,state.role));
+    'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=? AND '+liveGuard
+  ).bind(userId,state.contact_id,state.event_id,...guardArgs));
   writes.push(c.env.DB.prepare(
-    'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE id=? AND event_id=?'
-  ).bind(userId,state.contact_id,state.event_id));
+    'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE id=? AND event_id=? AND contact_id=? AND consumed_at IS NULL AND expires_at>unixepoch() AND EXISTS (SELECT 1 FROM group_phone_contacts WHERE id=? AND event_id=? AND user_id=?)'
+  ).bind(state.invite_id,state.event_id,state.contact_id,state.contact_id,state.event_id,userId));
   const results=await c.env.DB.batch(writes);
-  if(!results[contact.user_id?0:1]?.meta.changes)return c.json({error:'Invitation already redeemed'},409);
-  await c.env.KV.delete('approved-join:'+hash);
-  await c.env.KV.delete('approved-contact:'+state.event_id+':'+state.contact_id);
+  if(!results[results.length-1]?.meta.changes)return c.json({error:'Invitation already redeemed or revoked'},409);
+  try{
+    await rememberClaim(c.env,state,'redeemed');
+    await c.env.KV.delete('approved-join:'+hash);
+    await clearContactRequests(c.env,state.event_id,state.contact_id);
+  }catch{}
   // Successful registration is useful for the host to know; never include
   // a phone number in a lock-screen notification.
   try {
@@ -384,7 +501,7 @@ router.post('/phone-invites/complete-approval',async c=>{
     }));
   } catch {}
   privateHeaders(c);
-  return c.json({ok:true,token:await signJWT({sub:userId,email:'',name},c.env.JWT_SECRET),
+  return c.json({ok:true,token:await signJWT({sub:userId,email:account?.email||'',name},c.env.JWT_SECRET),
     event_id:state.event_id});
 });
 

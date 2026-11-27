@@ -150,12 +150,12 @@ async function pub<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export interface PrivateGroupContact {id:string;display_name:string;phone:string;user_id?:string|null;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member';created_at?:number}
+export interface PrivateGroupContact {id:string;display_name:string;phone:string;user_id?:string|null;status:'joined'|'invited'|'awaiting_host_approval'|'approved_awaiting_member'|'removed'|'expired';returning?:boolean;created_at?:number}
 
 export const api = {
   phoneInvites: {
     requestApproval:(token:string,display_name:string)=>pub<{claim:string;status:string}>(`/phone-invites/${encodeURIComponent(token)}/request-approval`,{method:'POST',body:JSON.stringify({display_name})}),
-    completeApproval:(claim:string)=>pub<{ok:boolean;token:string;event_id:string;status?:string}>('/phone-invites/complete-approval',{method:'POST',body:JSON.stringify({claim})}),
+    completeApproval:(claim:string,invite_token?:string)=>pub<{ok:boolean;token:string;event_id:string;status?:string}>('/phone-invites/complete-approval',{method:'POST',body:JSON.stringify({claim,invite_token})}),
     preview: (token:string)=>pub<{event_name:string;masked_phone:string;role:string;expires_at:number;approval_required:true;delivery:'manual_whatsapp'}>(`/phone-invites/${encodeURIComponent(token)}`),
   },
   auth: {
@@ -182,9 +182,9 @@ export const api = {
     reopen:         (id:string)      => req<{ok:boolean}>(`/events/${id}/reopen`,{method:'POST'}),
     invite:         (id:string,role:string,email:string) => req<{token:string;url:string;role:string;recipient_email:string}>(`/events/${id}/invite`,{method:'POST',body:JSON.stringify({role,email})}),
     recoverContact:(id:string,contactId:string)=>req<{ok:boolean;url:string;whatsapp_url:string}>(`/events/${id}/phone-contacts/${contactId}/recovery`,{method:'POST'}),
-    joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number;recovery?:boolean}>}>(`/events/${id}/join-requests`),
+    joinRequests:(id:string)=>req<{requests:Array<{id:string;name:string;expected_member:string;phone:string;requested_at:number;recovery?:boolean;rejoin?:boolean;contact_id?:string}>}>(`/events/${id}/join-requests`,{cache:'no-store'}),
     decideJoin:(id:string,requestId:string,approve:boolean)=>req<{ok:boolean;approved:boolean;contact_id?:string}>(`/events/${id}/join-requests/${requestId}/decision`,{method:'POST',body:JSON.stringify({approve})}),
-    phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`),
+    phoneContacts:  (id:string) => req<{contacts:PrivateGroupContact[]}>(`/events/${id}/phone-contacts`,{cache:'no-store'}),
     inviteByPhone:  (id:string,d:{display_name:string;phone:string;role:'member'|'cohost'}) =>
       req<{ok:boolean;contact:PrivateGroupContact;whatsapp_url:string;invite:{url:string;expires_at:number;role:string}}>(`/events/${id}/phone-contacts`,{method:'POST',body:JSON.stringify(d)}),
     linkPhoneContact:(id:string,contactId:string,userId:string)=>req<{ok:boolean;status:'joined';user_id:string}>(

@@ -25,6 +25,7 @@ function makeFixture(){
    return null;
   },
   async all(){
+   if(sql.includes('SELECT id,contact_id,role,expires_at FROM group_phone_invites'))return {results:dbState.consumed?[]:[{id:'invite-1',contact_id:'contact-1',role:'member',expires_at:Math.floor(Date.now()/1000)+3600}]};
    if(sql.includes('SELECT user_id FROM event_members WHERE event_id=?'))
      return {results:dbState.members.filter(m=>m.eventId===args[0]).map(m=>({user_id:m.userId}))};
     if(sql.includes('SELECT id,event_id,display_name,phone_cipher,user_id,created_at FROM group_phone_contacts')){
@@ -37,7 +38,7 @@ function makeFixture(){
   async run(){
    if(sql.includes('INSERT INTO users')){dbState.users++;return {meta:{changes:1}};}
    if(sql.includes('UPDATE group_phone_invites SET consumed_at')){if(dbState.consumed)return {meta:{changes:0}};dbState.consumed=true;return {meta:{changes:1}};}
-   if(sql.includes('INSERT INTO event_members')){dbState.members.push({eventId:args[0],userId:args[1],role:args[2]});return {meta:{changes:1}};}
+   if(sql.includes('INSERT INTO event_members')){dbState.members.push({eventId:args[0],userId:args[1],role:'member'});return {meta:{changes:1}};}
    if(sql.includes('UPDATE group_phone_contacts SET user_id')){dbState.userId=args[0];return {meta:{changes:1}};}
    return {meta:{changes:0}};
   },
@@ -103,7 +104,7 @@ describe('free private WhatsApp membership host approval contract',()=>{
   expect([...kvMap.keys()].some(k=>k.startsWith('approved-contact:'))).toBe(false);
   expect([...kvMap.keys()].some(k=>k.startsWith('approved-join:'))).toBe(false);
   const second=await router.request(base+'/phone-invites/complete-approval',jsonPost({claim:pending.claim}),env);
-  expect(second.status).toBe(202);
+  expect(second.status).toBe(409);
   expect(dbState.users).toBe(1);
  });
  it('host rejection never creates a user or membership',async()=>{

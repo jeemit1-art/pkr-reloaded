@@ -40,7 +40,7 @@ export default function PhoneInvite(){
    checkingRef.current=true;
    if(!silent){setChecking(true);setError('');}
    try{
-     const result=await api.phoneInvites.completeApproval(claim);
+     const result=await api.phoneInvites.completeApproval(claim,token);
      if(result.ok&&result.token){
        completedRef.current=true;
        saveToken(result.token);
@@ -60,8 +60,9 @@ export default function PhoneInvite(){
      const reason=e?.message||'Could not complete joining. Retry Check approval now, or contact the host.';
      // A declined, expired or consumed claim cannot be fixed by endlessly
      // polling. Offer the returning-member recovery guide instead.
-     if(/declin|no longer valid|expired|already redeemed/i.test(reason)){
+     if(/declin|no longer valid|expired|already redeemed|revoked|replaced/i.test(reason)){
        completedRef.current=true;
+       try{localStorage.removeItem('pkr:join-claim:'+token);}catch{}
        setNeedsHelp(true);
        setStatus('This invitation cannot be completed. Your existing PKR account has not been deleted.');
      }
