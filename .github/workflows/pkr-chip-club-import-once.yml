@@ -1,0 +1,53 @@
+name: PKR one-time verified Chip Club screenshot import
+on:
+  push:
+    branches:
+      - feature/chip-club-visual-20261127
+    paths:
+      - .github/workflows/pkr-chip-club-import-once.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  import-verified-demo-images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact Chip Club branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: true
+      - name: Download and verify CI screenshot gallery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 45927825170 --repo "$GITHUB_REPOSITORY" --name pkr-launch-gallery --dir "$RUNNER_TEMP/chip-gallery"
+          source="$(find "$RUNNER_TEMP/chip-gallery" -type d -path '*/frontend/public/demo/launch-20261127' -print -quit)"
+          test -n "$source"
+          SOURCE="$source" python3 - <<'PY'
+          import json,os,pathlib
+          root=pathlib.Path(os.environ['SOURCE'])
+          files=list(root.glob('*.webp'))
+          manifest=json.loads((root/'manifest.json').read_text())
+          assert len(files)>=14,(len(files),'not enough actual app image captures')
+          assert manifest.get('sampleData') is True,'no live player data may be used'
+          assert all((root/p).is_file() for p in ['mobile-home.webp','mobile-rsvp.webp','mobile-live-table.webp','mobile-payments.webp','desktop-home.webp','desktop-live-table.webp','desktop-home.png','mobile-home.png'])
+          print('Verified demo captures:',len(files),'webp images')
+          PY
+          cp -v "$source"/*.webp frontend/public/demo/launch-20261127/
+          cp -v "$source"/*.png frontend/public/demo/launch-20261127/
+          cp -v "$source"/manifest.json frontend/public/demo/launch-20261127/
+      - name: Commit verified images only
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/demo/launch-20261127
+          git diff --cached --stat
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh verified Chip Club homepage images from synthetic app capture [chip-assets]"
+            git push origin HEAD:feature/chip-club-visual-20261127
+          fi
