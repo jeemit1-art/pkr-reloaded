@@ -2,8 +2,8 @@
  * Legacy public/live paint is compiled into mutually exclusive selectors.
  * All non-game colour rules resolve to these tokens; geometry and gameplay stay. */
 @layer pkr-personal,pkr-lounge,pkr-theme-priority,pkr-layout,pkr-theme;
-html[data-pkr-personal-theme="light"]:not(:has(#gameScreen)){--pkr-personal-canvas:#F4F5F2;--pkr-personal-surface:#FFFFFF;--pkr-personal-raised:#EEF1EC;--pkr-personal-line:#D0D9D2;--pkr-personal-control:#71877A;--pkr-personal-ink:#192D27;--pkr-personal-muted:#52645C;--pkr-personal-primary:#166548;--pkr-personal-primary-deep:#0D4933;--pkr-personal-accent:#165E42;--pkr-personal-accent-surface:#E1F0E7;--pkr-personal-accent-line:#9CBFA8;--pkr-personal-gain:#126641;--pkr-personal-gain-surface:#E2F2E8;--pkr-personal-gain-line:#9BC7AB;--pkr-personal-loss:#A52D38;--pkr-personal-loss-surface:#F9E7E7;--pkr-personal-loss-line:#D5A5A7;--pkr-personal-warning:#79521B;--pkr-personal-warning-surface:#F8ECD4;--pkr-personal-warning-line:#D5BE91;--pkr-personal-hero:#153A2D;--pkr-personal-hero-live:#194D38;--pkr-personal-hero-deep:#102E25;--pkr-personal-hero-glow:#28654D;--pkr-personal-hero-live-glow:#32795B;--pkr-personal-on-dark:#FFFFFF;--pkr-personal-on-dark-muted:#D5E7DB;--pkr-personal-on-dark-gold:#F5D58C;--pkr-personal-on-dark-gain:#83E3AA;--pkr-personal-on-dark-loss:#FFADAE;--pkr-personal-danger-fill:#9E3441;--pkr-personal-warning-fill:#79521B;--pkr-personal-gold-fill:#E8C77B;--pkr-personal-on-gold:#32250D;--pkr-personal-nav:#FFFFFF;--pkr-personal-shadow:#142D2212;--pkr-personal-scheme:light;}
-html[data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){--pkr-personal-canvas:#101916;--pkr-personal-surface:#1B2924;--pkr-personal-raised:#24352E;--pkr-personal-line:#41574C;--pkr-personal-control:#77978A;--pkr-personal-ink:#F1F6F2;--pkr-personal-muted:#BECFC3;--pkr-personal-primary:#176647;--pkr-personal-primary-deep:#0E4B37;--pkr-personal-accent:#A1E6BD;--pkr-personal-accent-surface:#244839;--pkr-personal-accent-line:#618F72;--pkr-personal-gain:#83E3AA;--pkr-personal-gain-surface:#214536;--pkr-personal-gain-line:#679878;--pkr-personal-loss:#FFADAE;--pkr-personal-loss-surface:#47282D;--pkr-personal-loss-line:#9F666D;--pkr-personal-warning:#F5D58C;--pkr-personal-warning-surface:#49391F;--pkr-personal-warning-line:#A58B5C;--pkr-personal-hero:#153A2D;--pkr-personal-hero-live:#194D38;--pkr-personal-hero-deep:#102E25;--pkr-personal-hero-glow:#28654D;--pkr-personal-hero-live-glow:#32795B;--pkr-personal-on-dark:#FFFFFF;--pkr-personal-on-dark-muted:#D5E7DB;--pkr-personal-on-dark-gold:#F5D58C;--pkr-personal-on-dark-gain:#83E3AA;--pkr-personal-on-dark-loss:#FFADAE;--pkr-personal-danger-fill:#9E3441;--pkr-personal-warning-fill:#79521B;--pkr-personal-gold-fill:#E8C77B;--pkr-personal-on-gold:#32250D;--pkr-personal-nav:#101E19;--pkr-personal-shadow:#00000026;--pkr-personal-scheme:dark;}
+html[data-pkr-personal-theme="light"]:not(:has(#gameScreen)){--pkr-personal-canvas:#EEF2F7;--pkr-personal-surface:#FFFFFF;--pkr-personal-raised:#E5EBF4;--pkr-personal-line:#CDD6E5;--pkr-personal-control:#64748B;--pkr-personal-ink:#14233B;--pkr-personal-muted:#4D5F78;--pkr-personal-primary:#2852A0;--pkr-personal-primary-deep:#1A3976;--pkr-personal-accent:#25498B;--pkr-personal-accent-surface:#E0E9FA;--pkr-personal-accent-line:#9DB4DD;--pkr-personal-gain:#126641;--pkr-personal-gain-surface:#E2F2E8;--pkr-personal-gain-line:#9BC7AB;--pkr-personal-loss:#A52D38;--pkr-personal-loss-surface:#F9E7E7;--pkr-personal-loss-line:#D5A5A7;--pkr-personal-warning:#79521B;--pkr-personal-warning-surface:#F8ECD4;--pkr-personal-warning-line:#D5BE91;--pkr-personal-hero:#14243E;--pkr-personal-hero-live:#183B51;--pkr-personal-hero-deep:#0B1629;--pkr-personal-hero-glow:#304D77;--pkr-personal-hero-live-glow:#2B536B;--pkr-personal-on-dark:#FFFFFF;--pkr-personal-on-dark-muted:#D6E1F0;--pkr-personal-on-dark-gold:#F5D58C;--pkr-personal-on-dark-gain:#83E3AA;--pkr-personal-on-dark-loss:#FFADAE;--pkr-personal-danger-fill:#9E3441;--pkr-personal-warning-fill:#79521B;--pkr-personal-gold-fill:#E8C77B;--pkr-personal-on-gold:#32250D;--pkr-personal-nav:#FFFFFF;--pkr-personal-shadow:#14243E12;--pkr-personal-scheme:light;--pkr-personal-gain-fill:#166548;--pkr-personal-felt:#194D38;}
+html[data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){--pkr-personal-canvas:#101722;--pkr-personal-surface:#192535;--pkr-personal-raised:#243247;--pkr-personal-line:#3B4C65;--pkr-personal-control:#8295AE;--pkr-personal-ink:#EFF4FD;--pkr-personal-muted:#B9C8DA;--pkr-personal-primary:#315AA7;--pkr-personal-primary-deep:#203E79;--pkr-personal-accent:#B3CEFF;--pkr-personal-accent-surface:#263F67;--pkr-personal-accent-line:#6F91C8;--pkr-personal-gain:#83E3AA;--pkr-personal-gain-surface:#214536;--pkr-personal-gain-line:#679878;--pkr-personal-loss:#FFADAE;--pkr-personal-loss-surface:#47282D;--pkr-personal-loss-line:#9F666D;--pkr-personal-warning:#F5D58C;--pkr-personal-warning-surface:#49391F;--pkr-personal-warning-line:#A58B5C;--pkr-personal-hero:#14243E;--pkr-personal-hero-live:#183B51;--pkr-personal-hero-deep:#0B1629;--pkr-personal-hero-glow:#304D77;--pkr-personal-hero-live-glow:#2B536B;--pkr-personal-on-dark:#FFFFFF;--pkr-personal-on-dark-muted:#D6E1F0;--pkr-personal-on-dark-gold:#F5D58C;--pkr-personal-on-dark-gain:#83E3AA;--pkr-personal-on-dark-loss:#FFADAE;--pkr-personal-danger-fill:#9E3441;--pkr-personal-warning-fill:#79521B;--pkr-personal-gold-fill:#E8C77B;--pkr-personal-on-gold:#32250D;--pkr-personal-nav:#142030;--pkr-personal-shadow:#00000033;--pkr-personal-scheme:dark;--pkr-personal-gain-fill:#166548;--pkr-personal-felt:#194D38;}
 @layer pkr-personal{
   html[data-pkr-personal-theme]:not(:has(#gameScreen)),
   html[data-pkr-personal-theme]:not(:has(#gameScreen)) body{
@@ -130,7 +130,7 @@ html[data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){--pkr-personal-canva
     color:var(--pkr-personal-muted)!important;
   }
   html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-felt{
-    background-color:var(--pkr-personal-hero-live)!important;
+    background-color:var(--pkr-personal-felt)!important;
   }
   html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-felt :is(.pkr-dual-felt-empty,.pkr-dual-felt-record,.pkr-dual-felt-record strong){
     color:var(--pkr-personal-on-dark)!important;opacity:1!important;
@@ -175,7 +175,7 @@ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero,.pkr-exp
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero-live,.pkr-gn-game-ticket,.pkr-experience-stage.pkr-experience-games,.pkr-results-live-hero){background-color:var(--pkr-personal-hero-live)!important;background-image:radial-gradient(ellipse at 90% 20%,var(--pkr-personal-hero-live-glow),transparent 65%),linear-gradient(135deg,var(--pkr-personal-hero-live),var(--pkr-personal-hero-deep))!important;color:#FFFFFF!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero,.pkr-gn-game-ticket,.pkr-experience-stage.pkr-experience-players,.pkr-experience-stage.pkr-experience-games,.pkr-results-live-hero,.pkr-results-command-hero) :is(h1,h2,h3,p,.pkr-dual-hero-text>span,.pkr-dual-eyebrow>span:first-child,.pkr-results-command-tagline){color:#FFFFFF!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status{background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;}
-html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status[data-game-state="live"]{background:var(--pkr-personal-primary)!important;color:#FFFFFF!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status[data-game-state="live"]{background:var(--pkr-personal-gain-fill)!important;color:#FFFFFF!important;border-color:var(--pkr-personal-accent-line)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status[data-game-state="upcoming"]{background:var(--pkr-personal-gold-fill)!important;color:var(--pkr-personal-on-gold)!important;border-color:var(--pkr-personal-warning-line)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button){background:var(--pkr-personal-surface)!important;border-color:var(--pkr-personal-line)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button) :is(strong,small,span,svg){color:var(--pkr-personal-ink)!important;}
@@ -195,7 +195,7 @@ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-attention button:la
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home .pkr-attendance-card{background:var(--pkr-personal-gain-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-gain-line)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home .pkr-attendance-card :is(h2,h2 svg,.pkr-gn-muted){color:var(--pkr-personal-gain)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-pay{background:var(--pkr-personal-danger-fill)!important;border-color:var(--pkr-personal-danger-fill)!important;}
-html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-receive{background:var(--pkr-personal-primary)!important;border-color:var(--pkr-personal-primary)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-receive{background:var(--pkr-personal-gain-fill)!important;border-color:var(--pkr-personal-gain-fill)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total :is(strong,small,span,svg){color:#FFFFFF!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-record-dialog,.pkr-casino-game-summary){background:var(--pkr-personal-surface)!important;background-image:none!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;}
 html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-record-dialog,.pkr-casino-game-summary) :is(h1,h2,h3,.display){color:var(--pkr-personal-ink)!important;}
@@ -229,5 +229,71 @@ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club .pkr-club-error{b
  @media(max-width:359px){
  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-members-panel .pkr-history-player-card .pkr-history-player-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-members-panel .pkr-history-player-card .pkr-history-player-actions>button:last-child{grid-column:1 / -1!important;}
+ }
+}
+
+/* MIDNIGHT CLUB — a quieter, structured management workspace. Keep the
+   personal-theme gate on every rule, including all decorative changes.
+   The real table, public pages, native iOS canvas and navigation geometry
+   are intentionally untouched. No layout-dependent financial colours. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-heading h2{
+   font-family:var(--font-body),Inter,system-ui,sans-serif!important;
+   font-size:clamp(25px,3.2vw,34px)!important;font-weight:780!important;letter-spacing:-.035em!important;line-height:1.15!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-heading h2 em{
+   font-family:inherit!important;font-style:normal!important;color:var(--pkr-personal-accent)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-heading .pkr-dual-kicker{
+   color:var(--pkr-personal-muted)!important;letter-spacing:.12em!important;font-weight:750!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero,.pkr-gn-game-ticket,.pkr-experience-stage.pkr-experience-players,.pkr-experience-stage.pkr-experience-games,.pkr-results-command-hero,.pkr-results-live-hero){
+   border-radius:18px!important;border:1px solid #526B92!important;box-shadow:0 7px 20px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero-text{
+   max-width:100%!important;padding:clamp(18px,3.1vw,32px)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero h3{
+   font-family:var(--font-body),Inter,system-ui,sans-serif!important;font-size:clamp(26px,4vw,42px)!important;letter-spacing:-.035em!important;line-height:1.15!important;font-weight:800!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-gold-button{
+   background:var(--pkr-personal-gold-fill)!important;background-image:none!important;color:var(--pkr-personal-on-gold)!important;border-color:var(--pkr-personal-gold-fill)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-gold-button :is(span,strong,small,svg){color:var(--pkr-personal-on-gold)!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-outline-button{
+   background:var(--pkr-personal-hero-deep)!important;background-image:none!important;color:var(--pkr-personal-on-dark)!important;border-color:#849FC5!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-nextgame{
+   background:var(--pkr-personal-surface)!important;border:1px solid var(--pkr-personal-line)!important;border-left:4px solid var(--pkr-personal-accent)!important;
+   border-radius:14px!important;box-shadow:0 2px 10px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-nextgame :is(h3,.pkr-dual-kicker){color:var(--pkr-personal-ink)!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-nextgame p{color:var(--pkr-personal-muted)!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics,.pkr-dual-highlights)>button{
+   border:1px solid var(--pkr-personal-line)!important;border-radius:14px!important;box-shadow:0 2px 9px var(--pkr-personal-shadow)!important;
+   padding:clamp(12px,1.5vw,18px)!important;min-width:0!important;overflow-wrap:anywhere!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics,.pkr-dual-highlights)>button>strong{
+   font-variant-numeric:tabular-nums!important;letter-spacing:-.035em!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics,.pkr-dual-highlights)>button:not(:disabled):hover{
+   border-color:var(--pkr-personal-accent-line)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-data-card,.pkr-dual-table-panel,.pkr-dual-coming,.pkr-primary-panel,.pkr-results-card,.pkr-account-card,.pkr-gn-payment-card,.pkr-game-card:not(.is-live),.pkr-club-card,.pkr-gn-crew,.pkr-gn-attention){
+   border-radius:16px!important;box-shadow:0 2px 10px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-tool-grid>button,.pkr-gn-club-links>button,.pkr-dual-quick-grid>button){
+   background:var(--pkr-personal-surface)!important;border:1px solid var(--pkr-personal-line)!important;border-radius:12px!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-quick-grid>button{min-height:0!important;gap:7px!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-quick-grid>button>small{color:var(--pkr-personal-muted)!important;line-height:1.4!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-discovery,.pkr-dual-data-card,.pkr-dual-table-panel,.pkr-dual-coming) .pkr-dual-section-title h3{
+   font-size:clamp(16px,1.5vw,19px)!important;letter-spacing:-.02em!important;color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-leader,.pkr-dual-settlement-grid) .pkr-dual-positive{color:var(--pkr-personal-gain)!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-leader,.pkr-dual-settlement-grid) .pkr-dual-negative{color:var(--pkr-personal-loss)!important}
+ @media(max-width:480px){
+   html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero-buttons{gap:8px!important;display:flex!important;flex-wrap:wrap!important}
+   html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero-buttons>button{flex:1 1 124px!important;min-width:0!important}
  }
 }

@@ -370,7 +370,6 @@ export default function RoomDashboardDual({
           <div className="pkr-dual-hero-image" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
         <RoomOutstandingCard roomId={room.id}/>
-        {featureHub}
         <section className={'pkr-dual-nextgame'+(!featured?' pkr-nextgame-empty':'')}>
           <div><span className="pkr-dual-kicker"><PkrGlyph name="schedule"/> NEXT GAME NIGHT</span>
             <h3>{featured?niceDate(featured.scheduled_at):'No session scheduled'}</h3>
@@ -392,6 +391,7 @@ export default function RoomDashboardDual({
           <button type="button" onClick={goPayments}><span><PkrGlyph name="settle"/> Pending transfers</span><strong>{paymentLabel}</strong><small>{paymentHint}</small></button>
           <RecordMetric bare request={{kind:'games',title:'Settled games',roomId:room.id,filter:'settled'}}><span><PkrGlyph name="history"/> Settled games</span><strong>{settlements.length}</strong><small>Recorded results</small></RecordMetric>
         </div>
+        {featureHub}
         <div className="pkr-dual-data-grid">
           <section className="pkr-dual-data-card">
             <div className="pkr-dual-section-title"><h3><PkrGlyph name="trophy"/> Leaderboard</h3><button onClick={goLeaders}>View all ↗</button></div>
@@ -438,7 +438,6 @@ export default function RoomDashboardDual({
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
-        {featureHub}
         <div className="pkr-dual-highlights">
           <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
           <RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'RSVPs not confirmed going',gameId:featured?.id,filter:'not-confirmed'}}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></RecordMetric>
@@ -505,6 +504,7 @@ export default function RoomDashboardDual({
               </button>):featured?<p className="pkr-dual-empty">RSVPs appear when players respond.</p>:null}
           </div>
         </section>
+        {featureHub}
         <div className="pkr-dual-data-grid pkr-dual-live-tools">
           <section className="pkr-dual-data-card">
             <div className="pkr-dual-section-title"><h3><PkrGlyph name="settle"/> Quick Buy-in</h3><small>Host / co-host · player seat required</small></div>

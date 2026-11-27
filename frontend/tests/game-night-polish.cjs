@@ -173,29 +173,34 @@ async function checkFullDashboards(page,state,label){
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
   assert.equal(await colour(dashboard,'backgroundColor'),'rgba(0, 0, 0, 0)',name+' must expose the shared lounge canvas, not paint a separate panel');
   const canvas=await dashboard.evaluate(node=>{const parent=node.closest('.pkr-app.pkr-dashboard');if(!parent)throw new Error('Dashboard canvas missing');const style=getComputedStyle(parent);return {colour:style.backgroundColor,image:style.backgroundImage};});
-  assert.equal(canvas.colour,'rgb(244, 245, 242)',name+' must share the warm neutral canvas');
+  assert.equal(canvas.colour,'rgb(238, 242, 247)',name+' must share the cool slate canvas');
   assert.equal(canvas.image,'none',name+' must use the neutral canvas');
   const selected=appearance.getByRole('button',{name:new RegExp(name)});
   assert.equal(await selected.getAttribute('aria-pressed'),'true');
-  await waitForColour(page,selected,'backgroundColor','rgb(225, 240, 231)');
-  assert.equal(await colour(selected,'backgroundColor'),'rgb(225, 240, 231)',name+' selected control must use selected forest tint');
-  assert.equal(await colour(selected,'color'),'rgb(22, 94, 66)');
+  await waitForColour(page,selected,'backgroundColor','rgb(224, 233, 250)');
+  assert.equal(await colour(selected,'backgroundColor'),'rgb(224, 233, 250)',name+' selected control must use selected sapphire tint');
+  assert.equal(await colour(selected,'color'),'rgb(37, 73, 139)');
   const search=dashboard.locator('.pkr-dual-search');
   if(await search.isVisible()){
-   assert.equal(await colour(search,'backgroundColor'),'rgb(238, 241, 236)',name+' room search must use neutral raised surface');
-   assert.equal(await colour(search.locator('input'),'color'),'rgb(25, 45, 39)');
-   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(22, 94, 66)');
+   assert.equal(await colour(search,'backgroundColor'),'rgb(229, 235, 244)',name+' room search must use neutral raised surface');
+   assert.equal(await colour(search.locator('input'),'color'),'rgb(20, 35, 59)');
+   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(37, 73, 139)');
   }
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
   assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
+  assert(await dashboard.evaluate((node,mode)=>{
+   const main=node.querySelector(mode==='command'?'.pkr-dual-nextgame':'.pkr-dual-table-panel');
+   const tools=node.querySelector('.pkr-dual-discovery');
+   return !!(main&&tools&&(main.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING));
+  },mode),'Next game or live table must appear before general tools');
   await readable(cards.first().locator('strong'),name+' feature name');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
-  assert.equal(await colour(cta,'backgroundColor'),'rgb(22, 101, 72)',name+' primary action must use forest primary');
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(232, 199, 123)',name+' hero primary action must use restrained gold');
   assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
   await readable(cta,name+' primary action');
   const hero=dashboard.locator('.pkr-dual-hero');
-  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(21, 58, 45)':'rgb(25, 77, 56)',name+' uses a deep club-colour hero, not a white card');
+  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(20, 36, 62)':'rgb(24, 59, 81)',name+' uses a deep club-colour hero, not a white card');
   assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
   await readable(hero.locator('h3'),name+' hero heading');
   const overlays=await hero.evaluate(node=>['::before','::after'].map(p=>{
@@ -225,7 +230,7 @@ async function checkDashboardStatusContrast(page,state,label){
   for(const [kind,title,bg,fg] of [
    ['live','LIVE NOW','rgb(22, 101, 72)','rgb(255, 255, 255)'],
    ['upcoming','UP NEXT','rgb(232, 199, 123)','rgb(50, 37, 13)'],
-   ['empty','NO GAME SCHEDULED','rgb(238, 241, 236)','rgb(25, 45, 39)']
+   ['empty','NO GAME SCHEDULED','rgb(229, 235, 244)','rgb(20, 35, 59)']
   ]){
    state.upcoming=kind!=='empty';state.live=kind==='live';
    for(const mode of ['command','live']){
@@ -289,7 +294,7 @@ async function checkOutstandingDashboardRecords(page){
 async function checkPlayers(page,label){
  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members');
  const stage=page.getByTestId('players-command-stage');await stage.waitFor();
- assert.equal(await colour(stage,'backgroundColor'),'rgb(21, 58, 45)','Players needs a deep forest hero, not a white/grey panel');
+ assert.equal(await colour(stage,'backgroundColor'),'rgb(20, 36, 62)','Players needs a midnight blue hero, not a white/grey panel');
  assert(Number(await colour(stage.locator('h1'),'fontWeight'))>=780,'Players heading should have a clear, bold visual hierarchy');
  await readable(stage.locator('h1'),'Players heading on navy');
  await readable(stage.locator('.pkr-experience-eyebrow'),'Players section label on navy');
@@ -312,8 +317,8 @@ async function checkPlayers(page,label){
  await roster.getByText('🦊',{exact:true}).waitFor();
  assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
  const row=roster.locator(':scope > div').first();await row.hover();
- await waitForColour(page,row,'backgroundColor','rgb(238, 241, 236)');
- assert.equal(await colour(row,'backgroundColor'),'rgb(238, 241, 236)','Hovered member row must not turn old green');
+ await waitForColour(page,row,'backgroundColor','rgb(229, 235, 244)');
+ assert.equal(await colour(row,'backgroundColor'),'rgb(229, 235, 244)','Hovered member row must not turn old green');
  await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
  assert(Number(await colour(row.locator('.pkr-member-history-link strong'),'fontWeight'))>=750,'Player names must be bold and readable');
  const history=row.locator('.pkr-member-history-link');await history.focus();
@@ -493,7 +498,7 @@ async function checkReportedVisualIssues(page,state,label){
   assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
   assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
   const ticket=page.locator('.pkr-gn-game-ticket');
-  assert.equal(await colour(ticket,'backgroundColor'),'rgb(25, 77, 56)','Game Night uses an emerald ticket');
+  assert.equal(await colour(ticket,'backgroundColor'),'rgb(24, 59, 81)','Game Night uses an deep blue ticket');
   await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
  assert(Number(await colour(ticket.locator('.pkr-gn-when h2'),'fontWeight'))>=780,'Game night headline needs a deliberate heavy weight');
  const activeLabel=page.locator('.pkr-primary-bottom-nav button.active small:visible,.pkr-primary-sidebar nav button.active span:visible').first();
@@ -503,7 +508,7 @@ async function checkReportedVisualIssues(page,state,label){
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
   assert.equal(await colour(nav,'backgroundColor'),'rgb(255, 255, 255)','Shared navigation must use opaque neutral navigation');
   const activeNavLabel=page.locator('.pkr-primary-bottom-nav:visible button.active small,.pkr-primary-sidebar:visible nav button.active span').first();
-  assert.equal(await colour(activeNavLabel,'color'),'rgb(22, 94, 66)','Selected label is readable forest ink on soft green');
+  assert.equal(await colour(activeNavLabel,'color'),'rgb(37, 73, 139)','Selected label is readable sapphire ink on pale blue');
   await readable(activeNavLabel,'Selected navigation label');
   await readable(crew.locator('h2'),'Attendance heading');
   await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
@@ -574,11 +579,11 @@ async function checkPersonalAppearance(page,state,label){
    await page.locator(container).first().waitFor();
    await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
    const surface=await colour(page.locator(container).first(),'backgroundColor');
-   assert.equal(surface,'rgb(16, 25, 22)',route+' dark canvas');
+   assert.equal(surface,'rgb(16, 23, 34)',route+' dark canvas');
    const headings=page.locator(heading+':visible');
    if(await headings.count())await readable(headings.first(),route+' dark text');
    const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(16, 30, 25)');
+   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(20, 32, 48)');
    const audit=await page.locator(container).first().evaluate(root=>{
     const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
     const controls=[...root.querySelectorAll('button:not([disabled]),a.btn,summary,input:not([type=hidden]),select,textarea')].filter(visible);
@@ -729,7 +734,7 @@ async function run(){
    await checkSettledResultShare(page,state,label);
    await checkPayments(page,state,label);
    const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
-   assert.equal(canvas.colour,'rgb(244, 245, 242)','Payments shares the lounge canvas');
+   assert.equal(canvas.colour,'rgb(238, 242, 247)','Payments shares the lounge canvas');
    assert.equal(canvas.image,'none','Payments shares the neutral canvas');
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
    await checkPersonalAppearance(page,state,label);

@@ -274,11 +274,11 @@ async function test(){
            mobileMark:pick('.pkr-primary-mobile-mark')?.color||'',
            approval:pick('.pkr-approval-alert')?.backgroundColor||''};
        });
-       if(classicPaint.headline&&classicPaint.headline!=='rgb(22, 94, 66)')
+       if(classicPaint.headline&&classicPaint.headline!=='rgb(37, 73, 139)')
          errors.push(size.name+' Chip Club Game Night headline wrong: '+JSON.stringify(classicPaint));
-       if(classicPaint.primary&&classicPaint.primary!=='rgb(22, 101, 72)')
+       if(classicPaint.primary&&classicPaint.primary!=='rgb(40, 82, 160)')
          errors.push(size.name+' Chip Club Game Night button wrong: '+JSON.stringify(classicPaint));
-       if(classicPaint.approval&&classicPaint.approval!=='rgb(225, 240, 231)')
+       if(classicPaint.approval&&classicPaint.approval!=='rgb(224, 233, 250)')
          errors.push(size.name+' Chip Club approval banner wrong: '+JSON.stringify(classicPaint));
        // The host's payment attention card must show its record text and a
        // genuinely usable Review button, not a narrow blue overflow strip.
@@ -294,7 +294,7 @@ async function test(){
            reviewText:review.textContent?.trim()};
        });
        if(!paymentCard.present||paymentCard.detailsBackground!=='rgba(0, 0, 0, 0)'||
-          paymentCard.reviewBackground!=='rgb(22, 101, 72)'||
+          paymentCard.reviewBackground!=='rgb(40, 82, 160)'||
           paymentCard.review.width<80||paymentCard.reviewText!=='Review'||
           paymentCard.details.left<paymentCard.card.left-1||
           paymentCard.review.right>paymentCard.card.right+1||
@@ -352,11 +352,11 @@ async function test(){
            activeNav:style(selected)?.color||'',
          };
        });
-       if(paint.approvalBackground&&paint.approvalBackground!=='rgb(225, 240, 231)')
+       if(paint.approvalBackground&&paint.approvalBackground!=='rgb(224, 233, 250)')
          errors.push(size.name+' old approval palette remained: '+JSON.stringify(paint));
-       if(paint.approvalButton&&paint.approvalButton!=='rgb(22, 101, 72)')
+       if(paint.approvalButton&&paint.approvalButton!=='rgb(40, 82, 160)')
          errors.push(size.name+' old approval button colour remained: '+JSON.stringify(paint));
-       if(paint.gameButton&&paint.gameButton!=='rgb(22, 101, 72)')
+       if(paint.gameButton&&paint.gameButton!=='rgb(40, 82, 160)')
          errors.push(size.name+' old Game Night primary colour remained: '+JSON.stringify(paint));
      }
      // Publish dashboard before mutation tests (which reopen an archived room).
@@ -396,9 +396,9 @@ async function test(){
        // The Lounge redesign deliberately retires the pale photographic wash.
        // Verify the actual saturated surface, white heading and absence of
        // overlay pseudo-elements, rather than simply removing visual coverage.
-       if(visualContract.heroSurface!=='rgb(21, 58, 45)'||
+       if(visualContract.heroSurface!=='rgb(20, 36, 62)'||
           !visualContract.heroGradient.includes('radial-gradient')||
-          !visualContract.heroGradient.includes('40, 101, 77')||
+          !visualContract.heroGradient.includes('48, 77, 119')||
           visualContract.heroHeading!=='rgb(255, 255, 255)'||
           visualContract.heroArtwork!=='none'||visualContract.heroOverlays.length!==2||
           !visualContract.heroOverlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
@@ -426,8 +426,8 @@ async function test(){
              const title=getComputedStyle(node.querySelector('h1')),paint=getComputedStyle(node);
              return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),font:title.fontFamily};
            });
-           if(livePaint.surface!=='rgb(25, 77, 56)'||livePaint.ink!=='rgb(255, 255, 255)'||livePaint.weight<780||!livePaint.font.toLowerCase().includes('plus jakarta sans'))
-             errors.push(size.name+' Live Results needs a strong emerald hero with bold white heading: '+JSON.stringify(livePaint));
+           if(livePaint.surface!=='rgb(24, 59, 81)'||livePaint.ink!=='rgb(255, 255, 255)'||livePaint.weight<780||!livePaint.font.toLowerCase().includes('plus jakarta sans'))
+             errors.push(size.name+' Live Results needs a deep blue hero with bold white heading: '+JSON.stringify(livePaint));
            await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
            await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
            if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
@@ -633,7 +633,7 @@ async function test(){
          const s=getComputedStyle(node);
          return {colour:s.backgroundColor,image:s.backgroundImage,repeat:s.backgroundRepeat,attachment:s.backgroundAttachment};
        });
-       if(canvas.colour!=='rgb(244, 245, 242)'||canvas.image!=='none')
+       if(canvas.colour!=='rgb(238, 242, 247)'||canvas.image!=='none')
          errors.push(size.name+' '+item.id+' shared lounge canvas missing: '+JSON.stringify(canvas));
      }
      if(item.id==='game-detail'){
@@ -644,7 +644,7 @@ async function test(){
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
            font:heading.fontFamily};
        });
-       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(25, 45, 39)')
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(20, 35, 59)')
          errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
        // Production CSS may shorten white from #ffffff to the equivalent #fff.
        if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('plus jakarta sans'))
@@ -673,11 +673,11 @@ async function test(){
            return {background:getComputedStyle(node).backgroundColor,
              card:card?getComputedStyle(card).backgroundColor:null};
          });
-         if(insightsTheme.background!=='rgb(244, 245, 242)'||insightsTheme.card!=='rgb(255, 255, 255)')
+         if(insightsTheme.background!=='rgb(238, 242, 247)'||insightsTheme.card!=='rgb(255, 255, 255)')
            errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
-         const isCommand=visual.colour==='rgb(21, 58, 45)'&&visual.background.includes('40, 101, 77');
-         const isLive=visual.colour==='rgb(25, 77, 56)'&&visual.background.includes('50, 121, 91');
+         const isCommand=visual.colour==='rgb(20, 36, 62)'&&visual.background.includes('48, 77, 119');
+         const isLive=visual.colour==='rgb(24, 59, 81)'&&visual.background.includes('43, 83, 107');
          if((!isCommand&&!isLive)||!visual.background.includes('radial-gradient')||
             visual.heading!=='rgb(255, 255, 255)'||visual.art!=='none'||
             !visual.overlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
@@ -703,7 +703,7 @@ async function test(){
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
          return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(primary.image!=='none'||!['rgb(22, 101, 72)','rgb(22, 94, 66)'].includes(primary.background)||primary.color!=='rgb(255, 255, 255)'||primary.height<44||primary.width<85)
+       if(primary.image!=='none'||!['rgb(40, 82, 160)','rgb(37, 73, 139)'].includes(primary.background)||primary.color!=='rgb(255, 255, 255)'||primary.height<44||primary.width<85)
          errors.push(size.name+' full dashboard Chip Blue action is unreadable or too small: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
@@ -1106,7 +1106,7 @@ async function test(){
           const name=getComputedStyle(document.querySelector('.pkr-results-ledger-person strong'));
           return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),nameWeight:Number(name.fontWeight)};
         });
-        if(commandPaint.surface!=='rgb(21, 58, 45)'||commandPaint.ink!=='rgb(255, 255, 255)'||commandPaint.weight<780||commandPaint.nameWeight<750)
+        if(commandPaint.surface!=='rgb(20, 36, 62)'||commandPaint.ink!=='rgb(255, 255, 255)'||commandPaint.weight<780||commandPaint.nameWeight<750)
           errors.push(size.name+' Command Centre Results colour or typography hierarchy regressed: '+JSON.stringify(commandPaint));
         if(size.width<=740){
           const winner=await page.locator('.pkr-results-command-stats>div:last-child').evaluate(tile=>{
