@@ -5,6 +5,7 @@ import {useRouter,useSearchParams} from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
 import {api,fmt,type Event} from '@/lib/api';
 import {historyStateForQueryUpdate} from '@/lib/page-scroll';
+import FinancialIntegrityReview from '@/components/FinancialIntegrityReview';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad,type RoomTransferRecord} from '@/lib/room-payment-schedule';
 import {canTakePaymentAction,filterPaymentOverview,paymentRowKey,paymentSummaryRecords,readPaymentOverviewQuery,
  type PaymentAction,type PaymentControlState,type PaymentFilter,type PaymentScope,type PaymentGroup} from '@/lib/payment-overview';
@@ -67,6 +68,7 @@ export default function GameNightPayments(){
  const [actionError,setActionError]=useState('');
  const [busy,setBusy]=useState(false);
  const [visibleLimit,setVisibleLimit]=useState(20);
+ const [integrityOpen,setIntegrityOpen]=useState(false);
  const recordsHeading=useRef<HTMLHeadingElement>(null);
  const [focusRecordGroup,setFocusRecordGroup]=useState<PaymentGroup|null>(null);
 
@@ -88,6 +90,7 @@ export default function GameNightPayments(){
   ||rooms.find(item=>item.status!=='ended')||rooms[0];
  const selectedRoom=room?.id||'';
  const canManage=room?.role==='host'||room?.role==='cohost';
+ useEffect(()=>{setIntegrityOpen(false);},[selectedRoom]);
  const scope:PaymentScope=canManage&&params.get('paymentsScope')==='club'?'club':'mine';
 
  useEffect(()=>{
@@ -327,7 +330,16 @@ export default function GameNightPayments(){
      <button type="button" className="pkr-gn-payment-tools-link" onClick={paymentTools}><span><PaymentIcon name="receipt"/>Ledger &amp; tools</span><PaymentIcon name="arrow"/></button>
      <button type="button" className="pkr-gn-payment-tools-link" onClick={()=>router.push('/results?room='+encodeURIComponent(selectedRoom))}><span>Results &amp; history</span><PaymentIcon name="arrow"/></button>
      {room?.role==='host'&&<button type="button" className="pkr-gn-payment-tools-link" onClick={()=>router.push('/events/'+encodeURIComponent(selectedRoom)+'?tab=night')}><span>Club tools &amp; export</span><PaymentIcon name="arrow"/></button>}
+     {room?.role==='host'&&<button type="button" className="pkr-gn-payment-tools-link"
+      aria-expanded={integrityOpen} aria-controls="pkr-host-integrity-panel"
+      onClick={()=>setIntegrityOpen(value=>!value)}>
+      <span><PaymentIcon name="receipt"/>Saved game integrity review</span>
+      <PaymentIcon name="arrow"/>
+     </button>}
     </div>
+    {room?.role==='host'&&integrityOpen&&<div id="pkr-host-integrity-panel">
+      <FinancialIntegrityReview key={selectedRoom} roomId={selectedRoom}/>
+    </div>}
    </>}
 
   {selectedAction&&<AppDialog className="pkr-gn-payment-dialog" aria-labelledby="pkr-gn-payment-dialog-title" onDismiss={()=>{if(!busy)setSelectedAction(null);}}
