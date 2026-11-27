@@ -110,9 +110,9 @@ export default function GameNightHostHome(p:Props){
           <span><strong>{p.canInvite?'Invite players':'Player profiles'}</strong><small>{p.canInvite?'Add someone to the club':'Your club members'}</small></span>
           <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
         </button>
-        <button type="button" onClick={p.onCalendar}>
+        <button type="button" onClick={p.onRoom}>
           <span className="pkr-gn-quick-icon"><PkrGlyph name="games"/></span>
-          <span><strong>Game calendar</strong><small>Dates and game history</small></span>
+          <span><strong>Game sessions</strong><small>View and manage your tables</small></span>
           <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
         </button>
       </div>
