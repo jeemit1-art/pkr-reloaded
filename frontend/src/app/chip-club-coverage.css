@@ -826,3 +826,12 @@ html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero bu
  font-family:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important;
  }
 }
+
+/* Bank readouts are sometimes moved to an independent overlay. Match them by
+   semantic class/ID as well as by the normal live table ancestor. */
+@layer pkr-theme-priority{
+ html.pkr-chip-club :is(.bank-pill b,.pkr-bank-metric b,#bbIn,#bbOut,#bbBank){
+  font-family:'JetBrains Mono',ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums!important;
+ }
+}

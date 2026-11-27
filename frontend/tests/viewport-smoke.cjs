@@ -796,7 +796,9 @@ async function test(){
          const s=getComputedStyle(node);
          const rail=getComputedStyle(document.querySelector('#tableOuter'));
          return {felt:s.backgroundImage,rail:rail.backgroundImage,railColour:rail.backgroundColor,
-                 moneyFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
+                 moneyFont:getComputedStyle(document.querySelector('#gameScreen #bbIn')).fontFamily,
+                 legacyBankFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
+                 numericMatches:document.querySelectorAll('#gameScreen .bank-pill b').length,
                  feltWidth:node.getBoundingClientRect().width};
        });
        if(!feltTheme.felt.includes('15, 107, 85')||!feltTheme.felt.includes('19, 129, 106')||
