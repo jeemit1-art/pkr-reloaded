@@ -265,7 +265,23 @@ async function test(){
    for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-room-games-intro'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
-     if(item.id==='dashboard')await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+     if(item.id==='dashboard'){
+       await page.locator('[data-testid="game-night-host-home"]').waitFor({state:'visible'});
+       const classicPaint=await page.evaluate(()=>{
+         const pick=s=>{const el=document.querySelector(s);return el?getComputedStyle(el):null;};
+         return {headline:pick('.pkr-gn-page-head h1>span')?.color||'',
+           primary:pick('.pkr-gn-home .pkr-gn-primary')?.backgroundColor||'',
+           mobileMark:pick('.pkr-primary-mobile-mark')?.color||'',
+           approval:pick('.pkr-approval-alert')?.backgroundColor||''};
+       });
+       if(classicPaint.headline&&classicPaint.headline!=='rgb(62, 99, 221)')
+         errors.push(size.name+' Chip Club Game Night headline wrong: '+JSON.stringify(classicPaint));
+       if(classicPaint.primary&&classicPaint.primary!=='rgb(255, 197, 61)')
+         errors.push(size.name+' Chip Club Game Night button wrong: '+JSON.stringify(classicPaint));
+       if(classicPaint.approval&&classicPaint.approval!=='rgb(227, 233, 255)')
+         errors.push(size.name+' Chip Club approval banner wrong: '+JSON.stringify(classicPaint));
+       await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+     }
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // One consistent primary navigation: no stacked sticky banners or lost
