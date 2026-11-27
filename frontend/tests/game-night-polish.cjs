@@ -472,7 +472,7 @@ async function checkFinancialIntegrityReview(page,state,label){
  const review=page.getByTestId('pkr-finance-integrity');
  await review.waitFor({state:'visible'});
  await page.waitForFunction(()=>document.querySelector('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-metrics strong')?.textContent==='2 / 2');
- await review.getByText('No calculation exceptions found in the games reviewed.',{exact:false}).waitFor();
+ await review.getByText('No differences detected against the available figures.',{exact:false}).waitFor();
  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
  assert.equal(await review.getByRole('link',{name:'Open saved game'}).count(),0);
  await screenshot(page,label+'-payments-host-integrity-balanced');
@@ -482,7 +482,12 @@ async function checkFinancialIntegrityReview(page,state,label){
  await page.waitForFunction(()=>document.querySelector('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-metrics strong')?.textContent==='2 / 2'
   && document.querySelectorAll('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-row').length===1);
  assert.equal(await review.getByRole('link',{name:'Open saved game'}).count(),1);
- assert.match(await review.innerText(),/1 net difference/);
+ assert.match(await review.innerText(),/1 saved arithmetic difference/);
+  const details=review.locator('.pkr-finance-integrity-players');
+  assert.equal(await details.count(),1);
+  await details.locator('summary').click();
+  assert.match(await details.innerText(),/Saved buy-in total/);
+  assert.match(await details.innerText(),/Comparison basis/);
  await screenshot(page,label+'-payments-host-integrity-review');
  state.integrityIssue=false;state.memberMode=true;
  await gotoFixturePage(page,BASE+'/payments?room='+room.id);

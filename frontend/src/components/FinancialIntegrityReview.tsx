@@ -91,16 +91,17 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
   <div className="pkr-finance-integrity-heading">
    <div>
     <h3>Saved game integrity</h3>
-    <p>Checks recorded results against saved buy-ins and cash-outs. This is a review aid, not a payment reconciliation or an automatic correction.</p>
+    <p>Checks saved player results and distinguishes arithmetic differences from historical buy-ins that were never recorded. Review evidence before changing any result or payment.</p>
    </div>
    <button type="button" onClick={refresh} disabled={state.loading}>Recheck</button>
   </div>
   <div className="pkr-finance-integrity-metrics" aria-live="polite">
    <span><strong>{state.checked} / {state.total}</strong><small>Games checked</small></span>
    <span><strong>{totals.flagged}</strong><small>Games to review</small></span>
-   <span><strong>{totals.differences}</strong><small>Player differences</small></span>
+   <span><strong>{totals.historical}</strong><small>Unverified buy-in differences</small></span>
    <span><strong>{totals.incomplete}</strong><small>Incomplete players</small></span>
   </div>
+  <p className="pkr-finance-integrity-breakdown">{totals.recorded} differences against recorded buy-ins · {totals.historical} differences against historical estimates. An estimated amount is not proof that a saved net result is wrong.</p>
   {state.loading&&<p role="status" className="pkr-finance-integrity-notice">Checking saved game records. Results are provisional until every game has loaded.</p>}
   {state.error&&<p role="alert" className="pkr-finance-integrity-warning">{state.error} Please retry; do not interpret this as a zero balance.</p>}
   {!state.loading&&incomplete&&state.unavailable.length>0&&
@@ -108,23 +109,43 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
     {state.unavailable.length} saved {state.unavailable.length===1?'game was':'games were'} unavailable. These records have not been verified and must not be treated as balanced.
    </p>}
   {completed&&flagged.length===0&&<p role="status" className="pkr-finance-integrity-notice">
-   No calculation exceptions found in the games reviewed. This does not confirm that any transfer has been received.
+   No differences detected against the available figures. Historical buy-ins may still need evidence; this does not confirm receipt of any transfer.
   </p>}
   {flagged.length>0&&<div className="pkr-finance-integrity-results">
    <h4>Games requiring review</h4>
    {flagged.slice(0,visibleLimit).map(game=>{
     const issues=[
-     game.mismatchPlayers>0?game.mismatchPlayers+' '+(game.mismatchPlayers===1?'net difference':'net differences'):null,
+     game.historicalBasisDifferences>0?game.historicalBasisDifferences+' uncertain historical '+(game.historicalBasisDifferences===1?'buy-in':'buy-ins'):null,
+     game.savedArithmeticDifferences>0?game.savedArithmeticDifferences+' saved arithmetic '+(game.savedArithmeticDifferences===1?'difference':'differences'):null,
      game.missingPlayers>0?game.missingPlayers+' incomplete '+(game.missingPlayers===1?'record':'records'):null,
      game.nonZeroSavedNet?'Saved net total '+aud(game.savedNetCents):null,
      game.inconsistentGameVariance?'Game variance differs from saved player results':null,
      game.emptyPlayerRoster?'No player records':null,
     ].filter(Boolean);
-    return <div key={game.gameId} className="pkr-finance-integrity-row">
+    return <div key={game.gameId} className="pkr-finance-integrity-game">
+      <div className="pkr-finance-integrity-row">
      <span><strong>{gameDate(game.scheduledAt)}</strong>
       <small>{game.playerRecords} {game.playerRecords===1?'player':'players'} · {issues.join(' · ')}</small>
      </span>
      <Link href={'/games/'+encodeURIComponent(game.gameId)}>Open saved game</Link>
+      </div>
+      {game.playerIssues.length>0&&<details className="pkr-finance-integrity-players">
+        <summary>Player records to review ({game.playerIssues.length})</summary>
+        <div className="pkr-finance-integrity-player-list">
+         {game.playerIssues.map((player,index)=><div className="pkr-finance-integrity-player" key={player.key+'-'+index}>
+           <strong>{player.displayName}</strong>
+           <p>{player.explanation}</p>
+           <dl>
+             <div><dt>Buy-ins</dt><dd>{player.buyIns===null?'Unrecorded':player.buyIns}</dd></div>
+             <div><dt>Saved buy-in total</dt><dd>{player.recordedBuyinCents===null?'Missing':aud(player.recordedBuyinCents)}</dd></div>
+             <div><dt>Comparison basis</dt><dd>{player.comparisonBuyinCents===null?'Unavailable':aud(player.comparisonBuyinCents)}{player.buyinSource==='current-default-estimate'?' (current club rate estimate)':''}</dd></div>
+             <div><dt>Cash-out</dt><dd>{player.cashoutCents===null?'Missing':aud(player.cashoutCents)}</dd></div>
+             <div><dt>Saved net</dt><dd>{player.netCents===null?'Missing':aud(player.netCents)}</dd></div>
+             <div><dt>Calculated net</dt><dd>{player.comparisonNetCents===null?'Unavailable':aud(player.comparisonNetCents)}</dd></div>
+           </dl>
+         </div>)}
+        </div>
+      </details>}
     </div>;
    })}
    {flagged.length>visibleLimit&&
@@ -141,6 +162,6 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
     </div>)}
    {state.unavailable.length>10&&<p>Additional unavailable games: {state.unavailable.length-10}</p>}
   </div>}
-  <p className="pkr-finance-integrity-footnote">Read-only. Uses your existing saved game records and the legacy buy-in calculation. Financial changes require separate evidence review and an approved backup. No player records or payment statuses are changed by this check.</p>
+  <p className="pkr-finance-integrity-footnote">Read-only. Historical buy-in comparisons use today's club default when an original amount was not saved, so they are not conclusive. Confirm the original settlement, buy-in and cash-out evidence before correcting records. This check cannot alter players, cash balances, transfers or payment statuses.</p>
  </section>;
 }

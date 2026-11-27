@@ -36,6 +36,9 @@ const mismatch=reviewSettledGame(fixture([
  player('fictional-B',1,5000,2000,-3000),
 ]));
 assert.equal(mismatch.mismatchPlayers,1);
+assert.equal(mismatch.savedArithmeticDifferences,1);
+assert.equal(mismatch.historicalBasisDifferences,0);
+assert.equal(mismatch.playerIssues[0].category,'saved-arithmetic');
 assert.equal(mismatch.nonZeroSavedNet,true);
 assert.equal(mismatch.needsReview,true);
 assert.equal(mismatch.calculatedVarianceCents,0);
@@ -49,11 +52,13 @@ const incomplete=reviewSettledGame(fixture([
  player('fictional-B',1,5000,10000,5000),
 ]));
 assert.equal(incomplete.missingPlayers,1);
+assert.equal(incomplete.playerIssues[0].category,'incomplete');
 assert.equal(incomplete.mismatchPlayers,0);
 assert.equal(incomplete.calculatedVarianceCents,null);
 assert.equal(incomplete.needsReview,true);
 const missingDefault=reviewSettledGame({...fixture([player('A',1,0,5000,0)]),buy_in:undefined});
 assert.equal(missingDefault.missingPlayers,1,'Missing pricing must not be interpreted as a zero buy-in');
+assert.equal(missingDefault.playerIssues[0].category,'unknown-basis');
 const unusual=reviewSettledGame(fixture([
  player('A',1,5000,7000,2000),
  player('B',1,5000,3000,-2000),
@@ -61,8 +66,20 @@ const unusual=reviewSettledGame(fixture([
 assert.equal(unusual.inconsistentGameVariance,true,'Compare saved variance to complete saved player arithmetic');
 assert.throws(()=>reviewSettledGame({...fixture([]),status:'active'}),/unsettled game/);
 assert.throws(()=>reviewSettledGame({...fixture([]),players:null}),/invalid or unsettled/);
-assert.deepEqual(summariseGameIntegrity([balanced,mismatch,incomplete,empty]),{
- checked:4,flagged:3,incomplete:1,differences:1,nonZero:2,
+const historical=reviewSettledGame(fixture([
+ player('fictional-legacy',1,0,8000,1000)
+]));
+assert.equal(historical.historicalBasisDifferences,1);
+assert.equal(historical.savedArithmeticDifferences,0);
+assert.equal(historical.playerIssues[0].category,'historical-basis');
+assert.equal(historical.playerIssues[0].comparisonBuyinCents,5000);
+assert.equal(historical.playerIssues[0].netCents,1000);
+assert.equal(historical.playerIssues[0].comparisonNetCents,3000);
+assert.match(historical.playerIssues[0].explanation,/not proof/);
+const zeroSaved=reviewSettledGame(fixture([player('fictional-zero',1,0,5000,0)]));
+assert.equal(zeroSaved.needsReview,false,'An estimated matching balance is not an arithmetic difference');
+assert.deepEqual(summariseGameIntegrity([balanced,mismatch,incomplete,empty,historical]),{
+ checked:5,flagged:4,incomplete:1,differences:2,historical:1,recorded:1,nonZero:3,
 });
 const page=fs.readFileSync(path.join(root,'src/components/GameNightPayments.tsx'),'utf8');
 const view=fs.readFileSync(path.join(root,'src/components/FinancialIntegrityReview.tsx'),'utf8');
@@ -74,6 +91,8 @@ assert(page.includes("<FinancialIntegrityReview key={selectedRoom} roomId={selec
 assert(view.includes("api.games.list(roomId,'settled')"),'Use authenticated room-scoped saved game list');
 assert(view.includes("api.games.get(game.id)"),'Use existing authenticated saved game API');
 assert(view.includes("start+=4"),'Bound batch size to prevent full-room request fan-out');
+assert(view.includes('pkr-finance-integrity-players'),'Flagged players must be available in host-only evidence panel');
+assert(view.includes('recordedBuyinCents')&&view.includes('comparisonBuyinCents'),'Differentiate saved from estimated historical cost');
 assert(!/api\.games\.(settle|buyin|cashout|setTransferStatus|respondToTransfer|setRsvp)/.test(view),
  'The audit cannot use mutation methods');
 assert(!/fetch\(/.test(view),'The audit cannot access unprotected public APIs');

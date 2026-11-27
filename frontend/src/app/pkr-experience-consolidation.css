@@ -323,3 +323,72 @@ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .gn-player-club-expanded{
   }
  }
 }
+
+/* Financial audit: preserve separate game actions and host-only saved player evidence. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-game{
+  min-width:0!important;
+  border-top:1px solid var(--pkr-personal-line)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-game>.pkr-finance-integrity-row{
+  border-top:0!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-breakdown{
+  padding:8px 11px!important;margin:0 0 13px!important;
+  border-radius:9px!important;background:var(--pkr-personal-raised)!important;
+  font-size:11px!important;line-height:1.5!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-players{
+  min-width:0!important;margin:0 0 13px!important;padding:0!important;
+  border:1px solid var(--pkr-personal-line)!important;
+  border-radius:11px!important;overflow:hidden!important;
+  background:var(--pkr-personal-raised)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-players summary{
+  display:block!important;list-style:none!important;min-height:44px!important;
+  padding:12px 14px!important;cursor:pointer!important;
+  font-size:12px!important;line-height:1.4!important;
+  font-weight:750!important;color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-players summary::-webkit-details-marker{display:none!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-players summary:focus-visible{
+  outline:3px solid var(--pkr-personal-accent)!important;outline-offset:-3px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player-list{
+  min-width:0!important;display:grid!important;gap:9px!important;
+  padding:0 10px 10px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player{
+  padding:12px!important;min-width:0!important;border-radius:9px!important;
+  border:1px solid var(--pkr-personal-line)!important;
+  background:var(--pkr-personal-surface)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player strong{
+  color:var(--pkr-personal-ink)!important;font-size:13px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dl{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;margin:12px 0 0!important;padding:0!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dl>div{
+  display:grid!important;min-width:0!important;gap:3px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dt{
+  color:var(--pkr-personal-muted)!important;font-size:11px!important;line-height:1.4!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dd{
+  margin:0!important;color:var(--pkr-personal-ink)!important;
+  font-size:12px!important;font-weight:650!important;
+  line-height:1.45!important;overflow-wrap:anywhere!important;
+ }
+ @media(max-width:620px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dl{
+   grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+ }
+ @media(max-width:350px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-player dl{
+   grid-template-columns:minmax(0,1fr)!important;
+  }
+ }
+}
