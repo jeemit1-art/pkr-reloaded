@@ -66,6 +66,8 @@ jobs:
         run: npm test
       - name: Verify isolated production player-ledger audit with synthetic records
         run: python3 worker/scripts/test-read-only-player-ledger-audit.py
+      - name: Verify privacy-safe settlement exception inventory with synthetic records
+        run: python3 worker/scripts/test-settlement-exceptions-readonly.py
       - name: Parse browser and inlined poker scripts (no execution)
         run: node worker/scripts/check-browser-scripts.mjs
 
