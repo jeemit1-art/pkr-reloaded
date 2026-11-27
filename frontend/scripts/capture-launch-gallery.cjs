@@ -81,6 +81,21 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
  // Capture that real guidance unchanged; only its exact notice is expected.
  assert.deepEqual(checks.visibleAlerts.filter(notice=>!allowedAlerts.includes(notice)),[],id+' has an unexpected visible error');
  assert.deepEqual(checks.brokenImages,[],id+' has a broken image');
+ // Verify the actual settled first Home route, not just a later appearance switch.
+ if(/^(mobile|tablet|desktop)-home$/.test(id)){
+  const paint=await page.evaluate(()=>{
+   const ticket=document.querySelector('.pkr-gn-game-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
+   return {ticket:ticket?getComputedStyle(ticket).backgroundColor:null,nav:nav?getComputedStyle(nav).backgroundColor:null};
+  });
+  assert.equal(paint.ticket,'rgb(11, 89, 70)',id+' first-load Game Night must use Lounge emerald');
+  assert.equal(paint.nav,'rgb(8, 19, 36)',id+' first-load navigation must use Lounge navy');
+ }
+ if(/^(mobile|tablet|desktop)-(command-centre|live-dashboard)$/.test(id)){
+  const layers=await page.locator('.pkr-dual-hero').evaluate(node=>['::before','::after'].map(p=>{
+   const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
+  }));
+  assert(layers.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),id+' has an overlay hiding the hero: '+JSON.stringify(layers));
+ }
  const png=path.join(OUTPUT,id+'.png');
  await page.screenshot({path:png,fullPage,animations:'disabled'});
  const info=await sharp(png).metadata();

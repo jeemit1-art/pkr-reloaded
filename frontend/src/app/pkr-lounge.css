@@ -4,7 +4,7 @@
    Existing structural CSS and interaction semantics remain fallback layers.
    The first named layer wins for !important declarations. All rules are
    signed-in screen scopes; public pages and record dialogs remain readable. */
-@layer pkr-lounge, pkr-theme-priority;
+@layer pkr-lounge, pkr-theme-priority, pkr-layout, pkr-theme;
 @layer pkr-lounge {
 /* The installed app uses the default opaque, light native iOS status bar.
    Keep that native canvas consistent with the manifest and theme metadata.
@@ -162,6 +162,12 @@ html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero 
   border:1px solid #5877AE!important;
   color:#F2F7FF!important;
 }
+/* Retire the legacy pale photo overlay, which hid the saturated hero. */
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero::before,
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero::after {
+  content:none!important;display:none!important;background:none!important;opacity:0!important;
+}
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text {position:relative!important;z-index:1!important;}
 html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero-live {
   background-color:#0B5946!important;
   background-image:radial-gradient(ellipse at 90% 20%,#19876A 0,transparent 65%),linear-gradient(125deg,#0B5946,#102D3C)!important;

@@ -189,6 +189,10 @@ async function checkFullDashboards(page,state,label){
   assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(19, 44, 83)':'rgb(11, 89, 70)',name+' uses a deep club-colour hero, not a white card');
   assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
   await readable(hero.locator('h3'),name+' hero heading');
+  const overlays=await hero.evaluate(node=>['::before','::after'].map(p=>{
+   const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
+  }));
+  assert(overlays.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),name+' has an overlay hiding the high-contrast hero: '+JSON.stringify(overlays));
   if(mode==='command'){
    const tiles=dashboard.locator('.pkr-dual-metrics>button');
    assert.equal(await tiles.count(),4);
