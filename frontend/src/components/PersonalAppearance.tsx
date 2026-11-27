@@ -1,21 +1,21 @@
 'use client';
 import {createContext,useContext,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
-import {APPEARANCE_KEY,VISUAL_STYLE_KEY,isAppearance,isVisualStyle,isAppearanceRoute,resolvedAppearance,type AppearancePreference,type VisualStyle} from '@/lib/personal-appearance';
+import {APPEARANCE_KEY,VISUAL_STYLE_KEY,DEFAULT_VISUAL_STYLE,isAppearance,isVisualStyle,isAppearanceRoute,resolvedAppearance,type AppearancePreference,type VisualStyle} from '@/lib/personal-appearance';
 
 type AppearanceContext={
  preference:AppearancePreference;choose:(value:AppearancePreference)=>void;
  visualStyle:VisualStyle;chooseStyle:(value:VisualStyle)=>void;ready:boolean;
 };
-const Context=createContext<AppearanceContext>({preference:'light',choose:()=>{},visualStyle:'standard',chooseStyle:()=>{},ready:false});
+const Context=createContext<AppearanceContext>({preference:'light',choose:()=>{},visualStyle:DEFAULT_VISUAL_STYLE,chooseStyle:()=>{},ready:false});
 
 export function PersonalAppearanceProvider({children}:{children:ReactNode}){
  const pathname=usePathname()||'';
  const [preference,setPreference]=useState<AppearancePreference>('light');
- const [visualStyle,setVisualStyle]=useState<VisualStyle>('standard');
+ const [visualStyle,setVisualStyle]=useState<VisualStyle>(DEFAULT_VISUAL_STYLE);
  const [ready,setReady]=useState(false);
  const current=useRef<AppearancePreference>('light');
- const currentStyle=useRef<VisualStyle>('standard');
+ const currentStyle=useRef<VisualStyle>(DEFAULT_VISUAL_STYLE);
  const apply=useRef<()=>void>(()=>{});
  useLayoutEffect(()=>{
   try{
@@ -47,7 +47,7 @@ export function PersonalAppearanceProvider({children}:{children:ReactNode}){
    }
    if(event.key===VISUAL_STYLE_KEY||event.key===null){
     const next=event.key===null?null:event.newValue;
-    currentStyle.current=isVisualStyle(next)?next:'standard';
+    currentStyle.current=isVisualStyle(next)?next:DEFAULT_VISUAL_STYLE;
    }
    sync();
   };
