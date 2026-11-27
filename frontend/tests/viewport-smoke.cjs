@@ -280,6 +280,26 @@ async function test(){
          errors.push(size.name+' Chip Club Game Night button wrong: '+JSON.stringify(classicPaint));
        if(classicPaint.approval&&classicPaint.approval!=='rgb(227, 233, 255)')
          errors.push(size.name+' Chip Club approval banner wrong: '+JSON.stringify(classicPaint));
+       // The host's payment attention card must show its record text and a
+       // genuinely usable Review button, not a narrow blue overflow strip.
+       const paymentCard=await page.evaluate(()=>{
+         const card=document.querySelector('.pkr-gn-attention');
+         const details=card?.querySelector('.pkr-gn-attention-record');
+         const review=card?.querySelector('button:last-child');
+         if(!card||!details||!review)return {present:false};
+         const box=el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,top:b.top,bottom:b.bottom};};
+         return {present:true,card:box(card),details:box(details),review:box(review),
+           detailsBackground:getComputedStyle(details).backgroundColor,
+           reviewBackground:getComputedStyle(review).backgroundColor,
+           reviewText:review.textContent?.trim()};
+       });
+       if(!paymentCard.present||paymentCard.detailsBackground!=='rgba(0, 0, 0, 0)'||
+          paymentCard.reviewBackground!=='rgb(62, 99, 221)'||
+          paymentCard.review.width<80||paymentCard.reviewText!=='Review'||
+          paymentCard.details.left<paymentCard.card.left-1||
+          paymentCard.review.right>paymentCard.card.right+1||
+          paymentCard.details.right>paymentCard.review.left+1&&size.width>500)
+         errors.push(size.name+' host payment Review card has clipped/overlapping content: '+JSON.stringify(paymentCard));
        await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
      }
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
