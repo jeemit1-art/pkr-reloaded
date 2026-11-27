@@ -72,19 +72,33 @@ const styles:Array<{id:VisualStyle;name:string;description:string}>=[
  {id:'noir',name:'PKR Noir',description:'Charcoal and champagne gold'},
  {id:'clubhouse',name:'Clubhouse',description:'Traditional poker-club warmth'},
  {id:'studio',name:'PKR Studio',description:'Clean, modern and minimal'},
+ {id:'luxe',name:'Luxe Casino',description:'Emerald felt, golden chips and an elegant casino floor'},
+ {id:'neon',name:'Neon Casino',description:'Glowing violet, electric cyan and vivid pink casino lights'},
+ {id:'vip',name:'VIP Lounge',description:'Burgundy velvet, bronze details and champagne gold'},
+ {id:'tournament',name:'Playful Tournament',description:'Bright red, teal, trophies and colourful game-night energy'},
 ];
 export function PersonalAppearanceSettings(){
  const {preference,choose,visualStyle,chooseStyle,ready}=useContext(Context);
  return <section className="pkr-primary-panel pkr-personal-appearance" data-testid="personal-appearance">
   <h2>App appearance</h2>
   <p>Select the look you prefer. Theme and colour mode are personal to this device; the host's shared club layout is a separate setting.</p>
-  <h3>Theme style</h3>
-  <div className="pkr-visual-style-options" role="group" aria-label="App visual theme">
-   {styles.map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
+  <h3>Casino experiences</h3>
+  <p className="pkr-appearance-intro">Four distinct looks inspired by the approved casino concepts. Your games, results and payment records stay exactly as they are.</p>
+  <div className="pkr-visual-style-options pkr-visual-style-casino" role="group" aria-label="Casino themes">
+   {styles.filter(option=>['luxe','neon','vip','tournament'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
      disabled={!ready} onClick={()=>chooseStyle(option.id)} data-style-option={option.id}>
     <span className={'pkr-theme-style-swatch pkr-theme-style-'+option.id} aria-hidden="true">
      <i/><i/><i/>
     </span>
+    <span className="pkr-theme-style-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
+    <span className="pkr-theme-style-check" aria-hidden="true">{visualStyle===option.id?'✓':''}</span>
+   </button>)}
+  </div>
+  <h3>Original PKR looks</h3>
+  <div className="pkr-visual-style-options pkr-visual-style-original" role="group" aria-label="Original themes">
+   {styles.filter(option=>['standard','noir','clubhouse','studio'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
+     disabled={!ready} onClick={()=>chooseStyle(option.id)} data-style-option={option.id}>
+    <span className={'pkr-theme-style-swatch pkr-theme-style-'+option.id} aria-hidden="true"><i/><i/><i/></span>
     <span className="pkr-theme-style-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
     <span className="pkr-theme-style-check" aria-hidden="true">{visualStyle===option.id?'✓':''}</span>
    </button>)}
