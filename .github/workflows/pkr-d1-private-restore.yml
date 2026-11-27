@@ -1,0 +1,88 @@
+name: PKR private D1 backup and independent restore rehearsal
+
+# The initial checked-in workflow runs once on main to verify the current
+# production export in an isolated SQLite memory restore, with no D1 writes.
+# Later runs are explicitly owner-dispatched. Nothing is uploaded as an artifact.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pkr-d1-private-restore.yml'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Database whose private snapshot will be verified'
+        required: true
+        type: choice
+        options: [staging, production]
+        default: staging
+      confirm_read_only:
+        description: 'Confirm private export, memory restore and read-only comparison'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkr-private-d1-restore
+  cancel-in-progress: false
+
+jobs:
+  restore-rehearsal:
+    if: >-
+      ${{ github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'workflow_dispatch' && inputs.confirm_read_only)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: worker
+    env:
+      CI: 'true'
+      CLOUDFLARE_ACCOUNT_ID: '4b4794b983d6966f4207d2ff4fd8c991'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      PKR_REHEARSAL_TARGET: ${{ github.event_name == 'push' && 'production' || inputs.target }}
+    steps:
+      - name: Checkout exact reviewed main commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate private export credentials are configured
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::Missing Cloudflare Actions secret. Configure a scoped token; no live database data was changed."
+            exit 1
+          fi
+          case "$PKR_REHEARSAL_TARGET" in
+            production|staging) ;;
+            *) echo "::error::Invalid explicitly reviewed D1 target"; exit 1 ;;
+          esac
+      - name: Install locked Worker CLI and dependencies
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install required packages without a deployment
+        run: npm ci --no-audit --no-fund
+      - name: Verify synthetic restore and privacy-safe fallback behaviour
+        run: |
+          python3 scripts/test-restore-preflight.py
+          python3 scripts/test-d1-api-export-fallback-ci.py
+          python3 scripts/test-d1-export-diagnostic-ci.py
+      - name: Export the selected D1 privately and independently restore to isolated memory
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 scripts/preflight-club-release.py "$PKR_REHEARSAL_TARGET"
+      - name: Confirm immutable production database was never targeted for writes
+        run: |
+          echo "Private restore rehearsal completed. Export is deleted by the Python tempfile context."
+          echo "No D1 import, schema mutation, payment status change, source database restore or customer-data artifact was performed."
+
+# No production D1 write credentials are used by the rehearsal Python script.
+# All source queries are SELECT/PRAGMA and the migrations run in local memory only.
