@@ -300,6 +300,29 @@ async function test(){
        }else if(nav.mobile||!nav.sidebar)
          errors.push(size.name+' '+item.id+' desktop navigation mismatch '+JSON.stringify(nav));
      }
+     // Chip Club visual contract: classic Game Night must not keep the old coral
+     // approval action, home primary button or active bottom navigation.
+     if(item.id==='dashboard'){
+       const paint=await page.evaluate(()=>{
+         const alert=document.querySelector('.pkr-approval-alert');
+         const primary=alert?.querySelector('.btn-primary');
+         const game=document.querySelector('.pkr-gn-home .pkr-gn-primary');
+         const selected=document.querySelector('.pkr-primary-bottom-nav button.active');
+         const style=el=>el?getComputedStyle(el):null;
+         return {
+           approvalBackground:style(alert)?.backgroundColor||'',
+           approvalButton:style(primary)?.backgroundColor||'',
+           gameButton:style(game)?.backgroundColor||'',
+           activeNav:style(selected)?.color||'',
+         };
+       });
+       if(paint.approvalBackground&&paint.approvalBackground!=='rgb(227, 233, 255)')
+         errors.push(size.name+' old approval palette remained: '+JSON.stringify(paint));
+       if(paint.approvalButton&&paint.approvalButton!=='rgb(62, 99, 221)')
+         errors.push(size.name+' old approval button colour remained: '+JSON.stringify(paint));
+       if(paint.gameButton&&paint.gameButton!=='rgb(255, 197, 61)')
+         errors.push(size.name+' old Game Night primary colour remained: '+JSON.stringify(paint));
+     }
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
