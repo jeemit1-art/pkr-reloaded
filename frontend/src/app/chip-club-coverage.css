@@ -807,3 +807,22 @@ html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero bu
  html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-message.error{background:#FBDAD8!important;color:#8E1B12!important;border-color:#C9302C!important}
  html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-message.success{background:#D7F2E4!important;color:#075D39!important;border-color:#0E7C4F!important}
 }
+
+/* Numeral and heading font hardening for legacy inline/fallback font variables. */
+@layer pkr-theme-priority{
+ html.pkr-game-night.pkr-chip-club{
+ --font-num:'JetBrains Mono',ui-monospace,monospace!important;
+ --font-ui:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important;
+ }
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table{
+ --font-num:'JetBrains Mono',ui-monospace,monospace!important;
+ }
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table :is(#bbIn,#bbOut,#bbBank,.bank-pill b,.pkr-bank-metric b){
+ font-family:'JetBrains Mono',ui-monospace,monospace!important;
+ font-variant-numeric:tabular-nums!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-app.pkr-game-detail .pkr-casino-game-summary :is(h1,h2,.display),
+ html.pkr-game-night.pkr-chip-club body .pkr-casino-game-summary :is(h1,h2,.display){
+ font-family:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important;
+ }
+}
