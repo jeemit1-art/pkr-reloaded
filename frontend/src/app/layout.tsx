@@ -14,6 +14,7 @@ import './game-night-player.css';
 import './game-night-live.css';
 import './game-night-complete.css';
 import './game-night-shell.css';
+import './chip-club.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -55,7 +56,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU" className={`pkr-game-night ${bodyFont.variable}`}>
+    <html lang="en-AU" className={`pkr-game-night pkr-chip-club ${bodyFont.variable}`}>
       <body>
         <AppExperience>
         <PersistentNavigation/>
