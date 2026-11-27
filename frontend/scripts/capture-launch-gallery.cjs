@@ -84,11 +84,17 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
  const png=path.join(OUTPUT,id+'.png');
  await page.screenshot({path:png,fullPage,animations:'disabled'});
  const info=await sharp(png).metadata();
- const webp=path.join(PUBLIC,id+'.webp');
- await sharp(png).webp({quality:85,effort:6}).toFile(webp);
- fs.copyFileSync(webp,path.join(OUTPUT,id+'.webp'));
+ // WebP cannot encode a dimension above 16,383 pixels. Keep tall homepage
+ // captures as the original PNG so the evidence is never scaled or cropped.
+ const webImage=id+(info.width>16383||info.height>16383?'.png':'.webp');
+ const webPath=path.join(PUBLIC,webImage);
+ if(webImage.endsWith('.png'))fs.copyFileSync(png,webPath);
+ else{
+  await sharp(png).webp({quality:85,effort:6}).toFile(webPath);
+  fs.copyFileSync(webPath,path.join(OUTPUT,webImage));
+ }
  const screen={id,title,category,viewport:{width:size.width,height:size.height},width:info.width,height:info.height,
-  image:id+'.png',webImage:id+'.webp',publicPath:'/demo/launch-20261127/'+id+'.webp',route:sourceRoute||new URL(page.url()).pathname+new URL(page.url()).search};
+  image:id+'.png',webImage,publicPath:'/demo/launch-20261127/'+webImage,route:sourceRoute||new URL(page.url()).pathname+new URL(page.url()).search};
  manifest.screens.push(screen);manifest.checks.push({id,...checks,allowedAlerts});
  console.log('CAPTURE '+id+' '+info.width+'x'+info.height);
 }
