@@ -18,8 +18,8 @@ function makeFixture(){
        return {
          async first(){
            if(sql.includes('SELECT role FROM event_members'))return {role:'host'};
-           if(sql.includes('SELECT id,user_id FROM group_phone_contacts'))
-             return state.contact?{id:state.contact.id,user_id:state.contact.user_id}:null;
+           if(sql.includes('SELECT id,user_id,display_name FROM group_phone_contacts'))
+             return state.contact?{id:state.contact.id,user_id:state.contact.user_id,display_name:state.contact.display_name}:null;
            if(sql.includes('SELECT name FROM events WHERE id'))return {name:'Friday Poker Club'};
            if(sql.includes('JOIN group_phone_contacts c')&&sql.includes('group_phone_invites i')){
              if(!state.invite||!state.contact)return null;
@@ -34,6 +34,10 @@ function makeFixture(){
              state.contact={id:args[0],event_id:args[1],display_name:args[2],
                phone_lookup:args[3],phone_cipher:args[4],user_id:null};
              state.changed++;return {meta:{changes:1}};
+           }
+           if(sql.includes('UPDATE group_phone_contacts SET display_name=')){
+             if(!state.contact||state.contact.user_id!==null)return {meta:{changes:0}};
+             state.contact.display_name=args[0];return {meta:{changes:1}};
            }
            if(sql.includes('DELETE FROM group_phone_invites')){
              state.invite=null;return {meta:{changes:1}};
