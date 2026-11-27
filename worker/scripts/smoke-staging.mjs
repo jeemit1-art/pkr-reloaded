@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const WORKER = 'https://pkr-reloaded-worker-staging.jeemit1.workers.dev';
-const FRONTEND = 'https://pkr-reloaded-git-codex-pkr-product-b49f4c-jeemit1-arts-projects.vercel.app';
+const FRONTEND = 'https://pkr-reloaded-git-codex-pkr-unified-f830c3-jeemit1-arts-projects.vercel.app';
 const source = readFileSync(new URL('../wrangler.staging.toml', import.meta.url), 'utf8');
 
 function configVar(key) {
