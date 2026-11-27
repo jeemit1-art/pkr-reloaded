@@ -46,6 +46,7 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
       a.id.localeCompare(b.id));
     if(cancelled())return;
     setState(previous=>({...previous,total:ordered.length}));
+    if(!ordered.length){setState({loading:false,checked:0,total:0,summaries:[],unavailable:[],error:''});return;}
     const summaries:GameIntegritySummary[]=[];
     const unavailable:Unavailable[]=[];
     // Bounded concurrency: four existing authenticated read-only requests,
