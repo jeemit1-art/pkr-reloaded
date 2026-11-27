@@ -1,5 +1,7 @@
 export type AppearancePreference='light'|'dark'|'system';
 export type VisualStyle='standard'|'noir'|'clubhouse'|'studio';
+// New users get the approved premium look; a previously selected style always wins.
+export const DEFAULT_VISUAL_STYLE:VisualStyle='noir';
 export const APPEARANCE_KEY='pkr_personal_appearance_v1';
 export const VISUAL_STYLE_KEY='pkr_personal_visual_style_v1';
 export function isAppearance(value:unknown):value is AppearancePreference{
