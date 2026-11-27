@@ -6,5 +6,5 @@
  const mode=stored==='dark'||(stored==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
  const style=localStorage.getItem('pkr_personal_visual_style_v1');
  document.documentElement.setAttribute('data-pkr-personal-theme',mode);
- document.documentElement.setAttribute('data-pkr-personal-style',style==='noir'||style==='clubhouse'||style==='studio'?style:'standard');
+ document.documentElement.setAttribute('data-pkr-personal-style',style==='standard'||style==='noir'||style==='clubhouse'||style==='studio'?style:'noir');
 }catch{/* Storage can be blocked; the React provider retains safe defaults. */}})();
