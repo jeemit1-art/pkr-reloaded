@@ -85,7 +85,8 @@ assert(!accountDashboard.includes('ONE PKR EXPERIENCE'),'Do not restore the dupl
 assert(home.includes("game?p.onGame:p.onRoom"),'Current game should be accessible directly from Home');
 assert(!home.includes('Full dashboard</button>'),'Do not duplicate the Home view toggle in utility shortcuts');
 assert(player.includes('gn-player-more-list'),'Players must retain direct access to existing shortcuts');
-assert(premiumCss.includes('.gn-player-more-list>button'),'Player shortcuts must have consistent theme styling');
+const experienceCss=fs.readFileSync(path.join(app,'pkr-experience-consolidation.css'),'utf8');
+assert(experienceCss.includes('.gn-player-more-list>button'),'Player shortcuts must have consistent theme styling');
 const dashboard=fs.readFileSync(path.join(root,'src/components/RoomDashboardDual.tsx'),'utf8');
 assert.equal(dashboard.split('{featureHub}').length-1,2,'Each dashboard view should include exactly one shortcuts hub');
 console.log('PASS premium themes: palettes, Account preferences, host preview isolation, host/player navigation and game-data boundaries');
