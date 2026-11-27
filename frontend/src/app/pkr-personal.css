@@ -106,6 +106,36 @@ html[data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){--pkr-personal-canva
   html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.modal-sheet,.pkr-record-sheet,.pkr-record-dialog .pkr-record-panel,.pkr-native-dialog>div){
     background-color:var(--pkr-personal-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;
   }
+  /* Inactive data is still information. Do not fade saved figures or labels.
+     Disabled action controls remain disabled, with an explicit neutral surface. */
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-record-action,.pkr-metric-trigger):disabled{
+    opacity:1!important;filter:none!important;cursor:default!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root button:disabled:not(.pkr-record-action):not(.pkr-metric-trigger):not(.active):not([aria-pressed=true]){
+    opacity:1!important;filter:none!important;cursor:not-allowed!important;background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-muted)!important;border-color:var(--pkr-personal-control)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-table-panel,.pkr-dual-coming,.pkr-dual-data-card){
+    background:var(--pkr-personal-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-section-title>h3{color:var(--pkr-personal-ink)!important}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-section-title>small{color:var(--pkr-personal-muted)!important}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-section-title>button{color:var(--pkr-personal-accent)!important;min-height:44px}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-panel-actions .pkr-dual-table-count{
+    background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;border:1px solid var(--pkr-personal-control)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-panel-actions .pkr-dual-table-open{
+    background:var(--pkr-personal-primary)!important;color:var(--pkr-personal-on-dark)!important;border:1px solid var(--pkr-personal-primary)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-table-status,.pkr-dual-no-rsvps,.pkr-dual-coming>p,.pkr-dual-stage-note,.pkr-dual-attendance-summary>button){
+    color:var(--pkr-personal-muted)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-felt{
+    background-color:var(--pkr-personal-hero-live)!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-felt :is(.pkr-dual-felt-empty,.pkr-dual-felt-record,.pkr-dual-felt-record strong){
+    color:var(--pkr-personal-on-dark)!important;opacity:1!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-felt>small{color:var(--pkr-personal-on-dark-muted)!important}
   /* Overflow: allow content to grow instead of hiding the overflow.
      Preserve intentionally horizontal date selectors and data tables, and
      the separately controlled navigation/title geometry. */

@@ -447,16 +447,18 @@ export default function RoomDashboardDual({
         </div>
         <section className="pkr-dual-table-panel">
           <div className="pkr-dual-section-title"><h3><i className="pkr-dual-live-dot"/> Live Table Snapshot</h3>
-            <div className="pkr-dual-panel-actions"><RecordMetric bare className="pkr-dual-table-count" disabled={!featured}
-              request={{kind:'seats',title:'Table seats',gameId:featured?.id}}>{seated.length} / {featured?.seats||0} PLAYERS</RecordMetric>
-              <button type="button" onClick={active?openTable:openGame} disabled={!featured}>View table ↗</button></div></div>
+            <div className="pkr-dual-panel-actions">{featured?<>
+              <RecordMetric bare className="pkr-dual-table-count"
+                request={{kind:'seats',title:'Table seats',gameId:featured.id}}>{gameDetail?.id===featured.id?seated.length+' / '+featured.seats+' players':featured.seats+' seats'}</RecordMetric>
+              <button className="pkr-dual-table-open" type="button" onClick={active?openTable:openGame}>View table <span aria-hidden="true">↗</span></button>
+            </>:canManageGames?<button className="pkr-dual-table-open" type="button" onClick={goCreate}>Schedule a game</button>:<span className="pkr-dual-table-status">No game scheduled</span>}</div></div>
           <div className={'pkr-dual-felt-stage'+(seatCount>9?' pkr-dual-dense':'')} aria-label="Read-only seating preview">
             <div className="pkr-dual-felt">
               <span><PkrGlyph name="spade" size={16}/> <PkrGlyph name="heart" size={16}/> <PkrGlyph name="club" size={16}/> <PkrGlyph name="diamond" size={16}/></span>
               <small>{active?'RECORDED BUY-INS':'NEXT GAME SEATING'}</small>
-              <RecordMetric bare className="pkr-dual-felt-record" disabled={!featured}
-                request={active?{kind:'players',title:'Recorded buy-ins',gameId:active.id,measure:'buyins'}:{kind:'seats',title:'Table seats',gameId:featured?.id}}>
-                <strong>{active?(totalBuyins===null?'—':fmt(totalBuyins)):seatText}</strong></RecordMetric>
+              {featured?<RecordMetric bare className="pkr-dual-felt-record"
+                request={active?{kind:'players',title:'Recorded buy-ins',gameId:active.id,measure:'buyins'}:{kind:'seats',title:'Table seats',gameId:featured.id}}>
+                <strong>{active?(totalBuyins===null?'—':fmt(totalBuyins)):seatText}</strong></RecordMetric>:<strong className="pkr-dual-felt-empty">No scheduled game</strong>}
               <b><PkrGlyph name="spade" size={16}/> PKR <PkrGlyph name="spade" size={16}/></b>
             </div>
             {featured&&displaySeats.map((item)=>item.player?
@@ -490,17 +492,17 @@ export default function RoomDashboardDual({
             </button>)}</div>}
         </section>
         <section className="pkr-dual-coming">
-          <div className="pkr-dual-section-title"><h3>Who's Coming?</h3><button type="button" onClick={goRsvp} disabled={!featured}>See all RSVPs ↗</button></div>
-          <p><RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:featured?.id,filter:'yes'}}>{going.length} confirmed</RecordMetric>
-            {' · '}<RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'Interested RSVPs',gameId:featured?.id,filter:'maybe'}}>{maybe.length} maybe</RecordMetric>
-            {' · '}<RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'All RSVP responses',gameId:featured?.id}}>{rsvps.length} recorded responses</RecordMetric></p>
+          <div className="pkr-dual-section-title"><h3>Who's Coming?</h3>{featured&&<button type="button" onClick={goRsvp}>See all RSVPs ↗</button>}</div>
+          {featured?<p className="pkr-dual-attendance-summary"><RecordMetric bare request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:featured.id,filter:'yes'}}>{going.length} confirmed</RecordMetric>
+            <RecordMetric bare request={{kind:'rsvps',title:'Interested RSVPs',gameId:featured.id,filter:'maybe'}}>{maybe.length} maybe</RecordMetric>
+            <RecordMetric bare request={{kind:'rsvps',title:'All RSVP responses',gameId:featured.id}}>{rsvps.length} recorded responses</RecordMetric></p>:<p className="pkr-dual-no-rsvps">No game is scheduled. Attendance will appear once a game is created.</p>}
           <div className="pkr-dual-coming-grid">
-            {rsvps.length?rsvps.slice(0,16).map(r=>
+            {featured&&rsvps.length?rsvps.slice(0,16).map(r=>
               <button type="button" key={r.id} onClick={goRsvp}>
                 <PlayerAvatar name={r.display_name} image={nameAvatar(r.display_name)} size="small"/>
                 <strong>{r.display_name}</strong>
                 <small className={'pkr-dual-rsvp-'+r.status}>{r.status==='yes'?'Going':r.status==='maybe'?'Maybe':'Not coming'}</small>
-              </button>):<p className="pkr-dual-empty">RSVPs appear when players respond.</p>}
+              </button>):featured?<p className="pkr-dual-empty">RSVPs appear when players respond.</p>:null}
           </div>
         </section>
         <div className="pkr-dual-data-grid pkr-dual-live-tools">

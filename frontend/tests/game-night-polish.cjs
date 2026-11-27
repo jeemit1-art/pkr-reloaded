@@ -621,6 +621,76 @@ async function checkPersonalAppearance(page,state,label){
  await page.setViewportSize(original);
 }
 
+// Regression for the reported iPhone/PWA snapshot: check the actual text
+// ranges, not only document width. An overflowing label can be entirely
+// inside the viewport and still overlap the adjacent action.
+async function checkDashboardCardReadability(page,state,label){
+ const original=page.viewportSize();
+ try{
+  state.layout='live';state.live=false;
+  for(const mode of ['light','dark']){
+   await gotoFixturePage(page,BASE+'/account');
+   await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:mode==='light'?'Light':'Dark',exact:true}).click();
+   await page.waitForFunction(value=>document.documentElement.dataset.pkrPersonalTheme===value,mode);
+   for(const upcoming of [false,true]){
+    state.upcoming=upcoming;
+    await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+    const panel=page.locator('.pkr-dual-table-panel');
+    await panel.waitFor();
+    if(upcoming){
+     await panel.getByRole('button',{name:'View underlying records: Table seats',exact:true}).first().waitFor();
+     await page.waitForFunction(()=>document.querySelector('.pkr-dual-table-count')?.textContent.includes('players'));
+    }else{
+     assert.equal(await panel.getByRole('button',{name:/View table/}).count(),0);
+     assert.equal(await panel.locator('.pkr-dual-table-count').count(),0);
+     assert.equal(await page.getByRole('button',{name:/See all RSVPs/}).count(),0);
+     await panel.getByRole('button',{name:'Schedule a game',exact:true}).waitFor();
+     await readable(panel.locator('.pkr-dual-felt-empty'),'Empty felt message '+mode);
+     await readable(page.locator('.pkr-dual-no-rsvps'),'Empty attendance '+mode);
+    }
+    for(const width of [320,375,430,768,1024,1440]){
+     await page.setViewportSize({width,height:original.height});
+     await page.waitForTimeout(100);
+     const issues=await page.locator('.pkr-dual-root').evaluate(root=>{
+      const issues=[],visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
+      for(const row of root.querySelectorAll('.pkr-dual-section-title,.pkr-dual-panel-actions,.pkr-dual-attendance-summary')){
+       if(!visible(row))continue;
+       const children=[...row.children].filter(visible),parent=row.getBoundingClientRect();
+       for(const child of children){
+        const b=child.getBoundingClientRect();
+        if(b.left<parent.left-2||b.right>parent.right+2||b.top<parent.top-2||b.bottom>parent.bottom+2)issues.push('outside header '+child.textContent);
+        if(child.matches('button,h3,small,span')){
+         const range=document.createRange();range.selectNodeContents(child);
+         for(const rect of range.getClientRects()){
+          if(rect.width>0&&(rect.left<b.left-2||rect.right>b.right+2||rect.top<b.top-2||rect.bottom>b.bottom+2))issues.push('clipped text '+child.textContent);
+         }
+        }
+       }
+       for(let a=0;a<children.length;a++)for(let b=a+1;b<children.length;b++){
+        const x=children[a].getBoundingClientRect(),y=children[b].getBoundingClientRect();
+        if(Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2)issues.push('overlap '+children[a].textContent+' / '+children[b].textContent);
+       }
+      }
+      return issues;
+     });
+     assert.deepEqual(issues,[],label+' '+mode+' '+width+' upcoming='+upcoming+' internal header geometry');
+     await readable(panel.locator('h3'),'Snapshot title '+mode);
+     for(const button of await panel.locator('.pkr-dual-panel-actions>button').all())await readable(button,'Snapshot action '+mode);
+     if(upcoming)for(const button of await page.locator('.pkr-dual-attendance-summary>button').all())await readable(button,'RSVP metric '+mode);
+     if(width===430)await screenshot(page,label+'-snapshot-'+mode+'-'+(upcoming?'scheduled':'empty'));
+    }
+    assert.equal(await panel.locator('.pkr-dual-panel-actions button:disabled').count(),0);
+   }
+  }
+ }finally{
+  state.upcoming=true;state.live=false;state.layout='command';
+  await page.setViewportSize(original);
+  await gotoFixturePage(page,BASE+'/account');
+  await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Light',exact:true}).click();
+ }
+}
+
 async function run(){
  const failures=[];
  for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
@@ -643,6 +713,12 @@ async function run(){
   page.on('pageerror',error=>unexpected.push(new Date().toISOString()+' '+page.url()+': '+(error.stack||error.message)));
   page.on('requestfailed',request=>{if(new URL(request.url()).origin===API)requestFailures.push({at:new Date().toISOString(),page:page.url(),url:request.url(),method:request.method(),error:request.failure()?.errorText});});
   try{
+   if(process.argv.includes('--dashboard-overflow')){
+    await checkDashboardCardReadability(page,state,label);
+    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
+    console.log('PASS',label,'empty and scheduled dashboard card bounds and contrast');
+    continue;
+   }
    await checkFullDashboards(page,state,label);
    await checkDashboardStatusContrast(page,state,label);
    await checkOutstandingDashboardRecords(page);

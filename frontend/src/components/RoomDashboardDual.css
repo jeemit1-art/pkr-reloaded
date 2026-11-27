@@ -124,7 +124,13 @@
 .pkr-dual-outline-button{border:1px solid #4a7764;background:#102a23aa;color:#d5ebd7}
 .pkr-dual-hero-image{position:absolute;right:5%;top:15%;font-size:120px;opacity:.13;color:#e7ba79;pointer-events:none}
 .pkr-dual-block{display:flex;flex-direction:column;gap:13px}
-.pkr-dual-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.pkr-dual-section-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;min-width:0;max-width:100%}
+.pkr-dual-section-title>h3{flex:1 1 12ch;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.pkr-dual-section-title>small{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.pkr-dual-section-title>button{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.pkr-dual-attendance-summary{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;min-width:0}
+.pkr-dual-attendance-summary>button{min-width:0;max-width:100%;min-height:44px;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.pkr-dual-no-rsvps{line-height:1.5;overflow-wrap:anywhere}
 .pkr-dual-section-title h3{color:#f2f5ee;font-size:18px;font-weight:800;margin:0;line-height:1.25}
 .pkr-dual-section-title small{font-size:11px;color:#98b5a5}
 .pkr-dual-section-title button{

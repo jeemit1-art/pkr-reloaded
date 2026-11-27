@@ -31,6 +31,8 @@ jobs:
             suites: game-night-polish app-release-updates swipe-data-windows
           - name: all-viewports
             suites: viewport-smoke
+          - name: dashboard-overflow
+            suites: dashboard-overflow
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
