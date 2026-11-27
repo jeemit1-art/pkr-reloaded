@@ -239,7 +239,7 @@ async function test(){
 
     const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1});
    savedPreviewLayout='command';layoutWrites=0;
-   await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-viewport-test-only'));
+   await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-viewport-test-only');localStorage.setItem('pkr_personal_visual_style_v1','standard');});
    const page=await context.newPage();
    let delayedResults=null;
    function holdResultsResponse(){
