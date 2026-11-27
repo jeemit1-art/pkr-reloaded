@@ -1,5 +1,6 @@
 /* Production Game night home. */
 @layer pkr-theme-priority {
+html.pkr-game-night.pkr-chip-club{--pkr-ticket-bg:#3E63DD;--pkr-ticket-date:#FFC53D;--pkr-ticket-action:#FFC53D;--pkr-ticket-action-ink:#1B1F2A}
 html.pkr-game-night .pkr-gn-home{max-width:1080px!important;margin:0 auto!important;display:flex!important;flex-direction:column!important;gap:19px!important;color:#14242C!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;font-size:16px!important;font-variant-numeric:tabular-nums!important}
 html.pkr-game-night .pkr-gn-home *{box-sizing:border-box!important;min-width:0!important}
 html.pkr-game-night .pkr-gn-home button{font-family:inherit!important;cursor:pointer!important;touch-action:manipulation!important;text-align:left!important;box-shadow:none!important}
@@ -9,14 +10,14 @@ html.pkr-game-night .pkr-gn-eyebrow{color:#64727A!important;font-size:11px!impor
 html.pkr-game-night .pkr-gn-page-head h1{font-size:34px!important;line-height:1.1!important;font-weight:750!important;letter-spacing:-1.4px!important;color:#14242C!important;margin:7px 0 0!important}
 html.pkr-game-night .pkr-gn-page-head h1>span{color:#CE5D44!important}
 html.pkr-game-night .pkr-gn-icon-button{width:44px!important;height:44px!important;border:1px solid #DCE3E7!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#FFF!important;color:#364A53!important}
-html.pkr-game-night .pkr-gn-game-ticket{position:relative!important;border:0!important;border-radius:24px!important;padding:21px!important;background:#14242C!important;color:#FFF!important;overflow:hidden!important;box-shadow:0 14px 28px #14242C0D!important}
+html.pkr-game-night .pkr-gn-game-ticket{position:relative!important;border:0!important;border-radius:24px!important;padding:21px!important;background:var(--pkr-ticket-bg,#14242C)!important;color:#FFF!important;overflow:hidden!important;box-shadow:0 14px 28px #14242C0D!important}
 html.pkr-game-night .pkr-gn-ticket-top{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin-bottom:14px!important}
 html.pkr-game-night .pkr-gn-ticket-top>span:first-child{font-size:13px!important;font-weight:500!important;color:#CCD7DC!important;display:flex!important;gap:8px!important;align-items:center!important}
 html.pkr-game-night .pkr-gn-ticket-top i{display:none!important}
 html.pkr-game-night .pkr-gn-host-tag{font-size:10px!important;font-weight:650!important;letter-spacing:.12em!important;color:#D9E4E9!important;border:1px solid #445760!important;border-radius:6px!important;padding:5px 7px!important}
 html.pkr-game-night .pkr-gn-ticket-main{display:flex!important;align-items:center!important;gap:25px!important;min-height:92px!important}
 html.pkr-game-night .pkr-gn-date{display:flex!important;flex-direction:column!important;gap:4px!important;flex:0 0 98px!important;border-right:1px solid #40515A!important;padding-right:18px!important}
-html.pkr-game-night .pkr-gn-date strong{font-size:62px!important;font-weight:650!important;line-height:.9!important;letter-spacing:-5px!important;color:#FFF!important}
+html.pkr-game-night .pkr-gn-date strong{font-size:62px!important;font-weight:650!important;line-height:.9!important;letter-spacing:-5px!important;color:var(--pkr-ticket-date,#FFF)!important}
 html.pkr-game-night .pkr-gn-date>span{font-size:12px!important;line-height:1.3!important;color:#B9C6CE!important;text-transform:uppercase!important;letter-spacing:.05em!important;margin-top:9px!important}
 html.pkr-game-night .pkr-gn-when h2{font-size:27px!important;font-weight:600!important;letter-spacing:-.8px!important;line-height:1.15!important;margin:0 0 7px!important;color:#FFF!important}
 html.pkr-game-night .pkr-gn-when p{font-size:19px!important;line-height:1.3!important;margin:0 0 9px!important;color:#FFF!important;font-weight:500!important}
@@ -30,7 +31,7 @@ html.pkr-game-night .pkr-gn-seats-summary>span{font-size:13px!important;color:#C
 html.pkr-game-night .pkr-gn-seat-meter{display:flex!important;gap:4px!important;margin:5px 0 0!important;width:100%!important}
 html.pkr-game-night .pkr-gn-seat-meter>span{height:5px!important;flex:1!important;background:#40535E!important;border-radius:3px!important}
 html.pkr-game-night .pkr-gn-seat-meter>span.filled{background:#F29981!important}
-html.pkr-game-night .pkr-gn-primary{width:100%!important;min-height:50px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:13px!important;background:#F27457!important;color:#16242B!important;border:1px solid #F27457!important;border-radius:14px!important;padding:13px 16px!important;font-size:16px!important;font-weight:700!important;line-height:1.4!important;text-align:center!important;letter-spacing:-.2px!important}
+html.pkr-game-night .pkr-gn-primary{width:100%!important;min-height:50px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:13px!important;background:var(--pkr-ticket-action,#F27457)!important;color:var(--pkr-ticket-action-ink,#16242B)!important;border:1px solid var(--pkr-ticket-action,#F27457)!important;border-radius:14px!important;padding:13px 16px!important;font-size:16px!important;font-weight:700!important;line-height:1.4!important;text-align:center!important;letter-spacing:-.2px!important}
 html.pkr-game-night .pkr-gn-primary svg{width:20px!important;height:20px!important}
 html.pkr-game-night .pkr-gn-no-game h2{font-size:30px!important;line-height:1.15!important;letter-spacing:-1px!important;color:#FFF!important;margin:0 0 12px!important}
 html.pkr-game-night .pkr-gn-no-game p{color:#C0CED5!important;font-size:16px!important;line-height:1.5!important;margin:0 0 22px!important}
