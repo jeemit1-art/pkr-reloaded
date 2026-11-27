@@ -410,6 +410,12 @@ async function test(){
              errors.push(size.name+' Live Poker is still rendering the Command Centre ledger');
            if(!await page.locator('.pkr-results-live-table').isVisible())
              errors.push(size.name+' Live Poker top player felt is missing');
+           const livePaint=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>{
+             const title=getComputedStyle(node.querySelector('h1')),paint=getComputedStyle(node);
+             return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),font:title.fontFamily};
+           });
+           if(livePaint.surface!=='rgb(13, 89, 71)'||livePaint.ink!=='rgb(255, 255, 255)'||livePaint.weight<780||!livePaint.font.toLowerCase().includes('plus jakarta sans'))
+             errors.push(size.name+' Live Results needs a strong emerald hero with bold white heading: '+JSON.stringify(livePaint));
            await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
            await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
            if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
@@ -1063,6 +1069,13 @@ async function test(){
 
         if(await page.locator('.pkr-results-ledger-row').count()!==leaders.length)
           errors.push(size.name+' Command Centre lost ledger players');
+        const commandPaint=await page.locator('[data-testid="command-results-stage"]').evaluate(node=>{
+          const title=getComputedStyle(node.querySelector('h1')),paint=getComputedStyle(node);
+          const name=getComputedStyle(document.querySelector('.pkr-results-ledger-person strong'));
+          return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),nameWeight:Number(name.fontWeight)};
+        });
+        if(commandPaint.surface!=='rgb(36, 59, 121)'||commandPaint.ink!=='rgb(255, 255, 255)'||commandPaint.weight<780||commandPaint.nameWeight<750)
+          errors.push(size.name+' Command Centre Results colour or typography hierarchy regressed: '+JSON.stringify(commandPaint));
         if(size.width<=740){
           const winner=await page.locator('.pkr-results-command-stats>div:last-child').evaluate(tile=>{
             const value=tile.querySelector('strong');
