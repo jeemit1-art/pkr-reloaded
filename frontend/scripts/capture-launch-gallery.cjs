@@ -87,8 +87,9 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
    const ticket=document.querySelector('.pkr-gn-game-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
    return {ticket:ticket?getComputedStyle(ticket).backgroundColor:null,nav:nav?getComputedStyle(nav).backgroundColor:null};
   });
-  assert.equal(paint.ticket,'rgb(11, 89, 70)',id+' first-load Game Night must use Lounge emerald');
-  assert.equal(paint.nav,'rgb(8, 19, 36)',id+' first-load navigation must use Lounge navy');
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light',id+' first-load must resolve the personal light palette');
+  assert.equal(paint.ticket,'rgb(25, 77, 56)',id+' first-load Game Night must use the canonical forest live-ticket colour');
+  assert.equal(paint.nav,'rgb(255, 255, 255)',id+' first-load navigation must use the opaque light palette surface');
  }
  if(/^(mobile|tablet|desktop)-(command-centre|live-dashboard)$/.test(id)){
   const layers=await page.locator('.pkr-dual-hero').evaluate(node=>['::before','::after'].map(p=>{

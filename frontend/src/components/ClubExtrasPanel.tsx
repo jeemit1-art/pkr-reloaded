@@ -161,7 +161,7 @@ export default function ClubExtrasPanel({eventId,games=[],isManager,isOwner,user
              {data?.members.map(x=><option key={x.user_id} value={x.user_id}>{x.display_name}</option>)}</select></label>
            <label>Notes (optional)<input value={notes} maxLength={240}
              onChange={e=>setNotes(e.target.value)}/></label>
-           <fieldset style={{border:'1px solid #406450',borderRadius:8,padding:10}}>
+           <fieldset style={{border:'1px solid var(--pkr-personal-control)',borderRadius:8,padding:10}}>
              <legend>Share between approved members</legend>
              <div className="pkr-club-actions">
                {data?.members.map(x=><label key={x.user_id} style={{display:'flex',alignItems:'center',gap:6}}>

@@ -50,7 +50,7 @@ export default function GroupResultsShareDialog({gameId,token,onClose}:{
     try{await navigator.share({title:'PKR game results',text:message});setNotice('Share sheet closed. Check your chosen chat before sending.');}
     catch(e){if((e as Error)?.name!=='AbortError')setNotice('Phone sharing is unavailable. Open WhatsApp or copy the message.');}
   }
-  return <AppDialog aria-label="Share group-safe results" onDismiss={onClose}
+  return <AppDialog className="pkr-group-results-share" aria-label="Share group-safe results" onDismiss={onClose}
     swipeToDismiss onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
     <div className="modal-sheet" style={{maxWidth:560,width:'100%',padding:20,display:'grid',gap:12}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>

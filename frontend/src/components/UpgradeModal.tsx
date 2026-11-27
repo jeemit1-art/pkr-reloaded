@@ -81,43 +81,43 @@ export default function UpgradeModal() {
       backdropFilter:'blur(4px)',
     },
     modal: {
-      background:'#0e0e0f', border:'1px solid rgba(201,168,76,0.25)', borderRadius:8,
-      width:'100%', maxWidth:460, position:'relative', overflow:'hidden',
+      background:'var(--pkr-personal-surface,#0e0e0f)', border:'1px solid var(--pkr-personal-line,rgba(201,168,76,0.25))', borderRadius:8,
+      width:'100%', maxWidth:460, position:'relative', overflow:'auto',maxHeight:'min(85dvh,760px)',overflowWrap:'anywhere',
     },
     topBar: {
-      background:'linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.03))',
-      borderBottom:'1px solid rgba(201,168,76,0.15)', padding:'24px 24px 20px',
+      background:'var(--pkr-personal-raised,linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.03)))',
+      borderBottom:'1px solid var(--pkr-personal-line,rgba(201,168,76,0.15))', padding:'24px 24px 20px',
       textAlign:'center' as const,
     },
     closeBtn: {
       position:'absolute', top:16, right:16, background:'none', border:'none',
-      color:'rgba(255,255,255,0.35)', fontSize:20, cursor:'pointer', padding:4,
+      color:'var(--pkr-personal-muted,rgba(255,255,255,0.35))', fontSize:20, cursor:'pointer', padding:4,minWidth:44,minHeight:44,
       lineHeight:1,
     },
     body: { padding:'20px 24px 24px' },
     planCard: (active: boolean) => ({
-      border: active ? '1.5px solid rgba(201,168,76,0.6)' : '1px solid rgba(255,255,255,0.1)',
+      border: active ? '1.5px solid var(--pkr-personal-accent-line,rgba(201,168,76,0.6))' : '1px solid var(--pkr-personal-line,rgba(255,255,255,0.1))',
       borderRadius:6, padding:'16px 18px', marginBottom:12, cursor:'pointer',
-      background: active ? 'rgba(201,168,76,0.04)' : 'rgba(255,255,255,0.02)',
+      background: active ? 'var(--pkr-personal-accent-surface,rgba(201,168,76,0.04))' : 'var(--pkr-personal-raised,rgba(255,255,255,0.02))',
       position:'relative' as const,
     }),
-    planName: { fontSize:15, fontWeight:600, color:'#f5f0e8', fontFamily:"'Playfair Display',serif" },
-    planPrice: { fontSize:22, fontWeight:700, color:'rgba(201,168,76,0.9)', fontFamily:"'Playfair Display',serif" },
-    planPer: { fontSize:11, color:'rgba(255,255,255,0.4)', fontFamily:'DM Sans,sans-serif' },
-    planFeature: { fontSize:11, color:'rgba(255,255,255,0.55)', fontFamily:'DM Sans,sans-serif', marginTop:2 },
+    planName: { fontSize:15, fontWeight:600, color:'var(--pkr-personal-ink,#f5f0e8)', fontFamily:"'Playfair Display',serif" },
+    planPrice: { fontSize:22, fontWeight:700, color:'var(--pkr-personal-accent,rgba(201,168,76,0.9))', fontFamily:"'Playfair Display',serif" },
+    planPer: { fontSize:11, color:'var(--pkr-personal-muted,rgba(255,255,255,0.4))', fontFamily:'DM Sans,sans-serif' },
+    planFeature: { fontSize:11, color:'var(--pkr-personal-muted,rgba(255,255,255,0.55))', fontFamily:'DM Sans,sans-serif', marginTop:2 },
     badge: {
       position:'absolute', top:12, right:14, fontSize:9, fontWeight:700,
-      letterSpacing:'0.12em', textTransform:'uppercase' as const, color:'rgba(201,168,76,0.8)',
+      letterSpacing:'0.12em', textTransform:'uppercase' as const, color:'var(--pkr-personal-accent,rgba(201,168,76,0.8))',
       fontFamily:'DM Sans,sans-serif',
     },
     btn: (variant: 'gold'|'ghost') => ({
-      width:'100%', padding:'13px 0', borderRadius:4, fontSize:13, fontWeight:600,
+      width:'100%', padding:'13px 8px',minHeight:44,whiteSpace:'normal', borderRadius:4, fontSize:13, fontWeight:600,
       cursor:'pointer', border:'none', fontFamily:'DM Sans,sans-serif',
       background: variant==='gold'
-        ? 'linear-gradient(135deg,rgba(201,168,76,0.95),rgba(160,120,40,0.9))'
+        ? 'var(--pkr-personal-primary,linear-gradient(135deg,rgba(201,168,76,0.95),rgba(160,120,40,0.9)))'
         : 'transparent',
-      color: variant==='gold' ? '#000' : 'rgba(255,255,255,0.45)',
-      borderTop: variant==='ghost' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+      color: variant==='gold' ? 'var(--pkr-personal-on-dark,#000)' : 'var(--pkr-personal-muted,rgba(255,255,255,0.45))',
+      borderTop: variant==='ghost' ? '1px solid var(--pkr-personal-line,rgba(255,255,255,0.08))' : 'none',
       marginTop: variant==='ghost' ? 8 : 0,
     }),
   };
@@ -132,15 +132,15 @@ export default function UpgradeModal() {
           <div style={{fontSize:32, marginBottom:8}}><PkrGlyph name="spade" size={32}/></div>
           <div style={{
             fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase',
-            color:'rgba(201,168,76,0.7)', fontFamily:'DM Sans,sans-serif', marginBottom:8, fontWeight:600,
+            color:'var(--pkr-personal-accent,rgba(201,168,76,0.7))', fontFamily:'DM Sans,sans-serif', marginBottom:8, fontWeight:600,
           }}>Upgrade Required</div>
           <div style={{
-            fontSize:18, fontWeight:600, color:'#f5f0e8',
+            fontSize:18, fontWeight:600, color:'var(--pkr-personal-ink,#f5f0e8)',
             fontFamily:"'Playfair Display',serif", marginBottom:8,
           }}>
             To {blockedFeature}, choose a plan
           </div>
-          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', fontFamily:'DM Sans,sans-serif', lineHeight:1.6}}>
+          <div style={{fontSize:12, color:'var(--pkr-personal-muted,rgba(255,255,255,0.4))', fontFamily:'DM Sans,sans-serif', lineHeight:1.6}}>
             {detail.error || 'A paid host subscription is required to create rooms and schedule games.'}
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function UpgradeModal() {
         <div style={s.body}>
           {hasSubscription ? (
             <>
-              <div style={{fontSize:13, color:'rgba(255,255,255,0.5)', textAlign:'center', marginBottom:16, fontFamily:'DM Sans,sans-serif'}}>
+              <div style={{fontSize:13, color:'var(--pkr-personal-muted,rgba(255,255,255,0.5))', textAlign:'center', marginBottom:16, fontFamily:'DM Sans,sans-serif'}}>
                 You already have a subscription. Manage or upgrade it in the billing portal.
               </div>
               <button style={s.btn('gold')} onClick={openPortal} disabled={!!loading}>
@@ -157,13 +157,13 @@ export default function UpgradeModal() {
             </>
           ) : (
             <>
-              {detail.preferredPlan&&<div style={{fontSize:12,color:'#f3dca9',marginBottom:14,lineHeight:1.55}}>
+              {detail.preferredPlan&&<div style={{fontSize:12,color:'var(--pkr-personal-accent,#f3dca9)',marginBottom:14,lineHeight:1.55}}>
                 Selected on the website: <strong>{detail.preferredPlan==='pro'?'Pro':'Starter'}</strong>. Review both plans before subscribing.
               </div>}
               {/* Starter Plan */}
               <div style={s.planCard(detail.preferredPlan==='starter')}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
-                  <div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start',gap:10,flexWrap:'wrap'}}>
+                  <div style={{minWidth:0}}>
                     <div style={s.planName}>Starter</div>
                     <div style={s.planFeature}>1 group · Up to 9 seats · Buy-ins, live view, leaderboard</div>
                   </div>
@@ -174,7 +174,7 @@ export default function UpgradeModal() {
                 </div>
                 <button
                   style={{...s.btn('ghost'), marginTop:12, padding:'9px 0', fontSize:12,
-                    border:'1px solid rgba(201,168,76,0.25)', borderRadius:4, color:'rgba(201,168,76,0.8)'}}
+                    border:'1px solid var(--pkr-personal-line,rgba(201,168,76,0.25))', borderRadius:4, color:'var(--pkr-personal-accent,rgba(201,168,76,0.8))'}}
                   onClick={() => checkout('starter')}
                   disabled={!!loading}
                 >
@@ -205,7 +205,7 @@ export default function UpgradeModal() {
               </div>
 
               <div style={{
-                fontSize:11, color:'rgba(255,255,255,0.3)', textAlign:'center',
+                fontSize:11, color:'var(--pkr-personal-muted,rgba(255,255,255,0.3))', textAlign:'center',
                 fontFamily:'DM Sans,sans-serif', marginTop:8, lineHeight:1.6,
               }}>
                 Paid monthly subscription · Cancel anytime · AUD pricing

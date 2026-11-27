@@ -5,6 +5,7 @@ import {api,clearToken,getToken,type Event,type User} from '@/lib/api';
 import {canUsePush,ensurePushForRoom,isPWAInstalled,subscribePush,unsubscribePush,sendRealTestNotification} from '@/lib/push';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
 import RoomExperienceChoice from '@/components/RoomExperienceChoice';
+import {PersonalAppearanceSettings} from '@/components/PersonalAppearance';
 import {useAppUpdate} from '@/components/AppUpdateContext';
 import {collectDisplayDetails} from '@/lib/app-display-details';
 import './account.css';
@@ -122,8 +123,9 @@ export default function AccountSettings(){
      <button type="button" className="pkr-primary-outline" onClick={()=>router.push('/dashboard#pkr-rooms')}>My poker clubs ↗</button>
     </div>
    </section>
+   <PersonalAppearanceSettings/>
    <section className="pkr-primary-panel pkr-account-appearance">
-    <h2>Room appearance</h2>
+    <h2>Club dashboard layout</h2>
     {selected?<RoomExperienceChoice roomId={selected} canChange={room?.role==='host'}/>:
       <p>Join a poker club to see its selected experience.</p>}
    </section>

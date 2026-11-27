@@ -331,7 +331,7 @@ export default function InsightsPage(){
      <div className="pkr-vnext-card-heading"><div><h2><PkrGlyph name="settle"/> Settlement Centre</h2><p>See who pays whom and track recorded payment status across your room.</p></div>
        <label style={{display:'grid',gap:5,color:'var(--ivory)',fontSize:12}}>Period
         <select aria-label="Settlement reporting period" value={period} onChange={e=>{setPeriod(e.target.value as 'all'|'90d');setTransferPage(0)}}
-          style={{background:'#112b20',border:'1px solid #658260',color:'#ffe8b3',borderRadius:8,padding:'8px 11px'}}>
+          style={{background:'var(--pkr-personal-accent-surface)',border:'1px solid var(--pkr-personal-accent-line)',color:'var(--pkr-personal-accent)',borderRadius:8,padding:'8px 11px'}}>
           <option value="all">All time</option><option value="90d">Last 90 days</option>
         </select></label>
       </div>
