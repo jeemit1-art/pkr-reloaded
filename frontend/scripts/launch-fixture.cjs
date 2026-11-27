@@ -12,6 +12,7 @@ const room={id:'launch-room',name:'River City Poker',description:'Good company. 
 const upcoming={id:'launch-upcoming',event_id:room.id,event_name:room.name,name:'Friday Night Poker',status:'scheduled',scheduled_at:now+7*86400+900,location:'The club room',notes:'Arrive from 7 pm. Cards at 7:30.',seats:9,buy_in:5000,created_at:now-3*86400,player_count:6,results_token:null,live_token:null};
 const liveGame={...upcoming,id:'launch-live',name:'Friday Cash Game',status:'active',scheduled_at:now-900,location:'River City · Friday table',seats:9,player_count:9,starting_chips:200,chip_value:25,bank_size:50,defaultBuyin:50,hand_tracking:0,live_token:'launch-live-view'};
 const denseGame={...liveGame,id:'launch-dense',name:'Club Championship',seats:13,player_count:13,live_token:'launch-dense-view'};
+const handGame={...liveGame,id:'launch-hands',name:'Tracked Cash Game',hand_tracking:1,live_token:'launch-hands-view'};
 const nextGame={...upcoming,id:'launch-next',name:'Sunday Social',scheduled_at:now+9*86400-1800,location:'The club room',seats:9,player_count:3};
 const baseNet=[8500,-2500,4000,-5000,1000,-6000,3500,-2000,-1500];
 const settled=Array.from({length:12},(_,g)=>({...upcoming,id:'launch-settled-'+g,name:'Friday Night Poker',status:'settled',scheduled_at:now-(7*(g+1))*86400+900,created_at:now-(7*(g+1)+3)*86400,player_count:9,results_token:'launch-results-'+g,variance:0}));
@@ -42,7 +43,7 @@ const leaders=members.slice(0,9).map(m=>{
  return {user_id:m.id,display_name:m.name,games_played:records.length,games_won:records.filter(p=>p.net>0).length,total_net:records.reduce((n,p)=>n+p.net,0),biggest_win:Math.max(...records.map(p=>p.net)),biggest_loss:Math.abs(Math.min(...records.map(p=>p.net))),last_played:settled[0].scheduled_at,source_game_players:records.map(p=>({game_id:p.game_id,user_id:p.user_id}))};
 });
 function createFixture(){
- const state={layout:'command',role:'host',writes:[],requests:[]};
+ const state={layout:'command',role:'host',runningTournament:false,writes:[],requests:[]};
  function resolve(input,method='GET',body){
   const url=input instanceof URL?input:new URL(input,API),p=url.pathname;
   state.requests.push(method+' '+p);
@@ -73,24 +74,28 @@ function createFixture(){
   if(p==='/events/'+room.id+'/seasons')return {seasons:[]};
   if(p==='/events/'+room.id+'/shared-expenses')return {expenses:[],members:members.map(m=>({user_id:m.id,display_name:m.name}))};
   if(p==='/events/'+room.id+'/tournament-presets')return {presets:[]};
-  for(const game of [liveGame,denseGame,upcoming,nextGame,...settled]){
+  for(const game of [liveGame,denseGame,handGame,upcoming,nextGame,...settled]){
    const players=playersFor(game),rsvps=rsvpsFor(game),transfers=transfersFor(game);
    if(p==='/games/'+game.id)return {...game,players,rsvps,transfers};
    if(p==='/games/'+game.id+'/rsvp-board')return {event:room,game,players,guests:rsvps,options:['19:00','19:30','20:00'],version:1};
    if(p==='/games/'+game.id+'/lobby')return {event:room,game,players,rsvps};
+   if(game.live_token&&p==='/games/live/'+game.live_token){
+    const totalIn=players.reduce((sum,p)=>sum+p.buy_in_total,0),totalOut=players.reduce((sum,p)=>sum+(p.cashout||0),0);
+    return {game,event:room,players,totalIn,totalOut,bank:totalIn-totalOut};
+   }
    if(p==='/games/results/'+game.results_token)return {game,event:room,players,transfers};
    if(p==='/games/'+game.id+'/settlement-control')return {game_id:game.id,enabled:true,reminders_enabled:true,last_broadcast_at:now-86400};
    if(p==='/games/'+game.id+'/analysis')return [];
    if(p==='/games/'+game.id+'/hands')return [];
-   if(p==='/games/'+game.id+'/tournament')return {state:{status:'paused',current_level:4,paused_elapsed:420,starting_chips:10000,buy_in_amount:5000,rebuy_allowed:true,rebuy_levels:4,addon_allowed:false,total_chips_in_play:90000,payout_structure:'[{"position":1,"percent":60},{"position":2,"percent":30},{"position":3,"percent":10}]'},levels:[25,50,75,100,150,200,300,400,600,800,1000,1500].map((sb,i)=>({level_num:i+1,small_blind:sb,big_blind:sb*2,ante:i>3?sb:0,duration_secs:1200,is_break:false})),rebuys:[],eliminations:[],payouts:[],prize_pool_cents:45000};
+   if(p==='/games/'+game.id+'/tournament')return {state:{status:state.runningTournament?'running':'paused',current_level:4,paused_elapsed:420,level_started_at:now-420,starting_chips:10000,buy_in_amount:5000,rebuy_allowed:true,rebuy_levels:4,addon_allowed:false,total_chips_in_play:90000,payout_structure:'[{"position":1,"percent":60},{"position":2,"percent":30},{"position":3,"percent":10}]'},levels:[25,50,75,100,150,200,300,400,600,800,1000,1500].map((sb,i)=>({level_num:i+1,small_blind:sb,big_blind:sb*2,ante:i>3?sb:0,duration_secs:1200,is_break:false})),rebuys:[],eliminations:[],payouts:[],prize_pool_cents:45000};
   }
   throw Error('Missing launch fixture: '+method+' '+p);
  }
  return {state,resolve};
 }
 const initialStorage={pkr_token:'fictional-launch-fixture-only',pkr_preferred_room:room.id,pkr_approved_device_refresh_v1:'d'.repeat(64)};
-for(const game of [liveGame,denseGame]){
+for(const game of [liveGame,denseGame,handGame]){
  const players=Object.fromEntries(playersFor(game).map(p=>['seat'+p.seat_number,{name:p.display_name,userId:p.user_id,transactions:Array.from({length:p.buy_ins},()=>({type:'buyin',amount:50,ts:Date.parse(FIXED_TIME)-1800000}))}]));
  initialStorage['pokerState_'+game.id+'_'+user.id]=JSON.stringify({game:{...game,defaultBuyin:50},players});
 }
-module.exports={BASE,API,FIXED_TIME,room,user,members,upcoming,liveGame,denseGame,nextGame,settled,leaders,playersFor,rsvpsFor,transfersFor,createFixture,initialStorage};
+module.exports={BASE,API,FIXED_TIME,room,user,members,upcoming,liveGame,denseGame,handGame,nextGame,settled,leaders,playersFor,rsvpsFor,transfersFor,createFixture,initialStorage};

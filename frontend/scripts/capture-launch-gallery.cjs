@@ -6,7 +6,7 @@ const path=require('node:path');
 const {chromium}=require('playwright');
 const sharp=require('sharp');
 const data=require('./launch-fixture.cjs');
-const {BASE,API,FIXED_TIME,room,user,upcoming,liveGame,denseGame,settled,createFixture,initialStorage}=data;
+const {BASE,API,FIXED_TIME,room,user,upcoming,liveGame,denseGame,handGame,settled,createFixture,initialStorage}=data;
 const OUTPUT=path.resolve(__dirname,'../../artifacts/launch-gallery');
 const PUBLIC=path.resolve(__dirname,'../public/demo/launch-20261127');
 const mode=process.argv[2]||'app';
@@ -20,6 +20,9 @@ async function contextFor(browser,size,{signedIn=true,role='host'}={}){
  const fixture=createFixture();fixture.state.role=role;
  const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:size.dpr,
   isMobile:size.installed,hasTouch:size.installed,serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU',timezoneId:'Australia/Brisbane'});
+ // The launch gallery shows the permission-granted installation pathway.
+ // Granting this isolated browser permission never subscribes or sends an alert.
+ await context.grantPermissions(['notifications'],{origin:BASE});
  await context.addInitScript(({storage,installed,signedIn})=>{
   if(signedIn)Object.entries(storage).forEach(([key,value])=>localStorage.setItem(key,value));
   if(installed)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
@@ -59,11 +62,20 @@ async function focusSection(page,selector){
 }
 async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute}={}){
  await settle(page);
- const checks=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth,
+ const checks=await page.evaluate(()=>{
+  const header=document.querySelector('.pkr-primary-mobile-utility');
+  const rect=header?.getBoundingClientRect(),style=header?getComputedStyle(header):null;
+  const hit=document.elementFromPoint(Math.floor(innerWidth/2),Math.min(innerHeight-1,Math.max(0,(rect?.top||0)+16)));
+  return {viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth,
   bodyScrollWidth:document.body.scrollWidth,heading:document.querySelector('h1,h2')?.textContent||'',
+  header:{exists:Boolean(header),rect:rect?.toJSON()||null,display:style?.display||null,visibility:style?.visibility||null,
+   opacity:style?.opacity||null,zIndex:style?.zIndex||null,position:style?.position||null,
+   className:header?.className||null,rootClass:document.documentElement.className,
+   hitTest:{tag:hit?.tagName||null,className:typeof hit?.className==='string'?hit.className:null,insideHeader:Boolean(header&&hit&&header.contains(hit))}},
   rootScroll:document.documentElement.scrollTop,bodyScroll:document.body.scrollTop,
   visibleAlerts:Array.from(document.querySelectorAll('[role="alert"]')).filter(el=>el.getBoundingClientRect().width&&el.getBoundingClientRect().height).map(el=>el.textContent.trim()),
-  brokenImages:Array.from(document.images).filter(img=>img.getBoundingClientRect().width>0&&!img.complete||img.complete&&img.naturalWidth===0&&img.getAttribute('src')).map(img=>img.getAttribute('src'))}));
+  brokenImages:Array.from(document.images).filter(img=>img.getBoundingClientRect().width>0&&!img.complete||img.complete&&img.naturalWidth===0&&img.getAttribute('src')).map(img=>img.getAttribute('src'))};
+ });
  assert(checks.scrollWidth<=size.width+3,id+' has horizontal document overflow');
  assert(checks.bodyScrollWidth<=size.width+3,id+' has horizontal body overflow');
  assert.deepEqual(checks.visibleAlerts,[],id+' has a visible error');
@@ -156,7 +168,40 @@ async function captureApp(browser){
     },top:false},
     {id:prefix+'table-13',title:'Live table · 13 players',category:'Live gameplay',route:'/games/'+denseGame.id+'/play',ready:'#seat13 .pkr-game-seat-card',action:async page=>page.waitForFunction(()=>document.querySelectorAll('.seat-chip.seated').length===13)},
    ])await captureCase(page,size,item,errors);
-   if(label==='mobile')await captureCase(page,size,{id:'mobile-analysis',title:'Hand analysis and player statistics',category:'Results & records',route:'/games/'+settled[0].id+'/analysis',ready:'.pkr-analysis-player-record'},errors);
+   if(label==='mobile'){
+    await captureCase(page,size,{id:'mobile-table-13-lower',title:'13-player table · lower seats after scrolling',category:'Live gameplay',ready:'#seat13 .pkr-game-seat-card',action:async page=>{
+     await page.locator('#tableArea').evaluate(element=>{element.scrollTop=element.scrollHeight;});
+     await page.waitForTimeout(220);
+     const lowerSeats=await page.locator('#tableArea').evaluate(element=>{
+      const area=element.getBoundingClientRect();
+      return {scrollTop:element.scrollTop,visible:[7,8,9].every(number=>{
+       const balance=document.querySelector('#seat'+number+' .pkr-game-seat-result')?.getBoundingClientRect();
+       return balance&&balance.top>=area.top&&balance.bottom<=area.bottom;
+      })};
+     });
+     assert(lowerSeats.scrollTop>0&&lowerSeats.visible,'Lower 13-player balances must be reachable by ordinary table scrolling');
+     manifest.checks.push({id:'mobile-table-13-lower',...lowerSeats});
+    },top:false},errors);
+    await captureCase(page,size,{id:'mobile-payment-records',title:'Open payment records and confirmations',category:'Payments',route:'/payments?room='+room.id,ready:'.pkr-gn-payment-card',action:async page=>{
+     await page.getByRole('button',{name:'View underlying records: To receive',exact:true}).click();
+     await page.getByRole('heading',{name:'To receive — underlying records',exact:true}).waitFor({state:'visible'});
+     assert.equal(await page.locator('.pkr-gn-payment-card').count(),3);
+    },top:false},errors);
+    await captureCase(page,size,{id:'mobile-appearance',title:'Room appearance and layout choices',category:'Settings & access',route:'/account',ready:'.pkr-account-appearance',focus:'.pkr-account-appearance'},errors);
+    await captureCase(page,size,{id:'mobile-analysis',title:'Hand analysis and player statistics',category:'Results & records',route:'/games/'+settled[0].id+'/analysis',ready:'.pkr-analysis-player-record'},errors);
+    await captureCase(page,size,{id:'mobile-shared-results',title:'Shared game results and settlements',category:'Results & records',route:'/games/results/'+settled[0].results_token,ready:'.section-header'},errors);
+    await captureCase(page,size,{id:'mobile-live-spectator',title:'Player live table view',category:'Live gameplay',route:'/games/live/'+liveGame.live_token,ready:'#liveTableFelt'},errors);
+    await captureCase(page,size,{id:'mobile-hand-tracker',title:'Hand tracking controls',category:'Live gameplay',route:'/games/'+handGame.id+'/play',ready:'#seat9 .pkr-game-seat-card',action:async page=>{
+     await page.locator('#handTrackerBtn').waitFor({state:'visible'});await page.locator('#handTrackerBtn').click();
+     await page.locator('#handTrackerSheet.open #handTrackerBody').waitFor({state:'visible'});
+    },top:false},errors);
+   }
+   if(label==='desktop'){
+    fixture.state.runningTournament=true;
+    await captureCase(page,size,{id:'desktop-tournament-tv',title:'Tournament display for a shared screen',category:'Live gameplay',route:'/games/'+liveGame.id+'/tv',ready:'a[aria-label="Back to poker game"]',action:async page=>{
+     await page.getByText('13:00',{exact:true}).waitFor({state:'visible'});
+    }},errors);
+   }
    assert(errors.length===0,'Fixture/runtime errors: '+errors.join('; '));
    manifest.checks.push({viewport:label,apiRequests:fixture.state.requests.length,simulatedWrites:fixture.state.writes});
   }catch(error){manifest.errors.push(label+': '+error.stack);}
@@ -182,9 +227,9 @@ function galleryMarkup(screens,{boardTitle,embed=false}={}){
 async function makeBoards(browser){
  const groups=[
   ['01-planning-and-club','Planning and your club',['mobile-home','mobile-games','mobile-calendar','mobile-rsvp','mobile-players','mobile-invites','mobile-approvals','mobile-sharing']],
-  ['02-live-gameplay','At the table',['mobile-live-table','mobile-table-13','mobile-table-compact','mobile-table-tools','mobile-player-details','mobile-bank-records','mobile-tournament','mobile-game-detail']],
-  ['03-results-and-payments','Results, records and payments',['mobile-results','mobile-history','mobile-insights','mobile-records','mobile-payments','mobile-payment-ledger']],
-  ['04-settings-and-access','Account, settings and player access',['mobile-account','mobile-notifications','mobile-install','mobile-player-home','mobile-player-login','mobile-analysis']],
+  ['02-live-gameplay','At the table',['mobile-live-table','mobile-table-13','mobile-table-13-lower','mobile-table-compact','mobile-table-tools','mobile-player-details','mobile-bank-records','mobile-tournament','mobile-hand-tracker','mobile-live-spectator','mobile-game-detail']],
+  ['03-results-and-payments','Results, records and payments',['mobile-results','mobile-history','mobile-insights','mobile-records','mobile-payments','mobile-payment-records','mobile-payment-ledger','mobile-shared-results']],
+  ['04-settings-and-access','Account, settings and player access',['mobile-account','mobile-appearance','mobile-notifications','mobile-install','mobile-player-home','mobile-player-login','mobile-analysis']],
  ];
  const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
  try{

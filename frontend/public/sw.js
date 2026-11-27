@@ -1,4 +1,4 @@
-// PKR app release: 54cd019fbe6b38225834f62575e2e0c848bd3c9a14c58068d0a092e9c05b446b
+// PKR app release: 988f63861fad01e77beadd66f0a048ceafcf5ffbacbad120d0b9682c7f304d3d
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 

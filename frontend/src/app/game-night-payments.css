@@ -172,7 +172,9 @@
  html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-eyebrow {color:#A33D28!important}
  html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-command-stats {display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;flex:1 1 400px!important;max-width:100%!important;min-width:0!important;gap:10px!important}
  html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-command-stat {min-width:0!important;max-width:none!important;background:#EEF1F3!important;border-color:#DCE3E7!important;box-shadow:none!important}
- html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-live-metrics>span {background:#EEF1F3!important;border:1px solid #DCE3E7!important;border-radius:12px!important;padding:10px 12px!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-live-metrics>:is(span,.pkr-experience-live-metric) {display:grid!important;align-content:start!important;gap:7px!important;min-width:0!important;background:#EEF1F3!important;border:1px solid #DCE3E7!important;border-radius:12px!important;padding:12px 24px 12px 12px!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-live-metric>strong {display:block!important;line-height:1.15!important}
+ html.pkr-game-night .pkr-gn-payment-ledger .pkr-experience-live-metric>small {display:block!important;line-height:1.45!important}
  /* Retain every record drill-down and restore the metric grids explicitly;
     old payment-focus and room-theme rules otherwise leave tall stacked cards. */
  html.pkr-game-night .pkr-gn-payment-ledger .pkr-insights-kpis {display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important;margin:0 0 18px!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important}
