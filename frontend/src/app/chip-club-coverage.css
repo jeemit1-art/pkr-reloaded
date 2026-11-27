@@ -686,3 +686,22 @@ html.pkr-game-night.pkr-chip-club body :is(.pkr-gn-home,.pkr-player-home,.pkr-pr
  html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table :is(.pkr-game-seat-bank,.pkr-game-compact-bank,.pkr-game-seat-result,.pkr-game-stack-readout){font-size:clamp(9px,2.45vw,11px)!important;}
 }
 }
+
+/* Chip Blue buttons: preserve 4.5:1+ text contrast where legacy coral used dark labels. */
+@layer pkr-theme-priority {
+html.pkr-game-night.pkr-chip-club body :is(.pkr-primary-sidebar .pkr-persistent-brand>span,.pkr-player-home .pkr-player-primary,.pkr-results-page .pkr-primary-action,.pkr-gn-payment-primary,.pkr-night-hub .pkr-night-actions .pkr-night-primary,.pkr-club .pkr-club-primary,#notifBanner #notifEnableBtn,.pkr-player-profile-editor .pkr-player-profile-footer button[type=submit],.pkr-live-confirm-primary,#pkrGoSave,#pkrEndYes){color:#FFFFFF!important;}
+html.pkr-game-night.pkr-chip-club body .pkr-gn-payment-ledger :is(.pkr-settlement-record-filters button.active,.pkr-insights-settle-tabs button.active,.pkr-insights-bulk-actions .btn-primary){color:#FFFFFF!important;}
+html.pkr-game-night.pkr-chip-club body :is(#handTrackerSheet,#winnerOverlay,#cardPickerSheet,#tournamentSheet,#rabbitSheet,#seatSheet,#assignOverlay,#lbSheet,#shareSheet,#publishSheet) .btn-primary{color:#FFFFFF!important;}
+html.pkr-game-night.pkr-chip-club body #tournamentBody>button{color:#FFFFFF!important;}
+html.pkr-game-night.pkr-chip-club body .pkr-vnext-insights:not(.pkr-payments-focus) .pkr-insights-bulk-actions .btn-primary{color:#FFFFFF!important;}
+html.pkr-game-night.pkr-chip-club body .pkr-app :is(.pkr-player-home.pkr-game-night-player,.gn-player-rsvp-sheet) .gn-player-primary{color:#FFFFFF!important;}
+/* Gold remains the high-contrast action on dark felt and inside the live table. */
+html.pkr-game-night.pkr-chip-club body #gameScreen :is(.pkr-quick-buyin-presets .pkr-quick-bank,.pkr-quick-primary.buyin){background:#FFC53D!important;color:#1B1F2A!important;}
+html.pkr-game-night.pkr-chip-club body .pkr-table-tools-sheet button[aria-pressed="true"]{background:#FFC53D!important;color:#1B1F2A!important;}
+/* The installed-app status bar is painted from the page canvas, not the scroll view. */
+@media(max-width:1099px){
+ html.pkr-game-night.pkr-chip-club:has(.pkr-primary-mobile-utility),
+ html.pkr-game-night.pkr-chip-club:has(.pkr-primary-mobile-utility) body{background:#FFFFFF!important;background-image:none!important;}
+ html.pkr-game-night.pkr-chip-club .pkr-primary-mobile-utility{background:#FFFFFF!important;}
+}
+}
