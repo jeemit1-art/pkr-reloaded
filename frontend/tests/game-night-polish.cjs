@@ -185,6 +185,20 @@ async function checkFullDashboards(page,state,label){
   assert.equal(await colour(cta,'backgroundColor'),'rgb(62, 99, 221)',name+' primary action must use Chip Blue');
   assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
   await readable(cta,name+' primary action');
+  const hero=dashboard.locator('.pkr-dual-hero');
+  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(19, 44, 83)':'rgb(11, 89, 70)',name+' uses a deep club-colour hero, not a white card');
+  assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
+  await readable(hero.locator('h3'),name+' hero heading');
+  if(mode==='command'){
+   const tiles=dashboard.locator('.pkr-dual-metrics>button');
+   assert.equal(await tiles.count(),4);
+   const colors=['rgb(135, 96, 28)','rgb(41, 75, 176)','rgb(162, 63, 81)','rgb(16, 105, 79)'];
+   for(let i=0;i<4;i++){
+    assert.equal(await colour(tiles.nth(i),'backgroundColor'),colors[i],'Every dashboard metric has its own saturated colour');
+    await readable(tiles.nth(i).locator('strong'),'Coloured metric value '+i);
+    await readable(tiles.nth(i).locator('small'),'Coloured metric description '+i);
+   }
+  }
   await screenshot(page,label+'-full-'+mode);
  }
  assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
@@ -318,6 +332,12 @@ async function checkRsvps(page,state,label){
 async function checkPayments(page,state,label){
  await gotoFixturePage(page,BASE+'/payments?room='+room.id+'&paymentsScope=mine');
  const totals=page.locator('.pkr-gn-payment-totals');await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
+ const toPay=totals.locator('.pkr-gn-payment-total.is-pay');
+ const toReceive=totals.locator('.pkr-gn-payment-total.is-receive');
+ assert.equal(await colour(toPay,'backgroundColor'),'rgb(162, 63, 81)','Payable card has a distinct coral-red surface');
+ assert.equal(await colour(toReceive,'backgroundColor'),'rgb(16, 105, 79)','Receivable card has a distinct emerald surface');
+ await readable(toPay.locator('strong'),'Payable total');
+ await readable(toReceive.locator('strong'),'Receivable total');
  const assertAmounts=async expected=>assert.deepEqual(await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents(),expected);
  assert.equal(await totals.getByRole('button',{name:'View underlying records: To pay',exact:true}).locator('strong').innerText(),'$12');
  assert.equal(await totals.getByRole('button',{name:'View underlying records: To receive',exact:true}).locator('strong').innerText(),'$23');
@@ -392,6 +412,12 @@ async function checkReportedVisualIssues(page,state,label){
   await crew.getByText('No confirmed RSVPs yet.',{exact:true}).waitFor();
   assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
   assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
+  const ticket=page.locator('.pkr-gn-game-ticket');
+  assert.equal(await colour(ticket,'backgroundColor'),'rgb(11, 89, 70)','Game Night uses an emerald ticket');
+  await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
+  assert.equal(await colour(crew,'backgroundColor'),'rgb(216, 240, 231)','Attendance has a recognisably green surface');
+  const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
+  assert.equal(await colour(nav,'backgroundColor'),'rgb(8, 19, 36)','Shared navigation must use opaque navy');
   await readable(crew.locator('h2'),'Attendance heading');
   await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
   for(const b of await crew.locator('.pkr-gn-seat-note>button').all())await readable(b,'Attendance count action');
