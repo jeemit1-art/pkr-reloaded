@@ -1,6 +1,7 @@
 "use client";
 import RecordMetric from '@/components/RecordMetric';
 import AppDialog from '@/components/AppDialog';
+import GroupResultsShareDialog from '@/components/GroupResultsShareDialog';
 import PkrGlyph from '@/components/PkrGlyph';
 
 import { useEffect, useState } from "react";
@@ -23,6 +24,7 @@ export default function GamePage() {
   const [reminderChoice,setReminderChoice]=useState(false);
   const [settlementNotice,setSettlementNotice]=useState('');
   const [sendingSettlement,setSendingSettlement]=useState(false);
+  const [showResultsShare,setShowResultsShare]=useState(false);
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -331,7 +333,7 @@ export default function GamePage() {
             </button>
             {isHost&&<button type="button" className="btn btn-ghost"
               style={{fontSize:11,padding:'7px 12px'}}
-              onClick={()=>router.push('/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(id))}>
+              onClick={()=>setShowResultsShare(true)}>
               <PkrGlyph name="share"/> Share group-safe results
             </button>}
           </div>
@@ -418,6 +420,9 @@ export default function GamePage() {
 
       </div>
 
+      {showResultsShare&&isHost&&game.status==='settled'&&game.results_token&&
+        <GroupResultsShareDialog key={id} gameId={id} token={game.results_token}
+          onClose={()=>setShowResultsShare(false)}/>}
       {/* Confirm modal */}
       {confirm && (
         <AppDialog className="modal-overlay" onClick={()=>!acting&&setConfirm(null)}>

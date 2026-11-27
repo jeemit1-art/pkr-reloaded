@@ -80,7 +80,7 @@ function fixture(state,url,method,body){
  if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps,options:['19:00','20:00']};
  for(const game of [finished,older]){
   if(p==='/games/'+game.id)return {...game,players:playersFor(game),rsvps:[],transfers:game.id===finished.id?transfers:[]};
-  if(p==='/games/results/'+game.results_token)return {game,event:room,players:playersFor(game),transfers:game.id===finished.id?transfers:[]};
+  if(p==='/games/results/'+game.results_token){state.resultReads=(state.resultReads||0)+1;return {game:state.unreconciled?{...game,variance:100}:game,event:room,players:playersFor(game),transfers:game.id===finished.id?transfers:[]};}
   if(p==='/games/'+game.id+'/settlement-control')return {game_id:game.id,enabled:true,reminders_enabled:false,last_broadcast_at:null};
  }
  if(p==='/push/vapid-key')return {key:'synthetic-unusable-vapid-key'};
@@ -515,6 +515,38 @@ async function checkReportedVisualIssues(page,state,label){
  }
 }
 
+async function checkSettledResultShare(page,state,label){
+ await gotoFixturePage(page,BASE+'/games/'+finished.id);
+ const action=page.getByRole('button',{name:'Share group-safe results',exact:true});
+ await action.waitFor();
+ const reads=state.resultReads||0;
+ await action.click();
+ const dialog=page.getByRole('dialog',{name:'Share group-safe results',exact:true});
+ await dialog.waitFor();
+ const message=dialog.getByRole('textbox',{name:'Group results message'});
+ await message.waitFor();
+ assert((state.resultReads||0)>reads,'Read the exact settled result on opening');
+ assert.equal(new URL(page.url()).pathname,'/games/'+finished.id,'Sharing must stay on the settled game');
+ const safe=await message.inputValue();
+ assert.match(safe,/Alex Morgan/);assert.match(safe,/Jordan Lee/);
+ assert.doesNotMatch(safe,/\$|Transfer|Taylor Reed|polish-results/);
+ const link=dialog.getByRole('link',{name:'Open WhatsApp'});
+ assert.equal(new URL(await link.getAttribute('href')).searchParams.get('text'),safe);
+ await dialog.getByRole('checkbox',{name:'Include player net winnings and losses'}).check();
+ assert.match(await message.inputValue(),/\$75\.00/);
+ assert.doesNotMatch(await message.inputValue(),/Taylor Reed|polish-results/);
+ await screenshot(page,label+'-settled-results-share');
+ await dialog.getByRole('button',{name:'Close results sharing'}).click();
+ await dialog.waitFor({state:'hidden'});
+ state.unreconciled=true;
+ try{
+  await action.click();await dialog.getByRole('alert').waitFor();
+  assert.match(await dialog.getByRole('alert').innerText(),/reconciled/);
+  assert.equal(await dialog.getByRole('link',{name:'Open WhatsApp'}).count(),0);
+  await dialog.getByRole('button',{name:'Close results sharing'}).click();
+ }finally{state.unreconciled=false;}
+}
+
 async function run(){
  const failures=[];
  for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
@@ -544,6 +576,7 @@ async function run(){
    await checkInviteDirectory(page,state,label);
    await checkRsvps(page,state,label);
    await checkReportedVisualIssues(page,state,label);
+   await checkSettledResultShare(page,state,label);
    await checkPayments(page,state,label);
    const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
    assert.equal(canvas.colour,'rgb(229, 236, 239)','Payments shares the lounge canvas');
