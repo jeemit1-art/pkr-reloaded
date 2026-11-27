@@ -382,6 +382,10 @@ async function test(){
            paymentBackground:payment?getComputedStyle(payment).backgroundColor:'',
            paymentText:payment?getComputedStyle(payment).color:'',
            heroArtwork:hero?getComputedStyle(hero,'::before').backgroundImage:'',
+           heroSurface:hero?getComputedStyle(hero).backgroundColor:'',
+           heroGradient:hero?getComputedStyle(hero).backgroundImage:'',
+           heroHeading:hero?.querySelector('h3')?getComputedStyle(hero.querySelector('h3')).color:'',
+           heroOverlays:hero?['::before','::after'].map(p=>{const s=getComputedStyle(hero,p);return {content:s.content,display:s.display,background:s.backgroundImage};}):[],
            accountVisible:!!document.querySelector('.pkr-dual-account-trigger'),
          };
        });
@@ -389,8 +393,16 @@ async function test(){
          errors.push(size.name+' mockup header/branding contract failed '+JSON.stringify(visualContract));
        if(visualContract.paymentBackground!=='rgb(255, 255, 255)')
          errors.push(size.name+' full dashboard payment card retained the previous dark palette: '+JSON.stringify(visualContract));
-       if(!visualContract.heroArtwork.includes('pkr-approved-hero-desktop.webp'))
-         errors.push(size.name+' approved photographic hero not applied');
+       // The Lounge redesign deliberately retires the pale photographic wash.
+       // Verify the actual saturated surface, white heading and absence of
+       // overlay pseudo-elements, rather than simply removing visual coverage.
+       if(visualContract.heroSurface!=='rgb(19, 44, 83)'||
+          !visualContract.heroGradient.includes('radial-gradient')||
+          !visualContract.heroGradient.includes('54, 91, 157')||
+          visualContract.heroHeading!=='rgb(240, 246, 255)'||
+          visualContract.heroArtwork!=='none'||visualContract.heroOverlays.length!==2||
+          !visualContract.heroOverlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
+         errors.push(size.name+' Lounge dashboard hero visual contract failed: '+JSON.stringify(visualContract));
 
        // Host switches between BOTH approved variants on every viewport.
        const toggle=page.getByRole('button',{name:/Live Poker/});
@@ -638,7 +650,9 @@ async function test(){
        const visual=await page.locator(heroSelector).evaluate(node=>{
          const s=getComputedStyle(node),r=node.getBoundingClientRect();
          return {width:r.width,height:r.height,background:s.backgroundImage,colour:s.backgroundColor,
-           art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor};
+           art:getComputedStyle(node,'::before').backgroundImage,border:s.borderTopColor,
+           heading:node.querySelector('h3')?getComputedStyle(node.querySelector('h3')).color:'',
+           overlays:['::before','::after'].map(p=>{const a=getComputedStyle(node,p);return {content:a.content,display:a.display,background:a.backgroundImage};})};
        });
        if(item.id==='insights'){
          if(visual.colour!=='rgb(255, 255, 255)'||visual.background!=='none')
@@ -651,8 +665,12 @@ async function test(){
          if(insightsTheme.background!=='rgb(244, 241, 234)'||insightsTheme.card!=='rgb(255, 255, 255)')
            errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
-         if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
-           errors.push(size.name+' '+item.id+' approved poker equipment artwork missing');
+         const isCommand=visual.colour==='rgb(19, 44, 83)'&&visual.background.includes('54, 91, 157');
+         const isLive=visual.colour==='rgb(11, 89, 70)'&&visual.background.includes('25, 135, 106');
+         if((!isCommand&&!isLive)||!visual.background.includes('radial-gradient')||
+            visual.heading!=='rgb(240, 246, 255)'||visual.art!=='none'||
+            !visual.overlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
+           errors.push(size.name+' '+item.id+' Lounge saturated hero or heading regressed: '+JSON.stringify(visual));
        }
        if(visual.width<250||visual.height<140)
          errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
