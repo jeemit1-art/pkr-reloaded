@@ -15,6 +15,8 @@ type GameSnapshot={roomId:string;data:Game[]|null;error:string;loading:boolean;u
 const dateOptions={timeZone:'Australia/Brisbane'};
 const emptyGames:Game[]=[];
 const emptyLeaders:LeaderboardEntry[]=[];
+const CLUB_TOOLS_AVAILABLE=process.env.NEXT_PUBLIC_PKR_CLUB_PLANNING_V1==='1'||
+  process.env.NEXT_PUBLIC_PKR_CLUB_EXTRAS_V1==='1';
 
 type Props={
   room:Event;games:Game[];history?:Game[];leaders?:LeaderboardEntry[];
@@ -57,6 +59,7 @@ export default function PlayerRoomDashboard({
   const [paymentRefresh,setPaymentRefresh]=useState(0);
   const [gameRefresh,setGameRefresh]=useState(0);
   const [shareNotice,setShareNotice]=useState('');
+  const [clubToolsOpen,setClubToolsOpen]=useState(false);
   const ledgerKey=room.id+':'+(memberId||'');
   const currentLedger=ledgerSnapshot?.key===ledgerKey?ledgerSnapshot:null;
   const ledger=currentLedger?.data||null;
@@ -269,7 +272,17 @@ export default function PlayerRoomDashboard({
       </div>
       {shareNotice&&<p role="status" className="gn-player-muted">{shareNotice}</p>}
     </section>}
-    {!paymentsOnly&&<ClubEngagementPanel eventId={room.id} game={next} isHost={false}/>}
-    {!paymentsOnly&&<ClubExtrasPanel eventId={room.id} games={currentGames} isManager={false} isOwner={false} userId={memberId}/>}
+    {!paymentsOnly&&CLUB_TOOLS_AVAILABLE&&<section className="gn-player-club-tools" aria-label="Additional club tools">
+      <button type="button" className="gn-player-club-toggle" aria-expanded={clubToolsOpen}
+        aria-controls="pkr-player-club-extra-content" onClick={()=>setClubToolsOpen(open=>!open)}>
+        <span><strong>Club planning &amp; extras</strong>
+          <small>Vote on dates, check the waitlist, view league points and shared costs</small></span>
+        <span aria-hidden="true">{clubToolsOpen?'−':'+'}</span>
+      </button>
+      {clubToolsOpen&&<div id="pkr-player-club-extra-content" className="gn-player-club-expanded">
+        <ClubEngagementPanel eventId={room.id} game={next} isHost={false}/>
+        <ClubExtrasPanel eventId={room.id} games={currentGames} isManager={false} isOwner={false} userId={memberId}/>
+      </div>}
+    </section>}
   </section>;
 }

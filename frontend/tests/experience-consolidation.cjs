@@ -32,6 +32,14 @@ assert(!member.includes('Your club tools')&&!member.includes('<span>All games</s
  'Player Home should not duplicate primary navigation');
 assert(member.includes('My profile')&&member.includes('Add to calendar')&&member.includes('Share member link'),
  'Player-specific shortcuts remain available');
+assert(member.includes('CLUB_TOOLS_AVAILABLE&&<section className="gn-player-club-tools"'),
+ 'Optional club panels should be discoverable but absent when features are off');
+assert(member.includes('aria-expanded={clubToolsOpen}')&&member.includes('clubToolsOpen&&<div'),
+ 'Club tools must be expandable and not fetch on Home until opened');
+assert(member.includes('<ClubEngagementPanel')&&member.includes('<ClubExtrasPanel'),
+ 'Keep access to date polls, waitlists, leagues, shared costs and presets');
+assert(mobileCss.includes('.gn-player-club-toggle')&&mobileCss.includes('.gn-player-club-expanded'),
+ 'Member club options must use the premium accessible theme controls');
 for(const label of ['Home','Games','Players','Results','Payments'])
  assert(navigation.includes("'"+label+"'")||navigation.includes("name:'"+label+"'")||navigation.includes('>'+label+'<'),
  'Main navigation must preserve '+label);
