@@ -7,6 +7,8 @@ import {ProductTour,MobileProductShowcase} from '@/components/ProductShowcase';
 import AppDialog from '@/components/AppDialog';
 import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
 import './pkr-launch.css';
+import './chip-club-launch.css';
+import './chip-club-launch-coverage.css';
 
 const steps:{icon:PkrGlyphName;title:string;detail:string}[] = [
   {icon:'users',title:'Bring your people together',detail:'Create a private club, send personal invitations and approve your players.'},

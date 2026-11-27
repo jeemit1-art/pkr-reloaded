@@ -1,0 +1,35 @@
+/* Chip Club public homepage — visual changes only: preserve all routes, CTA behaviour and copy. */
+.pkr-launch{
+ --launch-ink:#1B1F2A;--launch-muted:#5A6172;--launch-accent:#2F4BB8;
+ --launch-coral:#3E63DD;--launch-paper:#F4F1EA;--launch-line:#E5E0D3;
+ background:#F4F1EA!important;color:#1B1F2A!important;
+ font-family:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important;
+}
+.pkr-launch :is(h1,h2,h3,.pkr-l2-brand){font-family:'Plus Jakarta Sans',var(--font-body),system-ui,sans-serif!important;color:#1B1F2A!important;letter-spacing:-.035em}
+.pkr-launch :is(button,a,input,summary):focus-visible{outline:3px solid #3E63DD!important;outline-offset:2px!important}
+.pkr-launch em{color:#2F4BB8!important}
+.pkr-launch .pkr-l2-topbar{background:#fff!important;border-color:#E5E0D3!important}
+.pkr-launch .pkr-l2-brand-emblem{color:#3E63DD!important}
+.pkr-launch :is(.pkr-l2-eyebrow,.pkr-l2-section-kicker,.pkr-tour-overline){color:#2F4BB8!important}
+.pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary){
+ background:#3E63DD!important;border-color:#3E63DD!important;color:#fff!important;
+}
+.pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary):hover{
+ background:#2F4BB8!important;border-color:#2F4BB8!important;
+}
+.pkr-launch :is(.pkr-l2-btn-outline,.pkr-l2-btn-glass){border-color:#E5E0D3!important;color:#1B1F2A!important;background:#fff!important}
+.pkr-launch :is(.pkr-tour-tab.selected,.pkr-tour-tab[aria-selected=true]){
+ background:#E3E9FF!important;color:#2F4BB8!important;border-color:#B6C7FF!important;
+}
+.pkr-launch :is(.pkr-tour-panel,.pkr-proof-card,.pkr-l2-plan,.pkr-l2-feature,.pkr-mobile-device){
+ border-color:#E5E0D3!important;
+}
+.pkr-launch :is(.pkr-product-tour,.pkr-l2-section,.pkr-mobile-product-showcase){background:#F4F1EA!important}
+.pkr-launch :is(.pkr-l2-hero,.pkr-tour-panel,.pkr-mobile-product-showcase){color:#1B1F2A}
+.pkr-launch :is(.pkr-l2-btn,.pkr-tour-cta){font-family:inherit;overflow-wrap:break-word}
+.pkr-launch :is(.pkr-l2-hero h1,.pkr-product-tour-header h2,.pkr-mobile-product-intro h2){
+ line-height:1.13!important;overflow-wrap:break-word;hyphens:auto;
+}
+@media(max-width:430px){
+ .pkr-launch :is(.pkr-l2-hero h1,.pkr-product-tour-header h2,.pkr-mobile-product-intro h2){font-size:clamp(29px,8.2vw,42px)!important}
+}

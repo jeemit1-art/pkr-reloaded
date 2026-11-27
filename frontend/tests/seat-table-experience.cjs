@@ -187,7 +187,7 @@ async function check(browser,name,width,height){
   assert.match((await page.locator('.side-panel.open #pNetDisplay').textContent())||'',/\$25/);
   await requireColour(page,'.side-panel.open #pNetDisplay','rgb(220, 230, 234)');
   // The visible Buy-in metric replaces the hidden legacy summary span.
-  await requireColour(page,'.side-panel.open .pkr-quick-metric.money-in strong','rgb(244, 246, 248)');
+  await requireColour(page,'.side-panel.open .pkr-quick-metric.money-in strong','rgb(244, 241, 234)');
   assert.equal(await page.locator('.side-panel.open .pkr-quick-metric.result.pending').count(),1,'Pending is the correct status until cash-out');
   await page.locator('.side-panel.open #pkrSeatChipSummary')
    .filter({hasText:/95 chips/}).waitFor({state:'visible',timeout:15000});

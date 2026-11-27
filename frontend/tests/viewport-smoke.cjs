@@ -109,8 +109,8 @@ async function test(){
       if(!closer.ok||closer.src!=='/demo/launch-20261127/desktop-live-table.webp')
         errors.push(size.name+' launch closing lacks the current real poker-table screenshot');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(242, 116, 87)')
-        errors.push(size.name+' launch CTA does not match the current app coral: '+landingCTAColour);
+      if(landingCTAColour!=='rgb(62, 99, 221)')
+        errors.push(size.name+' launch CTA does not match Chip Blue: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
       const theme=await guestPage.evaluate(()=>{
@@ -128,14 +128,14 @@ async function test(){
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background!=='rgb(255, 255, 255)'||theme.primary.toLowerCase()!=='#f27457'||theme.ink.toLowerCase()!=='#14242c')
+      if(theme.background!=='rgb(244, 241, 234)'||theme.primary.toLowerCase()!=='#3e63dd'||theme.ink.toLowerCase()!=='#1b1f2a')
         errors.push(size.name+' current launch palette mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(242, 116, 87)')
-        errors.push(size.name+' Pro pricing card lacks the current coral border: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(20, 36, 44)'||!theme.priceFont.toLowerCase().includes('inter'))
+      if(theme.proBorder!=='rgb(62, 99, 221)')
+        errors.push(size.name+' Pro pricing card lacks the Chip Club border: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(27, 31, 42)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
       if(!theme.logo)errors.push(size.name+' current vector spade brand is missing');
-      if(!theme.font.toLowerCase().includes('inter'))
+      if(!theme.font.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
       if(!planText.includes('$9.99')||!planText.includes('$19.99'))
@@ -265,7 +265,43 @@ async function test(){
    for(const item of [{id:'dashboard',url:'/dashboard',ready:'[data-testid="dual-dashboard"]'},{id:'insights',url:'/insights',ready:'.pkr-vnext-insights'},{id:'schedule',url:'/schedule',ready:'.pkr-schedule-page'},{id:'room',url:'/events/test-room',ready:'.pkr-room-games-intro'},{id:'game-detail',url:'/games/test-game',ready:'.pkr-game-detail'},{id:'rsvp',url:'/games/test-game/rsvp',ready:'.pkr-guest'},{id:'live-table',url:'/games/test-game/play',ready:'#gameScreen'},{id:'install',url:'/install?group=test-room',ready:'.pkr-install-vnext'}]){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
-     if(item.id==='dashboard')await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+     if(item.id==='dashboard'){
+       await page.locator('[data-testid="game-night-host-home"]').waitFor({state:'visible'});
+       const classicPaint=await page.evaluate(()=>{
+         const pick=s=>{const el=document.querySelector(s);return el?getComputedStyle(el):null;};
+         return {headline:pick('.pkr-gn-page-head h1>span')?.color||'',
+           primary:pick('.pkr-gn-home .pkr-gn-primary')?.backgroundColor||'',
+           mobileMark:pick('.pkr-primary-mobile-mark')?.color||'',
+           approval:pick('.pkr-approval-alert')?.backgroundColor||''};
+       });
+       if(classicPaint.headline&&classicPaint.headline!=='rgb(62, 99, 221)')
+         errors.push(size.name+' Chip Club Game Night headline wrong: '+JSON.stringify(classicPaint));
+       if(classicPaint.primary&&classicPaint.primary!=='rgb(255, 197, 61)')
+         errors.push(size.name+' Chip Club Game Night button wrong: '+JSON.stringify(classicPaint));
+       if(classicPaint.approval&&classicPaint.approval!=='rgb(227, 233, 255)')
+         errors.push(size.name+' Chip Club approval banner wrong: '+JSON.stringify(classicPaint));
+       // The host's payment attention card must show its record text and a
+       // genuinely usable Review button, not a narrow blue overflow strip.
+       const paymentCard=await page.evaluate(()=>{
+         const card=document.querySelector('.pkr-gn-attention');
+         const details=card?.querySelector('.pkr-gn-attention-record');
+         const review=card?.querySelector('button:last-child');
+         if(!card||!details||!review)return {present:false};
+         const box=el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,top:b.top,bottom:b.bottom};};
+         return {present:true,card:box(card),details:box(details),review:box(review),
+           detailsBackground:getComputedStyle(details).backgroundColor,
+           reviewBackground:getComputedStyle(review).backgroundColor,
+           reviewText:review.textContent?.trim()};
+       });
+       if(!paymentCard.present||paymentCard.detailsBackground!=='rgba(0, 0, 0, 0)'||
+          paymentCard.reviewBackground!=='rgb(62, 99, 221)'||
+          paymentCard.review.width<80||paymentCard.reviewText!=='Review'||
+          paymentCard.details.left<paymentCard.card.left-1||
+          paymentCard.review.right>paymentCard.card.right+1||
+          paymentCard.details.right>paymentCard.review.left+1&&size.width>500)
+         errors.push(size.name+' host payment Review card has clipped/overlapping content: '+JSON.stringify(paymentCard));
+       await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+     }
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
      await page.waitForTimeout(350);
      // One consistent primary navigation: no stacked sticky banners or lost
@@ -299,6 +335,29 @@ async function test(){
          }
        }else if(nav.mobile||!nav.sidebar)
          errors.push(size.name+' '+item.id+' desktop navigation mismatch '+JSON.stringify(nav));
+     }
+     // Chip Club visual contract: classic Game Night must not keep the old coral
+     // approval action, home primary button or active bottom navigation.
+     if(item.id==='dashboard'){
+       const paint=await page.evaluate(()=>{
+         const alert=document.querySelector('.pkr-approval-alert');
+         const primary=alert?.querySelector('.btn-primary');
+         const game=document.querySelector('.pkr-gn-home .pkr-gn-primary');
+         const selected=document.querySelector('.pkr-primary-bottom-nav button.active');
+         const style=el=>el?getComputedStyle(el):null;
+         return {
+           approvalBackground:style(alert)?.backgroundColor||'',
+           approvalButton:style(primary)?.backgroundColor||'',
+           gameButton:style(game)?.backgroundColor||'',
+           activeNav:style(selected)?.color||'',
+         };
+       });
+       if(paint.approvalBackground&&paint.approvalBackground!=='rgb(227, 233, 255)')
+         errors.push(size.name+' old approval palette remained: '+JSON.stringify(paint));
+       if(paint.approvalButton&&paint.approvalButton!=='rgb(62, 99, 221)')
+         errors.push(size.name+' old approval button colour remained: '+JSON.stringify(paint));
+       if(paint.gameButton&&paint.gameButton!=='rgb(255, 197, 61)')
+         errors.push(size.name+' old Game Night primary colour remained: '+JSON.stringify(paint));
      }
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
@@ -465,7 +524,7 @@ async function test(){
          }
          if(visual.head.bottom>visual.bank.top+2||visual.bank.bottom>visual.dock.top)
            errors.push(size.name+' gameplay chrome overlaps: '+JSON.stringify(visual));
-         if(visual.theme.toLowerCase()!=='#78ddb3')errors.push(size.name+' gameplay chrome Game night accent missing: '+visual.theme);
+         if(visual.theme.toLowerCase()!=='#4ade9a')errors.push(size.name+' gameplay chrome Chip Club win accent mismatch: '+visual.theme);
          if(!visual.chipsLoaded)errors.push(size.name+' real poker chips asset not loaded in bank summary');
          if(!visual.footerControls.includes('settleBtn')||!visual.footerControls.includes('endGameBtn'))
            errors.push(size.name+' gameplay settlement/end-game control missing');
@@ -556,10 +615,10 @@ async function test(){
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
            font:heading.fontFamily};
        });
-       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(20, 36, 44)')
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(27, 31, 42)')
          errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
        // Production CSS may shorten white from #ffffff to the equivalent #fff.
-       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
+       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('plus jakarta sans'))
          errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
@@ -583,7 +642,7 @@ async function test(){
            return {background:getComputedStyle(node).backgroundColor,
              card:card?getComputedStyle(card).backgroundColor:null};
          });
-         if(insightsTheme.background!=='rgb(244, 246, 248)'||insightsTheme.card!=='rgb(255, 255, 255)')
+         if(insightsTheme.background!=='rgb(244, 241, 234)'||insightsTheme.card!=='rgb(255, 255, 255)')
            errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
          if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
@@ -609,8 +668,8 @@ async function test(){
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
          return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(primary.image!=='none'||!['rgb(242, 116, 87)','rgb(230, 100, 71)'].includes(primary.background)||primary.color!=='rgb(20, 36, 44)'||primary.height<44||primary.width<85)
-         errors.push(size.name+' full dashboard coral action is unreadable or too small: '+JSON.stringify(primary));
+       if(primary.image!=='none'||!['rgb(62, 99, 221)','rgb(47, 75, 184)'].includes(primary.background)||primary.color!=='rgb(255, 255, 255)'||primary.height<44||primary.width<85)
+         errors.push(size.name+' full dashboard Chip Blue action is unreadable or too small: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
@@ -783,7 +842,7 @@ async function test(){
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
-       if(chrome!=='rgb(15, 29, 37)')errors.push(size.name+' live table header should use the Game night slate surface: '+chrome);
+       if(chrome!=='rgb(22, 27, 54)')errors.push(size.name+' live table header should use the Chip Club Night surface: '+chrome);
        const share=page.locator('#gameScreen #publishBtn');
        if(!await share.isVisible())errors.push(size.name+' live game Share action is hidden');
        const shareColour=await share.evaluate(el=>getComputedStyle(el).color);
@@ -791,19 +850,39 @@ async function test(){
          errors.push(size.name+' live game Share action must use readable neutral text: '+shareColour);
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
        const settleColour=await page.locator('#gameScreen #settleBtn').evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(settleColour!=='rgb(242, 116, 87)')errors.push(size.name+' live game settle action must use the coral action colour: '+settleColour);
+       if(settleColour!=='rgb(255, 197, 61)')errors.push(size.name+' live game settle action must use Chip Gold: '+settleColour);
        const feltTheme=await page.locator('#tableFelt').evaluate(node=>{
          const s=getComputedStyle(node);
          const rail=getComputedStyle(document.querySelector('#tableOuter'));
          return {felt:s.backgroundImage,rail:rail.backgroundImage,railColour:rail.backgroundColor,
-                 moneyFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
+                 moneyFont:getComputedStyle(document.querySelector('#gameScreen #bbIn')).fontFamily,
+                 legacyBankFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
+                 numericMatches:document.querySelectorAll('#gameScreen .bank-pill b').length,
                  feltWidth:node.getBoundingClientRect().width};
        });
-       if(!feltTheme.felt.includes('36, 66, 77')||!feltTheme.felt.includes('27, 51, 62')||
-           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(41, 62, 73)')
+       if(!feltTheme.felt.includes('15, 107, 85')||!feltTheme.felt.includes('19, 129, 106')||
+           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(58, 42, 30)')
          errors.push(size.name+' felt/rail deviates from the Game night slate palette: '+JSON.stringify(feltTheme));
-       if(!feltTheme.moneyFont.toLowerCase().includes('inter'))
-         errors.push(size.name+' bank amounts do not use the bundled Inter font: '+feltTheme.moneyFont);
+       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains mono')){
+         let diagnostic='';
+         if(size.name==='small-phone')diagnostic=JSON.stringify(await page.evaluate(()=>{
+           const el=document.querySelector('#gameScreen #bbIn'),root=document.documentElement,cs=el&&getComputedStyle(el);
+           const matched=[];let checked=0;
+           const visit=rules=>{for(const rule of rules){
+             if(rule.selectorText&&rule.style?.fontFamily){
+               checked++;
+               try{if(el?.matches(rule.selectorText))matched.push({selector:rule.selectorText.slice(0,160),font:rule.style.fontFamily,important:rule.style.getPropertyPriority('font-family')});}catch{}
+             }
+             if(rule.cssRules)try{visit(rule.cssRules)}catch{}
+           }};
+           for(const sheet of document.styleSheets)try{visit(sheet.cssRules)}catch{}
+           return {rootClass:root.className,rootMatches:root.matches('html.pkr-game-night.pkr-chip-club'),
+             el:el?.outerHTML?.slice(0,250),bankBarClass:el?.closest('#bankBar')?.className,
+             inline:el?.getAttribute('style'),font:cs?.fontFamily,variable:cs?.getPropertyValue('--font-num'),
+             matches:matched.slice(-22),ruleCount:checked};
+         }));
+         errors.push(size.name+' bank amounts do not use the bundled JetBrains Mono font: '+feltTheme.moneyFont+' '+diagnostic);
+       }
 
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>

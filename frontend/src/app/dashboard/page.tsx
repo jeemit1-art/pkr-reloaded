@@ -492,7 +492,7 @@ function DashboardInner() {
 
       <div className="pkr-content" style={{maxWidth:1600,margin:'0 auto',padding:'22px 22px 45px',position:'relative',zIndex:1}}>
         {totalPending > 0 && (
-          <section aria-label="Pending membership approvals" role="status"
+          <section className="pkr-approval-alert" aria-label="Pending membership approvals" role="status"
             style={{padding:'14px 17px',marginBottom:17,border:'1px solid var(--gold)',
               background:'rgba(201,168,76,.12)',borderRadius:10,color:'var(--ivory)'}}>
             <strong style={{color:'var(--gold)'}}><PkrGlyph name="bell"/> {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>

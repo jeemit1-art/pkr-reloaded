@@ -658,3 +658,23 @@
   html.pkr-game-night .pkr-player-history-dialog :is(.pkr-money-negative,.pkr-profile-stats strong.pkr-money-negative) {color:#BE3949!important}
   html.pkr-game-night .pkr-player-history-dialog :is(.pkr-money-neutral,.pkr-profile-stats strong.pkr-money-neutral) {color:#14242C!important}
 }
+
+/* Chip Club applies paint only to retained full dashboards. No layout or controls change. */
+@layer pkr-theme-priority{
+html.pkr-game-night.pkr-chip-club .pkr-dual-root{
+--dd-bg:#F4F1EA!important;--dd-deep:#F0EDE6!important;--dd-ink:#1B1F2A!important;
+--dd-muted:#5A6172!important;--dd-soft:#5A6172!important;--dd-line:#E5E0D3!important;--dd-gold:#3E63DD!important;
+background:#F4F1EA!important;color:#1B1F2A!important;
+}
+html.pkr-game-night.pkr-chip-club .pkr-dual-root .pkr-dual-switch-actions button.active,
+html.pkr-game-night.pkr-chip-club .pkr-account-page .pkr-experience-choice-options button.is-active{
+background:#E3E9FF!important;color:#2F4BB8!important;border-color:#B6C7FF!important;
+}
+html.pkr-game-night.pkr-chip-club .pkr-dual-root .pkr-dual-search{background:#F0EDE6!important;border-color:#E5E0D3!important}
+html.pkr-game-night.pkr-chip-club .pkr-dual-root .pkr-dual-search input{color:#1B1F2A!important}
+html.pkr-game-night.pkr-chip-club .pkr-dual-root .pkr-dual-plan-pill{color:#2F4BB8!important}
+html.pkr-game-night.pkr-chip-club .pkr-dual-root .pkr-dual-gold-button{
+background:#3E63DD!important;color:#fff!important;border-color:#3E63DD!important;background-image:none!important;
+}
+html.pkr-game-night.pkr-chip-club .pkr-record-dialog .pkr-record-footer button{background:#3E63DD!important;color:#fff!important}
+}
