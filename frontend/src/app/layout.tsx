@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import AppExperience from '@/components/AppExperience';
+import Script from 'next/script';
+import './pkr-personal.css';
 import localFont from 'next/font/local';
 // Lounge palette precedes the older structural fallback layers.
 import './pkr-lounge.css';
@@ -20,6 +22,7 @@ import './chip-club.css';
 import './chip-club-coverage.css';
 import './pkr-table-readable.css';
 import './pkr-visual-qa.css';
+import './pkr-personal-paint.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -61,8 +64,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU" className={`pkr-game-night pkr-chip-club pkr-lounge ${bodyFont.variable}`}>
+    <html lang="en-AU" suppressHydrationWarning className={`pkr-game-night pkr-chip-club pkr-lounge ${bodyFont.variable}`}>
       <body>
+        <Script src="/pkr-appearance-init.js" strategy="beforeInteractive"/>
         <AppExperience>
         <PersistentNavigation/>
         {children}
