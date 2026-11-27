@@ -472,7 +472,7 @@ async function checkFinancialIntegrityReview(page,state,label){
  const review=page.getByTestId('pkr-finance-integrity');
  await review.waitFor({state:'visible'});
  await page.waitForFunction(()=>document.querySelector('[data-testid="pkr-finance-integrity"] .pkr-finance-integrity-metrics strong')?.textContent==='2 / 2');
- await review.getByText('No calculation exceptions found in the games reviewed.',{exact:false}).waitFor();
+ await review.getByText('No differences detected against the available figures.',{exact:false}).waitFor();
  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
  assert.equal(await review.getByRole('link',{name:'Open saved game'}).count(),0);
  await screenshot(page,label+'-payments-host-integrity-balanced');
