@@ -566,8 +566,17 @@ events.delete('/:id/members/:userId', authMiddleware, async (c) => {
   if (!await requireEventRole(c, eventId, 'host')) return c.json({error:'Forbidden'},403);
   const me = (c as any).get('userId');
   if (targetId === me) return c.json({error:'Cannot remove yourself'},400);
-  await c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=?')
-    .bind(eventId, targetId).run();
+  if(c.env.PKR_PHONE_MEMBERS_V1==='1'){
+    // Removing access must invalidate every outstanding phone/recovery link
+    // before the member can rejoin. Keep their linked identity and history.
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id IN (SELECT id FROM group_phone_contacts WHERE event_id=? AND user_id=?)').bind(eventId,eventId,targetId),
+      c.env.DB.prepare("DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!='host'").bind(eventId,targetId)
+    ]);
+  }else{
+    await c.env.DB.prepare("DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!='host'")
+      .bind(eventId,targetId).run();
+  }
   return c.json({ok:true});
 });
 
