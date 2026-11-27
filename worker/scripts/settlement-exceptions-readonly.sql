@@ -16,23 +16,18 @@ WITH settled_players AS (
  FROM games g LEFT JOIN game_players p ON p.game_id=g.id
  WHERE g.status='settled' GROUP BY g.id
 )
-SELECT 'settled_player_records' AS metric, (SELECT COUNT(*) FROM settled_players) AS count
-UNION ALL SELECT 'settled_incomplete_players',
- (SELECT COUNT(*) FROM settled_players WHERE cashout IS NULL OR net IS NULL)
-UNION ALL SELECT 'settled_effective_net_exceptions',
- (SELECT COUNT(*) FROM settled_players
-  WHERE cashout IS NOT NULL AND net IS NOT NULL AND net<>cashout-effective_buyin)
-UNION ALL SELECT 'settled_nonzero_net_games',
- (SELECT COUNT(*) FROM settled_game_totals WHERE net_total<>0)
-UNION ALL SELECT 'settled_nonzero_games_with_incomplete_players',
+SELECT
+ (SELECT COUNT(*) FROM settled_players) AS settled_player_records,
+ (SELECT COUNT(*) FROM settled_players WHERE cashout IS NULL OR net IS NULL) AS settled_incomplete_players,
+ (SELECT COUNT(*) FROM settled_players WHERE cashout IS NOT NULL AND net IS NOT NULL
+   AND net<>cashout-effective_buyin) AS settled_effective_net_exceptions,
+ (SELECT COUNT(*) FROM settled_game_totals WHERE net_total<>0) AS settled_nonzero_net_games,
  (SELECT COUNT(*) FROM settled_game_totals WHERE net_total<>0 AND incomplete>0)
-UNION ALL SELECT 'settled_games_without_transfer_rows',
+   AS settled_nonzero_games_with_incomplete_players,
  (SELECT COUNT(*) FROM settled_game_totals g
-  WHERE NOT EXISTS(SELECT 1 FROM settlement_transfers t WHERE t.game_id=g.id))
-UNION ALL SELECT 'missing_player_revision_records',
- (SELECT COUNT(*) FROM game_players p
-   LEFT JOIN game_player_revisions r ON r.game_id=p.game_id AND r.user_id=p.user_id
-   WHERE r.game_id IS NULL)
-UNION ALL SELECT 'nonpositive_transfer_rows',
- (SELECT COUNT(*) FROM settlement_transfers WHERE amount<=0)
-ORDER BY metric;
+   WHERE NOT EXISTS(SELECT 1 FROM settlement_transfers t WHERE t.game_id=g.id))
+   AS settled_games_without_transfer_rows,
+ (SELECT COUNT(*) FROM game_players p LEFT JOIN game_player_revisions r
+   ON r.game_id=p.game_id AND r.user_id=p.user_id WHERE r.game_id IS NULL)
+   AS missing_player_revision_records,
+ (SELECT COUNT(*) FROM settlement_transfers WHERE amount<=0) AS nonpositive_transfer_rows;
