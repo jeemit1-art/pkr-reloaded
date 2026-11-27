@@ -804,8 +804,26 @@ async function test(){
        if(!feltTheme.felt.includes('15, 107, 85')||!feltTheme.felt.includes('19, 129, 106')||
            feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(58, 42, 30)')
          errors.push(size.name+' felt/rail deviates from the Game night slate palette: '+JSON.stringify(feltTheme));
-       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains mono'))
-         errors.push(size.name+' bank amounts do not use the bundled JetBrains Mono font: '+feltTheme.moneyFont);
+       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains mono')){
+         let diagnostic='';
+         if(size.name==='small-phone')diagnostic=JSON.stringify(await page.evaluate(()=>{
+           const el=document.querySelector('#gameScreen #bbIn'),root=document.documentElement,cs=el&&getComputedStyle(el);
+           const matched=[];let checked=0;
+           const visit=rules=>{for(const rule of rules){
+             if(rule.selectorText&&rule.style?.fontFamily){
+               checked++;
+               try{if(el?.matches(rule.selectorText))matched.push({selector:rule.selectorText.slice(0,160),font:rule.style.fontFamily,important:rule.style.getPropertyPriority('font-family')});}catch{}
+             }
+             if(rule.cssRules)try{visit(rule.cssRules)}catch{}
+           }};
+           for(const sheet of document.styleSheets)try{visit(sheet.cssRules)}catch{}
+           return {rootClass:root.className,rootMatches:root.matches('html.pkr-game-night.pkr-chip-club'),
+             el:el?.outerHTML?.slice(0,250),bankBarClass:el?.closest('#bankBar')?.className,
+             inline:el?.getAttribute('style'),font:cs?.fontFamily,variable:cs?.getPropertyValue('--font-num'),
+             matches:matched.slice(-22),ruleCount:checked};
+         }));
+         errors.push(size.name+' bank amounts do not use the bundled JetBrains Mono font: '+feltTheme.moneyFont+' '+diagnostic);
+       }
 
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
