@@ -6,7 +6,12 @@
    signed-in screen scopes; public pages and record dialogs remain readable. */
 @layer pkr-lounge, pkr-theme-priority;
 @layer pkr-lounge {
-html.pkr-lounge:has(.pkr-primary-mobile-utility), html.pkr-lounge:has(.pkr-primary-mobile-utility) body,
+/* The installed app uses the default opaque, light native iOS status bar.
+   Keep that native canvas consistent with the manifest and theme metadata.
+   Only the actual in-app header/dock and live game screen are navy. */
+html.pkr-lounge:has(.pkr-primary-mobile-utility), html.pkr-lounge:has(.pkr-primary-mobile-utility) body {
+  background:#FFFFFF!important;background-image:none!important;
+}
 html.pkr-lounge:has(#gameScreen) body {background:#081324!important;background-image:none!important}
 html.pkr-game-night.pkr-chip-club.pkr-lounge body :is(.pkr-primary-mobile-utility,.pkr-primary-bottom-nav,.pkr-primary-sidebar) {
   background:#081324!important;
