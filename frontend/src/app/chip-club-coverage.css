@@ -705,3 +705,16 @@ html.pkr-game-night.pkr-chip-club body .pkr-table-tools-sheet button[aria-presse
  html.pkr-game-night.pkr-chip-club .pkr-primary-mobile-utility{background:#FFFFFF!important;}
 }
 }
+
+/* Late visual QA corrections: eliminate remaining warm-coral exceptions in older screens. */
+@layer pkr-theme-priority {
+ html.pkr-game-night.pkr-chip-club .pkr-gn-page-head h1>span{color:#2F4BB8!important}
+ html.pkr-game-night.pkr-chip-club .pkr-gn-host-tag{color:#1B1F2A!important;border-color:#5C3D00!important}
+ html.pkr-game-night.pkr-chip-club .pkr-gn-home button:focus-visible{outline-color:#3E63DD!important}
+ html.pkr-game-night.pkr-chip-club .pkr-gn-seat-meter>span.filled{background:#3E63DD!important}
+ html.pkr-game-night.pkr-chip-club .pkr-dual-root :is(.pkr-dual-gold-button,.pkr-dual-wide-link):hover,
+ html.pkr-game-night.pkr-chip-club .pkr-night-hub .pkr-night-actions .pkr-night-primary:hover,
+ html.pkr-game-night.pkr-chip-club .pkr-player-home .pkr-player-primary:hover{background:#2F4BB8!important;border-color:#2F4BB8!important;color:#FFFFFF!important}
+ html.pkr-game-night.pkr-chip-club .pkr-results-page .pkr-results-trend-col>div>span{background:linear-gradient(180deg,#3E63DD,#2F4BB8)!important}
+ html.pkr-game-night.pkr-chip-club .pkr-gn-home .pkr-gn-ticket-record:hover{text-decoration-color:#B6C7FF!important}
+}
