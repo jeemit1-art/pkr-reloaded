@@ -513,6 +513,9 @@ async function run(){
    await checkRsvps(page,state,label);
    await checkReportedVisualIssues(page,state,label);
    await checkPayments(page,state,label);
+   const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
+   assert.equal(canvas.colour,'rgb(229, 236, 239)','Payments shares the lounge canvas');
+   assert(canvas.image.includes('radial-gradient'),'Payments shares the lounge light pools');
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
    console.log('PASS',label,'appearance, SVG icons, exact records and payment scope');
