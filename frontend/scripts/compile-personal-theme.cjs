@@ -162,7 +162,7 @@ function convert(value,kind){
  });
  // The legacy "white" variable sometimes means ink. Explicit foreground
  // roles disambiguate primary accents from their deep button backgrounds.
- if(kind==='fg')out=out.replace(/var\(--(?:pkr-a-primary|blue|gold|gn-coral)(?:\s*,[^)]+)?\)/g,token('accent'));
+ if(kind==='fg')out=out.replace(/var\(--(?:pkr-a-primary|blue|gold|gn-coral)\)/g,token('accent'));
  return out;
 }
 const gate=':where([data-pkr-personal-theme]:not(:has(#gameScreen)))';
