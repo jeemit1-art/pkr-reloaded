@@ -635,7 +635,7 @@ async function checkPersonalAppearance(page,state,label){
   }
  }
  await gotoFixturePage(page,BASE+'/account');
- await page.getByRole('button',{name:'System',exact:true}).click();
+ await modes.getByRole('button',{name:'Follow device',exact:true}).click();
  await page.emulateMedia({colorScheme:'light'});
  await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
  await page.emulateMedia({colorScheme:'dark'});
