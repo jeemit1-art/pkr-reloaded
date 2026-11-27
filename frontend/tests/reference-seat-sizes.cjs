@@ -15,7 +15,7 @@ async function check(browser,width,height,count){
  const players={},roster=[];
  for(let i=1;i<=count;i++){
   const cashout=i%4===0?0:i%4===1?null:i%4===2?40:10;
-  const name=i===1?'Alex':i===2?'Blair':i===3?'Casey':'Player '+i;
+  const name=i===1?'Alex':i===2?'Blair':i===3?'Casey':i===5?'Christopher':i===6?'Prakash':i===8?'Alexanderson':'Player '+i;
   players['seat'+i]={name,userId:'ref-'+i,transactions:[{type:'buyin',amount:25,ts:Date.now()},
    ...(cashout===null?[]:[{type:'cashout',amount:cashout,ts:Date.now()}])]};
   roster.push({seat_number:i,user_id:'ref-'+i,display_name:name,buy_ins:1,buy_in_total:2500,
@@ -90,6 +90,13 @@ async function check(browser,width,height,count){
   assert.equal(await page.locator('#bbIn').isVisible(),true);
   assert.equal(await page.locator('#bbOut').isVisible(),true);
   assert.match(await page.locator('#bbBankQuick').textContent(),/\$/);
+  assert.equal(await page.locator('#bbBank').isVisible(),true,'Four-colour bank metrics must remain visible');
+  const bankColours=await page.evaluate(()=>Object.fromEntries(
+    ['bbBankQuick','bbIn','bbOut','bbBank'].map(id=>[id,getComputedStyle(document.getElementById(id)).color])));
+  assert.equal(bankColours.bbBankQuick,'rgb(255, 197, 61)','Bank remaining uses gold');
+  assert.equal(bankColours.bbIn,'rgb(74, 222, 154)','Recorded buy-ins are green');
+  assert.equal(bankColours.bbOut,'rgb(255, 119, 138)','Cashed out totals use red');
+  assert.equal(bankColours.bbBank,'rgb(255, 197, 61)','In-bank cash uses gold');
   assert.equal(await page.locator('#bbBanks').count(),0);
   if(count===9||count===13)
    await page.screenshot({path:path.join(out,browser.browserType().name()+'-'+width+'x'+height+'-'+count+'-auto.png')});
@@ -127,6 +134,25 @@ async function check(browser,width,height,count){
     assert.equal(await name.textContent(),'Alex');
     assert((await name.boundingBox()).width>=30,'Compact player name has readable width');
     assert.equal(await page.locator('#seat1 .pkr-game-compact-name').getAttribute('title'),'Alex');
+   }
+   // Names stay complete, legible and within their own seat in both layouts.
+   for(const [sid,expectedName] of [['seat5','Christopher'],['seat6','Prakash'],['seat8','Alexanderson']]){
+     const readable=page.locator('#'+sid+' .pkr-game-seat-name,#'+sid+' .pkr-game-compact-name').first();
+     assert.equal(await readable.textContent(),expectedName);
+     const measured=await readable.evaluate(el=>{
+       const box=el.getBoundingClientRect(),seat=el.closest('.seat').getBoundingClientRect(),style=getComputedStyle(el);
+       return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,
+         seatL:seat.left,seatR:seat.right,seatT:seat.top,seatB:seat.bottom,
+         scrollW:el.scrollWidth,scrollH:el.scrollHeight,clientW:el.clientWidth,clientH:el.clientHeight,
+         whiteSpace:style.whiteSpace,textOverflow:style.textOverflow};
+     });
+     assert.equal(measured.whiteSpace,'normal','Full name must wrap when needed: '+JSON.stringify(measured));
+     assert.equal(measured.textOverflow,'clip','No ellipsis on player names: '+JSON.stringify(measured));
+     assert(measured.scrollW<=measured.clientW+2&&measured.scrollH<=measured.clientH+2,
+       'Full first name clipped: '+JSON.stringify({sid,mode,width,height,count,measured}));
+     assert(measured.left>=measured.seatL-1&&measured.right<=measured.seatR+1&&
+            measured.top>=measured.seatT-1&&measured.bottom<=measured.seatB+1,
+       'Full first name escaped seat: '+JSON.stringify({sid,mode,width,height,count,measured}));
    }
    const bank=compact?'.pkr-game-compact-bank':'.pkr-game-seat-bank';
    assert.equal(await page.locator('#seat1 '+bank).evaluate(e=>getComputedStyle(e).color),'rgb(189, 207, 216)',
