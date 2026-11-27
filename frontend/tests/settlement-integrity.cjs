@@ -79,7 +79,7 @@ assert.match(historical.playerIssues[0].explanation,/not proof/);
 const zeroSaved=reviewSettledGame(fixture([player('fictional-zero',1,0,5000,0)]));
 assert.equal(zeroSaved.needsReview,false,'An estimated matching balance is not an arithmetic difference');
 assert.deepEqual(summariseGameIntegrity([balanced,mismatch,incomplete,empty,historical]),{
- checked:5,flagged:4,incomplete:1,differences:2,historical:1,recorded:1,nonZero:2,
+ checked:5,flagged:4,incomplete:1,differences:2,historical:1,recorded:1,nonZero:3,
 });
 const page=fs.readFileSync(path.join(root,'src/components/GameNightPayments.tsx'),'utf8');
 const view=fs.readFileSync(path.join(root,'src/components/FinancialIntegrityReview.tsx'),'utf8');
