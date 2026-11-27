@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppDialog from '@/components/AppDialog';
+import SwipeDismissHandle from '@/components/SwipeDismissHandle';
+import {installSwipeDismiss} from '@/lib/swipe-dismiss';
 import PkrGlyph from '@/components/PkrGlyph';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import {api,type RoomPlayerProfile,type RoomPlayerProfileInput} from '@/lib/api';
@@ -16,6 +18,39 @@ export default function PlayPage() {
   const initialized = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [bankRecords,setBankRecords]=useState<BankBreakdown|null>(null);
+  useEffect(()=>{
+    const panel=document.getElementById('sidePanel');
+    const leaderboard=document.querySelector<HTMLElement>('#lbSheet .sheet-box');
+    const publishedResults=document.querySelector<HTMLElement>('#publishSheet .sheet-box');
+    const cleanups:Array<()=>void>=[];
+    if(panel)cleanups.push(installSwipeDismiss(panel,()=>(window as any).closePanel?.(),{
+      isEnabled:()=>panel.classList.contains('open')&&!panel.querySelector('form,input,textarea,select,[contenteditable="true"]')
+        &&!panel.querySelector('[data-pkr-player-view="settings"],[data-pkr-player-view="more"]'),
+    }));
+    if(leaderboard)cleanups.push(installSwipeDismiss(leaderboard,()=>(window as any).closeLbSheet?.(),{
+      isEnabled:()=>!!document.getElementById('lbSheet')?.classList.contains('show'),
+    }));
+    if(publishedResults)cleanups.push(installSwipeDismiss(publishedResults,()=>(window as any).closePublish?.(),{
+      isEnabled:()=>!!document.getElementById('publishSheet')?.classList.contains('show'),
+    }));
+    // Settlement reviews are created by the legacy table engine after a tap.
+    // Give only that read-only window the same controller, retaining its close
+    // path for focus and scroll restoration and releasing it on route cleanup.
+    const activeReviews=new Map<()=>void,()=>void>();
+    const attachReview=(surface:HTMLElement,onClose:()=>void)=>{
+      const detach=installSwipeDismiss(surface,onClose);
+      const release=()=>{detach();activeReviews.delete(onClose);};
+      activeReviews.set(onClose,release);
+      return release;
+    };
+    (window as any)._pkrInstallSettlementReviewSwipe=attachReview;
+    return()=>{
+      cleanups.forEach(cleanup=>cleanup());
+      Array.from(activeReviews.keys()).forEach(close=>close());
+      if((window as any)._pkrInstallSettlementReviewSwipe===attachReview)
+        delete (window as any)._pkrInstallSettlementReviewSwipe;
+    };
+  },[gameId]);
   function openBankRecords(measure:'buyins'|'cashouts'|'bank'|'status'){
     const detail=(window as any)._pkrBankBreakdown?.(measure) as BankBreakdown|undefined;
     if(detail)setBankRecords(detail);
@@ -415,6 +450,7 @@ export default function PlayPage() {
       {/* ── LEADERBOARD SHEET ── */}
       <div className="sheet" id="lbSheet">
         <div className="sheet-box">
+          <SwipeDismissHandle/>
           <div className="sheet-hdr"><h2><PkrGlyph name="trophy"/> Leaderboard</h2><button className="panel-close" onClick={() => (window as any).closeLbSheet?.()}>✕</button></div>
           <div className="sheet-tabs">
             <button className="sheet-tab" id="lbTabAll" onClick={() => (window as any).switchLbTab?.('all')}>All Time</button>
@@ -473,6 +509,7 @@ export default function PlayPage() {
       </div>
       <div className="sheet" id="publishSheet">
         <div className="sheet-box">
+          <SwipeDismissHandle/>
           <div className="sheet-hdr"><h2>♠ Results</h2><button className="panel-close" onClick={() => (window as any).closePublish?.()}>✕</button></div>
           <div className="sheet-body">
             <div id="publishPreview" style={{background:'rgba(4,12,5,0.85)',border:'1px solid var(--border)',borderRadius:'8px',padding:'12px',marginBottom:'14px',fontSize:'0.9rem'}}></div>
@@ -534,14 +571,15 @@ export default function PlayPage() {
         </div>
       </AppDialog>}
 
-      {bankRecords&&<AppDialog className="pkr-bank-record-dialog" aria-label={bankRecords.title} onDismiss={()=>setBankRecords(null)}>
+      {bankRecords&&<AppDialog className="pkr-bank-record-dialog" swipeToDismiss aria-label={bankRecords.title} onDismiss={()=>setBankRecords(null)}>
         <div className="pkr-bank-record-sheet">
+          <SwipeDismissHandle/>
           <header><div><small>UNDERLYING RECORDS</small><h2>{bankRecords.title}</h2><p>{bankRecords.summary}</p></div>
             <button type="button" onClick={()=>setBankRecords(null)} aria-label="Close bank records">Close</button></header>
           <div className="pkr-bank-record-list">
             {bankRecords.warning&&<p role="status" className="pkr-bank-record-warning">{bankRecords.warning}</p>}
             {!bankRecords.rows.length&&<p>No matching records in this table.</p>}
-            {bankRecords.rows.map(row=><button key={row.id} type="button" className="pkr-bank-record-row" onClick={()=>{
+            {bankRecords.rows.map(row=><button key={row.id} type="button" className="pkr-bank-record-row" data-pkr-swipe-row onClick={()=>{
               setBankRecords(null);(window as any).openPanel?.(row.id);
             }}><span><strong>{row.name}</strong><small>{row.detail}</small></span><b>{row.value}</b><PkrGlyph name="chevron-right" size={17}/></button>)}
           </div>
@@ -773,7 +811,7 @@ function pkrUiIcon(name) {
 var _ctx = null;
 try { _ctx = JSON.parse(localStorage.getItem('pkrCtx') || 'null'); } catch(e) {}
 if (!_ctx || !_ctx.gameId) { window.location.href = '/dashboard'; return; }
-var _pkrTableDisposed=false,_pkrTableListeners=[],_pkrSwipePanel=null;
+var _pkrTableDisposed=false,_pkrTableListeners=[];
 function pkrListen(target,type,listener,options){
   target.addEventListener(type,listener,options);
   _pkrTableListeners.push([target,type,listener,options]);
@@ -2220,7 +2258,6 @@ window.openPanel = function openPanel(sid) {
   activePanel = sid;
   var sp = document.getElementById('sidePanel');
   if (sp) {
-    pkrBindPlayerSwipe(sp);
     sp.classList.add('open');
     sp.setAttribute('aria-hidden', 'false');
   }
@@ -2278,49 +2315,6 @@ function pkrQuickRecordBuyin(sid,p,dollars){
   return !!success;
 }
 
-function pkrBindPlayerSwipe(sp){
-  if(sp.dataset.pkrSwipeBound==='yes')return;
-  sp.dataset.pkrSwipeBound='yes';
-  _pkrSwipePanel=sp;
-  var gesture=null;
-  function canStart(e){
-    if(!sp.classList.contains('open')||!window.matchMedia('(max-width:700px)').matches||
-       e.touches.length!==1)return false;
-    var target=e.target;
-    if(!(target instanceof Element)||
-       target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return false;
-    var content=document.getElementById('panelBody');
-    return !(content&&content.contains(target)&&content.scrollTop>1);
-  }
-  pkrListen(sp,'touchstart',function(e){
-    gesture=null;
-    if(!canStart(e))return;
-    gesture={x:e.touches[0].clientX,y:e.touches[0].clientY,dy:0,moving:false};
-  },{passive:true});
-  pkrListen(sp,'touchmove',function(e){
-    if(!gesture||e.touches.length!==1)return;
-    var dy=e.touches[0].clientY-gesture.y;
-    var dx=Math.abs(e.touches[0].clientX-gesture.x);
-    var content=document.getElementById('panelBody');
-    if((content&&content.scrollTop>1)||dy<0||dx>dy){gesture=null;return;}
-    if(dy<=7)return;
-    if(e.cancelable)e.preventDefault();
-    gesture.moving=true;gesture.dy=dy;
-    sp.style.transition='none';
-    sp.style.transform='translateY('+Math.min(dy,300)+'px)';
-  },{passive:false});
-  function finish(){
-    if(!gesture)return;
-    var moved=gesture.moving,distance=gesture.dy;
-    gesture=null;
-    sp.style.transition='';
-    sp.style.transform='';
-    if(moved&&distance>=75)window.closePanel();
-  }
-  pkrListen(sp,'touchend',finish,{passive:true});
-  pkrListen(sp,'touchcancel',finish,{passive:true});
-}
-
 function pkrAssembleQuickPlayerView(sid,body,p){
   var original=Array.from(body.children),sections={};
   var sectionName='';
@@ -2341,6 +2335,7 @@ function pkrAssembleQuickPlayerView(sid,body,p){
     return container;
   }
   var root=node('div','pkr-quick-view');
+  root.setAttribute('data-pkr-player-view',_pkrPlayerPanelView);
   if(_pkrPlayerPanelView!=='overview'){
     root.appendChild(button('‹ Back to player',function(){go('overview');}, 'pkr-quick-back'));
   }
@@ -3142,6 +3137,9 @@ function _doOpenSettleUp(review) {
   overlay.style.cssText='position:fixed;inset:0;z-index:26000;background:rgba(0,0,0,0.88);display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);box-sizing:border-box';
   var box=document.createElement('div');
   box.style.cssText='background:#101e1d;border:1px solid #365450;border-radius:16px 16px 0 0;width:100%;max-width:580px;max-height:calc(100dvh - 20px - env(safe-area-inset-top));overflow:hidden;display:flex;flex-direction:column;color:#eaf0f2';
+  var grip=document.createElement('div');grip.className='pkr-swipe-handle';
+  grip.setAttribute('aria-hidden','true');grip.setAttribute('data-pkr-swipe-handle','');
+  grip.appendChild(document.createElement('span'));box.appendChild(grip);
   var hdr=document.createElement('div');
   hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #365450;flex-shrink:0';
   var caption=document.createElement('div');
@@ -3156,8 +3154,9 @@ function _doOpenSettleUp(review) {
   closeBtn.style.cssText='background:#243637;border:1px solid #45605b;color:#fff;border-radius:9px;min-height:44px;padding:8px 14px;cursor:pointer';
   var originalFocus=document.activeElement;
   var priorOverflow=document.body.style.overflow;
+  var releaseSwipe=function(){},closed=false;
   var onKey=function(e){if(e.key==='Escape'){e.preventDefault();close();}};
-  function close(){overlay.remove();document.removeEventListener('keydown',onKey);document.body.style.overflow=priorOverflow;if(originalFocus&&originalFocus.focus)originalFocus.focus();}
+  function close(){if(closed)return;closed=true;releaseSwipe();overlay.remove();document.removeEventListener('keydown',onKey);document.body.style.overflow=priorOverflow;if(originalFocus&&originalFocus.focus)originalFocus.focus();}
   closeBtn.addEventListener('click',close);
   hdr.append(caption,closeBtn);box.appendChild(hdr);
   var body=document.createElement('div');
@@ -3224,6 +3223,8 @@ function _doOpenSettleUp(review) {
   pkrListen(document,'keydown',onKey);
   document.body.style.overflow='hidden';
   document.body.appendChild(overlay);
+  if(typeof window._pkrInstallSettlementReviewSwipe==='function')
+    releaseSwipe=window._pkrInstallSettlementReviewSwipe(box,close);
   closeBtn.focus();
 }
 
@@ -3763,7 +3764,6 @@ window._pkrTableCleanup = function() {
   if(_pkrTableAreaObserver)_pkrTableAreaObserver.disconnect();
   _pkrTableListeners.forEach(function(binding){binding[0].removeEventListener(binding[1],binding[2],binding[3]);});
   _pkrTableListeners=[];
-  if(_pkrSwipePanel)delete _pkrSwipePanel.dataset.pkrSwipeBound;
 };
 
 window.addSeat = function() {

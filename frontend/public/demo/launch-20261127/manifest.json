@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "sourceCommit": "884bc11fbe638c82314a95b438f90a4efd4f319a",
+  "fixtureDate": "2026-11-27T09:15:00.000Z",
+  "sampleData": true,
+  "description": "Actual PKR screens, rendered from the application with fictional River City Poker records. No production data or device status bars are simulated.",
+  "captureWorkflow": "https://github.com/jeemit1-art/pkr-reloaded/actions/runs/45916112601",
+  "screens": [
+    {
+      "id": "mobile-home",
+      "title": "Game night home",
+      "category": "Planning & club",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-home.webp",
+      "publicPath": "/demo/launch-20261127/mobile-home.webp",
+      "route": "/dashboard?room=launch-room",
+      "socialImage": "mobile-home.png"
+    },
+    {
+      "id": "mobile-rsvp",
+      "title": "RSVP board and seat selection",
+      "category": "Planning & club",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-rsvp.webp",
+      "publicPath": "/demo/launch-20261127/mobile-rsvp.webp",
+      "route": "/games/launch-upcoming/rsvp"
+    },
+    {
+      "id": "mobile-players",
+      "title": "Player profiles and membership",
+      "category": "Players & access",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-players.webp",
+      "publicPath": "/demo/launch-20261127/mobile-players.webp",
+      "route": "/events/launch-room?tab=members"
+    },
+    {
+      "id": "mobile-results",
+      "title": "Player standings",
+      "category": "Results & records",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-results.webp",
+      "publicPath": "/demo/launch-20261127/mobile-results.webp",
+      "route": "/results?room=launch-room"
+    },
+    {
+      "id": "mobile-records",
+      "title": "Underlying player records",
+      "category": "Results & records",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-records.webp",
+      "publicPath": "/demo/launch-20261127/mobile-records.webp",
+      "route": "/events/launch-room?tab=members"
+    },
+    {
+      "id": "mobile-payments",
+      "title": "Payments overview",
+      "category": "Payments",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-payments.webp",
+      "publicPath": "/demo/launch-20261127/mobile-payments.webp",
+      "route": "/payments?room=launch-room"
+    },
+    {
+      "id": "mobile-account",
+      "title": "Account and appearance settings",
+      "category": "Settings & access",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-account.webp",
+      "publicPath": "/demo/launch-20261127/mobile-account.webp",
+      "route": "/account"
+    },
+    {
+      "id": "mobile-live-table",
+      "title": "Live cash table \u00b7 9 players",
+      "category": "Live gameplay",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-live-table.webp",
+      "publicPath": "/demo/launch-20261127/mobile-live-table.webp",
+      "route": "/games/launch-live/play"
+    },
+    {
+      "id": "mobile-tournament",
+      "title": "Tournament timer and blinds",
+      "category": "Live gameplay",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-tournament.webp",
+      "publicPath": "/demo/launch-20261127/mobile-tournament.webp",
+      "route": "/games/launch-live/play"
+    },
+    {
+      "id": "mobile-appearance",
+      "title": "Room appearance and layout choices",
+      "category": "Settings & access",
+      "viewport": {
+        "width": 430,
+        "height": 873
+      },
+      "width": 860,
+      "height": 1746,
+      "webImage": "mobile-appearance.webp",
+      "publicPath": "/demo/launch-20261127/mobile-appearance.webp",
+      "route": "/account"
+    },
+    {
+      "id": "desktop-home",
+      "title": "Game night home",
+      "category": "Planning & club",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "width": 1440,
+      "height": 900,
+      "webImage": "desktop-home.webp",
+      "publicPath": "/demo/launch-20261127/desktop-home.webp",
+      "route": "/dashboard?room=launch-room",
+      "socialImage": "desktop-home.png"
+    },
+    {
+      "id": "desktop-command-centre",
+      "title": "Full dashboard \u00b7 Command Centre",
+      "category": "Dashboard layouts",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "width": 1440,
+      "height": 900,
+      "webImage": "desktop-command-centre.webp",
+      "publicPath": "/demo/launch-20261127/desktop-command-centre.webp",
+      "route": "/dashboard?room=launch-room"
+    },
+    {
+      "id": "desktop-live-dashboard",
+      "title": "Full dashboard \u00b7 Live Poker",
+      "category": "Dashboard layouts",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "width": 1440,
+      "height": 900,
+      "webImage": "desktop-live-dashboard.webp",
+      "publicPath": "/demo/launch-20261127/desktop-live-dashboard.webp",
+      "route": "/dashboard?room=launch-room"
+    },
+    {
+      "id": "desktop-live-table",
+      "title": "Live cash table \u00b7 9 players",
+      "category": "Live gameplay",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "width": 1440,
+      "height": 900,
+      "webImage": "desktop-live-table.webp",
+      "publicPath": "/demo/launch-20261127/desktop-live-table.webp",
+      "route": "/games/launch-live/play"
+    }
+  ]
+}

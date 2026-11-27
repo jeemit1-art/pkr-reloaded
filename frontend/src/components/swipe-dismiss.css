@@ -1,0 +1,8 @@
+/* Individual translate preserves the dialog's existing centring transform. */
+[data-pkr-swipe-surface]{translate:0 var(--pkr-swipe-y,0);transition:translate 160ms ease-out}
+[data-pkr-swipe-surface][data-pkr-swipe-state=dragging]{transition:none!important;user-select:none;-webkit-user-select:none}
+[data-pkr-swipe-surface][data-pkr-swipe-state=closing]{pointer-events:none}
+.pkr-swipe-handle{display:none;flex:none;align-items:center;justify-content:center;height:22px;min-height:22px;padding:8px 0 5px;box-sizing:border-box;cursor:grab;touch-action:none}
+.pkr-swipe-handle>span{display:block;width:38px;height:4px;border-radius:999px;background:#A6B4BC}
+@media(max-width:1099px),(any-pointer:coarse){.pkr-swipe-handle{display:flex}}
+@media(prefers-reduced-motion:reduce){[data-pkr-swipe-surface]{transition:none!important}}

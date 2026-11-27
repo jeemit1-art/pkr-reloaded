@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import '../pkr-marketing-screens.css';
 
 export const metadata:Metadata={
  title:'Home Poker Settlement Tracker — Who Owes Whom? | PKR',
@@ -10,7 +11,7 @@ export default function SettlementPage(){
  return <main className="pkr-marketing-editorial">
   <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Poker settlement</span></nav>
   <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">HOME POKER SETTLEMENT TRACKER</span><h1>Last hand played.<br/><em>Numbers settled.</em></h1><p>After a private cash game, the final count matters. PKR helps hosts record buy-ins, cash-outs and the resulting player balances, so everyone understands the result and who owes whom.</p><div className="pkr-marketing-hero-actions"><a className="pkr-marketing-button primary" href="/?subscribe=starter">Track your next game ↗</a><a className="pkr-marketing-button" href="/pricing">See pricing</a></div></header>
-  <div className="pkr-marketing-feature-visual"><img src="/demo/theme-a/insights.webp" alt="Actual PKR player insights and settlement screen with fictional demonstration records" loading="lazy"/><div><small>AFTER THE LAST HAND</small><strong>Everyone knows<br/>where they stand.</strong></div></div>
+  <div className="pkr-marketing-feature-visual pkr-marketing-launch-visual"><img src="/demo/launch-20261127/mobile-payments.webp" alt="Current PKR Payments screen with fictional settlement and payment records" width="430" height="873" loading="lazy" decoding="async"/><div><small>AFTER THE LAST HAND</small><strong>Everyone knows<br/>where they stand.</strong></div></div>
   <section className="pkr-marketing-prose"><span className="pkr-marketing-kicker">HOW TO SETTLE A POKER GAME</span><h2>Close the night <em>without guesswork.</em></h2><div className="pkr-marketing-steps">
    <article><span>01</span><h3>Record every entry</h3><p>Keep each player’s original buy-in and any rebuys recorded during play.</p></article>
    <article><span>02</span><h3>Capture final cash-outs</h3><p>Enter what each player takes away at the end of the session.</p></article>

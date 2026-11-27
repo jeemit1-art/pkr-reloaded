@@ -83,7 +83,7 @@ async function test(){
     try{
       await guestPage.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:40000});
       await guestPage.locator('.pkr-l2-hero').waitFor({state:'visible',timeout:25000});
-      // Theme A shows genuine PKR screens, never the old painted hero backdrop.
+      // The launch page shows real screenshots of the current app, using fictional data.
       await guestPage.locator('.pkr-hero-desktop img').evaluate(async image=>{
         if(image instanceof HTMLImageElement){image.loading='eager';await image.decode().catch(()=>{});}
       });
@@ -106,39 +106,35 @@ async function test(){
         return {ok:image.complete&&image.naturalWidth>500&&getComputedStyle(image).display!=='none',
                 src:image.getAttribute('src')};
       });
-      if(!closer.ok||closer.src!=='/images/pkr-approved-hero-desktop.webp')
-        errors.push(size.name+' Theme A closing lacks visible poker-chip artwork');
+      if(!closer.ok||closer.src!=='/demo/launch-20261127/desktop-live-table.webp')
+        errors.push(size.name+' launch closing lacks the current real poker-table screenshot');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(61, 220, 151)')
-        errors.push(size.name+' landing CTA is not Midnight Felt lime: '+landingCTAColour);
-      if(await guestPage.locator('.pkr-l2-feature-card').count()!==3)
-        errors.push(size.name+' landing visual feature cards missing');
+      if(landingCTAColour!=='rgb(242, 116, 87)')
+        errors.push(size.name+' launch CTA does not match the current app coral: '+landingCTAColour);
+      if(await guestPage.locator('.pkr-l2-step').count()!==4)
+        errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
       const theme=await guestPage.evaluate(()=>{
-        const root=getComputedStyle(document.documentElement);
+        const root=getComputedStyle(document.querySelector('.pkr-launch'));
         const price=document.querySelector('.pkr-l2-price');
         const pro=document.querySelector('.pkr-l2-plan-featured');
-        const brand=document.querySelector('.pkr-l2-brand-emblem');
         return {
-          background:root.getPropertyValue('--pkr-a-bg').trim(),
-          surface:root.getPropertyValue('--pkr-a-surface').trim(),
-          primary:root.getPropertyValue('--pkr-a-primary').trim(),
-          money:root.getPropertyValue('--pkr-a-money').trim(),
+          background:root.backgroundColor,
+          primary:root.getPropertyValue('--launch-coral').trim(),
+          ink:root.getPropertyValue('--launch-ink').trim(),
           priceFont:price?getComputedStyle(price).fontFamily:'',
           priceColor:price?getComputedStyle(price).color:'',
           proBorder:pro?getComputedStyle(pro).borderTopColor:'',
-          logoBackground:brand?getComputedStyle(brand).backgroundImage:'',
+          logo:!!document.querySelector('.pkr-l2-brand-emblem svg[data-pkr-icon=spade]'),
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background.toLowerCase()!=='#0b0f12'||theme.surface.toLowerCase()!=='#131a1f'||
-         theme.primary.toLowerCase()!=='#3ddc97'||theme.money.toLowerCase()!=='#f2b84b')
-        errors.push(size.name+' Midnight Felt design tokens mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(242, 184, 75)')
-        errors.push(size.name+' Pro pricing card lacks gold outline: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(242, 184, 75)'||!theme.priceFont.toLowerCase().includes('inter'))
-        errors.push(size.name+' pricing must preserve gold numbers in the bundled Inter font: '+JSON.stringify(theme));
-      if(!theme.logoBackground.includes('/brand/pkr-midnight-mark.svg'))
-        errors.push(size.name+' brand geometric spade asset not loaded');
+      if(theme.background!=='rgb(255, 255, 255)'||theme.primary.toLowerCase()!=='#f27457'||theme.ink.toLowerCase()!=='#14242c')
+        errors.push(size.name+' current launch palette mismatch: '+JSON.stringify(theme));
+      if(theme.proBorder!=='rgb(242, 116, 87)')
+        errors.push(size.name+' Pro pricing card lacks the current coral border: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(20, 36, 44)'||!theme.priceFont.toLowerCase().includes('inter'))
+        errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
+      if(!theme.logo)errors.push(size.name+' current vector spade brand is missing');
       if(!theme.font.toLowerCase().includes('inter'))
         errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
@@ -158,17 +154,33 @@ async function test(){
       if(await guestPage.locator('.pkr-mobile-device img').count()!==3)
         errors.push(size.name+' authentic mobile screenshot gallery missing');
       const tabs=guestPage.getByRole('tablist',{name:'PKR app features'});
-      if(await tabs.getByRole('tab').count()!==6)
-        errors.push(size.name+' product tour must show all six actual app features');
-      await tabs.getByRole('tab',{name:/Insights & settlement/i}).click();
+      if(await tabs.getByRole('tab').count()!==8)
+        errors.push(size.name+' product tour must show all eight current app feature groups');
+      await tabs.getByRole('tab',{name:'Payments',exact:true}).click();
       const insightsImage=guestPage.locator('#pkr-tour-panel picture img');
       await insightsImage.waitFor({state:'visible',timeout:10000});
       const selectedImage=await insightsImage.getAttribute('src');
-      if(selectedImage!=='/demo/theme-a/insights.webp')
-        errors.push(size.name+' interactive product tour did not switch to Insights screenshot');
+      if(selectedImage!=='/demo/launch-20261127/mobile-payments.webp')
+        errors.push(size.name+' interactive product tour did not switch to the current Payments screen');
       await tabs.getByRole('tab',{name:/Live poker table/i}).click();
-      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/theme-a/live-table.webp')
+      if(await guestPage.locator('#pkr-tour-panel picture img').getAttribute('src')!=='/demo/launch-20261127/desktop-live-table.webp')
         errors.push(size.name+' interactive product tour did not switch back to live table');
+      await guestPage.getByRole('button',{name:'Enlarge screenshot: Live poker table',exact:true}).click();
+      const preview=guestPage.getByRole('dialog',{name:'Live poker table',exact:true});
+      await preview.waitFor({state:'visible'});
+      const previewImage=preview.locator('.pkr-launch-preview-image img');
+      await previewImage.evaluate(async image=>{if(image instanceof HTMLImageElement)await image.decode();});
+      if(!(await previewImage.evaluate(image=>image instanceof HTMLImageElement&&image.naturalWidth>0)))
+        errors.push(size.name+' enlarged current app screenshot failed to load');
+      await preview.getByRole('button',{name:'Close screenshot',exact:true}).click();
+      if(await preview.count())errors.push(size.name+' screenshot preview did not close');
+      await tabs.getByRole('tab',{name:'Live poker table',exact:true}).focus();
+      await guestPage.keyboard.press('End');
+      if(await tabs.getByRole('tab',{name:'Your setup',exact:true}).getAttribute('aria-selected')!=='true')
+        errors.push(size.name+' app tour End key failed');
+      await guestPage.keyboard.press('Home');
+      if(await tabs.getByRole('tab',{name:'Home',exact:true}).getAttribute('aria-selected')!=='true')
+        errors.push(size.name+' app tour Home key failed');
       const productWidth=await guestPage.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
       if(productWidth.scroll>productWidth.viewport+5)
         errors.push(size.name+' product screenshot gallery introduces horizontal overflow');
@@ -182,7 +194,8 @@ async function test(){
         const social=await guestPage.locator('meta[property="og:image"]').getAttribute('content');
         if(!social?.includes('/opengraph-image'))
           errors.push('Theme A social share metadata still points to legacy gold image');
-        for(const asset of ['/demo/theme-a/live-table.webp','/demo/theme-a/host-dashboard.webp','/demo/theme-a/rsvp-board.webp','/demo/theme-a/insights.webp','/demo/theme-a/mobile-live-table.webp']){
+        for(const name of ['desktop-home','mobile-home','desktop-live-table','mobile-live-table','mobile-rsvp','mobile-tournament','mobile-players','mobile-results','mobile-payments','mobile-records','mobile-account','desktop-command-centre','desktop-live-dashboard']){
+          const asset='/demo/launch-20261127/'+name+'.webp';
           const response=await guestPage.request.get(BASE+asset);
           if(!response.ok()||(await response.body()).length<10000)
             errors.push('Real product screenshot not available: '+asset);
@@ -538,12 +551,13 @@ async function test(){
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
          const s=getComputedStyle(el),r=el.getBoundingClientRect();
-         return {height:r.height,image:s.backgroundImage,
+         const heading=getComputedStyle(el.querySelector('h1,h2,.display')||el);
+         return {height:r.height,image:s.backgroundImage,background:s.backgroundColor,colour:heading.color,
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
-           font:getComputedStyle(el.querySelector('h1,h2,.display')||el).fontFamily};
+           font:heading.fontFamily};
        });
-       if(summary.height<245||!summary.image.includes('linear-gradient')||summary.image.includes('pkr-approved-hero'))
-         errors.push(size.name+' game detail header lost its retained gradient or geometry: '+JSON.stringify(summary));
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(20, 36, 44)')
+         errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
        // Production CSS may shorten white from #ffffff to the equivalent #fff.
        if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('inter'))
          errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));

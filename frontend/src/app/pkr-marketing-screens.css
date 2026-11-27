@@ -1,0 +1,10 @@
+/* Keep actual launch screenshots intact on the linked product guides. */
+@layer pkr-theme-priority {
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)!important;align-items:center!important;gap:24px!important;min-height:0!important;padding:26px!important;background:#F4F6F8!important;border-color:#D2DDE3!important;box-shadow:none!important}
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual::after{display:none!important}
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual>img{position:static!important;inset:auto!important;order:2!important;width:100%!important;height:430px!important;object-fit:contain!important;border-radius:12px!important;background:transparent!important;opacity:1!important}
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual>div{order:1!important;padding:20px!important;gap:18px!important}
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual small{color:#A33D28!important;font-size:12px!important}
+ html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual strong{color:#14242C!important;font-size:clamp(28px,3.5vw,43px)!important}
+ @media(max-width:700px){html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual{grid-template-columns:1fr!important;padding:20px!important;gap:15px!important}html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual>div{padding:8px!important}html.pkr-game-night .pkr-marketing-editorial .pkr-marketing-launch-visual>img{height:auto!important;max-height:500px!important;object-fit:contain!important}}
+}

@@ -5,6 +5,8 @@ import {createPortal} from 'react-dom';
 import {usePathname,useRouter} from 'next/navigation';
 import {loadRecordDetail,type RecordDetail,type RecordRequest} from '@/lib/record-details';
 import {lockPageScroll} from '@/lib/overlay-scroll';
+import SwipeDismissHandle from './SwipeDismissHandle';
+import {useSwipeDismiss} from './useSwipeDismiss';
 
 const RecordContext=createContext<((request:RecordRequest)=>void)|null>(null);
 
@@ -41,6 +43,7 @@ function RecordSheet({request,canGoBack,onClose,onBack,onNext}:{request:RecordRe
   const [query,setQuery]=useState('');
   const [page,setPage]=useState(0);
   const [retry,setRetry]=useState(0);
+  useSwipeDismiss(dialog,onClose);
   useEffect(()=>{
     const element=dialog.current;
     if(!element)return;
@@ -74,6 +77,7 @@ function RecordSheet({request,canGoBack,onClose,onBack,onNext}:{request:RecordRe
       const bounds=event.currentTarget.getBoundingClientRect();
       if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)onClose();
     }}>
+    <SwipeDismissHandle/>
     <header className="pkr-record-heading">
       <div><span>UNDERLYING RECORDS</span><h2 id="pkr-record-title" ref={heading} tabIndex={-1}>{request.title}</h2>
         {detail?.summary&&<p data-money-tone={detail.summaryTone||'neutral'}>{detail.summary}</p>}</div>
@@ -91,7 +95,7 @@ function RecordSheet({request,canGoBack,onClose,onBack,onNext}:{request:RecordRe
           {rows.slice(currentPage*pageSize,(currentPage+1)*pageSize).map(row=>{
             const content=<><span><strong>{row.label}</strong>{row.detail&&<small>{row.detail}</small>}</span>
               {row.value&&<b data-money-tone={row.moneyTone||'neutral'}>{row.value}</b>}{(row.href||row.next)&&<span aria-hidden="true">&rsaquo;</span>}</>;
-            return row.href||row.next?<button type="button" className="pkr-record-row" key={row.id}
+            return row.href||row.next?<button type="button" className="pkr-record-row" data-pkr-swipe-row key={row.id}
               onClick={()=>{if(row.next)onNext(row.next);else if(row.href){onClose();router.push(row.href);}}}>{content}</button>
               :<div className="pkr-record-row" key={row.id}>{content}</div>;
           })}

@@ -1,0 +1,105 @@
+name: PKR launch screenshots (fictional records only)
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pkr-launch-gallery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkr-launch-gallery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture-launch-gallery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_PKR_ENV: staging
+      NEXT_PUBLIC_API_URL: https://pkr-reloaded-worker-staging.jeemit1.workers.dev
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked app and isolated capture runner
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx --no-install playwright install --with-deps chromium
+      - name: Build exact application
+        id: build_app
+        working-directory: frontend
+        run: npm run build
+      - name: Start isolated application
+        id: start_app
+        working-directory: frontend
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/pkr-launch-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/install >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/pkr-launch-next.log
+          exit 1
+      - name: Capture real app, optimise images and prepare overview boards
+        timeout-minutes: 8
+        working-directory: frontend
+        run: node scripts/capture-launch-gallery.cjs app
+      - name: Check homepage image availability
+        id: homepage_assets
+        if: ${{ !cancelled() && steps.build_app.outcome == 'success' && steps.start_app.outcome == 'success' }}
+        working-directory: frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const names = ['desktop-home', 'mobile-home', 'desktop-live-table', 'mobile-live-table',
+            'mobile-rsvp', 'mobile-tournament', 'mobile-players', 'mobile-results', 'mobile-payments',
+            'mobile-records', 'mobile-account', 'mobile-appearance', 'desktop-command-centre', 'desktop-live-dashboard'];
+          const files = names.map(name => name + '.webp').concat(['desktop-home.png', 'mobile-home.png']);
+          const missing = files.filter(name => {
+            const file = 'public/demo/launch-20261127/' + name;
+            return !fs.existsSync(file) || fs.statSync(file).size === 0;
+          });
+          if (missing.length) throw new Error('Missing homepage images: ' + missing.join(', '));
+          console.log('Homepage screenshot assets ready: ' + files.length);
+          NODE
+      - name: Restart with newly captured launch images
+        id: restart_app
+        if: ${{ !cancelled() && steps.homepage_assets.outcome == 'success' }}
+        working-directory: frontend
+        run: |
+          fuser -k 3000/tcp || true
+          npm run start -- --hostname 127.0.0.1 >> /tmp/pkr-launch-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/demo/launch-20261127/manifest.json >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Verify launch homepage uses working screenshots
+        if: ${{ !cancelled() && steps.restart_app.outcome == 'success' }}
+        timeout-minutes: 4
+        working-directory: frontend
+        run: node scripts/capture-launch-gallery.cjs marketing
+      - name: Save actual app and homepage images
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pkr-launch-gallery
+          path: |
+            artifacts/launch-gallery/
+            frontend/public/demo/launch-20261127/
+            /tmp/pkr-launch-next.log
+          if-no-files-found: error
+          retention-days: 7

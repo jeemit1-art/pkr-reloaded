@@ -45,3 +45,15 @@ A fresh physical iPhone screenshot confirms page content still paints behind the
 - Acceptance checks cover a stationary root while the body scrolls, viewport clipping, header/footer hit testing, navigation/restoration, anchors, dialogs and reachable page actions. Native iPhone scrolling still needs confirmation after release.
 
 Recovery checkpoint: `release-checkpoints/pkr-before-scroll-containment-20261127` at main `a81ff3a7e54e63ee6ca03000ec31030ba21157c3`. No Worker/backend or database changes are included.
+
+## Swipeable records and launch screenshots — 27 November 2026
+
+The owner confirmed that the installed-iPhone header correction works. Preserve that scroll containment while making read-only data windows dismissible with a downward swipe and refreshing the public homepage with current, genuine app screenshots.
+
+- Add a visible mobile drag handle and deliberate downward-swipe dismissal to record breakdowns, live table records, settlement reviews and saved result previews. Retain Close/Done, Escape, focus restoration, background locks and all nested record actions.
+- Keep normal list scrolling and controls usable. A gesture in scrollable records must not dismiss the sheet while the list is away from its top; cancelled, short or horizontal gestures must not dismiss it. Editable forms and payment confirmations must not lose unsaved work through this gesture.
+- Capture all major app areas on representative phone, tablet and desktop sizes from the actual source, using fictional clubs, players, games and payments. Publish no private club records or user-provided screenshots.
+- Refresh the public homepage and product tour to match the current app, preserving host/member access, subscription choices, factual pricing and existing routes. Keep store availability claims accurate to the current web-app release.
+- Verify gesture behaviour, existing header/footer containment, record navigation and homepage layouts before publication. Package the original screenshots and a labelled gallery for the owner.
+
+Recovery checkpoint: `release-checkpoints/pkr-before-swipe-launch-20261127` at main `604d67cd65da89694351a6d581f4834b196d267d`. No Worker/backend or database changes are included.

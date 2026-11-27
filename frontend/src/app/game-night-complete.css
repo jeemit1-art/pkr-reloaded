@@ -302,6 +302,18 @@
   html.pkr-game-night .pkr-members-panel :is(.pkr-historical-player-archived,.pkr-historical-player-name small) {color:#64727A!important}
   html.pkr-game-night .pkr-player-home .pkr-player-primary:hover {background:#E66447!important;color:#14242C!important}
 
+  /* Game details retain all records with the same light surfaces as the club. */
+  html.pkr-game-night .pkr-game-detail>.pkr-topbar {background:#FFFFFF!important;background-image:none!important;border-color:#DFE5E9!important;backdrop-filter:none!important}
+  html.pkr-game-night .pkr-game-detail>.pkr-topbar .display {color:#14242C!important;text-shadow:none!important}
+  html.pkr-game-night .pkr-game-detail .pkr-casino-game-summary {background:#FFFFFF!important;background-image:none!important;border-color:#DFE5E9!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-game-detail .pkr-casino-game-summary>.display {color:#14242C!important;text-shadow:none!important}
+  html.pkr-game-night .pkr-game-detail .pkr-casino-game-summary>.pkr-eyebrow {color:#A33D28!important}
+  html.pkr-game-night .pkr-game-detail .pkr-casino-game-summary::after {color:#EDF1F4!important}
+  html.pkr-game-night .pkr-game-detail .pkr-player-activity {background:transparent!important}
+  html.pkr-game-night .pkr-game-detail .pkr-player-activity>div {background:#FFFFFF!important;border-color:#DFE5E9!important;box-shadow:none!important}
+  html.pkr-game-night .pkr-game-detail .pkr-player-activity strong {color:#14242C!important;font-family:var(--font-body),Inter,system-ui,sans-serif!important;font-weight:700!important}
+  html.pkr-game-night .pkr-game-detail .pkr-player-activity span {color:#64727A!important}
+
   /* The same statistic cards now use real buttons and retain their card layout. */
   html.pkr-game-night :is(.pkr-experience-command-stat,.pkr-experience-live-metric,.pkr-results-stat-action,.pkr-results-insight-kpi,.pkr-gn-payment-total,.gn-player-result-record),
   html.pkr-game-night .gn-player-balances>button {

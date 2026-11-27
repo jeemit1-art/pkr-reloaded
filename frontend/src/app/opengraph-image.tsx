@@ -1,47 +1,30 @@
-/* Theme A Midnight Felt social share image. Design-only artwork, no data access.
-   Replaces the old gold share image via the static Next Open Graph route.
-   Always 1200x630 PNG and retains the site's existing main promise. */
-import { ImageResponse } from 'next/og';
+/* PKR launch share image. The final build embeds the same real app screenshots
+   used by the homepage. A first capture build can render the brand before those
+   screenshots exist; it never fabricates an application screen. */
+import {ImageResponse} from 'next/og';
+import {readFile} from 'node:fs/promises';
+import path from 'node:path';
 
 export const size={width:1200,height:630};
 export const contentType='image/png';
 
-export default function Image(){
-  const dark='#0B0F12',surface='#131A1F',line='#26323A',ink='#EAF0F2',muted='#8A99A3',lime='#3DDC97',gold='#F2B84B',felt='#0F5C4A';
+async function screenshot(name:string){
+  try{return 'data:image/png;base64,'+(await readFile(path.join(process.cwd(),'public','demo','launch-20261127',name))).toString('base64');}
+  catch{return null;}
+}
+export default async function Image(){
+  const [desktop,mobile]=await Promise.all([screenshot('desktop-home.png'),screenshot('mobile-home.png')]);
   return new ImageResponse(
-    <div style={{
-      width:'100%',height:'100%',position:'relative',display:'flex',
-      background:dark,color:ink,fontFamily:'sans-serif',overflow:'hidden'
-    }}>
-      <div style={{display:'flex',position:'absolute',right:-100,top:55,width:590,height:590,
-        alignItems:'center',justifyContent:'center',borderRadius:360,
-        background:'radial-gradient(circle, #143D32 0%, #0B0F12 78%)'}}>
-        <div style={{width:510,height:325,display:'flex',alignItems:'center',justifyContent:'center',
-          borderRadius:200,transform:'rotate(-15deg)',background:'#28333A',
-          border:'12px solid #465762'}}>
-          <div style={{width:450,height:267,display:'flex',alignItems:'center',justifyContent:'center',
-            borderRadius:200,background:felt,border:'3px solid #3E9273',
-            boxShadow:'inset 0 0 0 10px #0D503F'}}>
-            <div style={{fontSize:140,color:ink,transform:'rotate(15deg)'}}>♠</div>
-          </div>
-        </div>
+    <div style={{width:'100%',height:'100%',position:'relative',display:'flex',background:'#F4F6F8',color:'#14242C',fontFamily:'sans-serif',overflow:'hidden'}}>
+      <div style={{position:'absolute',width:600,height:600,right:-100,top:-80,borderRadius:350,background:'#FFECE5',display:'flex'}}/>
+      <div style={{position:'absolute',top:65,left:64,display:'flex',alignItems:'center',gap:14}}>
+        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#CB5038" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3C9 7 3 9.5 3 14a4.5 4.5 0 0 0 8 2.8L9 21h6l-2-4.2A4.5 4.5 0 0 0 21 14c0-4.5-6-7-9-11Z"/></svg>
+        <div style={{display:'flex',flexDirection:'column'}}><div style={{fontSize:40,fontWeight:800,letterSpacing:-2}}>PKR</div><div style={{fontSize:11,letterSpacing:2,color:'#576972',fontWeight:600}}>YOUR PRIVATE POKER CLUB</div></div>
       </div>
-      <div style={{position:'absolute',top:70,left:72,display:'flex',alignItems:'center',gap:18}}>
-        <div style={{width:66,height:66,borderRadius:15,background:lime,color:dark,display:'flex',
-          alignItems:'center',justifyContent:'center',fontSize:53,fontWeight:700}}>♠</div>
-        <div style={{display:'flex',flexDirection:'column',justifyContent:'center'}}>
-          <div style={{fontSize:45,fontWeight:900,letterSpacing:-2}}>PKR</div>
-          <div style={{fontSize:13,fontWeight:700,letterSpacing:2.5,color:muted}}>PRIVATE POKER CLUB</div>
-        </div>
-      </div>
-      <div style={{position:'absolute',top:245,left:72,display:'flex',flexDirection:'column',gap:0}}>
-        <div style={{fontSize:77,letterSpacing:-3.8,fontWeight:800,color:ink}}>More poker.</div>
-        <div style={{fontSize:77,letterSpacing:-3.8,fontWeight:800,color:gold}}>Less admin.</div>
-      </div>
-      <div style={{position:'absolute',bottom:89,left:72,width:380,height:2,background:line,display:'flex'}}/>
-      <div style={{position:'absolute',bottom:47,left:72,fontSize:23,color:lime,fontWeight:700,display:'flex'}}>mypkr.app</div>
-      <div style={{position:'absolute',bottom:46,right:58,fontSize:14,color:muted,display:'flex'}}>PRIVATE POKER GAME MANAGEMENT</div>
-    </div>,
-    {...size}
+      <div style={{position:'absolute',left:64,top:220,display:'flex',flexDirection:'column'}}><div style={{fontSize:72,letterSpacing:-3.7,fontWeight:800}}>More poker.</div><div style={{fontSize:72,letterSpacing:-3.7,fontWeight:800,color:'#A33D28'}}>Less admin.</div><div style={{fontSize:21,lineHeight:1.5,color:'#576972',maxWidth:390,marginTop:24}}>Your people, your game and every result. All together.</div></div>
+      {desktop&&<div style={{position:'absolute',left:540,top:153,width:610,display:'flex',flexDirection:'column',padding:5,border:'1px solid #CAD5DC',borderRadius:15,background:'#FFFFFF',boxShadow:'0 20px 40px #14242C20',overflow:'hidden'}}><div style={{display:'flex',padding:'10px 12px',fontSize:11,color:'#576972'}}>mypkr.app · Actual app with demo data</div><img src={desktop} width={600} height={375} style={{borderRadius:9}} alt="PKR Home dashboard"/></div>}
+      {mobile&&<div style={{position:'absolute',left:994,top:308,width:156,display:'flex',padding:4,border:'2px solid #CCD6DB',borderRadius:18,background:'#FFFFFF',boxShadow:'0 12px 28px #14242C25',overflow:'hidden'}}><img src={mobile} width={144} height={292} style={{borderRadius:11}} alt="PKR mobile Home"/></div>}
+      <div style={{position:'absolute',bottom:46,left:64,display:'flex',alignItems:'center',gap:18}}><div style={{background:'#F27457',color:'#14242C',padding:'11px 18px',fontSize:21,borderRadius:11,fontWeight:700}}>mypkr.app</div><div style={{fontSize:14,color:'#576972'}}>Phone · Tablet · Desktop</div></div>
+    </div>,{...size}
   );
 }
