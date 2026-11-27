@@ -245,29 +245,15 @@ export default function RoomDashboardDual({
   const countDownText=[Math.floor(secondsToStart/3600),Math.floor(secondsToStart/60)%60,secondsToStart%60]
     .map(n=>String(n).padStart(2,'0')).join(' : ');
 
-  // Same discoverable feature grid in both host-selected dashboard designs.
-  // Every entry opens the existing authoritative feature rather than duplicating it.
-  const featureHub=<section className="pkr-dual-block pkr-dual-discovery" aria-label="PKR features and tools">
-    <div className="pkr-dual-section-title"><h3>Explore your PKR tools</h3>
-      <small>Tap to open a feature</small></div>
-    <div className="pkr-dual-quick-grid">
-      <button type="button" onClick={featured?openGame:goCreate}><b><DashIcon name="spade"/></b><span>↗</span>
-        <strong>Game sessions</strong><small>Schedule and manage tables</small></button>
-      <button type="button" onClick={goGameNight}><b><DashIcon name="calendar"/></b><span>↗</span>
-        <strong>RSVPs & sharing</strong><small>Live board and WhatsApp</small></button>
-      {canManageGames&&<button type="button" onClick={goRsvpSettings}><b><DashIcon name="table"/></b><span>↗</span>
-        <strong>RSVP settings</strong><small>Arrival times and custom replies</small></button>}
-      <button type="button" onClick={goSchedule}><b><DashIcon name="calendar"/></b><span>↗</span>
-        <strong>Calendar</strong><small>Upcoming and unfinished games</small></button>
-      <button type="button" onClick={goMembers}><b><DashIcon name="people"/></b><span>↗</span>
-        <strong>Players & invites</strong><small>Profiles, approvals and QR codes</small></button>
-      <button type="button" onClick={goLeaders}><b><DashIcon name="trophy"/></b><span>↗</span>
-        <strong>Results & insights</strong><small>Standings, graphs and history</small></button>
-      <button type="button" onClick={goPayments}><b><DashIcon name="wallet"/></b><span>↗</span>
-        <strong>{canManageGames?'Payment reminders':'My payments'}</strong>
-        <small>{canManageGames?'Outstanding transfers and follow-ups':'Private payment records'}</small></button>
-      <button type="button" onClick={goNotificationSettings}><b><DashIcon name="chip"/></b><span>↗</span>
-        <strong>Notifications</strong><small>Push alerts and sound settings</small></button>
+  // All five primary destinations stay in the persistent navigation. These
+  // small links expose host-only tasks without duplicating the navigation.
+  const featureHub=<section className="pkr-dual-block pkr-dual-secondary-tools" aria-label="Additional club tools">
+    <div className="pkr-dual-secondary-heading"><h3>Club management</h3><small>Useful extras for the host</small></div>
+    <div className="pkr-dual-utility-strip">
+      {canManageGames&&<button type="button" onClick={goRsvpSettings}><DashIcon name="table"/> RSVP settings</button>}
+      {canManageGames&&<button type="button" onClick={goMembers}><DashIcon name="people"/> Player invitations</button>}
+      <button type="button" onClick={goSchedule}><DashIcon name="calendar"/> Calendar</button>
+      <button type="button" onClick={goNotificationSettings}><DashIcon name="chip"/> Notifications</button>
     </div>
   </section>;
 
