@@ -201,3 +201,125 @@ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .gn-player-club-expanded{
   font-size:11px;
  }
 }
+
+/* Read-only host financial integrity review. This panel does not alter payment
+   status, history, financial totals, or any player's saved game record. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity {
+  box-sizing:border-box!important;min-width:0!important;width:100%!important;
+  margin:18px 0 22px!important;padding:17px!important;
+  border-radius:16px!important;
+  background:var(--pkr-personal-surface)!important;
+  border:1px solid var(--pkr-personal-line)!important;
+  color:var(--pkr-personal-ink)!important;
+  box-shadow:0 3px 15px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-heading {
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;
+  gap:14px!important;flex-wrap:wrap!important;margin:0 0 16px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-heading>div {
+  min-width:0!important;flex:1!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity h3 {
+  margin:0 0 7px!important;font-size:19px!important;font-weight:760!important;
+  line-height:1.32!important;letter-spacing:-.02em!important;
+  color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity h4 {
+  margin:17px 0 11px!important;font-size:15px!important;font-weight:760!important;
+  color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity p {
+  margin:5px 0!important;color:var(--pkr-personal-muted)!important;
+  font-size:12px!important;line-height:1.55!important;overflow-wrap:anywhere!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-heading>button,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-more {
+  box-sizing:border-box!important;min-height:44px!important;padding:10px 14px!important;
+  border-radius:10px!important;background:var(--pkr-personal-raised)!important;
+  border:1px solid var(--pkr-personal-line)!important;
+  color:var(--pkr-personal-ink)!important;font-size:12px!important;font-weight:700!important;
+  cursor:pointer!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-heading>button:disabled {
+  opacity:.65!important;cursor:wait!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-heading>button:focus-visible,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-more:focus-visible,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row a:focus-visible {
+  outline:3px solid var(--pkr-personal-accent)!important;outline-offset:2px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-metrics {
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;margin:0 0 14px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-metrics>span {
+  box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+  justify-content:center!important;gap:4px!important;padding:12px!important;
+  min-width:0!important;border-radius:11px!important;
+  border:1px solid var(--pkr-personal-line)!important;
+  background:var(--pkr-personal-raised)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-metrics strong {
+  color:var(--pkr-personal-ink)!important;font-size:21px!important;font-weight:790!important;
+  line-height:1.22!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-metrics small {
+  color:var(--pkr-personal-muted)!important;font-size:11px!important;line-height:1.35!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-warning {
+  padding:11px 12px!important;border-radius:10px!important;
+  border:1px solid var(--pkr-personal-warning-line)!important;
+  background:var(--pkr-personal-warning-surface)!important;
+  color:var(--pkr-personal-warning)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-notice {
+  padding:10px 12px!important;border-radius:10px!important;
+  background:var(--pkr-personal-accent-surface)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row {
+  box-sizing:border-box!important;display:flex!important;align-items:center!important;
+  justify-content:space-between!important;gap:12px!important;
+  min-width:0!important;padding:13px 0!important;
+  border-top:1px solid var(--pkr-personal-line)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row>span {
+  min-width:0!important;display:grid!important;gap:4px!important;flex:1!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row strong {
+  color:var(--pkr-personal-ink)!important;font-size:13px!important;
+  line-height:1.34!important;font-weight:740!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row small {
+  color:var(--pkr-personal-muted)!important;font-size:11px!important;
+  line-height:1.45!important;overflow-wrap:anywhere!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row a {
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 auto!important;min-height:44px!important;
+  padding:8px 11px!important;border-radius:9px!important;
+  border:1px solid var(--pkr-personal-accent-line)!important;
+  color:var(--pkr-personal-accent)!important;
+  background:var(--pkr-personal-accent-surface)!important;
+  text-decoration:none!important;font-size:11px!important;font-weight:740!important;
+  text-align:center!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity .pkr-finance-integrity-footnote {
+  margin:16px 0 0!important;padding-top:12px!important;
+  border-top:1px solid var(--pkr-personal-line)!important;
+ }
+ @media(max-width:690px) {
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-metrics {
+   grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+ }
+ @media(max-width:430px) {
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity {
+   padding:13px!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-finance-integrity-row {
+   align-items:flex-start!important;flex-direction:column!important;gap:8px!important;
+  }
+ }
+}
