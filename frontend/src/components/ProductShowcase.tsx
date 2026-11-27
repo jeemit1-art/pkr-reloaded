@@ -103,7 +103,7 @@ export function ProductTour(){
 export function MobileProductShowcase(){
  const [preview,setPreview]=useState<Preview|null>(null);
  return <section className="pkr-mobile-product-showcase" aria-labelledby="pkr-mobile-showcase-title">
-  <div className="pkr-mobile-product-intro"><span className="pkr-tour-overline">MADE TO GO WITH YOU</span><h2 id="pkr-mobile-showcase-title">The club.<br/>In <em>your pocket.</em></h2><p>Check the next game, open the records behind a result and keep track of payments from your phone.</p><p className="pkr-mobile-install-note">Use PKR in your browser or add it to your Home Screen. Your host and player tools stay together.</p><Link href="/install" className="pkr-tour-cta">Add PKR to your Home Screen</Link></div>
+  <div className="pkr-mobile-product-intro"><span className="pkr-tour-overline">MADE TO GO WITH YOU</span><h2 id="pkr-mobile-showcase-title">The club.{' '}<br/>In <em>your pocket.</em></h2><p>Check the next game, open the records behind a result and keep track of payments from your phone.</p><p className="pkr-mobile-install-note">Use PKR in your browser or add it to your Home Screen. Your host and player tools stay together.</p><Link href="/install" className="pkr-tour-cta">Add PKR to your Home Screen</Link></div>
   <div className="pkr-mobile-devices">{[
     {src:'mobile-home.webp',title:'Your game night',alt:'Current PKR Home on a phone with fictional club activity'},
     {src:'mobile-records.webp',title:'Every record',alt:'PKR saved-records window on a phone with fictional game history'},
