@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId } from '../middleware';
@@ -53,7 +54,7 @@ async function hasDeclaredWinner(c: any, handId: string): Promise<boolean> {
 
 // ── Toggle hand tracking on/off ─────────────────────────────────────────────
 hands.post('/games/:id/tracking/toggle', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
@@ -64,7 +65,7 @@ hands.post('/games/:id/tracking/toggle', authMiddleware, async (c) => {
 
 // ── Start a new hand ────────────────────────────────────────────────────────
 hands.post('/games/:id/hands', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -163,7 +164,7 @@ hands.post('/games/:id/hands', authMiddleware, async (c) => {
 // The host sees authoritative seat identities but must physically count chips.
 // Do not read optional migration tables when integrity mode is disabled.
 hands.get('/games/:id/hands/:handId/stack-baseline',authMiddleware,async(c)=>{
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   const hand=await c.env.DB.prepare(
@@ -202,7 +203,7 @@ hands.post('/games/:id/hands/:handId/confirm-stacks', authMiddleware, async (c) 
   if(c.env.PKR_INTEGRITY_STACKS!=='1')
     return c.json({error:'Persistent stack baselines are not enabled.',
       code:'STACK_BASELINE_UNAVAILABLE'},503);
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -283,7 +284,7 @@ hands.post('/games/:id/hands/:handId/confirm-stacks', authMiddleware, async (c) 
 
 // ── Read-only audit from host-confirmed opening chips; never guesses stacks ─
 hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) => {
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   const hand=await c.env.DB.prepare(
@@ -340,7 +341,7 @@ hands.post('/games/:id/hands/:handId/audit-stacks', authMiddleware, async (c) =>
 
 // ── Get all hands for a game ─────────────────────────────────────────────────
 hands.get('/games/:id/hands', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first() as any;
   if (!game) return c.json({ error: 'Not found' }, 404);
   if (!await requireEventRole(c, game.event_id, 'member')) return c.json({ error: 'Forbidden' }, 403);
@@ -357,8 +358,8 @@ hands.get('/games/:id/hands', authMiddleware, async (c) => {
 
 // ── Get single hand ──────────────────────────────────────────────────────────
 hands.get('/games/:id/hands/:handId', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const handId = requiredRouteParam(c.req.param('handId'));
   const game = await c.env.DB.prepare('SELECT event_id FROM games WHERE id=?').bind(gameId).first() as any;
   if (!game) return c.json({ error: 'Not found' }, 404);
   if (!await requireEventRole(c, game.event_id, 'member')) return c.json({ error: 'Forbidden' }, 403);
@@ -372,7 +373,7 @@ hands.get('/games/:id/hands/:handId', authMiddleware, async (c) => {
 
 // ── Update board cards, rejecting stale edits and finished hands ──────────────
 hands.put('/games/:id/hands/:handId/board', authMiddleware, async (c) => {
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -414,8 +415,8 @@ hands.put('/games/:id/hands/:handId/board', authMiddleware, async (c) => {
 
 // ── Record a player action ───────────────────────────────────────────────────
 hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const handId = requiredRouteParam(c.req.param('handId'));
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
@@ -568,7 +569,7 @@ hands.post('/games/:id/hands/:handId/actions', authMiddleware, async (c) => {
 
 // ── Delete the observed last action, never a different newer action ───────
 hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) => {
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -610,8 +611,8 @@ hands.delete('/games/:id/hands/:handId/actions/last', authMiddleware, async (c) 
 
 // ── Declare winner ───────────────────────────────────────────────────────────
 hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const handId = requiredRouteParam(c.req.param('handId'));
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
@@ -786,8 +787,8 @@ hands.post('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
 
 // ── Update D/SB/BB assignments ──────────────────────────────────────────────────
 hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
-  const handId = c.req.param('handId');
+  const gameId = requiredRouteParam(c.req.param('id'));
+  const handId = requiredRouteParam(c.req.param('handId'));
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden or not found' }, 403);
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
@@ -805,7 +806,7 @@ hands.put('/games/:id/hands/:handId/assign', authMiddleware, async (c) => {
 
 // ── Void hand without destroying recorded evidence ───────────────────────
 hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -831,7 +832,7 @@ hands.delete('/games/:id/hands/:handId', authMiddleware, async (c) => {
 
 // ── Undo the specific winner result the host actually reviewed ────────────
 hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
-  const gameId=c.req.param('id'),handId=c.req.param('handId');
+  const gameId=requiredRouteParam(c.req.param('id')),handId=requiredRouteParam(c.req.param('handId'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden or not found'},403);
   if(isLocked(game))return c.json({error:lockedMessage},409);
@@ -860,7 +861,7 @@ hands.delete('/games/:id/hands/:handId/result', authMiddleware, async (c) => {
 
 // ── Toggle live card submission ──────────────────────────────────────────────
 hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await getGameAndVerify(c, gameId);
   if (!game) return c.json({ error: 'Forbidden' }, 403);
   if (isLocked(game)) return c.json({ error: lockedMessage }, 409);
@@ -872,7 +873,7 @@ hands.post('/games/:id/tracking/live-cards', authMiddleware, async (c) => {
 
 // ── Seat draw ────────────────────────────────────────────────────────────────
 hands.post('/games/:id/seat-draw', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT event_id,status FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({ error: 'Not found' }, 404);
   if (!await requireEventRole(c, game.event_id, 'cohost')) return c.json({ error: 'Forbidden' }, 403);
@@ -885,7 +886,7 @@ hands.post('/games/:id/seat-draw', authMiddleware, async (c) => {
 
 // ── Get live hand state (for player view polling) ────────────────────────────
 hands.get('/games/live/:token/hand', async (c) => {
-  const token = c.req.param('token');
+  const token = requiredRouteParam(c.req.param('token'));
   const game = await c.env.DB.prepare(
     'SELECT id,hand_tracking,current_hand_no,chip_value,starting_chips FROM games WHERE live_token=?'
   ).bind(token).first() as any;

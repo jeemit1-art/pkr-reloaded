@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 // Private club planning features. Entire surface is gated by an additive
 // staging-first D1 migration; no existing membership, game or money mutations.
 import {Hono} from 'hono';
@@ -61,7 +62,7 @@ function safePoll(row:PollRow,counts:Array<{option_index:number;total:number}>,m
 // each option. Hosts cannot use a poll result to change attendance or balances.
 club.get('/events/:id/date-polls',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   try{
     const polls=await c.env.DB.prepare(
@@ -84,7 +85,7 @@ club.get('/events/:id/date-polls',authMiddleware,async c=>{
 });
 club.post('/events/:id/date-polls',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'cohost'))return c.json({error:'Only a host or co-host can create a date poll'},403);
   const body=await c.req.json().catch(()=>null) as {title?:unknown;options?:unknown;closes_at?:unknown}|null;
   const title=typeof body?.title==='string'?body.title.trim().replace(/\s+/g,' '):'';
@@ -108,7 +109,7 @@ club.post('/events/:id/date-polls',authMiddleware,async c=>{
 });
 club.put('/events/:id/date-polls/:pollId/vote',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id'),pollId=c.req.param('pollId');
+  const eventId=requiredRouteParam(c.req.param('id')),pollId=requiredRouteParam(c.req.param('pollId'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   const body=await c.req.json().catch(()=>null) as {option_index?:unknown}|null;
   const choice=body?.option_index;
@@ -133,7 +134,7 @@ club.put('/events/:id/date-polls/:pollId/vote',authMiddleware,async c=>{
 });
 club.post('/events/:id/date-polls/:pollId/close',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id'),pollId=c.req.param('pollId');
+  const eventId=requiredRouteParam(c.req.param('id')),pollId=requiredRouteParam(c.req.param('pollId'));
   if(!await requireEventRole(c,eventId,'cohost'))return c.json({error:'Only a host or co-host can close a poll'},403);
   const body=await c.req.json().catch(()=>null) as {selected_index?:unknown}|null;
   const choice=body?.selected_index;
@@ -165,6 +166,12 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
   const game=await gameFor(env,gameId);
   if(!game||!isOpen(game))return null;
   try{
+    // Removing room membership revokes outstanding availability offers.
+    await env.DB.prepare(
+      "UPDATE game_waitlist SET status='withdrawn',updated_at=unixepoch() "+
+      "WHERE game_id=? AND status IN ('waiting','offered') AND NOT EXISTS "+
+      "(SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=game_waitlist.user_id)"
+    ).bind(gameId,game.event_id).run();
     await env.DB.prepare(
       "UPDATE game_waitlist SET status='expired',updated_at=unixepoch() "+
       "WHERE game_id=? AND status='offered' AND expires_at<=unixepoch()"
@@ -173,7 +180,8 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
       "UPDATE game_waitlist SET status='offered',offered_at=unixepoch(),"+
       "expires_at=unixepoch()+1800,updated_at=unixepoch() "+
       "WHERE game_id=? AND status='waiting' AND user_id=("+
-      "SELECT user_id FROM game_waitlist WHERE game_id=? AND status='waiting' "+
+      "SELECT user_id FROM game_waitlist w WHERE game_id=? AND status='waiting' "+
+      "AND EXISTS(SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=w.user_id) "+
       "ORDER BY created_at,user_id LIMIT 1) "+
       "AND NOT EXISTS(SELECT 1 FROM game_waitlist WHERE game_id=? AND status='offered') "+
       "AND ((SELECT COUNT(*) FROM game_players WHERE game_id=?) + "+
@@ -181,7 +189,7 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
       "AND NOT EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id=g.game_id "+
       "AND LOWER(TRIM(gp.display_name))=LOWER(TRIM(g.display_name))))) "+
       "<(SELECT seats FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
-    ).bind(gameId,gameId,gameId,gameId,gameId,gameId).run();
+    ).bind(gameId,gameId,game.event_id,gameId,gameId,gameId,gameId).run();
     if(!changed.meta.changes)return null;
     const offered=await env.DB.prepare(
       "SELECT user_id FROM game_waitlist WHERE game_id=? AND status='offered'"
@@ -216,26 +224,26 @@ export async function syncWaitlistAfterRsvp(
 }
 club.get('/games/:id/waitlist',authMiddleware,async c=>{
   if(!on(c.env)||c.env.PKR_RSVP_V2!=='1')return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'));
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Room membership required'},403);
   try{
     const [availability,mine,count,isManager]=await Promise.all([
       capacity(c.env,game.id,game.seats),
       c.env.DB.prepare('SELECT status,expires_at FROM game_waitlist WHERE game_id=? AND user_id=?')
         .bind(game.id,c.get('userId')).first<{status:WaitStatus;expires_at:number|null}>(),
-      c.env.DB.prepare("SELECT COUNT(*) AS count FROM game_waitlist WHERE game_id=? AND status='waiting'")
-        .bind(game.id).first<{count:number}>(),
+      c.env.DB.prepare("SELECT COUNT(*) AS count FROM game_waitlist w WHERE game_id=? AND status='waiting' AND EXISTS (SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=w.user_id)")
+        .bind(game.id,game.event_id).first<{count:number}>(),
       requireEventRole(c,game.event_id,'cohost'),
     ]);
     const list=isManager?await c.env.DB.prepare(
       "SELECT w.user_id,u.name AS display_name,w.status,w.created_at,w.expires_at "+
-      "FROM game_waitlist w JOIN users u ON u.id=w.user_id WHERE w.game_id=? AND "+
+      "FROM game_waitlist w JOIN users u ON u.id=w.user_id JOIN event_members em ON em.event_id=? AND em.user_id=w.user_id WHERE w.game_id=? AND "+
       "w.status IN ('waiting','offered') ORDER BY CASE w.status WHEN 'offered' THEN 0 ELSE 1 END,w.created_at LIMIT 40"
-    ).bind(game.id).all<WaitRow>():{results:[] as WaitRow[]};
+    ).bind(game.event_id,game.id).all<WaitRow>():{results:[] as WaitRow[]};
     c.header('Cache-Control','private, no-store');
     return c.json({game_id:game.id,open:isOpen(game),
       seats:game.seats,filled:availability.filled,available:availability.available,
-      waiting:Number(count?.count||0),my_status:mine?.status||null,
+      waiting:Number(count?.count||0),my_status:mine?.status==='offered'&&Number(mine.expires_at||0)<=now()?'expired':mine?.status||null,
       my_offer_expires_at:mine?.expires_at||null,
       queue:isManager?list.results:undefined,
       note:'An offer alerts you that a place may be available; the RSVP board confirms seats.'});
@@ -243,7 +251,7 @@ club.get('/games/:id/waitlist',authMiddleware,async c=>{
 });
 club.post('/games/:id/waitlist',authMiddleware,async c=>{
   if(!on(c.env)||c.env.PKR_RSVP_V2!=='1')return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'));
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Room membership required'},403);
   if(!isOpen(game))return c.json({error:'Waitlist is closed for this game'},409);
   try{
@@ -275,7 +283,7 @@ club.post('/games/:id/waitlist',authMiddleware,async c=>{
 });
 club.delete('/games/:id/waitlist',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'));
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Room membership required'},403);
   try{
     const change=await c.env.DB.prepare(
@@ -288,7 +296,7 @@ club.delete('/games/:id/waitlist',authMiddleware,async c=>{
 });
 club.post('/games/:id/waitlist/offer-next',authMiddleware,async c=>{
   if(!on(c.env)||c.env.PKR_RSVP_V2!=='1')return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'),'cohost');
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')),'cohost');
   if(!game)return c.json({error:'Host or co-host permission required'},403);
   const offered=await offerNextWaitlisted(c.env,game.id);
   return c.json({ok:true,offered:!!offered,
@@ -300,7 +308,7 @@ club.post('/games/:id/waitlist/offer-next',authMiddleware,async c=>{
 // protected host buy-in/cash-out actions remain the sole source of truth.
 club.get('/games/:id/member-requests',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'));
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Room membership required'},403);
   try{
     const manager=await requireEventRole(c,game.event_id,'cohost');
@@ -319,7 +327,7 @@ club.get('/games/:id/member-requests',authMiddleware,async c=>{
 });
 club.post('/games/:id/member-requests',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'));
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')));
   if(!game)return c.json({error:'Room membership required'},403);
   if(game.status!=='active')return c.json({error:'Requests open only while a game is live'},409);
   const raw=await c.req.json().catch(()=>null) as {kind?:unknown;note?:unknown}|null;
@@ -339,7 +347,7 @@ club.post('/games/:id/member-requests',authMiddleware,async c=>{
       title:'New PKR player request',
       body:'An approved member has requested host attention during the live game.',
       data:{type:'player_request',gameId:game.id,eventId:game.event_id,
-        url:'/events/'+encodeURIComponent(game.event_id)+'?tab=gamenight'},
+        url:'/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(game.id)},
     }));}catch{}
     return c.json({ok:true,id,status:'pending'},201);
   }catch{
@@ -348,7 +356,7 @@ club.post('/games/:id/member-requests',authMiddleware,async c=>{
 });
 club.put('/games/:id/member-requests/:requestId',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const game=await gameMember(c,c.req.param('id'),'cohost');
+  const game=await gameMember(c,requiredRouteParam(c.req.param('id')),'cohost');
   if(!game)return c.json({error:'Host or co-host permission required'},403);
   const raw=await c.req.json().catch(()=>null) as {status?:unknown}|null;
   const next=String(raw?.status||'');
@@ -358,7 +366,7 @@ club.put('/games/:id/member-requests/:requestId',authMiddleware,async c=>{
     const changed=await c.env.DB.prepare(
       'UPDATE game_member_requests SET status=?,reviewed_by=?,updated_at=unixepoch() '+
       'WHERE id=? AND game_id=? AND ((status=? AND ? IN (?,?)) OR (status=? AND ?=?))'
-    ).bind(next,c.get('userId'),c.req.param('requestId'),game.id,
+    ).bind(next,c.get('userId'),requiredRouteParam(c.req.param('requestId')),game.id,
       'pending',next,'approved','declined','approved',next,'resolved').run();
     if(!changed.meta.changes)return c.json({error:'Request status changed; reload before deciding again'},409);
     return c.json({ok:true,status:next,
@@ -374,7 +382,7 @@ type SeasonRow={
 };
 club.get('/events/:id/seasons',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   try{
     const rows=await c.env.DB.prepare(
@@ -387,7 +395,7 @@ club.get('/events/:id/seasons',authMiddleware,async c=>{
 });
 club.post('/events/:id/seasons',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'cohost'))return c.json({error:'Host or co-host permission required'},403);
   const raw=await c.req.json().catch(()=>null) as {
     name?:unknown;starts_at?:unknown;ends_at?:unknown;points?:unknown;
@@ -411,12 +419,12 @@ club.post('/events/:id/seasons',authMiddleware,async c=>{
 });
 club.get('/events/:id/seasons/:seasonId/standings',authMiddleware,async c=>{
   if(!on(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'member'))return c.json({error:'Forbidden'},403);
   try{
     const season=await c.env.DB.prepare(
       'SELECT * FROM room_league_seasons WHERE id=? AND event_id=?'
-    ).bind(c.req.param('seasonId'),eventId).first<SeasonRow>();
+    ).bind(requiredRouteParam(c.req.param('seasonId')),eventId).first<SeasonRow>();
     if(!season)return c.json({error:'Season not found'},404);
     const [settled,members]=await Promise.all([
       c.env.DB.prepare(

@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware, requireEventRole, generateId, getPlanStatus } from '../middleware';
@@ -21,7 +22,7 @@ async function getGameAndVerify(c: any, gameId: string) {
 }
 
 tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
-  const gameId = c.req.param('id');
+  const gameId = requiredRouteParam(c.req.param('id'));
   const game = await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>();
   if (!game) return c.json({ error: 'Not found' }, 404);
   if (!await requireEventRole(c, game.event_id, 'member')) return c.json({ error: 'Forbidden' }, 403);
@@ -56,7 +57,7 @@ tournament.get('/games/:id/tournament', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(!await checkProHost(c,game.event_id))
@@ -141,7 +142,7 @@ tournament.post('/games/:id/tournament/setup', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(!await checkProHost(c,game.event_id))
@@ -180,7 +181,7 @@ tournament.post('/games/:id/tournament/start', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/next-level', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(game.status==='settled'||game.status==='cancelled')
@@ -211,7 +212,7 @@ tournament.post('/games/:id/tournament/next-level', authMiddleware, async (c) =>
  * An expired local browser timer alone can never skip a level.
  */
 tournament.post('/games/:id/tournament/advance-due',authMiddleware,async(c)=>{
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(game.status==='settled'||game.status==='cancelled')
@@ -244,7 +245,7 @@ tournament.post('/games/:id/tournament/advance-due',authMiddleware,async(c)=>{
 });
 
 tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(game.status==='settled'||game.status==='cancelled')
@@ -284,7 +285,7 @@ tournament.post('/games/:id/tournament/pause', authMiddleware, async (c) => {
 // after an HTTP timeout or a simultaneous double-click. A D1 transaction
 // credits chips only once, and inserts the receipt only if the credit occurred.
 tournament.post('/games/:id/tournament/rebuy', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(game.status==='settled'||game.status==='cancelled')
@@ -357,7 +358,7 @@ tournament.post('/games/:id/tournament/rebuy', authMiddleware, async (c) => {
 });
 
 tournament.post('/games/:id/tournament/eliminate', authMiddleware, async (c) => {
-  const gameId=c.req.param('id');
+  const gameId=requiredRouteParam(c.req.param('id'));
   const game=await getGameAndVerify(c,gameId);
   if(!game)return c.json({error:'Forbidden'},403);
   if(game.status==='settled'||game.status==='cancelled')
@@ -412,7 +413,7 @@ tournament.post('/games/:id/tournament/eliminate', authMiddleware, async (c) => 
 });
 
 tournament.get('/games/live/:token/tournament', async (c) => {
-  const token = c.req.param('token');
+  const token = requiredRouteParam(c.req.param('token'));
   const game = await c.env.DB.prepare('SELECT id FROM games WHERE live_token=?').bind(token).first<any>();
   if (!game) return c.json({ error: 'Not found' }, 404);
   const state = await c.env.DB.prepare('SELECT * FROM tournament_state WHERE game_id=?').bind(game.id).first<any>();

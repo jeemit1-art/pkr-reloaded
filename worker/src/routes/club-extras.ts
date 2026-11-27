@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 // Opt-in club extras. Consent-based shared costs and reusable tournament
 // structures are separate from poker transactions and Stripe subscriptions.
 import {Hono} from 'hono';
@@ -24,7 +25,7 @@ async function authorised(c:any,eventId:string,role:'member'|'cohost'|'host'='me
 
 extras.get('/events/:id/shared-expenses',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId))return c.json({error:'Forbidden'},403);
   try{
     const [items,members]=await Promise.all([
@@ -51,7 +52,7 @@ extras.get('/events/:id/shared-expenses',authMiddleware,async c=>{
 
 extras.post('/events/:id/shared-expenses',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'cohost'))
     return c.json({error:'Only hosts or co-hosts can propose expenses'},403);
   const data=await c.req.json().catch(()=>null) as {
@@ -99,7 +100,7 @@ extras.post('/events/:id/shared-expenses',authMiddleware,async c=>{
 
 extras.put('/events/:id/shared-expenses/:expenseId/respond',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId))return c.json({error:'Forbidden'},403);
   const body=await c.req.json().catch(()=>null) as {status?:unknown}|null;
   const status=String(body?.status||'');
@@ -110,7 +111,7 @@ extras.put('/events/:id/shared-expenses/:expenseId/respond',authMiddleware,async
       'UPDATE room_shared_expense_splits SET status=?,responded_at=unixepoch() '+
       'WHERE expense_id=? AND user_id=? AND status=? AND EXISTS '+
       "(SELECT 1 FROM room_shared_expenses WHERE id=? AND event_id=? AND status='proposed')"
-    ).bind(status,c.req.param('expenseId'),c.get('userId'),'proposed',c.req.param('expenseId'),eventId).run();
+    ).bind(status,requiredRouteParam(c.req.param('expenseId')),c.get('userId'),'proposed',requiredRouteParam(c.req.param('expenseId')),eventId).run();
     if(!changed.meta.changes)return c.json({error:'This proposal is not awaiting your response'},409);
     return c.json({ok:true,status,note:'This is consent only; no funds or poker balances have moved.'});
   }catch(e){return failure(c,e);}
@@ -118,13 +119,13 @@ extras.put('/events/:id/shared-expenses/:expenseId/respond',authMiddleware,async
 
 extras.post('/events/:id/shared-expenses/:expenseId/cancel',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'cohost'))return c.json({error:'Host permission required'},403);
   try{
     const res=await c.env.DB.prepare(
       "UPDATE room_shared_expenses SET status='cancelled',updated_at=unixepoch() "+
       "WHERE id=? AND event_id=? AND status='proposed'"
-    ).bind(c.req.param('expenseId'),eventId).run();
+    ).bind(requiredRouteParam(c.req.param('expenseId')),eventId).run();
     if(!res.meta.changes)return c.json({error:'Proposal was already closed'},409);
     return c.json({ok:true,note:'Cancelled proposal; no poker financial records were altered.'});
   }catch(e){return failure(c,e);}
@@ -135,7 +136,7 @@ extras.post('/events/:id/shared-expenses/:expenseId/cancel',authMiddleware,async
 type ExportKind='games'|'player_results'|'transfers'|'rsvps'|'rsvps_live'|'members'|'expense_splits'|'payment_events';
 extras.get('/events/:id/data-export',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'host'))return c.json({error:'Only the club owner can export complete history'},403);
   const kind=c.req.query('kind');
   const offset=Number(c.req.query('offset')||'0');
@@ -191,7 +192,7 @@ extras.get('/events/:id/data-export',authMiddleware,async c=>{
 type PresetRow={id:string;event_id:string;name:string;config_json:string;created_at:number;updated_at:number};
 extras.get('/events/:id/tournament-presets',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'cohost'))return c.json({error:'Host or co-host permission required'},403);
   try{
     const rows=await c.env.DB.prepare(
@@ -210,7 +211,7 @@ extras.get('/events/:id/tournament-presets',authMiddleware,async c=>{
 
 extras.post('/events/:id/tournament-presets',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'cohost'))return c.json({error:'Host or co-host permission required'},403);
   const data=await c.req.json().catch(()=>null) as {name?:unknown;config?:unknown}|null;
   if(!safeName(data?.name,3,80))return c.json({error:'Name your tournament preset'},400);
@@ -231,12 +232,12 @@ extras.post('/events/:id/tournament-presets',authMiddleware,async c=>{
 
 extras.delete('/events/:id/tournament-presets/:presetId',authMiddleware,async c=>{
   if(!ready(c.env))return disabled(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await authorised(c,eventId,'cohost'))return c.json({error:'Host or co-host permission required'},403);
   try{
     const result=await c.env.DB.prepare(
       'DELETE FROM room_tournament_presets WHERE event_id=? AND id=?'
-    ).bind(eventId,c.req.param('presetId')).run();
+    ).bind(eventId,requiredRouteParam(c.req.param('presetId'))).run();
     if(!result.meta.changes)return c.json({error:'Preset not found'},404);
     return c.json({ok:true,note:'No existing tournament or settlement was changed.'});
   }catch(e){return failure(c,e);}

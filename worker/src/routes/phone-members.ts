@@ -1,3 +1,4 @@
+import {requiredRouteParam} from '../route-params';
 // Mobile-first private group directory; no phone directory is published globally.
 // Private group contacts are encrypted. Hosts send individual personal links
 // through WhatsApp manually; each request needs host approval (no messaging API).
@@ -123,7 +124,7 @@ function privateHeaders(c:any){
 }
 router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Only the group host may view private contacts'},403);
   try{
     const result=await c.env.DB.prepare(
@@ -158,7 +159,7 @@ router.get('/events/:id/phone-contacts',authMiddleware,async c=>{
 });
 router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const eventId=c.req.param('id');
+  const eventId=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Only a group host can invite members'},403);
   const body=await c.req.json().catch(()=>null) as {phone?:unknown;display_name?:unknown;role?:unknown}|null;
   const mobile=normalizeMobile(body?.phone);
@@ -216,7 +217,7 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
 // or relying on an unverified match of names/phone numbers.
 router.post('/events/:id/phone-contacts/:contactId/link-member',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const eventId=c.req.param('id'),contactId=c.req.param('contactId');
+  const eventId=requiredRouteParam(c.req.param('id')),contactId=requiredRouteParam(c.req.param('contactId'));
   if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Host only'},403);
   const body=await c.req.json().catch(()=>null) as {user_id?:unknown}|null;
   const userId=typeof body?.user_id==='string'?body.user_id.trim():'';
@@ -257,7 +258,7 @@ router.post('/events/:id/phone-contacts/:contactId/link-member',authMiddleware,a
 });
 router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const id=c.req.param('id'),contactId=c.req.param('contactId');
+  const id=requiredRouteParam(c.req.param('id')),contactId=requiredRouteParam(c.req.param('contactId'));
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Only the group host can remove members'},403);
   try{
     const contact=await c.env.DB.prepare(
@@ -288,7 +289,7 @@ router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
 // a fresh private invitation, a separate join request and explicit host approval.
 router.post('/events/:id/phone-contacts/:contactId/recovery',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const eventId=c.req.param('id'),contactId=c.req.param('contactId');
+  const eventId=requiredRouteParam(c.req.param('id')),contactId=requiredRouteParam(c.req.param('contactId'));
   if(!await requireEventRole(c,eventId,'host'))return c.json({error:'Host only'},403);
   const contact=await c.env.DB.prepare(
     'SELECT id,display_name,phone_cipher,user_id FROM group_phone_contacts WHERE id=? AND event_id=?'
@@ -319,7 +320,7 @@ router.post('/events/:id/phone-contacts/:contactId/recovery',authMiddleware,asyn
 router.get('/phone-invites/:token',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
   try{
-    const invite=await getInvite(c.env,c.req.param('token'));
+    const invite=await getInvite(c.env,requiredRouteParam(c.req.param('token')));
     if(!invite)return c.json({error:'Invitation unavailable or expired.'},404);
     const mobile=await decryptPhone(c.env,invite.phone_cipher);
     privateHeaders(c);
@@ -331,7 +332,7 @@ router.get('/phone-invites/:token',async c=>{
 // explicit host approval. A forwarded link is NOT proof of phone ownership.
 router.post('/phone-invites/:token/request-approval',async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const invite=await getInvite(c.env,c.req.param('token')).catch(()=>null);
+  const invite=await getInvite(c.env,requiredRouteParam(c.req.param('token'))).catch(()=>null);
   if(!invite)return c.json({error:'Invitation expired or unavailable'},404);
   const body=await c.req.json().catch(()=>null) as {display_name?:unknown}|null;
   const name=typeof body?.display_name==='string'?body.display_name.trim():'';
@@ -370,7 +371,7 @@ router.post('/phone-invites/:token/request-approval',async c=>{
 });
 router.get('/events/:id/join-requests',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const id=c.req.param('id');
+  const id=requiredRouteParam(c.req.param('id'));
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
   const invites=await currentInvites(c.env,id);
   const approved=await approvedRequests(c.env,id,invites);
@@ -391,7 +392,7 @@ router.get('/events/:id/join-requests',authMiddleware,async c=>{
 });
 router.post('/events/:id/join-requests/:requestId/decision',authMiddleware,async c=>{
   if(!phoneMembersReady(c.env))return unavailable(c);
-  const id=c.req.param('id'),key='join-request:'+id+':'+c.req.param('requestId');
+  const id=requiredRouteParam(c.req.param('id')),key='join-request:'+id+':'+requiredRouteParam(c.req.param('requestId'));
   if(!await requireEventRole(c,id,'host'))return c.json({error:'Host only'},403);
   const body=await c.req.json().catch(()=>null) as {approve?:unknown}|null;
   if(typeof body?.approve!=='boolean')return c.json({error:'Select approve or reject'},400);
