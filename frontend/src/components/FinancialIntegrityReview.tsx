@@ -122,11 +122,13 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
      game.inconsistentGameVariance?'Game variance differs from saved player results':null,
      game.emptyPlayerRoster?'No player records':null,
     ].filter(Boolean);
-    return <div key={game.gameId} className="pkr-finance-integrity-row">
+    return <div key={game.gameId} className="pkr-finance-integrity-game">
+      <div className="pkr-finance-integrity-row">
      <span><strong>{gameDate(game.scheduledAt)}</strong>
       <small>{game.playerRecords} {game.playerRecords===1?'player':'players'} · {issues.join(' · ')}</small>
      </span>
      <Link href={'/games/'+encodeURIComponent(game.gameId)}>Open saved game</Link>
+      </div>
       {game.playerIssues.length>0&&<details className="pkr-finance-integrity-players">
         <summary>Player records to review ({game.playerIssues.length})</summary>
         <div className="pkr-finance-integrity-player-list">
