@@ -102,7 +102,7 @@ export default function FinancialIntegrityReview({roomId}:{roomId:string}){
    <span><strong>{totals.incomplete}</strong><small>Incomplete players</small></span>
   </div>
   <p className="pkr-finance-integrity-breakdown">{totals.recorded} differences against recorded buy-ins · {totals.historical} differences against historical estimates. An estimated amount is not proof that a saved net result is wrong.</p>
-  {state.loading&&<p role="status" className="pkr-finance-integrity-notice">Checking saved game records. Results are provisional until every game has loaded.</p>
+  {state.loading&&<p role="status" className="pkr-finance-integrity-notice">Checking saved game records. Results are provisional until every game has loaded.</p>}
   {state.error&&<p role="alert" className="pkr-finance-integrity-warning">{state.error} Please retry; do not interpret this as a zero balance.</p>}
   {!state.loading&&incomplete&&state.unavailable.length>0&&
    <p role="alert" className="pkr-finance-integrity-warning">
