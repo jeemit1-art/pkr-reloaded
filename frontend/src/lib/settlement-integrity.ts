@@ -21,7 +21,7 @@ export type GameIntegritySummary={
 };
 
 const cents=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value);
-const safeBuyin=(player:GamePlayer,defaultBuyin:number):number|null=>{
+const safeBuyin=(player:GamePlayer,defaultBuyin:unknown):number|null=>{
  const explicit=(player as GamePlayer & {buy_in_total?:number|null}).buy_in_total;
  if(cents(explicit)&&explicit>0)return explicit;
  if(!cents(player.buy_ins)||player.buy_ins<0||!cents(defaultBuyin)||defaultBuyin<0)return null;
