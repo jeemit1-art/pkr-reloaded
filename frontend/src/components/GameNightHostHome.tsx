@@ -117,6 +117,7 @@ export default function GameNightHostHome(p:Props){
         </button>
       </div>
       <div className="pkr-gn-quick-utilities" aria-label="Additional club tools">
+        <button type="button" onClick={p.onCalendar}><PkrGlyph name="schedule"/> Calendar</button>
         {p.canManageGames&&<button type="button" onClick={p.onRsvpSettings}><PkrGlyph name="settings"/> RSVP settings</button>}
         <button type="button" onClick={p.onScan}><PkrGlyph name="qr"/> Scan invitation</button>
         <button type="button" onClick={p.onAppearance}><PkrGlyph name="grid"/> Full dashboard</button>
