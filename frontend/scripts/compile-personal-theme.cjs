@@ -143,7 +143,7 @@ const alias={
 };
 const literal=/#(?:[a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{4}|[a-fA-F0-9]{3})(?![a-fA-F0-9])|rgba?\(/;
 const isDarkSurface=role=>['primary','primaryDeep','dangerFill','warningFill','hero','heroLive','heroDeep','heroGlow','heroLiveGlow'].includes(role);
-function recolour(d,rule){
+function recolour(d,rule,originalBackground){
  const p=d.prop.toLowerCase(),val=d.value;
  if(p.startsWith('--pkr-personal-'))return val;
  // Room layouts remain different components. They can no longer supply
@@ -173,8 +173,8 @@ function recolour(d,rule){
   return token('surface');
  }
  if(p==='color'){
-  const bg=rule.nodes?.find(n=>n.type==='decl'&&/^(background|background-color)$/.test(n.prop));
-  const hex=bg?.value.match(/#[0-9a-fA-F]{3,8}\b/)?.[0];
+  const bg=originalBackground??rule.nodes?.find(n=>n.type==='decl'&&/^(background|background-color)$/.test(n.prop))?.value;
+  const hex=bg?.match(/#[0-9a-fA-F]{3,8}\b/)?.[0];
   const surface=hex?role(hex,'bg'):null;
   if(surface==='goldFill')return token('onGold');
   if(isDarkSurface(surface)&&/^(?:#[0-9a-fA-F]{3,8}|white|black)$/i.test(val))return token('onDark');
@@ -198,18 +198,20 @@ function transform(root){
  // keyframes for gameplay and generate a separate tokenised version only
  // when a keyframe actually changes. Non-colour animations are untouched.
  const animated=new Map();
- root.walkAtRules(/keyframes$/i,at=>{
+ const frames=[];root.walkAtRules(/keyframes$/i,at=>frames.push(at));
+ for(const at of frames){
   const copy=at.clone();let changed=false;
   copy.walkDecls(d=>{const next=recolour(d,d.parent);if(next!==d.value){d.value=next;changed=true;}});
   if(changed){const name=at.params.trim(),next='pkr-personal-'+name;copy.params=next;animated.set(name,next);at.after(copy);}
- });
+ }
  const rules=[];
  root.walkRules(rule=>{if(!inKeyframes(rule)&&rule.parent?.type!=='rule')rules.push(rule);});
  let count=0;
  for(const rule of rules){
   const modern=rule.clone();let changed=false;
   modern.walkDecls(d=>{
-   let value=recolour(d,d.parent);
+   const originalBackground=rule.nodes?.find(n=>n.type==='decl'&&/^(background|background-color)$/.test(n.prop))?.value;
+   let value=recolour(d,d.parent,originalBackground);
    if(/^(?:-webkit-)?animation(?:-name)?$/.test(d.prop)){
     for(const [old,next] of animated)value=value.replace(new RegExp('(^|[\\s,])'+old.replace(/[.*+?^$${}()|[\]\\]/g,'\\$&')+'(?=$|[\\s,])','g'),'$1'+next);
    }

@@ -534,9 +534,9 @@ export default function EventPage() {
           {/* Push bell */}
           {canUsePush() && (
             <button onClick={togglePush} disabled={pushLoading} title={pushEnabled?'Notifications ON — tap to disable':'Enable push notifications'}
-              style={{background:pushEnabled?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.05)',
+              style={{background:pushEnabled?'var(--pkr-personal-gain-surface)':'var(--pkr-personal-raised)',
                 color:pushEnabled?'var(--green)':'var(--muted)',
-                border:`1px solid ${pushEnabled?'rgba(0,255,136,0.3)':'var(--border-sub)'}`,
+                border:`1px solid ${pushEnabled?'var(--pkr-personal-gain-line)':'var(--border-sub)'}`,
                 borderRadius:2,padding:'5px 8px',cursor:'pointer',fontSize:16,minHeight:36,
                 display:'flex',alignItems:'center',WebkitTapHighlightColor:'transparent',opacity:pushLoading?0.5:1}}>
               <PkrGlyph name={pushEnabled?'bell':'bell-off'}/>
@@ -916,7 +916,7 @@ export default function EventPage() {
                         <span style={{
                           padding:'1px 6px',borderRadius:2,fontSize:9,fontWeight:600,letterSpacing:'0.1em',
                           textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
-                          background: m.role==='host'?'rgba(201,168,76,0.15)':m.role==='cohost'?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.06)',
+                          background: m.role==='host'?'var(--pkr-personal-warning-surface)':m.role==='cohost'?'var(--pkr-personal-gain-surface)':'var(--pkr-personal-raised)',
                           color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
                         }}>{m.role}</span>
                         {m.email && <span style={{marginLeft:8}}>{m.email}</span>}
@@ -940,7 +940,7 @@ export default function EventPage() {
                       aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
                       onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
                     {isGroupOwner && m.role !== 'host' && (
-                      <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'rgba(231,76,60,0.3)',flexShrink:0}}
+                      <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'var(--pkr-personal-loss-line)',flexShrink:0}}
                         onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
                         Remove
                       </button>
@@ -995,7 +995,7 @@ export default function EventPage() {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <button className="btn btn-outline" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('member');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Invite Member by Mobile</button>
                 <button className="btn btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>{setPhoneRole('cohost');focusMemberSection('invite');window.setTimeout(()=>document.getElementById('pkr-mobile-name')?.focus(),120);}}>+ Co-host by Mobile</button>
-                {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}} onClick={()=>{
+                {leaders.length>1&&<button className="btn btn-ghost" style={{width:'100%',fontSize:12,marginTop:4,color:'var(--amber)',borderColor:'var(--pkr-personal-warning-line)'}} onClick={()=>{
                     setMergeFrom('');setMergeTo('');setMergeConfirmed(false);setMergeMsg('');
                     setMergeLinks([]);setShowMerge(true);
                     void api.events.playerMerges(id).then(({merges})=>setMergeLinks(merges))
@@ -1119,8 +1119,8 @@ export default function EventPage() {
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                         {((g as any).top_players||[]).slice(0,expandedHistory.includes(g.id)?undefined:3).map((p:any,i:number)=>(
                           <div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 8px',
-                            background:i===0?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.03)',
-                            border:`1px solid ${i===0?'rgba(201,168,76,0.25)':'var(--border-sub)'}`,borderRadius:2}}>
+                            background:i===0?'var(--pkr-personal-accent-surface)':'var(--pkr-personal-raised)',
+                            border:`1px solid ${i===0?'var(--pkr-personal-accent-line)':'var(--border-sub)'}`,borderRadius:2}}>
                             <span style={{fontSize:10,color:i===0?'var(--gold)':'var(--faint)'}}><PkrGlyph name={i===0?"trophy":"medal"} size={16}/></span>
                             <span style={{fontSize:11,color:'var(--ivory)',fontFamily:'var(--font-display),serif'}}>{p.display_name}</span>
                             <span style={{fontSize:11,fontWeight:600,color:p.net>0?'var(--green)':p.net<0?'var(--red)':'var(--muted)'}}>{fmtSign(p.net)}</span>
@@ -1136,7 +1136,7 @@ export default function EventPage() {
                   </div>
                   {isHost && (
                     <div style={{borderTop:'1px solid var(--border-sub)',padding:'8px 14px',display:'flex',justifyContent:'flex-end'}}>
-                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}
+                      <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px',color:'var(--amber)',borderColor:'var(--pkr-personal-warning-line)'}}
                         onClick={()=>setConfirmDelete(g.id)}>Cancel Game</button>
                       <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}}
                         onClick={()=>setConfirmDelete(g.id+':delete')}>Delete</button>
@@ -1258,7 +1258,7 @@ export default function EventPage() {
                   {['6','7','8','9','10','11','12','13','14','15'].map(n=>(
                     <button type="button" key={n} aria-pressed={form.seats===n} onClick={()=>setForm(f=>({...f,seats:n}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:13,fontWeight:500,
-                        background:form.seats===n?'var(--gold)':'var(--bg3)',color:form.seats===n?'#0e0e0f':'var(--muted)',
+                        background:form.seats===n?'var(--pkr-personal-primary)':'var(--bg3)',color:form.seats===n?'var(--pkr-personal-on-dark)':'var(--muted)',
                         border:form.seats===n?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>{n}</button>
                   ))}
                 </div>
@@ -1316,7 +1316,7 @@ export default function EventPage() {
                   {(['none','weekly','fortnightly']).map(r=>(
                     <button type="button" key={r} aria-pressed={form.repeat===r} onClick={()=>setForm(f=>({...f,repeat:r}))}
                       style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:500,
-                        background:form.repeat===r?'var(--gold)':'var(--bg3)',color:form.repeat===r?'#0e0e0f':'var(--muted)',
+                        background:form.repeat===r?'var(--pkr-personal-primary)':'var(--bg3)',color:form.repeat===r?'var(--pkr-personal-on-dark)':'var(--muted)',
                         border:form.repeat===r?'1px solid var(--gold)':'1px solid var(--border-sub)',fontFamily:'var(--font-body),sans-serif'}}>
                       {r==='none'?'Once':r==='weekly'?'Weekly':'Fortnightly'}
                     </button>
@@ -1380,14 +1380,14 @@ export default function EventPage() {
             <div style={{fontSize:12,color:'var(--muted)',marginBottom:20,fontFamily:'var(--font-body),sans-serif'}}>{event.name}</div>
 
             {/* Install link */}
-            <div style={{marginBottom:16,padding:'14px',background:'rgba(0,255,136,0.04)',border:'1px solid rgba(0,255,136,0.15)',borderRadius:4}}>
+            <div style={{marginBottom:16,padding:'14px',background:'var(--pkr-personal-gain-surface)',border:'1px solid var(--pkr-personal-gain-line)',borderRadius:4}}>
               <div style={{fontSize:9,letterSpacing:'0.18em',color:'var(--green)',marginBottom:6,fontFamily:'var(--font-body),sans-serif',fontWeight:600,textTransform:'uppercase'}}><PkrGlyph name="phone"/> Player Install Link</div>
               <div style={{fontSize:11,color:'var(--muted)',marginBottom:10,fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                 Send to new players so they can install PKR and get push notifications for every game.
               </div>
               <div style={{background:'var(--bg3)',border:'1px solid var(--border-sub)',borderRadius:2,padding:'10px 12px',fontSize:10,color:'var(--ivory)',wordBreak:'break-all',marginBottom:8,fontFamily:'monospace'}}>{installLink}</div>
               <div style={{display:'flex',gap:6}}>
-                <button className="btn btn-outline" style={{flex:1,fontSize:11,borderColor:'rgba(0,255,136,0.3)',color:'var(--green)'}}
+                <button className="btn btn-outline" style={{flex:1,fontSize:11,borderColor:'var(--pkr-personal-gain-line)',color:'var(--green)'}}
                   onClick={()=>navigator.clipboard.writeText(installLink).then(()=>alert('Install link copied!'))}>Copy</button>
                 <a href={`https://wa.me/?text=${encodeURIComponent(`Install PKR and join ${event.name}: ${installLink}`)}`}
                   target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
@@ -1407,8 +1407,8 @@ export default function EventPage() {
                   </div>
                   <button onClick={togglePush} disabled={pushLoading}
                     style={{padding:'7px 14px',borderRadius:2,cursor:'pointer',fontSize:12,fontWeight:600,
-                      background:pushEnabled?'rgba(255,60,60,0.1)':'var(--gold)',color:pushEnabled?'var(--red)':'#000',
-                      border:`1px solid ${pushEnabled?'rgba(255,60,60,0.3)':'var(--gold)'}`,
+                      background:pushEnabled?'var(--pkr-personal-loss-surface)':'var(--pkr-personal-primary)',color:pushEnabled?'var(--red)':'var(--pkr-personal-on-dark)',
+                      border:`1px solid ${pushEnabled?'var(--pkr-personal-loss-line)':'var(--gold)'}`,
                       fontFamily:'var(--font-body),sans-serif',opacity:pushLoading?0.6:1,whiteSpace:'nowrap'}}>
                     {pushLoading ? '…' : pushEnabled ? 'Disable' : 'Enable'}
                   </button>
@@ -1417,7 +1417,7 @@ export default function EventPage() {
             )}
 
             {!isPWA && iosDevice && safariOnly && (
-              <div style={{padding:'10px 14px',background:'rgba(201,168,76,0.06)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:4,marginBottom:14}}>
+              <div style={{padding:'10px 14px',background:'var(--pkr-personal-accent-surface)',border:'1px solid var(--pkr-personal-accent-line)',borderRadius:4,marginBottom:14}}>
                 <div style={{fontSize:11,color:'var(--gold)',fontFamily:'var(--font-body),sans-serif',fontWeight:500,marginBottom:4}}><PkrGlyph name="phone"/> iPhone: Add to Home Screen</div>
                 <div style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',lineHeight:1.6}}>
                   Tap <strong style={{color:'var(--ivory)'}}>Share ↑</strong> → <strong style={{color:'var(--ivory)'}}>Add to Home Screen</strong> to install PKR as a native app.
@@ -1499,7 +1499,7 @@ function QuickSeatModal({ gameId, onClose, onSeated }: { gameId:string; onClose:
         {seated.length > 0 && (
           <div style={{marginBottom:14,display:'flex',flexWrap:'wrap',gap:6}}>
             {seated.map((n,i) => (
-              <span key={i} style={{padding:'4px 10px',background:'rgba(76,175,125,0.1)',border:'1px solid rgba(76,175,125,0.25)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
+              <span key={i} style={{padding:'4px 10px',background:'var(--pkr-personal-gain-surface)',border:'1px solid var(--pkr-personal-gain-line)',borderRadius:2,fontSize:11,color:'var(--green)',fontFamily:'var(--font-body),sans-serif'}}>
                 <PkrGlyph name="check" size={16}/> {n}
               </span>
             ))}
@@ -1539,7 +1539,7 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
   const isLive = isLiveGame(game);
   const isUnfinished = isUnfinishedGame(game);
   const statusBg:Record<string,string> = {
-    scheduled:'rgba(201,168,76,0.08)', active:'rgba(0,255,136,0.08)',
+    scheduled:'var(--pkr-personal-accent-surface)', active:'rgba(0,255,136,0.08)',
     lobby:'rgba(201,168,76,0.12)', settled:'transparent',
   };
   const statusDot:Record<string,string> = {
@@ -1562,7 +1562,7 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
           {(game as any).format && (game as any).format !== 'cash' && (
             <span style={{display:'inline-block',marginTop:4,padding:'2px 8px',borderRadius:2,fontSize:10,fontWeight:500,
               letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
-              background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',color:'var(--gold)'}}>
+              background:'var(--pkr-personal-accent-surface)',border:'1px solid var(--pkr-personal-accent-line)',color:'var(--gold)'}}>
               <PkrGlyph name={(game as any).format==='tournament'?'trophy':(game as any).format==='rebuy'?'refresh':'games'} size={14}/> {String(({tournament:'Tournament',rebuy:'Rebuy',freezeout:'Freezeout'} as {[k:string]:string})[(game as any).format] || (game as any).format)}
             </span>
           )}
@@ -1598,13 +1598,13 @@ function GameCard({game,appUrl,eventName,isHost,canDelete,onClick,onOpenTable,on
           )}
           {isHost && (game.status==='scheduled'||game.status==='lobby') && (
             <button onClick={(e)=>{e.stopPropagation();onQuickSeat();}}
-              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'rgba(201,168,76,0.3)'}}>
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--gold)',borderColor:'var(--pkr-personal-accent-line)'}}>
               <PkrGlyph name="table"/> Quick Seat
             </button>
           )}
           {isHost && game.status==='scheduled' && (<>
             <button onClick={(e)=>{e.stopPropagation();onCancel();}}
-              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'rgba(212,137,26,0.3)'}}>
+              className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--amber)',borderColor:'var(--pkr-personal-warning-line)'}}>
               Cancel
             </button>
             {canDelete&&<button onClick={(e)=>{e.stopPropagation();onDelete();}}

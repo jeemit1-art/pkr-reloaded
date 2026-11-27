@@ -442,9 +442,9 @@ function DashboardInner() {
 
       {/* Trial expiry banner */}
       {onTrial && !playerOnly && user.trial_days_left <= 2 && (
-        <div style={{background:'rgba(255,160,30,0.08)',borderBottom:'1px solid rgba(255,160,30,0.2)',
+        <div style={{background:'var(--pkr-personal-warning-surface)',borderBottom:'1px solid var(--pkr-personal-warning-line)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-          <div style={{fontSize:12,color:'rgba(255,170,50,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
+          <div style={{fontSize:12,color:'var(--pkr-personal-warning)',fontFamily:'var(--font-body),sans-serif'}}>
             ⏱ Your free trial ends in <strong>{user.trial_days_left} day{user.trial_days_left!==1?'s':''}</strong>
           </div>
           <button
@@ -472,9 +472,9 @@ function DashboardInner() {
         </div>
       )}
       {needsUpgrade && !user?.free_game_in_progress && !playerOnly && (
-        <div style={{background:'rgba(220,60,60,0.08)',borderBottom:'1px solid rgba(220,60,60,0.2)',
+        <div style={{background:'var(--pkr-personal-loss-surface)',borderBottom:'1px solid var(--pkr-personal-loss-line)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-          <div style={{fontSize:12,color:'rgba(220,90,90,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
+          <div style={{fontSize:12,color:'var(--pkr-personal-loss)',fontFamily:'var(--font-body),sans-serif'}}>
             A paid host plan is required to create more groups and games.
           </div>
           <button
@@ -494,7 +494,7 @@ function DashboardInner() {
         {totalPending > 0 && (
           <section className="pkr-approval-alert" aria-label="Pending membership approvals" role="status"
             style={{padding:'14px 17px',marginBottom:17,border:'1px solid var(--gold)',
-              background:'rgba(201,168,76,.12)',borderRadius:10,color:'var(--ivory)'}}>
+              background:'var(--pkr-personal-accent-surface)',borderRadius:10,color:'var(--ivory)'}}>
             <strong style={{color:'var(--gold)'}}><PkrGlyph name="bell"/> {totalPending} player{totalPending===1?'':'s'} waiting for your approval</strong>
             <div style={{display:'flex',gap:9,flexWrap:'wrap',marginTop:10}}>
               {activeRooms.filter(room=>pendingByRoom[room.id]>0).map(room=>(
@@ -507,8 +507,8 @@ function DashboardInner() {
           </section>
         )}
         {featuredRoom && activeRooms.every(room=>room.role!=='host') && !playerOnly && (
-          <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid rgba(201,168,76,.28)',
-            borderRadius:12,background:'linear-gradient(115deg,rgba(21,47,32,.97),rgba(7,17,11,.97))',
+          <section className="pkr-player-setup-card" style={{marginBottom:17,border:'1px solid var(--pkr-personal-line)',
+            borderRadius:12,background:'var(--pkr-personal-surface)',
             padding:'17px 19px',display:'flex',gap:15,justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
             <div><span className="pkr-eyebrow">YOUR PLAYER SETUP</span>
               <h2 style={{margin:'4px 0',fontSize:20,fontFamily:'var(--font-display),serif',color:'var(--white)'}}>Ready for poker night?</h2>
@@ -591,8 +591,8 @@ function DashboardInner() {
         {/* QR Scanner Modal */}
         {showScanner && (
           <AppDialog style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}} aria-label="Scan invite" onDismiss={()=>{setShowScanner(false);setScanning(false);}}>
-            <div style={{width:'100%',maxWidth:360,background:'#0d1a0f',borderRadius:12,border:'1px solid rgba(201,168,76,0.3)',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(201,168,76,0.15)'}}>
+            <div style={{width:'100%',maxWidth:360,background:'var(--pkr-personal-surface)',borderRadius:12,border:'1px solid var(--pkr-personal-control)',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid var(--pkr-personal-line)'}}>
                 <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--gold)',fontWeight:600}}>Scan Invite QR</div>
                 <button onClick={()=>{setShowScanner(false);setScanning(false);}} style={{background:'none',border:'none',color:'var(--muted)',fontSize:20,cursor:'pointer',padding:4}}>✕</button>
               </div>

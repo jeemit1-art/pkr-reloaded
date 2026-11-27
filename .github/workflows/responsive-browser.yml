@@ -17,7 +17,20 @@ permissions:
   contents: read
 
 jobs:
-  responsive-browser:
+  browser-shard:
+    name: browser-shard (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gameplay
+            suites: room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout
+          - name: access-and-layout
+            suites: app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive
+          - name: appearance-and-updates
+            suites: game-night-polish app-release-updates swipe-data-windows
+          - name: all-viewports
+            suites: viewport-smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -81,7 +94,7 @@ jobs:
         working-directory: frontend
         run: |
           failed=0
-          for suite in room-player-merge reference-seat-sizes seat-table-experience dense-seat-layout app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive game-night-polish app-release-updates swipe-data-windows viewport-smoke; do
+          for suite in ${{ matrix.suites }}; do
             echo "::group::${suite}"
             if ! node "tests/${suite}.cjs"; then
               echo "::error::Browser suite failed: ${suite}"
@@ -94,7 +107,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pkr-viewport-smoke
+          name: pkr-viewport-smoke-${{ matrix.name }}
           path: artifacts/
           if-no-files-found: ignore
           retention-days: 5
+
+  responsive-browser:
+    if: always()
+    needs: browser-shard
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every browser shard to pass
+        env:
+          RESULT: ${{ needs.browser-shard.result }}
+        run: test "$RESULT" = success

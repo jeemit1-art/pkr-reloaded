@@ -270,7 +270,7 @@ export default function ResultsPage() {
                       className="btn btn-ghost"
                       style={{flex:1,fontSize:11,padding:'5px 10px',
                         color:copied===i?'var(--green)':'var(--muted)',
-                        borderColor:copied===i?'rgba(76,175,125,0.4)':'var(--border-sub)'}}>
+                        borderColor:copied===i?'var(--pkr-personal-gain-line)':'var(--border-sub)'}}>
                       <PkrGlyph name={copied===i?'check':'copy'} size={16}/> {copied===i ? 'Copied!' : 'Copy reminder'}
                     </button>
                     {recipient?.whatsapp ? (
