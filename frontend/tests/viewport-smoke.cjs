@@ -860,9 +860,11 @@ async function test(){
                  numericMatches:document.querySelectorAll('#gameScreen .bank-pill b').length,
                  feltWidth:node.getBoundingClientRect().width};
        });
-       if(!feltTheme.felt.includes('15, 107, 85')||!feltTheme.felt.includes('19, 129, 106')||
-           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(58, 42, 30)')
-         errors.push(size.name+' felt/rail deviates from the Game night slate palette: '+JSON.stringify(feltTheme));
+       // Restored green felt and gold-rail gradients are an explicit visual
+       // requirement; this strict assertion replaces the retired slate rail.
+       if(!feltTheme.felt.includes('16, 132, 102')||!feltTheme.felt.includes('7, 94, 74')||
+           !feltTheme.rail.includes('190, 147, 67')||!feltTheme.rail.includes('210, 163, 75'))
+         errors.push(size.name+' live felt/gold rail does not match the approved casino table: '+JSON.stringify(feltTheme));
        if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains mono')){
          let diagnostic='';
          if(size.name==='small-phone')diagnostic=JSON.stringify(await page.evaluate(()=>{
