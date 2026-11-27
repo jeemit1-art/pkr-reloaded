@@ -150,3 +150,42 @@ html.pkr-chip-club #gameScreen :is(button,input,select):focus-visible{outline:3p
 }
 @media(prefers-reduced-motion:reduce){html.pkr-chip-club *{scroll-behavior:auto!important}}
 }
+/* Specificity bridge for retained legacy presentation layers.
+   No geometry, positions, layout display, seating logic or behaviour changes. */
+@layer pkr-theme-priority {
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-primary-page,.pkr-schedule-page,.pkr-results-page,.pkr-gn-home,.pkr-player-home,.pkr-app.pkr-event,.pkr-app.pkr-game-detail,.pkr-vnext-insights){
+  background-color:#F4F1EA!important;color:#1B1F2A!important;
+  --bg:#F4F1EA!important;--bg2:#FFF!important;--bg3:#F0EDE6!important;
+  --muted:#5A6172!important;--white:#1B1F2A!important;--ivory:#1B1F2A!important;
+ }
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-gn-game-ticket,.pkr-player-feature){
+  background:#3E63DD!important;border-color:#2F4BB8!important;color:#FFF!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-gn-game-ticket :is(h2,strong,p,small,span),
+ html.pkr-game-night.pkr-chip-club body .pkr-player-feature :is(h2,h3,strong,p,small,span){color:#FFF!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-gn-game-ticket .pkr-gn-date strong{color:#FFC53D!important}
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-gn-primary,.pkr-gn-ticket-footer .pkr-gn-primary){background:#FFC53D!important;color:#1B1F2A!important;border-color:#FFC53D!important}
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-gn-context-actions button,.pkr-gn-club-links button){background:#FFF!important;color:#1B1F2A!important;border-color:#E5E0D3!important}
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-primary-panel,.pkr-primary-metric,.pkr-account-card,.pkr-player-panel,.pkr-game-card,.pkr-vnext-card,.pkr-results-card){
+  background-color:#FFF!important;border-color:#E5E0D3!important;color:#1B1F2A!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-bottom-nav button.active{
+  color:#2F4BB8!important;background:#E3E9FF!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-bottom-nav button.active :is(svg,small){color:#2F4BB8!important}
+ html.pkr-game-night.pkr-chip-club body :is(.pkr-primary-mobile-mark,.pkr-primary-sidebar .pkr-persistent-brand svg){color:#3E63DD!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog .pkr-record-footer button{
+  background:#3E63DD!important;color:#FFF!important;border-color:#3E63DD!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog .pkr-record-heading span{color:#2F4BB8!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog .pkr-record-search input{background:#FFF!important;color:#1B1F2A!important;border-color:#E5E0D3!important}
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table .pkr-approved-game-dock #settleBtn{
+  background:#FFC53D!important;color:#1B1F2A!important;border-color:#FFC53D!important;
+ }
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table :is(.pkr-game-seat-result.pos,.pkr-game-seat-result.neg){
+  font-family:var(--font-num)!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog :is(.pkr-record-row b,.pkr-record-heading p)[data-money-tone=positive]{color:#0E7C4F!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog :is(.pkr-record-row b,.pkr-record-heading p)[data-money-tone=negative]{color:#C9302C!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-record-dialog :is(button,input):focus-visible{outline:3px solid #3E63DD!important;outline-offset:2px!important}
+}
