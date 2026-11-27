@@ -8,6 +8,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/pkr-d1-private-restore.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/pkr-d1-private-restore.yml'
+      - 'worker/scripts/preflight-club-release.py'
+      - 'worker/scripts/test-restore-preflight.py'
+      - 'worker/scripts/verify-restored-d1.py'
   workflow_dispatch:
     inputs:
       target:
@@ -30,6 +36,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  synthetic-recovery-gate:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Check synthetic export/restore with no production credentials or player data
+        run: |
+          python3 scripts/test-restore-preflight.py
+          python3 scripts/test-d1-api-export-fallback-ci.py
+          python3 scripts/test-d1-export-diagnostic-ci.py
+
   restore-rehearsal:
     if: >-
       ${{ github.ref == 'refs/heads/main' &&
@@ -84,5 +115,5 @@ jobs:
           echo "Private restore rehearsal completed. Export is deleted by the Python tempfile context."
           echo "No D1 import, schema mutation, payment status change, source database restore or customer-data artifact was performed."
 
-# No production D1 write credentials are used by the rehearsal Python script.
+# The rehearsal Python script never executes a write against the production D1.
 # All source queries are SELECT/PRAGMA and the migrations run in local memory only.
