@@ -2086,36 +2086,40 @@ function renderTable() {
   var cardWidth=wideTable?(compact?compactWidth:balancedWidth):
     compact?Math.floor(Math.min(tabletPortrait?108:84,Math.max(vpW<355?64:74,W*.215))):
     Math.floor(Math.min(tabletPortrait?142:120,Math.max(tabletPortrait?102:90,W*(tabletPortrait?.22:.27))));
-  var cardHeight=wideTable?(compact?(hasStacks?100:86):(hasStacks?108:82)):
-    compact?(hasStacks?102:82):(hasStacks?94:tabletPortrait?79:vpW<355?82:68);
-  // Retain the full/compact content, including bank units and chip values.
-  // Reserve enough vertical room for the readable records instead of clipping them.
-  cardHeight=Math.max(cardHeight,compact?(hasStacks?124:102):(hasStacks?110:90));
-  var displaySeatRows=seatChipRows(),recordWidth=Math.max(40,cardWidth-16),extraHeight=0;
+  // Reference Full seat: photo alongside all three record lines.
+  // Compact seats retain vertical stacking, with the same full names.
+  var avatarSize=compact?(wideTable?30:vpW<355?22:26):wideTable?(tightWide?29:38):vpW<355?23:30;
+  var nameSize=compact?(wideTable?11:vpW<355?10:11):wideTable?(tightWide?11:13):vpW<355?10:12;
+  var bankSize=wideTable?(tightWide?10:11):vpW<355?9:10;
+  var resultSize=wideTable?(tightWide?14:17):vpW<355?12:14;
+  var cardHeight=compact?(hasStacks?116:96):(hasStacks?88:70);
+  if(wideTable&&!compact)cardHeight+=8;
+  var displaySeatRows=seatChipRows(),recordWidth=Math.max(30,cardWidth-(compact?12:avatarSize+20)),extraHeight=0;
+  var measure=document.createElement('canvas').getContext('2d');
+  function textLines(value,size,width,mono){
+    var text=String(value||'');
+    if(!text)return 1;
+    if(!measure)return Math.max(1,Math.ceil(text.length*size*.62/width));
+    measure.font='700 '+size+'px '+(mono?'JetBrains Mono, monospace':'Plus Jakarta Sans, sans-serif');
+    return Math.max(1,Math.ceil(measure.measureText(text).width/width));
+  }
   Object.keys(state.players||{}).forEach(function(sid){
     var player=state.players[sid];if(!player||!player.name)return;
     var invested=pBuyin(player),cashed=(player.transactions||[]).some(function(tx){return tx.type==='cashout';});
     var bankText=seatBankLabel(invested).replace(/ in$/,'').replace('.00','');
     var resultText=pkrSeatMoney(cashed?pNet(player):invested,cashed);
-    var bankLines=Math.max(1,Math.ceil(bankText.length*11*.66/recordWidth));
-    var resultLines=Math.max(1,Math.ceil(resultText.length*(compact?14:17)*.66/recordWidth));
+    var bankLines=textLines(bankText,bankSize,recordWidth-2,true);
+    var resultLines=textLines(resultText,resultSize,recordWidth,true);
     var stackText=hasStacks&&!cashed?seatStackText(displaySeatRows[sid]):'';
-    var stackLines=stackText?Math.max(1,Math.ceil(stackText.length*11*.66/recordWidth)):1;
-    // The first name or selected screen name must never be ellipsised.
-    // Allow extra vertical lines rather than shrinking it to an initial or
-    // increasing card width beyond the available table geometry.
+    var stackLines=stackText?textLines(stackText,bankSize,cardWidth-14,true):1;
     var visibleName=String(pkrSeatDisplayName(player)||'').trim();
-    var nameSize=compact?(wideTable?10:vpW<355?10:11):(wideTable?(tightWide?10:13):vpW<355?10:11);
-    var availableNameWidth=Math.max(24,cardWidth-(compact?16:wideTable?54:44));
-    var nameLines=Math.max(1,Math.ceil(visibleName.length*nameSize*.60/availableNameWidth));
-    var nameExtra=Math.max(0,nameLines-1)*Math.ceil(nameSize*1.18);
-    extraHeight=Math.max(extraHeight,nameExtra+(bankLines-1)*14+(resultLines-1)*20+(stackLines-1)*14);
+    var nameLines=textLines(visibleName,nameSize,recordWidth,false);
+    extraHeight=Math.max(extraHeight,(nameLines-1)*Math.ceil(nameSize*1.32)+(bankLines-1)*13+(resultLines-1)*17+(stackLines-1)*13);
   });
-  // Extra record label and chip badge line. Preserve the collision-aware canvas.
-  cardHeight+=extraHeight+20;
+  cardHeight+=extraHeight;
   // When thirteen players cannot fit at the requested scale, extend the
   // table canvas vertically and scroll it. Never overlap or silently hide seats.
-  var minimumHeight=wideTable?(count>=10?520:460):Math.max(440,(maxSide+1)*(cardHeight+9)+34);
+  var minimumHeight=wideTable?(count>=10?520:460):Math.max(420,Math.max(1,maxSide)*(cardHeight+10)+40);
   var H=Math.max(availableHeight,minimumHeight);
   var summary=document.getElementById('pkrSeatSummary');
   area.classList.remove('pkr-table-summary-on');
@@ -2124,7 +2128,7 @@ function renderTable() {
     tabletPortrait?Math.min(W*.47,380):Math.min(W*(compact?.49:.45),250);
   var tH=wideTable?(tightWide?Math.min(H*.63,340):Math.min(H*.59,460)):
     tabletPortrait?Math.min(H*.72,tW*1.56):
-    Math.min(H*.63,compact?tW*1.77:Math.max(tW*1.77,vpW>=355?320:0));
+    Math.min(H*.72,compact?tW*1.95:Math.max(tW*1.98,vpW>=355?320:0));
   var seatRadiusY=null;
   if(wideTable){
     var radiusX=Math.min(W/2-cardWidth/2-12,tW/2+cardWidth*.65),angles=pkrWideSeatAngles(count),requiredY=0;
@@ -2158,7 +2162,7 @@ function renderTable() {
   var caption=active+' active · '+players.length+' seated';
   if(stats)stats.textContent=players.length?caption:'';
   if(meta)meta.textContent=caption;
-  buildSeats(count,tW,tH,cx,cy,wideTable,displaySeatRows,{width:W,height:H,cardWidth:cardWidth,cardHeight:cardHeight,mode:mode,compact:compact,mobileRail:mobileRail,tightWide:tightWide,hasStacks:hasStacks,seatRadiusY:seatRadiusY});
+  buildSeats(count,tW,tH,cx,cy,wideTable,displaySeatRows,{width:W,height:H,cardWidth:cardWidth,cardHeight:cardHeight,mode:mode,compact:compact,mobileRail:mobileRail,tightWide:tightWide,hasStacks:hasStacks,seatRadiusY:seatRadiusY,avatarSize:avatarSize,nameSize:nameSize,bankSize:bankSize,resultSize:resultSize});
   updateBank();updateSaveResultsBtn();
 }
 window.renderTable = renderTable;
@@ -2200,21 +2204,29 @@ function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){
     var first=Math.max(g.cardHeight/2+10,cy-sideSpan/2);
     var last=Math.min(g.height-g.cardHeight/2-10,cy+sideSpan/2);
     var spread=function(i,n){return n<=1?g.height/2:first+(last-first)*i/(n-1);};
-    positions.push({x:cx,y:top});for(var a=0;a<leftCount;a++)positions.push({x:leftX,y:spread(a,leftCount)});positions.push({x:cx,y:bottom});
-    for(var b=0;b<rightCount;b++)positions.push({x:rightX,y:spread(rightCount-1-b,rightCount)});
+    // Follow the felt's rounded ends without overlapping adjacent cards.
+    var curve=Math.max(0,Math.min(g.cardWidth*.12,cx-g.cardWidth-9-leftX,rightX-cx-g.cardWidth-9));
+    var arc=function(i,n){return n<2?0:curve*Math.pow(Math.abs(2*i/(n-1)-1),1.5);};
+    positions.push({x:cx,y:Math.max(g.cardHeight/2+9,Math.min(top,first-10))});
+    for(var a=0;a<leftCount;a++)positions.push({x:leftX+arc(a,leftCount),y:spread(a,leftCount)});
+    positions.push({x:cx,y:Math.min(g.height-g.cardHeight/2-9,Math.max(bottom,last+10))});
+    for(var b=0;b<rightCount;b++)positions.push({x:rightX-arc(rightCount-1-b,rightCount),y:spread(rightCount-1-b,rightCount)});
   }
   positions.forEach(function(pos,i){
     var sid='seat'+(i+1),p=state.players[sid],seat=document.createElement('div');
     seat.className='seat pkr-mockup-player-seat pkr-layout-'+g.mode;seat.id=sid;seat.style.left=pos.x+'px';seat.style.top=pos.y+'px';
     seat.style.setProperty('--pkr-card-width',g.cardWidth+'px');seat.style.setProperty('--pkr-card-height',g.cardHeight+'px');
-    seat.style.setProperty('--pkr-avatar-size',(g.mobileRail?(g.width<=360?34:40):g.tightWide?32:wideTable?42:g.width<=360?26:32)+'px');
-    seat.style.setProperty('--pkr-name-size',(g.mobileRail?(g.width<=360?10:11):g.tightWide?10:wideTable?13:g.width<=360?10:11)+'px');
-    seat.style.setProperty('--pkr-bank-size',(g.mobileRail?(g.width<=360?9:10):g.tightWide?9:wideTable?12:g.width<=360?9:10)+'px');
-    seat.style.setProperty('--pkr-result-size',(g.mobileRail?(g.width<=360?12:14):g.tightWide?13:wideTable?17:g.width<=360?12:14)+'px');
+    seat.style.setProperty('--pkr-avatar-size',g.avatarSize+'px');
+    seat.style.setProperty('--pkr-name-size',g.nameSize+'px');
+    seat.style.setProperty('--pkr-bank-size',g.bankSize+'px');
+    seat.style.setProperty('--pkr-result-size',g.resultSize+'px');
     if(i>0&&i<=leftCount)seat.dataset.side='left';else if(i>leftCount+1)seat.dataset.side='right';seat.setAttribute('role','button');seat.tabIndex=0;
     if(p&&p.name){
       var bi=pBuyin(p),cashed=(p.transactions||[]).some(function(t){return t.type==='cashout';});
       seat.classList.add(cashed?'pkr-cashed-seat':bi>0?'pkr-inplay-seat':'pkr-waiting-seat');seat.dataset.status=cashed?'cashed':bi>0?'inplay':'waiting';
+      var avatarKey=String(p.userId||p.user_id||p.name),hash=0;
+      for(var k=0;k<avatarKey.length;k++)hash=(hash*31+avatarKey.charCodeAt(k))|0;
+      seat.dataset.avatarTone=String(Math.abs(hash%6));
       seat.setAttribute('aria-label','Open player '+p.name+': '+(cashed?'Cashed out':bi>0?'In play':'Seated')+'. Recorded buy-ins '+fmt(bi)+(cashed?'. Final result '+fmtNet(pNet(p)):'. Result pending until cash-out'));
       seat.title=p.name+' · '+seatBankLabel(bi)+' · '+(cashed?'Cashed out; net '+fmtNet(pNet(p)):'Buy-ins outstanding, not a realised loss');
       seat.innerHTML=pkrMockupSeatCard(p,sid,bi,pNet(p),cashed,g.mode,(seatRows||{})[sid]);

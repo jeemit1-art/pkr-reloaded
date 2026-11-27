@@ -66,7 +66,7 @@ async function check(browser,width,height,count){
    assert(approved.felt.width>=165&&approved.felt.width<=205,'Approved phone felt must leave space for full player names: '+JSON.stringify(approved));
    assert(approved.felt.height>=300&&approved.felt.height<=365,'Approved phone felt must not stretch vertically: '+JSON.stringify(approved));
    const ratio=approved.felt.height/approved.felt.width;
-   assert(ratio>=1.6&&ratio<=1.9,'Approved felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
+   assert(ratio>=1.75&&ratio<=2.1,'Lounge reference felt aspect ratio regressed: '+JSON.stringify({ratio,approved}));
    assert(approved.left.right<=approved.felt.left+22,'Left player cards must sit off the felt: '+JSON.stringify(approved));
    assert(approved.right.left>=approved.felt.right-22,'Right player cards must sit off the felt: '+JSON.stringify(approved));
   }
@@ -162,8 +162,13 @@ async function check(browser,width,height,count){
    assert.equal(await page.locator('#seat2 .pkr-game-seat-result').getAttribute('data-pkr-amount-label'),'Net result');
    assert.equal(await page.locator('#seat1 '+bank+' .pkr-seat-bank-unit').textContent(),'1b');
    assert.equal(await page.locator('#seat1 '+bank+' .pkr-seat-bank-value').textContent(),'$25');
-   assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(244, 241, 234)');
+   assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 161, 139)');
    assert.equal(await page.locator('#seat2 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(74, 222, 154)');
+    assert.match(await page.locator('#seat1 .pkr-game-seat-card').evaluate(e=>getComputedStyle(e).backgroundImage),/gradient/,'Invested seat has a deliberate coloured surface');
+    if(!compact){
+      assert.equal(await page.locator('#seat1 .pkr-game-full-avatar').evaluate(e=>getComputedStyle(e).gridRow),'1 / 4','Reference layout places avatar beside all three information lines');
+      assert.equal(await page.locator('#seat1 .pkr-game-seat-bank').evaluate(e=>getComputedStyle(e).gridColumn),'2','Full bank line sits alongside avatar');
+    }
    assert.match(await page.locator('#seat2 .pkr-game-seat-result').textContent(),/\+\$15/);
    assert.equal(await page.locator('#seat3 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 119, 138)');
    assert.match(await page.locator('#seat3 .pkr-game-seat-result').textContent(),/-\$15/);

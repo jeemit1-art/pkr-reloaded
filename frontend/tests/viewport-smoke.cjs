@@ -842,7 +842,7 @@ async function test(){
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
-       if(chrome!=='rgb(22, 27, 54)')errors.push(size.name+' live table header should use the Chip Club Night surface: '+chrome);
+       if(chrome!=='rgb(8, 19, 36)')errors.push(size.name+' live table header should use the Lounge navy surface: '+chrome);
        const share=page.locator('#gameScreen #publishBtn');
        if(!await share.isVisible())errors.push(size.name+' live game Share action is hidden');
        const shareColour=await share.evaluate(el=>getComputedStyle(el).color);

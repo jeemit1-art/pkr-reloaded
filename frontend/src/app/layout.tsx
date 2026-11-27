@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import AppExperience from '@/components/AppExperience';
 import localFont from 'next/font/local';
+// Lounge palette precedes the older structural fallback layers.
+import './pkr-lounge.css';
 import './pkr-theme-a.css';
 import './pkr-player-shell.css';
 import './pkr-navigation-stability.css';
@@ -59,7 +61,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU" className={`pkr-game-night pkr-chip-club ${bodyFont.variable}`}>
+    <html lang="en-AU" className={`pkr-game-night pkr-chip-club pkr-lounge ${bodyFont.variable}`}>
       <body>
         <AppExperience>
         <PersistentNavigation/>
