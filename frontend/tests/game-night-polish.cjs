@@ -114,7 +114,7 @@ async function readable(locator,label){
   return {ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),colour:style.color,background,font:style.fontFamily};
  });
  assert(result.ratio>=4.5,label+' is hard to read: '+JSON.stringify(result));
- assert.match(result.font,/inter/i,label+' must use the bundled Inter font');
+ assert.match(result.font,/plus jakarta sans|inter/i,label+' must use an approved bundled UI font');
 }
 async function loadedSheet(page){
  await page.locator('.pkr-record-dialog .pkr-record-body[aria-busy="false"]').waitFor();
@@ -165,24 +165,24 @@ async function checkFullDashboards(page,state,label){
   const name=mode==='command'?'Command Centre':'Live Poker';
   await appearance.getByRole('button',{name:new RegExp(name)}).click();
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
-  assert.equal(await colour(dashboard,'backgroundColor'),'rgb(244, 246, 248)',name+' root must use porcelain');
+  assert.equal(await colour(dashboard,'backgroundColor'),'rgb(244, 241, 234)',name+' root must use Chip Club paper');
   const selected=appearance.getByRole('button',{name:new RegExp(name)});
   assert.equal(await selected.getAttribute('aria-pressed'),'true');
-  await waitForColour(page,selected,'backgroundColor','rgb(255, 240, 235)');
-  assert.equal(await colour(selected,'backgroundColor'),'rgb(255, 240, 235)',name+' selected control must use coral tint');
-  assert.equal(await colour(selected,'color'),'rgb(163, 61, 40)');
+  await waitForColour(page,selected,'backgroundColor','rgb(227, 233, 255)');
+  assert.equal(await colour(selected,'backgroundColor'),'rgb(227, 233, 255)',name+' selected control must use Chip Club blue tint');
+  assert.equal(await colour(selected,'color'),'rgb(47, 75, 184)');
   const search=dashboard.locator('.pkr-dual-search');
   if(await search.isVisible()){
-   assert.equal(await colour(search,'backgroundColor'),'rgb(237, 241, 244)',name+' room search must use the app palette');
-   assert.equal(await colour(search.locator('input'),'color'),'rgb(20, 36, 44)');
-   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(163, 61, 40)');
+   assert.equal(await colour(search,'backgroundColor'),'rgb(240, 237, 230)',name+' room search must use Chip Club sand');
+   assert.equal(await colour(search.locator('input'),'color'),'rgb(27, 31, 42)');
+   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(47, 75, 184)');
   }
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
   assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
   await readable(cards.first().locator('strong'),name+' feature name');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
-  assert.equal(await colour(cta,'backgroundColor'),'rgb(242, 116, 87)',name+' primary action must use coral');
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(62, 99, 221)',name+' primary action must use Chip Blue');
   assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
   await readable(cta,name+' primary action');
   await screenshot(page,label+'-full-'+mode);

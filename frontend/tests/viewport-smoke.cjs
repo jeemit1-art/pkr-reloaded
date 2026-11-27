@@ -109,8 +109,8 @@ async function test(){
       if(!closer.ok||closer.src!=='/demo/launch-20261127/desktop-live-table.webp')
         errors.push(size.name+' launch closing lacks the current real poker-table screenshot');
       const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(242, 116, 87)')
-        errors.push(size.name+' launch CTA does not match the current app coral: '+landingCTAColour);
+      if(landingCTAColour!=='rgb(62, 99, 221)')
+        errors.push(size.name+' launch CTA does not match Chip Blue: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
       const theme=await guestPage.evaluate(()=>{
@@ -128,14 +128,14 @@ async function test(){
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background!=='rgb(255, 255, 255)'||theme.primary.toLowerCase()!=='#f27457'||theme.ink.toLowerCase()!=='#14242c')
+      if(theme.background!=='rgb(244, 241, 234)'||theme.primary.toLowerCase()!=='#3e63dd'||theme.ink.toLowerCase()!=='#1b1f2a')
         errors.push(size.name+' current launch palette mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(242, 116, 87)')
-        errors.push(size.name+' Pro pricing card lacks the current coral border: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(20, 36, 44)'||!theme.priceFont.toLowerCase().includes('inter'))
+      if(theme.proBorder!=='rgb(229, 224, 211)')
+        errors.push(size.name+' Pro pricing card lacks the Chip Club border: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(20, 36, 44)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
       if(!theme.logo)errors.push(size.name+' current vector spade brand is missing');
-      if(!theme.font.toLowerCase().includes('inter'))
+      if(!theme.font.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
       if(!planText.includes('$9.99')||!planText.includes('$19.99'))
@@ -583,7 +583,7 @@ async function test(){
            return {background:getComputedStyle(node).backgroundColor,
              card:card?getComputedStyle(card).backgroundColor:null};
          });
-         if(insightsTheme.background!=='rgb(244, 246, 248)'||insightsTheme.card!=='rgb(255, 255, 255)')
+         if(insightsTheme.background!=='rgb(244, 241, 234)'||insightsTheme.card!=='rgb(255, 255, 255)')
            errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
        }else{
          if(!visual.art.includes('pkr-approved-hero-desktop.webp'))
@@ -609,8 +609,8 @@ async function test(){
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
          return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(primary.image!=='none'||!['rgb(242, 116, 87)','rgb(230, 100, 71)'].includes(primary.background)||primary.color!=='rgb(20, 36, 44)'||primary.height<44||primary.width<85)
-         errors.push(size.name+' full dashboard coral action is unreadable or too small: '+JSON.stringify(primary));
+       if(primary.image!=='none'||!['rgb(62, 99, 221)','rgb(47, 75, 184)'].includes(primary.background)||primary.color!=='rgb(255, 255, 255)'||primary.height<44||primary.width<85)
+         errors.push(size.name+' full dashboard Chip Blue action is unreadable or too small: '+JSON.stringify(primary));
      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
@@ -783,7 +783,7 @@ async function test(){
        if(!await page.locator('#gameScreen #backBtn').isVisible())
          errors.push(size.name+' gameplay back-to-room control unavailable');
        const chrome=await page.locator('#gameScreen .topbar').evaluate(node=>getComputedStyle(node).backgroundColor);
-       if(chrome!=='rgb(15, 29, 37)')errors.push(size.name+' live table header should use the Game night slate surface: '+chrome);
+       if(chrome!=='rgb(22, 27, 54)')errors.push(size.name+' live table header should use the Chip Club Night surface: '+chrome);
        const share=page.locator('#gameScreen #publishBtn');
        if(!await share.isVisible())errors.push(size.name+' live game Share action is hidden');
        const shareColour=await share.evaluate(el=>getComputedStyle(el).color);
@@ -791,7 +791,7 @@ async function test(){
          errors.push(size.name+' live game Share action must use readable neutral text: '+shareColour);
        if(!await page.locator('#gameScreen #settleBtn').isVisible())errors.push(size.name+' live game settle action hidden');
        const settleColour=await page.locator('#gameScreen #settleBtn').evaluate(el=>getComputedStyle(el).backgroundColor);
-       if(settleColour!=='rgb(242, 116, 87)')errors.push(size.name+' live game settle action must use the coral action colour: '+settleColour);
+       if(settleColour!=='rgb(255, 197, 61)')errors.push(size.name+' live game settle action must use Chip Gold: '+settleColour);
        const feltTheme=await page.locator('#tableFelt').evaluate(node=>{
          const s=getComputedStyle(node);
          const rail=getComputedStyle(document.querySelector('#tableOuter'));
@@ -799,11 +799,11 @@ async function test(){
                  moneyFont:getComputedStyle(document.querySelector('.bank-pill b')).fontFamily,
                  feltWidth:node.getBoundingClientRect().width};
        });
-       if(!feltTheme.felt.includes('36, 66, 77')||!feltTheme.felt.includes('27, 51, 62')||
-           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(41, 62, 73)')
+       if(!feltTheme.felt.includes('15, 107, 85')||!feltTheme.felt.includes('19, 129, 106')||
+           feltTheme.rail!=='none'||feltTheme.railColour!=='rgb(58, 42, 30)')
          errors.push(size.name+' felt/rail deviates from the Game night slate palette: '+JSON.stringify(feltTheme));
-       if(!feltTheme.moneyFont.toLowerCase().includes('inter'))
-         errors.push(size.name+' bank amounts do not use the bundled Inter font: '+feltTheme.moneyFont);
+       if(!feltTheme.moneyFont.toLowerCase().includes('jetbrains mono'))
+         errors.push(size.name+' bank amounts do not use the bundled JetBrains Mono font: '+feltTheme.moneyFont);
 
        if(size.width<=700){
          const clipped=await page.locator('#gameScreen .seat-label').evaluateAll(nodes=>
