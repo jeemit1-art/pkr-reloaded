@@ -1995,6 +1995,8 @@ function updateBank() {
   if(bankBar)bankBar.setAttribute('aria-label','Recorded bank remaining '+fmt(inBank)+'. Buy-ins '+fmt(totalIn)+', cash-outs '+fmt(totalOut)+'. Toggle bank breakdown.');
   var bankQuick=document.getElementById('bbBankQuick');
   if(bankQuick)bankQuick.classList.toggle('neg',inBank<0);
+  var bankCurrent=document.getElementById('bbBank');
+  if(bankCurrent)bankCurrent.classList.toggle('neg',inBank<0);
   var inPlayEl=document.getElementById('bbInPlay');
   if(inPlayEl)inPlayEl.className=inBank<0?'neg':'pos';
   set('bbIn', fmtB(totalIn));
@@ -2099,7 +2101,15 @@ function renderTable() {
     var resultLines=Math.max(1,Math.ceil(resultText.length*(compact?14:17)*.66/recordWidth));
     var stackText=hasStacks&&!cashed?seatStackText(displaySeatRows[sid]):'';
     var stackLines=stackText?Math.max(1,Math.ceil(stackText.length*11*.66/recordWidth)):1;
-    extraHeight=Math.max(extraHeight,(bankLines-1)*14+(resultLines-1)*20+(stackLines-1)*14);
+    // The first name or selected screen name must never be ellipsised.
+    // Allow extra vertical lines rather than shrinking it to an initial or
+    // increasing card width beyond the available table geometry.
+    var visibleName=String(pkrSeatDisplayName(player)||'').trim();
+    var nameSize=compact?(wideTable?10:vpW<355?10:11):(wideTable?(tightWide?10:13):vpW<355?10:11);
+    var availableNameWidth=Math.max(24,cardWidth-(compact?16:wideTable?54:44));
+    var nameLines=Math.max(1,Math.ceil(visibleName.length*nameSize*.60/availableNameWidth));
+    var nameExtra=Math.max(0,nameLines-1)*Math.ceil(nameSize*1.18);
+    extraHeight=Math.max(extraHeight,nameExtra+(bankLines-1)*14+(resultLines-1)*20+(stackLines-1)*14);
   });
   cardHeight+=extraHeight;
   // When thirteen players cannot fit at the requested scale, extend the

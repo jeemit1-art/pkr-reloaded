@@ -89,13 +89,13 @@ async function check(browser,width){
   assert.equal(await cashed.locator('.pkr-game-status-dot.cashed').count(),1,'Cashed-out card uses a compact green check');
   assert.match(await cashed.locator('.pkr-game-seat-result').textContent(),/-\$15/);
   assert.equal(initialStyles.cashedResult.color,
-    'rgb(255, 142, 142)','A recorded cash-out loss must retain its distinct semantic colour.'+initialStyleDetails);
+    'rgb(255, 119, 138)','A recorded cash-out loss must retain its distinct semantic colour.'+initialStyleDetails);
   assert.equal(initialStyles.cashedBank.color,
     'rgb(189, 207, 216)','The buy-in line stays neutral after CASHED OUT; the final result carries the loss.'+initialStyleDetails);
   assert.equal(await page.locator('#bbBankQuick').isVisible(),true,'Bank balance must be visible once');
   assert.equal(await page.locator('.bank-right>.bank-pill.g').isVisible(),true,'IN must be visible');
   assert.equal(await page.locator('.bank-right>.pkr-bank-out').isVisible(),true,'OUT must be visible');
-  assert.equal(await page.locator('.bank-right>.pkr-bank-current').isVisible(),false,'Duplicate BANK segment must stay hidden');
+  assert.equal(await page.locator('.bank-right>.pkr-bank-current').isVisible(),true,'Colour-coded in-bank metric must remain visible');
   assert.equal(await page.locator('#saveResultsBtn').isVisible(),false,
     'Do not show Save Results before all cash-outs reconcile.');
   const sheet=page.locator('.pkr-mockup-tools-sheet');

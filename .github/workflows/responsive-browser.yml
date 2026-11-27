@@ -57,7 +57,15 @@ jobs:
         run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - name: Install isolated Chromium and WebKit test browsers
         working-directory: frontend
-        run: npx playwright install --with-deps chromium webkit
+        run: |
+          # The optional Microsoft apt feed sometimes returns HTTP 403.
+          # Playwright uses Ubuntu repositories; disable this feed for CI only.
+          for source in /etc/apt/sources.list.d/*; do
+            if [ -f "$source" ] && grep -q 'packages.microsoft.com' "$source"; then
+              sudo mv "$source" "$source.disabled"
+            fi
+          done
+          npx playwright install --with-deps chromium webkit
       - name: Start local production-build server with staging-only configuration
         working-directory: frontend
         run: |
