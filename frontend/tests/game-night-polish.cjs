@@ -130,7 +130,7 @@ async function closeSheet(page){
  await page.locator('.pkr-record-footer').getByRole('button',{name:'Done',exact:true}).click();
  await page.locator('.pkr-record-dialog').waitFor({state:'detached'});
 }
-async function screenshot(page,name){await page.screenshot({path:path.join(output,name+'.png'),fullPage:false});}
+async function screenshot(page,name){await page.screenshot({path:path.join(output,name.replace(/[^a-zA-Z0-9_.-]+/g,'-')+'.png'),fullPage:false});}
 const fixtureApiActivity=new WeakMap();
 function observeFixtureApi(page){
  const activity={pending:new Set(),changedAt:Date.now()};fixtureApiActivity.set(page,activity);
@@ -471,7 +471,7 @@ async function checkReportedVisualIssues(page,state,label){
    for(const button of await actions.all())await readable(button,'Saved player action at '+width);
    const geometry=await historical.evaluate(node=>{
     const c=node.getBoundingClientRect(),buttons=[...node.querySelectorAll('.pkr-history-player-actions>button')];
-    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3};
+    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3,card:c.toJSON(),actions:buttons.map(b=>({label:b.textContent,rect:b.getBoundingClientRect().toJSON()}))};
    });
    assert(geometry.within&&!geometry.overflow,'Saved player controls outside card at '+width+': '+JSON.stringify(geometry));
   }
@@ -602,7 +602,7 @@ async function checkPersonalAppearance(page,state,label){
     await screenshot(page,label+'-dark-results-share-'+size.width);
     await dialog.getByRole('button',{name:'Close results sharing'}).click();
    }
-   if(size.width===original.width)await screenshot(page,label+'-dark-'+route.split('/')[1]);
+   if(size.width===original.width)await screenshot(page,label+'-dark-'+route.split('?')[0].split('/').filter(Boolean).join('-'));
   }
  }
  await gotoFixturePage(page,BASE+'/account');
