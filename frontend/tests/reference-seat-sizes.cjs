@@ -161,7 +161,7 @@ async function check(browser,width,height,count){
    assert.equal(await page.locator('#seat1 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(244, 241, 234)');
    assert.equal(await page.locator('#seat2 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(74, 222, 154)');
    assert.match(await page.locator('#seat2 .pkr-game-seat-result').textContent(),/\+\$15/);
-   assert.equal(await page.locator('#seat3 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 142, 142)');
+   assert.equal(await page.locator('#seat3 .pkr-game-seat-result').evaluate(e=>getComputedStyle(e).color),'rgb(255, 119, 138)');
    assert.match(await page.locator('#seat3 .pkr-game-seat-result').textContent(),/-\$15/);
    assert.equal(await page.locator('#seat4').getAttribute('data-status'),'cashed','Zero-dollar cashout still marks player cashed out');
    assert.match(await page.locator('#seat4 .pkr-game-seat-result').textContent(),/-\$25/);
