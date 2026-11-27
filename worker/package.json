@@ -16,7 +16,7 @@
     "build:staging": "npm run check:staging && wrangler deploy --config wrangler.staging.toml --dry-run --outdir ./dist-staging-check"
   },
   "dependencies": {
-    "hono": "^4.4.0"
+    "hono": "4.13.16"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240524.0",

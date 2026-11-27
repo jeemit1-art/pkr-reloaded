@@ -165,6 +165,12 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
   const game=await gameFor(env,gameId);
   if(!game||!isOpen(game))return null;
   try{
+    // Removing room membership revokes outstanding availability offers.
+    await env.DB.prepare(
+      "UPDATE game_waitlist SET status='withdrawn',updated_at=unixepoch() "+
+      "WHERE game_id=? AND status IN ('waiting','offered') AND NOT EXISTS "+
+      "(SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=game_waitlist.user_id)"
+    ).bind(gameId,game.event_id).run();
     await env.DB.prepare(
       "UPDATE game_waitlist SET status='expired',updated_at=unixepoch() "+
       "WHERE game_id=? AND status='offered' AND expires_at<=unixepoch()"
@@ -173,7 +179,8 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
       "UPDATE game_waitlist SET status='offered',offered_at=unixepoch(),"+
       "expires_at=unixepoch()+1800,updated_at=unixepoch() "+
       "WHERE game_id=? AND status='waiting' AND user_id=("+
-      "SELECT user_id FROM game_waitlist WHERE game_id=? AND status='waiting' "+
+      "SELECT user_id FROM game_waitlist w WHERE game_id=? AND status='waiting' "+
+      "AND EXISTS(SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=w.user_id) "+
       "ORDER BY created_at,user_id LIMIT 1) "+
       "AND NOT EXISTS(SELECT 1 FROM game_waitlist WHERE game_id=? AND status='offered') "+
       "AND ((SELECT COUNT(*) FROM game_players WHERE game_id=?) + "+
@@ -181,7 +188,7 @@ export async function offerNextWaitlisted(env:Env,gameId:string){
       "AND NOT EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id=g.game_id "+
       "AND LOWER(TRIM(gp.display_name))=LOWER(TRIM(g.display_name))))) "+
       "<(SELECT seats FROM games WHERE id=? AND status IN ('scheduled','lobby'))"
-    ).bind(gameId,gameId,gameId,gameId,gameId,gameId).run();
+    ).bind(gameId,gameId,game.event_id,gameId,gameId,gameId,gameId).run();
     if(!changed.meta.changes)return null;
     const offered=await env.DB.prepare(
       "SELECT user_id FROM game_waitlist WHERE game_id=? AND status='offered'"
@@ -223,19 +230,19 @@ club.get('/games/:id/waitlist',authMiddleware,async c=>{
       capacity(c.env,game.id,game.seats),
       c.env.DB.prepare('SELECT status,expires_at FROM game_waitlist WHERE game_id=? AND user_id=?')
         .bind(game.id,c.get('userId')).first<{status:WaitStatus;expires_at:number|null}>(),
-      c.env.DB.prepare("SELECT COUNT(*) AS count FROM game_waitlist WHERE game_id=? AND status='waiting'")
-        .bind(game.id).first<{count:number}>(),
+      c.env.DB.prepare("SELECT COUNT(*) AS count FROM game_waitlist w WHERE game_id=? AND status='waiting' AND EXISTS (SELECT 1 FROM event_members em WHERE em.event_id=? AND em.user_id=w.user_id)")
+        .bind(game.id,game.event_id).first<{count:number}>(),
       requireEventRole(c,game.event_id,'cohost'),
     ]);
     const list=isManager?await c.env.DB.prepare(
       "SELECT w.user_id,u.name AS display_name,w.status,w.created_at,w.expires_at "+
-      "FROM game_waitlist w JOIN users u ON u.id=w.user_id WHERE w.game_id=? AND "+
+      "FROM game_waitlist w JOIN users u ON u.id=w.user_id JOIN event_members em ON em.event_id=? AND em.user_id=w.user_id WHERE w.game_id=? AND "+
       "w.status IN ('waiting','offered') ORDER BY CASE w.status WHEN 'offered' THEN 0 ELSE 1 END,w.created_at LIMIT 40"
-    ).bind(game.id).all<WaitRow>():{results:[] as WaitRow[]};
+    ).bind(game.event_id,game.id).all<WaitRow>():{results:[] as WaitRow[]};
     c.header('Cache-Control','private, no-store');
     return c.json({game_id:game.id,open:isOpen(game),
       seats:game.seats,filled:availability.filled,available:availability.available,
-      waiting:Number(count?.count||0),my_status:mine?.status||null,
+      waiting:Number(count?.count||0),my_status:mine?.status==='offered'&&Number(mine.expires_at||0)<=now()?'expired':mine?.status||null,
       my_offer_expires_at:mine?.expires_at||null,
       queue:isManager?list.results:undefined,
       note:'An offer alerts you that a place may be available; the RSVP board confirms seats.'});
@@ -339,7 +346,7 @@ club.post('/games/:id/member-requests',authMiddleware,async c=>{
       title:'New PKR player request',
       body:'An approved member has requested host attention during the live game.',
       data:{type:'player_request',gameId:game.id,eventId:game.event_id,
-        url:'/events/'+encodeURIComponent(game.event_id)+'?tab=gamenight'},
+        url:'/events/'+encodeURIComponent(game.event_id)+'?tab=night&game='+encodeURIComponent(game.id)},
     }));}catch{}
     return c.json({ok:true,id,status:'pending'},201);
   }catch{

@@ -294,7 +294,7 @@ function DashboardInner() {
 
   const needsUpgrade = user && !user.is_active;
   const onTrial = user && user.plan === 'trial' && user.trial_active;
-  const isPaid = user && user.is_active;
+  const isPaid = user && user.is_active && !user.free_game_available;
   const activeRooms = events.filter(evt => evt.status !== 'ended');
   const playerOnly = activeRooms.length>0 && activeRooms.every(evt=>evt.role==='member');
   const totalPending = Object.values(pendingByRoom).reduce((sum,count)=>sum+count,0);
@@ -471,11 +471,11 @@ function DashboardInner() {
           further games require an appropriate paid host plan.
         </div>
       )}
-      {needsUpgrade && !playerOnly && (
+      {needsUpgrade && !user?.free_game_in_progress && !playerOnly && (
         <div style={{background:'rgba(220,60,60,0.08)',borderBottom:'1px solid rgba(220,60,60,0.2)',
           padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div style={{fontSize:12,color:'rgba(220,90,90,0.9)',fontFamily:'var(--font-body),sans-serif'}}>
-            ⚠️ Your free trial has ended. Upgrade to keep creating groups and games.
+            A paid host plan is required to create more groups and games.
           </div>
           <button
             className="btn btn-primary"
