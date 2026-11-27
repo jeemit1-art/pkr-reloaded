@@ -835,3 +835,13 @@ html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero bu
   font-variant-numeric:tabular-nums!important;
  }
 }
+
+/* The retained bank dock has an exceptionally specific important font shorthand.
+   Override that precise declaration at higher specificity; keep its size/line height. */
+@layer pkr-theme-priority{
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table #bankBar.bank-bar.pkr-mockup-bank.pkr-bank-quickbar .pkr-bank-metric b,
+ html.pkr-game-night.pkr-chip-club body #gameScreen.pkr-casino-live-table #bankBar.bank-bar.pkr-mockup-bank.pkr-bank-quickbar #bbBankQuick{
+  font-family:'JetBrains Mono',ui-monospace,monospace!important;
+  font-variant-numeric:tabular-nums!important;
+ }
+}
