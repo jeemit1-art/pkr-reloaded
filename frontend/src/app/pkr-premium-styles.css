@@ -1,0 +1,309 @@
+/* PKR CANONICAL PERSONAL APPEARANCE — premium variants use only saved personal style and mode.
+   This is not a club-wide layout setting and never affects gameplay or public marketing pages. */
+html[data-pkr-personal-style="noir"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#F4F1EA;
+  --pkr-personal-surface:#FFFCF7;
+  --pkr-personal-raised:#EAE5D9;
+  --pkr-personal-line:#C9C0AF;
+  --pkr-personal-control:#7D705C;
+  --pkr-personal-ink:#29251E;
+  --pkr-personal-muted:#645C4D;
+  --pkr-personal-primary:#72501E;
+  --pkr-personal-primary-deep:#49320E;
+  --pkr-personal-accent:#6A4A16;
+  --pkr-personal-accent-surface:#F3E5C7;
+  --pkr-personal-accent-line:#B79B65;
+  --pkr-personal-gain:#16603D;
+  --pkr-personal-gain-surface:#E2F0E6;
+  --pkr-personal-gain-line:#98B69A;
+  --pkr-personal-loss:#A02D36;
+  --pkr-personal-loss-surface:#FAE7E7;
+  --pkr-personal-loss-line:#D6A3A6;
+  --pkr-personal-warning:#78520F;
+  --pkr-personal-warning-surface:#FAEFDA;
+  --pkr-personal-warning-line:#D3B98B;
+  --pkr-personal-hero:#26312B;
+  --pkr-personal-hero-live:#214A34;
+  --pkr-personal-hero-deep:#131E19;
+  --pkr-personal-hero-glow:#556044;
+  --pkr-personal-hero-live-glow:#357955;
+  --pkr-personal-nav:#FFFCF7;
+  --pkr-personal-shadow:#49341D16;
+  --pkr-personal-gold-fill:#D3AB61;
+  --pkr-personal-on-gold:#2A1E0A;
+  --pkr-personal-scheme:light;
+}
+html[data-pkr-personal-style="noir"][data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#0B1012;
+  --pkr-personal-surface:#182123;
+  --pkr-personal-raised:#242D2F;
+  --pkr-personal-line:#455453;
+  --pkr-personal-control:#89948F;
+  --pkr-personal-ink:#F8F3E8;
+  --pkr-personal-muted:#C9CBC6;
+  --pkr-personal-primary:#795319;
+  --pkr-personal-primary-deep:#52340D;
+  --pkr-personal-accent:#F1D294;
+  --pkr-personal-accent-surface:#40351E;
+  --pkr-personal-accent-line:#86734B;
+  --pkr-personal-gain:#91E7AE;
+  --pkr-personal-gain-surface:#244332;
+  --pkr-personal-gain-line:#57916E;
+  --pkr-personal-loss:#FFA7B0;
+  --pkr-personal-loss-surface:#45272E;
+  --pkr-personal-loss-line:#955D66;
+  --pkr-personal-warning:#F2D294;
+  --pkr-personal-warning-surface:#45391F;
+  --pkr-personal-warning-line:#887448;
+  --pkr-personal-hero:#152723;
+  --pkr-personal-hero-live:#173B2A;
+  --pkr-personal-hero-deep:#091513;
+  --pkr-personal-hero-glow:#305847;
+  --pkr-personal-hero-live-glow:#346D51;
+  --pkr-personal-nav:#111A1C;
+  --pkr-personal-shadow:#0000005C;
+  --pkr-personal-gold-fill:#DBB875;
+  --pkr-personal-on-gold:#271B09;
+  --pkr-personal-scheme:dark;
+}
+html[data-pkr-personal-style="clubhouse"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#F7F1E5;
+  --pkr-personal-surface:#FFFCF3;
+  --pkr-personal-raised:#EEE5D4;
+  --pkr-personal-line:#CFC3A9;
+  --pkr-personal-control:#89795F;
+  --pkr-personal-ink:#30291F;
+  --pkr-personal-muted:#625848;
+  --pkr-personal-primary:#17603D;
+  --pkr-personal-primary-deep:#0C482D;
+  --pkr-personal-accent:#155D3B;
+  --pkr-personal-accent-surface:#E3EEDF;
+  --pkr-personal-accent-line:#9DB79E;
+  --pkr-personal-gain:#166340;
+  --pkr-personal-gain-surface:#E3F0E5;
+  --pkr-personal-gain-line:#98B99F;
+  --pkr-personal-loss:#A42C39;
+  --pkr-personal-loss-surface:#FAE7E8;
+  --pkr-personal-loss-line:#D7A3A7;
+  --pkr-personal-warning:#7B5312;
+  --pkr-personal-warning-surface:#F9EEDB;
+  --pkr-personal-warning-line:#D1B98A;
+  --pkr-personal-hero:#18432D;
+  --pkr-personal-hero-live:#155637;
+  --pkr-personal-hero-deep:#0A2B1C;
+  --pkr-personal-hero-glow:#437353;
+  --pkr-personal-hero-live-glow:#3B8055;
+  --pkr-personal-nav:#FFFCF3;
+  --pkr-personal-shadow:#4A321519;
+  --pkr-personal-gold-fill:#DEB873;
+  --pkr-personal-on-gold:#30200A;
+  --pkr-personal-scheme:light;
+}
+html[data-pkr-personal-style="clubhouse"][data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#071B14;
+  --pkr-personal-surface:#102E22;
+  --pkr-personal-raised:#193D2F;
+  --pkr-personal-line:#486D5C;
+  --pkr-personal-control:#A0AE9F;
+  --pkr-personal-ink:#F6F7EB;
+  --pkr-personal-muted:#CDDFD0;
+  --pkr-personal-primary:#1B6949;
+  --pkr-personal-primary-deep:#125137;
+  --pkr-personal-accent:#F4D393;
+  --pkr-personal-accent-surface:#294B34;
+  --pkr-personal-accent-line:#6F8B62;
+  --pkr-personal-gain:#9AE5B0;
+  --pkr-personal-gain-surface:#214B35;
+  --pkr-personal-gain-line:#5C9473;
+  --pkr-personal-loss:#FFABB1;
+  --pkr-personal-loss-surface:#4B3034;
+  --pkr-personal-loss-line:#996367;
+  --pkr-personal-warning:#F4D393;
+  --pkr-personal-warning-surface:#4E4127;
+  --pkr-personal-warning-line:#8B7C57;
+  --pkr-personal-hero:#14432E;
+  --pkr-personal-hero-live:#16573A;
+  --pkr-personal-hero-deep:#061D14;
+  --pkr-personal-hero-glow:#35724F;
+  --pkr-personal-hero-live-glow:#3B8059;
+  --pkr-personal-nav:#0B241A;
+  --pkr-personal-shadow:#0000004D;
+  --pkr-personal-gold-fill:#E2B96F;
+  --pkr-personal-on-gold:#2C210D;
+  --pkr-personal-scheme:dark;
+}
+html[data-pkr-personal-style="studio"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#F3F7FC;
+  --pkr-personal-surface:#FFFFFF;
+  --pkr-personal-raised:#E8F0F9;
+  --pkr-personal-line:#C8D5E5;
+  --pkr-personal-control:#8191AA;
+  --pkr-personal-ink:#15283E;
+  --pkr-personal-muted:#53657C;
+  --pkr-personal-primary:#1457A5;
+  --pkr-personal-primary-deep:#0B3E83;
+  --pkr-personal-accent:#1457A5;
+  --pkr-personal-accent-surface:#E2ECFB;
+  --pkr-personal-accent-line:#9CBCE4;
+  --pkr-personal-gain:#126042;
+  --pkr-personal-gain-surface:#E0F3EC;
+  --pkr-personal-gain-line:#93C5B0;
+  --pkr-personal-loss:#A32939;
+  --pkr-personal-loss-surface:#FBE8E9;
+  --pkr-personal-loss-line:#D7A3AC;
+  --pkr-personal-warning:#78520F;
+  --pkr-personal-warning-surface:#FCF0DB;
+  --pkr-personal-warning-line:#CEB88B;
+  --pkr-personal-hero:#152C50;
+  --pkr-personal-hero-live:#10406A;
+  --pkr-personal-hero-deep:#081D36;
+  --pkr-personal-hero-glow:#2566AC;
+  --pkr-personal-hero-live-glow:#2881AF;
+  --pkr-personal-nav:#FFFFFF;
+  --pkr-personal-shadow:#12254C15;
+  --pkr-personal-gold-fill:#DBB66D;
+  --pkr-personal-on-gold:#31210B;
+  --pkr-personal-scheme:light;
+}
+html[data-pkr-personal-style="studio"][data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){
+  --pkr-personal-canvas:#0B1523;
+  --pkr-personal-surface:#142135;
+  --pkr-personal-raised:#203149;
+  --pkr-personal-line:#415877;
+  --pkr-personal-control:#8B9EB7;
+  --pkr-personal-ink:#EBF4FD;
+  --pkr-personal-muted:#C3D3E5;
+  --pkr-personal-primary:#1254A5;
+  --pkr-personal-primary-deep:#0D3D84;
+  --pkr-personal-accent:#87C9FF;
+  --pkr-personal-accent-surface:#1C3957;
+  --pkr-personal-accent-line:#587E9D;
+  --pkr-personal-gain:#86E1B3;
+  --pkr-personal-gain-surface:#203F3A;
+  --pkr-personal-gain-line:#5A9983;
+  --pkr-personal-loss:#FFADB4;
+  --pkr-personal-loss-surface:#4B303B;
+  --pkr-personal-loss-line:#95636C;
+  --pkr-personal-warning:#F3D59E;
+  --pkr-personal-warning-surface:#483C2D;
+  --pkr-personal-warning-line:#9D8356;
+  --pkr-personal-hero:#153659;
+  --pkr-personal-hero-live:#10466A;
+  --pkr-personal-hero-deep:#071627;
+  --pkr-personal-hero-glow:#2C729F;
+  --pkr-personal-hero-live-glow:#2180AB;
+  --pkr-personal-nav:#101B2B;
+  --pkr-personal-shadow:#00000050;
+  --pkr-personal-gold-fill:#DAB66F;
+  --pkr-personal-on-gold:#30220B;
+  --pkr-personal-scheme:dark;
+}
+
+/* Explicit visual treatments build on the established, tested PKR palette system. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-personal-appearance>h3{
+  color:var(--pkr-personal-ink)!important;font-size:15px;font-weight:750;margin:19px 0 9px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:10px 0 18px;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options>button{
+  box-sizing:border-box;display:flex;align-items:center;text-align:left;position:relative;gap:11px;min-width:0;min-height:94px;
+  padding:11px;border:1px solid var(--pkr-personal-line)!important;border-radius:14px;
+  background:var(--pkr-personal-surface)!important;color:var(--pkr-personal-ink)!important;
+  cursor:pointer;transition:border-color .15s,box-shadow .15s;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options>button[aria-pressed=true]{
+  border:2px solid var(--pkr-personal-accent)!important;
+  background:var(--pkr-personal-accent-surface)!important;
+  box-shadow:0 0 0 2px var(--pkr-personal-accent-line)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options>button:focus-visible{
+  outline:3px solid var(--pkr-personal-accent)!important;outline-offset:3px;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options>button:disabled{cursor:not-allowed;opacity:.8}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-swatch{
+  flex:0 0 69px;height:65px;padding:9px 8px;box-sizing:border-box;border-radius:9px;
+  display:flex;flex-direction:column;gap:5px;border:1px solid #FFFFFF38;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-swatch i{
+  display:block;height:8px;border-radius:4px;background:var(--preview-line,#C4D6C8);
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-swatch i:nth-child(2){width:75%;height:17px;background:var(--preview-accent,#80AD91)}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-swatch i:nth-child(3){width:56%}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-standard{background:linear-gradient(145deg,#0C271C,#1B4834);--preview-line:#9FC4AD;--preview-accent:#D6C18D}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-noir{background:linear-gradient(145deg,#0D1518,#293233);--preview-line:#A7A99F;--preview-accent:#F0D195}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-clubhouse{background:linear-gradient(145deg,#F9F3E6,#E8D8B5);--preview-line:#5A755B;--preview-accent:#195E42}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-studio{background:linear-gradient(145deg,#142843,#125FA5);--preview-line:#B4D5F9;--preview-accent:#48AEFF}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-copy{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-copy strong{
+  font-size:14px;font-weight:800;color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-copy small{
+  font-size:11px;line-height:1.35;color:var(--pkr-personal-muted)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-check{
+  flex:0 0 20px;display:grid;place-items:center;font-size:17px;font-weight:800;
+  color:var(--pkr-personal-accent)!important;
+ }
+ @media(max-width:520px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options{grid-template-columns:minmax(0,1fr)}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-options>button{min-height:77px}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-theme-style-swatch{height:51px}
+ }
+ /* Poker heritage typography, without changing the modern app's controls or figures. */
+ html:is([data-pkr-personal-style="noir"],[data-pkr-personal-style="clubhouse"])[data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-gn-page-head h1,.pkr-gn-game-ticket h2,.pkr-primary-page-head h1,.pkr-results-page h1,.pkr-dual-hero h2,.pkr-dual-hero h3,.pkr-primary-page h1){
+  font-family:Georgia,"Times New Roman",serif!important;letter-spacing:-.025em!important;
+ }
+ html[data-pkr-personal-style="studio"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-gn-page-head h1,.pkr-primary-page-head h1,.pkr-primary-page h1){
+  font-family:var(--font-body),Inter,system-ui,sans-serif!important;font-weight:780!important;letter-spacing:-.035em!important;
+ }
+ /* Premium cards have genuine depth, not gradients over monetary values. */
+ html[data-pkr-personal-style]:not([data-pkr-personal-style="standard"])[data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-primary-panel,.pkr-primary-metric,.pkr-gn-crew,.pkr-gn-attention,.pkr-dual-data-card,.pkr-game-card:not(.is-live),.pkr-results-card,.pkr-gn-payment-card,.pkr-vnext-card){
+  border-radius:16px!important;box-shadow:0 4px 20px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-style="noir"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-gn-game-ticket,.pkr-dual-hero,.pkr-experience-stage){
+  border-color:var(--pkr-personal-accent-line)!important;
+  box-shadow:0 9px 28px var(--pkr-personal-shadow)!important;
+ }
+ html[data-pkr-personal-style="studio"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-primary-panel,.pkr-primary-metric,.pkr-gn-crew,.pkr-gn-attention,.pkr-dual-data-card,.pkr-vnext-card){
+  border-radius:19px!important;
+ }
+ html[data-pkr-personal-style="studio"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-gn-game-ticket,.pkr-dual-hero,.pkr-experience-stage){
+  background-image:radial-gradient(ellipse at 100% 0%,var(--pkr-personal-hero-glow),transparent 65%),linear-gradient(120deg,var(--pkr-personal-hero),var(--pkr-personal-hero-deep))!important;
+ }
+ /* Keep navigation and header genuinely opaque during iOS/WebKit scrolling. */
+ @media(max-width:1099px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-mobile-utility{
+   background:var(--pkr-personal-nav)!important;
+   background-image:none!important;
+   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+   box-shadow:0 3px 15px var(--pkr-personal-shadow)!important;
+   isolation:isolate;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-universal-bottom-nav{
+   background:var(--pkr-personal-nav)!important;
+   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+   border-top:1px solid var(--pkr-personal-line)!important;
+   box-shadow:0 -4px 18px var(--pkr-personal-shadow)!important;
+  }
+ }
+ /* Navigation and home actions form clear, tap-sized controls across layouts. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-tool-group{margin:12px 0 19px;min-width:0}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-tool-group h3{
+  color:var(--pkr-personal-ink)!important;font-size:14px;line-height:1.35;margin:0 0 9px;font-weight:750;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-tool-group .pkr-gn-tool-grid{margin:0}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-tools-heading>div .pkr-gn-eyebrow{
+  color:var(--pkr-personal-accent)!important;
+ }
+ /* No change to win/loss/status signal colours or to the live poker game. */
+}
