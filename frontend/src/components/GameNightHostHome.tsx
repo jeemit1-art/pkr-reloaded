@@ -36,24 +36,26 @@ export default function GameNightHostHome(p:Props){
   const startTime = game?new Date(game.scheduled_at*1000).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit',timeZone:tz}):'';
   const phase = p.active?'At the table':closed||finishing?'After the game':'Before the game';
   const primary = p.active?'Open live table':closed?'View game results':finishing?'Review settlement':game?'Prepare game':p.canManageGames?'Schedule a game':'Open club';
-  const tools:Array<{label:string;detail:string;icon:PkrGlyphName;run:()=>void;show?:boolean}> = [
-    {label:'Game sessions',detail:'Dates, tables and game details',icon:'games',run:p.onRoom},
-    {label:'Calendar',detail:'Upcoming and unfinished games',icon:'schedule',run:p.onCalendar},
-    {label:'RSVPs & sharing',detail:'Attendance, seats and WhatsApp',icon:'members',run:p.onSharing},
-    {label:'RSVP settings',detail:'Arrival times and custom replies',icon:'settings',run:p.onRsvpSettings,show:p.canManageGames},
-    {label:'Players & invitations',detail:'Profiles, approvals and QR codes',icon:'members',run:p.onMembers},
-    {label:'Results & history',detail:'Standings, graphs and past games',icon:'insights',run:p.onResults},
-    {label:'Payments',detail:'Saved records, reminders and ledger',icon:'settle',run:p.onPayments},
-    {label:'Account & notifications',detail:'Install, alerts, sound and account',icon:'account',run:p.onAccount},
-    {label:'Scan invitation',detail:'Join a club using its QR code',icon:'qr',run:p.onScan},
-    {label:'Room appearance',detail:'Command Centre and Live Poker',icon:'grid',run:p.onAppearance},
+  type ToolGroup = 'Games & attendance' | 'Players & invitations' | 'Results & payments' | 'Personal settings';
+  const tools:Array<{group:ToolGroup;label:string;detail:string;icon:PkrGlyphName;run:()=>void;show?:boolean}> = [
+    {group:'Games & attendance',label:'Game sessions',detail:'Dates, tables and game details',icon:'games',run:p.onRoom},
+    {group:'Games & attendance',label:'Calendar',detail:'Upcoming and unfinished games',icon:'schedule',run:p.onCalendar},
+    {group:'Games & attendance',label:'RSVPs & sharing',detail:'Attendance, seats and WhatsApp',icon:'members',run:p.onSharing},
+    {group:'Games & attendance',label:'RSVP settings',detail:'Arrival times and custom replies',icon:'settings',run:p.onRsvpSettings,show:p.canManageGames},
+    {group:'Players & invitations',label:'Players & invitations',detail:'Profiles, approvals and QR codes',icon:'members',run:p.onMembers},
+    {group:'Players & invitations',label:'Scan invitation',detail:'Join a club using its QR code',icon:'qr',run:p.onScan},
+    {group:'Results & payments',label:'Results & history',detail:'Standings, graphs and past games',icon:'insights',run:p.onResults},
+    {group:'Results & payments',label:'Payments',detail:'Saved records, reminders and ledger',icon:'settle',run:p.onPayments},
+    {group:'Personal settings',label:'Account & notifications',detail:'Install, alerts, sound and appearance',icon:'account',run:p.onAccount},
+    {group:'Personal settings',label:'Full club dashboard',detail:'Command Centre and Live Poker',icon:'grid',run:p.onAppearance},
   ];
+  const toolGroups:ToolGroup[]=['Games & attendance','Players & invitations','Results & payments','Personal settings'];
   const query = search.trim().toLocaleLowerCase('en-AU');
   const matches = tools.filter(t=>t.show!==false&&(!query||(t.label+' '+t.detail).toLocaleLowerCase('en-AU').includes(query)));
 
   return <section className="pkr-gn-home" data-testid="game-night-host-home">
     <header className="pkr-gn-page-head">
-      <div><span className="pkr-gn-eyebrow">YOUR CLUB, YOUR NIGHT</span><h1>Game night<span>.</span></h1></div>
+      <div><span className="pkr-gn-eyebrow">YOUR CLUB AT A GLANCE</span><h1>Club overview<span>.</span></h1></div>
       <button className="pkr-gn-refresh" type="button" disabled={p.refreshing} onClick={p.onRefresh} aria-label="Refresh game night"><PkrGlyph name="refresh"/> <span>{p.refreshing?'Refreshing…':'Refresh'}</span></button>
     </header>
     {p.refreshError&&<p className="pkr-gn-refresh-error" role="alert">{p.refreshError}</p>}
@@ -111,7 +113,17 @@ export default function GameNightHostHome(p:Props){
     <section className="pkr-gn-tools" aria-label="All club tools">
       <div className="pkr-gn-tools-heading"><div><span className="pkr-gn-eyebrow">EVERYTHING IN ONE PLACE</span><h2>Your club tools</h2></div>
         <label><span>Find a tool</span><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tools…"/></label></div>
-      <div className="pkr-gn-tool-grid">{matches.map(t=><button type="button" key={t.label} onClick={t.run}><PkrGlyph name={t.icon}/><span><strong>{t.label}</strong><small>{t.detail}</small></span><b aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 18 18 6M6 6h12v12"/></svg></b></button>)}</div>
+      {toolGroups.map(group=>{
+        const entries=matches.filter(tool=>tool.group===group);
+        return entries.length>0?<section key={group} className="pkr-gn-tool-group" aria-label={group}>
+          <h3>{group}</h3>
+          <div className="pkr-gn-tool-grid">{entries.map(t=><button type="button" key={t.label} onClick={t.run}>
+            <PkrGlyph name={t.icon}/><span><strong>{t.label}</strong><small>{t.detail}</small></span>
+            <b aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M6 18 18 6M6 6h12v12"/></svg></b>
+          </button>)}</div>
+        </section>:null;
+      })}
       {matches.length===0&&<p className="pkr-gn-muted" role="status">No tools match “{search}”. Try payments, RSVP, calendar or players.</p>}
     </section>
   </section>;

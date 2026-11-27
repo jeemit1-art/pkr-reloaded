@@ -370,7 +370,6 @@ export default function RoomDashboardDual({
           <div className="pkr-dual-hero-image" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
         <RoomOutstandingCard roomId={room.id}/>
-        {featureHub}
         <section className={'pkr-dual-nextgame'+(!featured?' pkr-nextgame-empty':'')}>
           <div><span className="pkr-dual-kicker"><PkrGlyph name="schedule"/> NEXT GAME NIGHT</span>
             <h3>{featured?niceDate(featured.scheduled_at):'No session scheduled'}</h3>
@@ -418,6 +417,7 @@ export default function RoomDashboardDual({
               </button>):<p className="pkr-dual-empty">Game and payment history will appear here.</p>}
           </section>
         </div>
+        {featureHub}
       </>:<>
         <div className="pkr-dual-heading"><span className="pkr-dual-kicker">YOUR LIVE POKER HUB</span>
           <h2>The table is <em>calling.</em></h2></div>
@@ -438,7 +438,6 @@ export default function RoomDashboardDual({
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
         </section>
-        {featureHub}
         <div className="pkr-dual-highlights">
           <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
           <RecordMetric bare disabled={!featured} request={{kind:'rsvps',title:'RSVPs not confirmed going',gameId:featured?.id,filter:'not-confirmed'}}><span><DashIcon name="calendar"/></span><strong>{featured?rsvps.length-going.length:'—'}</strong><small>Not confirmed going</small></RecordMetric>
@@ -531,6 +530,7 @@ export default function RoomDashboardDual({
             </button>)}</div>:<p className="pkr-dual-empty">No confirmed payments recorded in this room.</p>}
         </section>
         <RoomOutstandingCard roomId={room.id}/>
+        {featureHub}
       </>}
     </div>
   </section>
