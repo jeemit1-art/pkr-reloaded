@@ -40,6 +40,7 @@ jobs:
       - name: Validate read-only record breakdowns and tournament structures
         working-directory: frontend
         run: |
+          node tests/personal-palette.cjs
           node tests/record-details.cjs
           node tests/room-payment-schedule.cjs
           node tests/payment-overview.cjs

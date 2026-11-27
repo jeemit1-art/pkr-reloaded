@@ -173,29 +173,29 @@ async function checkFullDashboards(page,state,label){
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
   assert.equal(await colour(dashboard,'backgroundColor'),'rgba(0, 0, 0, 0)',name+' must expose the shared lounge canvas, not paint a separate panel');
   const canvas=await dashboard.evaluate(node=>{const parent=node.closest('.pkr-app.pkr-dashboard');if(!parent)throw new Error('Dashboard canvas missing');const style=getComputedStyle(parent);return {colour:style.backgroundColor,image:style.backgroundImage};});
-  assert.equal(canvas.colour,'rgb(229, 236, 239)',name+' must share the slate-and-sage canvas');
-  assert.match(canvas.image,/radial-gradient/,name+' must retain the lounge light pools');
+  assert.equal(canvas.colour,'rgb(244, 245, 242)',name+' must share the warm neutral canvas');
+  assert.equal(canvas.image,'none',name+' must use the neutral canvas');
   const selected=appearance.getByRole('button',{name:new RegExp(name)});
   assert.equal(await selected.getAttribute('aria-pressed'),'true');
-  await waitForColour(page,selected,'backgroundColor','rgb(227, 233, 255)');
-  assert.equal(await colour(selected,'backgroundColor'),'rgb(227, 233, 255)',name+' selected control must use Chip Club blue tint');
-  assert.equal(await colour(selected,'color'),'rgb(47, 75, 184)');
+  await waitForColour(page,selected,'backgroundColor','rgb(225, 240, 231)');
+  assert.equal(await colour(selected,'backgroundColor'),'rgb(225, 240, 231)',name+' selected control must use selected forest tint');
+  assert.equal(await colour(selected,'color'),'rgb(22, 94, 66)');
   const search=dashboard.locator('.pkr-dual-search');
   if(await search.isVisible()){
-   assert.equal(await colour(search,'backgroundColor'),'rgb(240, 237, 230)',name+' room search must use Chip Club sand');
-   assert.equal(await colour(search.locator('input'),'color'),'rgb(27, 31, 42)');
-   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(47, 75, 184)');
+   assert.equal(await colour(search,'backgroundColor'),'rgb(238, 241, 236)',name+' room search must use neutral raised surface');
+   assert.equal(await colour(search.locator('input'),'color'),'rgb(25, 45, 39)');
+   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(22, 94, 66)');
   }
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const cards=dashboard.locator('.pkr-dual-discovery .pkr-dual-quick-grid button');
   assert(await cards.count()>=8,'Both layouts retain the existing feature actions');
   await readable(cards.first().locator('strong'),name+' feature name');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
-  assert.equal(await colour(cta,'backgroundColor'),'rgb(62, 99, 221)',name+' primary action must use Chip Blue');
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(22, 101, 72)',name+' primary action must use forest primary');
   assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
   await readable(cta,name+' primary action');
   const hero=dashboard.locator('.pkr-dual-hero');
-  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(19, 44, 83)':'rgb(11, 89, 70)',name+' uses a deep club-colour hero, not a white card');
+  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(21, 58, 45)':'rgb(25, 77, 56)',name+' uses a deep club-colour hero, not a white card');
   assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
   await readable(hero.locator('h3'),name+' hero heading');
   const overlays=await hero.evaluate(node=>['::before','::after'].map(p=>{
@@ -205,9 +205,9 @@ async function checkFullDashboards(page,state,label){
   if(mode==='command'){
    const tiles=dashboard.locator('.pkr-dual-metrics>button');
    assert.equal(await tiles.count(),4);
-   const colors=['rgb(135, 96, 28)','rgb(41, 75, 176)','rgb(162, 63, 81)','rgb(16, 105, 79)'];
+   const colors=Array(4).fill('rgb(255, 255, 255)');
    for(let i=0;i<4;i++){
-    assert.equal(await colour(tiles.nth(i),'backgroundColor'),colors[i],'Every dashboard metric has its own saturated colour');
+    assert.equal(await colour(tiles.nth(i),'backgroundColor'),colors[i],'Dashboard metrics share a neutral card surface');
     await readable(tiles.nth(i).locator('strong'),'Coloured metric value '+i);
     await readable(tiles.nth(i).locator('small'),'Coloured metric description '+i);
    }
@@ -223,9 +223,9 @@ async function checkDashboardStatusContrast(page,state,label){
  const startingLayout=state.layout,startingWrites=state.layoutWrites;
  try{
   for(const [kind,title,bg,fg] of [
-   ['live','LIVE NOW','rgb(18, 99, 71)','rgb(255, 255, 255)'],
-   ['upcoming','UP NEXT','rgb(255, 217, 120)','rgb(56, 38, 0)'],
-   ['empty','NO GAME SCHEDULED','rgb(227, 234, 245)','rgb(35, 60, 97)']
+   ['live','LIVE NOW','rgb(22, 101, 72)','rgb(255, 255, 255)'],
+   ['upcoming','UP NEXT','rgb(232, 199, 123)','rgb(50, 37, 13)'],
+   ['empty','NO GAME SCHEDULED','rgb(238, 241, 236)','rgb(25, 45, 39)']
   ]){
    state.upcoming=kind!=='empty';state.live=kind==='live';
    for(const mode of ['command','live']){
@@ -289,7 +289,7 @@ async function checkOutstandingDashboardRecords(page){
 async function checkPlayers(page,label){
  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members');
  const stage=page.getByTestId('players-command-stage');await stage.waitFor();
- assert.equal(await colour(stage,'backgroundColor'),'rgb(36, 59, 121)','Players needs a rich blue hero, not a white/grey panel');
+ assert.equal(await colour(stage,'backgroundColor'),'rgb(21, 58, 45)','Players needs a deep forest hero, not a white/grey panel');
  assert(Number(await colour(stage.locator('h1'),'fontWeight'))>=780,'Players heading should have a clear, bold visual hierarchy');
  await readable(stage.locator('h1'),'Players heading on navy');
  await readable(stage.locator('.pkr-experience-eyebrow'),'Players section label on navy');
@@ -312,8 +312,8 @@ async function checkPlayers(page,label){
  await roster.getByText('🦊',{exact:true}).waitFor();
  assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
  const row=roster.locator(':scope > div').first();await row.hover();
- await waitForColour(page,row,'backgroundColor','rgb(244, 241, 234)');
- assert.equal(await colour(row,'backgroundColor'),'rgb(244, 241, 234)','Hovered member row must not turn old green');
+ await waitForColour(page,row,'backgroundColor','rgb(238, 241, 236)');
+ assert.equal(await colour(row,'backgroundColor'),'rgb(238, 241, 236)','Hovered member row must not turn old green');
  await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
  assert(Number(await colour(row.locator('.pkr-member-history-link strong'),'fontWeight'))>=750,'Player names must be bold and readable');
  const history=row.locator('.pkr-member-history-link');await history.focus();
@@ -343,7 +343,7 @@ async function checkPlayers(page,label){
  assert.equal(await colour(sheet,'backgroundColor'),'rgb(255, 255, 255)','Body-level record sheet must use the light theme');
  await readable(sheet.locator('h2'),'Record heading');
  assert.equal(await sheet.locator('.pkr-record-row').count(),2);
- for(const [tone,value,expectedColour] of [['positive','+$75','rgb(14, 124, 79)'],['negative','-$25','rgb(201, 48, 44)']]){
+ for(const [tone,value,expectedColour] of [['positive','+$75','rgb(18, 102, 65)'],['negative','-$25','rgb(165, 45, 56)']]){
   const amount=sheet.locator('.pkr-record-row b[data-money-tone="'+tone+'"]');
   assert.equal(await amount.innerText(),value,'Recorded gains/losses retain explicit signs');
   assert.equal(await colour(amount,'color'),expectedColour,'Money meaning uses the correct light-theme tone');
@@ -392,8 +392,8 @@ async function checkPayments(page,state,label){
  const totals=page.locator('.pkr-gn-payment-totals');await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
  const toPay=totals.locator('.pkr-gn-payment-total.is-pay');
  const toReceive=totals.locator('.pkr-gn-payment-total.is-receive');
- assert.equal(await colour(toPay,'backgroundColor'),'rgb(162, 63, 81)','Payable card has a distinct coral-red surface');
- assert.equal(await colour(toReceive,'backgroundColor'),'rgb(16, 105, 79)','Receivable card has a distinct emerald surface');
+ assert.equal(await colour(toPay,'backgroundColor'),'rgb(158, 52, 65)','Payable card has a distinct coral-red surface');
+ assert.equal(await colour(toReceive,'backgroundColor'),'rgb(22, 101, 72)','Receivable card has a distinct emerald surface');
  await readable(toPay.locator('strong'),'Payable total');
  await readable(toReceive.locator('strong'),'Receivable total');
  const assertAmounts=async expected=>assert.deepEqual(await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents(),expected);
@@ -493,17 +493,17 @@ async function checkReportedVisualIssues(page,state,label){
   assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
   assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
   const ticket=page.locator('.pkr-gn-game-ticket');
-  assert.equal(await colour(ticket,'backgroundColor'),'rgb(11, 89, 70)','Game Night uses an emerald ticket');
+  assert.equal(await colour(ticket,'backgroundColor'),'rgb(25, 77, 56)','Game Night uses an emerald ticket');
   await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
  assert(Number(await colour(ticket.locator('.pkr-gn-when h2'),'fontWeight'))>=780,'Game night headline needs a deliberate heavy weight');
  const activeLabel=page.locator('.pkr-primary-bottom-nav button.active small:visible,.pkr-primary-sidebar nav button.active span:visible').first();
  await readable(activeLabel,'Selected navigation label');
  assert(Number(await colour(activeLabel,'fontWeight'))>=750,'Active navigation must be bold as well as high contrast');
-  assert.equal(await colour(crew,'backgroundColor'),'rgb(216, 240, 231)','Attendance has a recognisably green surface');
+  assert.equal(await colour(crew,'backgroundColor'),'rgb(226, 242, 232)','Attendance has a recognisably green surface');
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-  assert.equal(await colour(nav,'backgroundColor'),'rgb(8, 19, 36)','Shared navigation must use opaque navy');
+  assert.equal(await colour(nav,'backgroundColor'),'rgb(255, 255, 255)','Shared navigation must use opaque neutral navigation');
   const activeNavLabel=page.locator('.pkr-primary-bottom-nav:visible button.active small,.pkr-primary-sidebar:visible nav button.active span').first();
-  assert.equal(await colour(activeNavLabel,'color'),'rgb(255, 241, 204)','Selected label is readable gold-ivory on navy');
+  assert.equal(await colour(activeNavLabel,'color'),'rgb(22, 94, 66)','Selected label is readable forest ink on soft green');
   await readable(activeNavLabel,'Selected navigation label');
   await readable(crew.locator('h2'),'Attendance heading');
   await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
@@ -547,6 +547,80 @@ async function checkSettledResultShare(page,state,label){
  }finally{state.unreconciled=false;}
 }
 
+async function checkPersonalAppearance(page,state,label){
+ const original=page.viewportSize();
+ await gotoFixturePage(page,BASE+'/account');
+ const modes=page.getByRole('group',{name:'App colour mode'});
+ await modes.waitFor();
+ await modes.getByRole('button',{name:'Dark',exact:true}).click();
+ await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
+ assert.equal(await modes.getByRole('button',{name:'Dark',exact:true}).getAttribute('aria-pressed'),'true');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'dark');
+ const routes=[
+  ['/account','.pkr-account-page','.pkr-personal-appearance h2'],
+  ['/dashboard','.pkr-app.pkr-dashboard','.pkr-gn-page-head h1'],
+  ['/events/'+room.id+'?tab=games','.pkr-app.pkr-event','.pkr-room-games-intro h1'],
+  ['/events/'+room.id+'?tab=members','.pkr-app.pkr-event','.pkr-member-history-link strong'],
+  ['/events/'+room.id+'?tab=night','.pkr-app.pkr-event','.pkr-gn-page-head,.pkr-night-title,.pkr-club-header h3'],
+  ['/results?room='+room.id,'.pkr-results-page','.pkr-results-command-title h1,.pkr-results-live-intro h1'],
+  ['/payments?room='+room.id+'&paymentsScope=mine','.pkr-gn-payment-workspace','.pkr-gn-payment-total strong'],
+  ['/schedule','.pkr-schedule-page','.pkr-schedule-hero h1'],
+  ['/games/'+finished.id,'.pkr-app.pkr-game-detail','.pkr-casino-game-summary h1,.pkr-casino-game-summary .display']
+ ];
+ for(const size of [{width:Math.min(original.width,390),height:original.height},original]){
+  await page.setViewportSize(size);
+  for(const [route,container,heading] of routes){
+   await gotoFixturePage(page,BASE+route);
+   await page.locator(container).first().waitFor();
+   await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
+   const surface=await colour(page.locator(container).first(),'backgroundColor');
+   assert.equal(surface,'rgb(16, 25, 22)',route+' dark canvas');
+   const headings=page.locator(heading+':visible');
+   if(await headings.count())await readable(headings.first(),route+' dark text');
+   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
+   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(16, 30, 25)');
+   const audit=await page.locator(container).first().evaluate(root=>{
+    const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
+    const controls=[...root.querySelectorAll('button:not([disabled]),a.btn,summary,input:not([type=hidden]),select,textarea')].filter(visible);
+    const overflow=controls.filter(el=>{
+     const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+     if(el.closest('.pkr-section-tabs,[role=tablist],.pkr-rsvp-seat-grid,[data-pkr-horizontal-scroll]'))return false;
+     if(r.width<2||r.height<2)return false;
+     return r.left< -2||r.right>innerWidth+2||
+      (el.matches('button,a.btn,summary')&&s.whiteSpace!=='nowrap'&&el.scrollHeight>el.clientHeight+3&&s.overflowY==='hidden');
+    }).map(el=>({text:(el.innerText||el.getAttribute('aria-label')||el.tagName).trim().slice(0,80),width:el.clientWidth,scroll:el.scrollWidth}));
+    return {overflow,bodyWidth:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth),viewport:innerWidth};
+   });
+   assert(audit.bodyWidth<=audit.viewport+4,route+' page overflow '+JSON.stringify(audit));
+   assert.deepEqual(audit.overflow,[],route+' clipped actions');
+   if(route.startsWith('/games/')){
+    await page.getByRole('button',{name:'Share group-safe results',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Share group-safe results'});
+    await dialog.getByRole('textbox',{name:'Group results message'}).waitFor();
+    await readable(dialog.getByRole('link',{name:'Open WhatsApp'}),'Dark WhatsApp action');
+    await readable(dialog.getByRole('textbox',{name:'Group results message'}),'Dark message preview');
+    await screenshot(page,label+'-dark-results-share-'+size.width);
+    await dialog.getByRole('button',{name:'Close results sharing'}).click();
+   }
+   if(size.width===original.width)await screenshot(page,label+'-dark-'+route.split('/')[1]);
+  }
+ }
+ await gotoFixturePage(page,BASE+'/account');
+ await page.getByRole('button',{name:'System',exact:true}).click();
+ await page.emulateMedia({colorScheme:'light'});
+ await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
+ await page.emulateMedia({colorScheme:'dark'});
+ await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
+ await page.getByRole('button',{name:'Light',exact:true}).click();
+ await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'light');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.getByRole('group',{name:'App colour mode'}).waitFor();
+ assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light');
+ await screenshot(page,label+'-light-appearance');
+ await page.setViewportSize(original);
+}
+
 async function run(){
  const failures=[];
  for(const [label,type,width,height] of [['chromium-phone',chromium,390,844],['chromium-desktop',chromium,1440,900],['webkit-phone',webkit,390,844]]){
@@ -579,9 +653,10 @@ async function run(){
    await checkSettledResultShare(page,state,label);
    await checkPayments(page,state,label);
    const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
-   assert.equal(canvas.colour,'rgb(229, 236, 239)','Payments shares the lounge canvas');
-   assert(canvas.image.includes('radial-gradient'),'Payments shares the lounge light pools');
+   assert.equal(canvas.colour,'rgb(244, 245, 242)','Payments shares the lounge canvas');
+   assert.equal(canvas.image,'none','Payments shares the neutral canvas');
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
+   await checkPersonalAppearance(page,state,label);
    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
    console.log('PASS',label,'appearance, SVG icons, exact records and payment scope');
   }catch(error){failures.push(label+': '+error.stack);if(requestFailures.length)console.error(label+' failed API requests: '+JSON.stringify(requestFailures));await screenshot(page,label+'-failure').catch(()=>{});}

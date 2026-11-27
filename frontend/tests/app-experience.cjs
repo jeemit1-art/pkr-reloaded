@@ -247,7 +247,8 @@ async function run(){
           return {border:style.borderColor,background:style.backgroundImage,
             accent:root.getPropertyValue('--pkr-ex-accent').trim()};
         });
-        assert.equal(applied.accent,'#66e6a2','Live Poker accent missing from '+route);
+        assert.equal(await page.locator('html').getAttribute('data-pkr-room-experience'),'live','Saved Live Poker layout missing from '+route);
+        assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light','Independent personal mode missing from '+route);
         assert(applied.border!=='rgba(0, 0, 0, 0)','Theme border missing from '+route);
       }
       await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});

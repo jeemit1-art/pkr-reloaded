@@ -423,14 +423,14 @@ async function check(engine,size){
     },{safeTop:size.safeTop||0,safeBottom:size.safeBottom||0});
     assert(Math.abs(masks.height-(64+(size.safeTop||0)))<=1,'Safe area must be reserved once: '+JSON.stringify(masks));
     assert(masks.paddingTop>=(size.safeTop||0)+8,'Header controls intrude into status bar');
-    assert.equal(masks.colour,'rgb(8, 19, 36)','The Lounge in-app header must be opaque navy');
-    assert.equal(masks.cap,'rgb(8, 19, 36)','Header safe-area cap must match the in-app navy header');
+    assert.equal(masks.colour,'rgb(255, 255, 255)','The Lounge in-app header must be opaque white');
+    assert.equal(masks.cap,'rgb(255, 255, 255)','Header safe-area cap must match the in-app header');
     assert.equal(masks.image,'none');assert.equal(masks.opacity,'1');assert.equal(masks.blur,'none');
     assert(masks.fullWidth,'Scrolled header must cover the entire app content width: '+JSON.stringify(masks));
     await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'-scrolled.png'),fullPage:false});
     assert(masks.topCovered,'Scrolled content is exposed in the status-bar inset: '+JSON.stringify(masks));
     assert(masks.bottomCovered,'Scrolled content is exposed beneath bottom navigation');
-    assert.equal(masks.footerColour,'rgb(8, 19, 36)','The Lounge footer must be opaque navy');
+    assert.equal(masks.footerColour,'rgb(255, 255, 255)','The Lounge footer must be opaque white');
     assert(masks.footerPadding>=(size.safeBottom||0),'Footer lost home-indicator clearance');
     if(size.installed){
       assert.equal(masks.footerPosition,'fixed','Installed footer must remain fixed while the body scrolls');

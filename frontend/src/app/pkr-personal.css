@@ -139,3 +139,42 @@ html[data-pkr-personal-theme="dark"]:not(:has(#gameScreen)){--pkr-personal-canva
     html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav button :is(small,span){font-size:clamp(10px,2.65vw,12px)!important;white-space:normal!important;line-height:1.2!important}
   }
 }
+
+@layer pkr-personal{
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero,.pkr-experience-stage.pkr-experience-players,.pkr-results-command-hero){background-color:var(--pkr-personal-hero)!important;background-image:radial-gradient(ellipse at 90% 20%,var(--pkr-personal-hero-glow),transparent 65%),linear-gradient(135deg,var(--pkr-personal-hero),var(--pkr-personal-hero-deep))!important;color:#FFFFFF!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero-live,.pkr-gn-game-ticket,.pkr-experience-stage.pkr-experience-games,.pkr-results-live-hero){background-color:var(--pkr-personal-hero-live)!important;background-image:radial-gradient(ellipse at 90% 20%,var(--pkr-personal-hero-live-glow),transparent 65%),linear-gradient(135deg,var(--pkr-personal-hero-live),var(--pkr-personal-hero-deep))!important;color:#FFFFFF!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-hero,.pkr-gn-game-ticket,.pkr-experience-stage.pkr-experience-players,.pkr-experience-stage.pkr-experience-games,.pkr-results-live-hero,.pkr-results-command-hero) :is(h1,h2,h3,p,.pkr-dual-hero-text>span,.pkr-dual-eyebrow>span:first-child,.pkr-results-command-tagline){color:#FFFFFF!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status{background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status[data-game-state="live"]{background:var(--pkr-personal-primary)!important;color:#FFFFFF!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-status[data-game-state="upcoming"]{background:var(--pkr-personal-gold-fill)!important;color:var(--pkr-personal-on-gold)!important;border-color:var(--pkr-personal-warning-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button){background:var(--pkr-personal-surface)!important;border-color:var(--pkr-personal-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button) :is(strong,small,span,svg){color:var(--pkr-personal-ink)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button) :is(small,span){color:var(--pkr-personal-muted)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-dual-metrics>button,.pkr-dual-highlights>button) svg{color:var(--pkr-personal-accent)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-search{background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-control)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-plan-pill{background:var(--pkr-personal-accent-surface)!important;color:var(--pkr-personal-accent)!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-switch-actions button[aria-pressed=true]{background:var(--pkr-personal-accent-surface)!important;color:var(--pkr-personal-accent)!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-switch-actions button[aria-pressed=true] :is(strong,small,span,svg){color:var(--pkr-personal-accent)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-switch-actions button[aria-pressed=false]{background:var(--pkr-personal-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-roster>div:is(:hover,:focus-within){background:var(--pkr-personal-raised)!important;border-left-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-approval-alert,.pkr-account-notice){background:var(--pkr-personal-accent-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-page-head h1>span{color:var(--pkr-personal-accent)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-attention .pkr-gn-attention-record{background:transparent!important;color:var(--pkr-personal-ink)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-attention button:last-child{background:var(--pkr-personal-primary)!important;color:#FFFFFF!important;border-color:var(--pkr-personal-primary)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-attention button:last-child :is(span,strong,small,svg){color:#FFFFFF!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home .pkr-attendance-card{background:var(--pkr-personal-gain-surface)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-gain-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home .pkr-attendance-card :is(h2,h2 svg,.pkr-gn-muted){color:var(--pkr-personal-gain)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-pay{background:var(--pkr-personal-danger-fill)!important;border-color:var(--pkr-personal-danger-fill)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-receive{background:var(--pkr-personal-primary)!important;border-color:var(--pkr-personal-primary)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total :is(strong,small,span,svg){color:#FFFFFF!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-record-dialog,.pkr-casino-game-summary){background:var(--pkr-personal-surface)!important;background-image:none!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-record-dialog,.pkr-casino-game-summary) :is(h1,h2,h3,.display){color:var(--pkr-personal-ink)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog :is([data-money-tone=positive]){color:var(--pkr-personal-gain)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog :is([data-money-tone=negative]){color:var(--pkr-personal-loss)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-club,.pkr-club-card,.pkr-club-body){color:var(--pkr-personal-ink)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club button:not(.pkr-club-primary){background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;border-color:var(--pkr-personal-control)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club button[aria-pressed=true]{background:var(--pkr-personal-accent-surface)!important;color:var(--pkr-personal-accent)!important;border-color:var(--pkr-personal-accent-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club :is(.pkr-club-body p,.pkr-club-card summary small,.pkr-club-item small,.pkr-club-header p,.pkr-club label){color:var(--pkr-personal-muted)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club .pkr-club-ok{background:var(--pkr-personal-gain-surface)!important;color:var(--pkr-personal-gain)!important;border-color:var(--pkr-personal-gain-line)!important;}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-club .pkr-club-error{background:var(--pkr-personal-loss-surface)!important;color:var(--pkr-personal-loss)!important;border-color:var(--pkr-personal-loss-line)!important;}
+}
