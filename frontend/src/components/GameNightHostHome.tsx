@@ -110,9 +110,10 @@ export default function GameNightHostHome(p:Props){
           <span><strong>{p.canInvite?'Invite players':'Player profiles'}</strong><small>{p.canInvite?'Add someone to the club':'Your club members'}</small></span>
           <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
         </button>
-        <button type="button" onClick={p.onRoom}>
+        <button type="button" onClick={game?p.onGame:p.onRoom}>
           <span className="pkr-gn-quick-icon"><PkrGlyph name="games"/></span>
-          <span><strong>Game sessions</strong><small>View and manage your tables</small></span>
+          <span><strong>{p.active?'Live table':game?'Current game':'Game sessions'}</strong>
+          <small>{p.active?'Return to the live table':game?'Details, chips and results':'View and manage your tables'}</small></span>
           <span className="pkr-gn-quick-arrow" aria-hidden="true">›</span>
         </button>
       </div>
@@ -120,7 +121,6 @@ export default function GameNightHostHome(p:Props){
         <button type="button" onClick={p.onCalendar}><PkrGlyph name="schedule"/> Calendar</button>
         {p.canManageGames&&<button type="button" onClick={p.onRsvpSettings}><PkrGlyph name="settings"/> RSVP settings</button>}
         <button type="button" onClick={p.onScan}><PkrGlyph name="qr"/> Scan invitation</button>
-        <button type="button" onClick={p.onAppearance}><PkrGlyph name="grid"/> Full dashboard</button>
       </div>
     </section>
   </section>;
