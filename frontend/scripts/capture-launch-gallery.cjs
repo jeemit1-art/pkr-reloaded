@@ -81,6 +81,21 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
  // Capture that real guidance unchanged; only its exact notice is expected.
  assert.deepEqual(checks.visibleAlerts.filter(notice=>!allowedAlerts.includes(notice)),[],id+' has an unexpected visible error');
  assert.deepEqual(checks.brokenImages,[],id+' has a broken image');
+ // Verify the actual settled first Home route, not just a later appearance switch.
+ if(/^(mobile|tablet|desktop)-home$/.test(id)){
+  const paint=await page.evaluate(()=>{
+   const ticket=document.querySelector('.pkr-gn-game-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
+   return {ticket:ticket?getComputedStyle(ticket).backgroundColor:null,nav:nav?getComputedStyle(nav).backgroundColor:null};
+  });
+  assert.equal(paint.ticket,'rgb(11, 89, 70)',id+' first-load Game Night must use Lounge emerald');
+  assert.equal(paint.nav,'rgb(8, 19, 36)',id+' first-load navigation must use Lounge navy');
+ }
+ if(/^(mobile|tablet|desktop)-(command-centre|live-dashboard)$/.test(id)){
+  const layers=await page.locator('.pkr-dual-hero').evaluate(node=>['::before','::after'].map(p=>{
+   const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
+  }));
+  assert(layers.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),id+' has an overlay hiding the hero: '+JSON.stringify(layers));
+ }
  const png=path.join(OUTPUT,id+'.png');
  await page.screenshot({path:png,fullPage,animations:'disabled'});
  const info=await sharp(png).metadata();
@@ -176,17 +191,24 @@ async function captureApp(browser){
     {id:prefix+'table-13',title:'Live table · 13 players',category:'Live gameplay',route:'/games/'+denseGame.id+'/play',ready:'#seat13 .pkr-game-seat-card',action:async page=>page.waitForFunction(()=>document.querySelectorAll('.seat-chip.seated').length===13)},
    ])await captureCase(page,size,item,errors);
    if(label==='mobile'){
-    await captureCase(page,size,{id:'mobile-table-13-lower',title:'13-player table · lower seats after scrolling',category:'Live gameplay',ready:'#seat13 .pkr-game-seat-card',action:async page=>{
+    await captureCase(page,size,{id:'mobile-table-13-lower',title:'13-player table · lower seats',category:'Live gameplay',ready:'#seat13 .pkr-game-seat-card',action:async page=>{
      await page.locator('#tableArea').evaluate(element=>{element.scrollTop=element.scrollHeight;});
      await page.waitForTimeout(220);
      const lowerSeats=await page.locator('#tableArea').evaluate(element=>{
       const area=element.getBoundingClientRect();
-      return {scrollTop:element.scrollTop,visible:[7,8,9].every(number=>{
+
+      const scrollMax=Math.max(0,element.scrollHeight-element.clientHeight);
+      const balanceVisible=number=>{
        const balance=document.querySelector('#seat'+number+' .pkr-game-seat-result')?.getBoundingClientRect();
-       return balance&&balance.top>=area.top&&balance.bottom<=area.bottom;
-      })};
+       return !!balance&&balance.top>=area.top-1&&balance.bottom<=area.bottom+1&&balance.left>=area.left-1&&balance.right<=area.right+1;
+      };
+      return {scrollTop:element.scrollTop,scrollMax,visible:[7,8,9].every(balanceVisible),
+       allVisible:Array.from({length:13},(_,i)=>i+1).every(balanceVisible)};
      });
-     assert(lowerSeats.scrollTop>0&&lowerSeats.visible,'Lower 13-player balances must be reachable by ordinary table scrolling');
+     // A compact table may fit all 13 players without scrolling. Verify all
+     // balances then; otherwise require real scrolling and visible lower seats.
+     assert(lowerSeats.visible&&(lowerSeats.scrollMax<=1?lowerSeats.allVisible:lowerSeats.scrollTop>=lowerSeats.scrollMax-1),
+      'All fitting balances, or lower balances after reaching the end, must be visible: '+JSON.stringify(lowerSeats));
      manifest.checks.push({id:'mobile-table-13-lower',...lowerSeats});
     },top:false},errors);
     await captureCase(page,size,{id:'mobile-payment-records',title:'Open payment records and confirmations',category:'Payments',route:'/payments?room='+room.id,ready:'.pkr-gn-payment-card',action:async page=>{

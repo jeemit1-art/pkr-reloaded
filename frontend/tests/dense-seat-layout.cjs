@@ -79,7 +79,7 @@ async function check(browser,width){
   });
   const initialStyleDetails=' Current seat styles: '+JSON.stringify(initialStyles);
   assert.equal(initialStyles.inPlayResult.color,
-    'rgb(244, 241, 234)','In-play investment must use neutral text, not a loss colour.'+initialStyleDetails);
+    'rgb(255, 161, 139)','Invested money is warm coral, unsigned and distinct from a realised loss.'+initialStyleDetails);
   const inPlayBank=inPlay.locator('.pkr-game-seat-bank,.pkr-game-compact-bank');
   assert.match(await inPlayBank.textContent(),/\$25/);
   assert.equal(initialStyles.inPlayBank.color,
