@@ -845,3 +845,44 @@ html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero bu
   font-variant-numeric:tabular-nums!important;
  }
 }
+
+/* Game Night home final paint overrides.
+   The classic dashboard receives legacy inline variables outside the Command
+   Centre appearance state. Keep its layout, behaviour and financial logic as-is. */
+@layer pkr-theme-priority {
+ html.pkr-game-night.pkr-chip-club body .pkr-app.pkr-dashboard .pkr-approval-alert {
+  background:#E3E9FF!important;
+  border-color:#B6C7FF!important;
+  color:#1B1F2A!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-approval-alert strong {
+  color:#2F4BB8!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-approval-alert .btn-primary {
+  background:#3E63DD!important;
+  border-color:#3E63DD!important;
+  color:#FFF!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-gn-page-head h1>span {
+  color:#3E63DD!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-gn-home .pkr-gn-primary {
+  background:#FFC53D!important;
+  border-color:#FFC53D!important;
+  color:#1B1F2A!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-mobile-mark,
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-sidebar .pkr-persistent-brand span {
+  color:#3E63DD!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-bottom-nav.pkr-universal-bottom-nav button.active,
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-sidebar nav button.active {
+  background:#E3E9FF!important;
+  border-color:#B6C7FF!important;
+  color:#2F4BB8!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-bottom-nav.pkr-universal-bottom-nav button.active :is(svg,small),
+ html.pkr-game-night.pkr-chip-club body .pkr-primary-sidebar nav button.active :is(svg,small) {
+  color:#2F4BB8!important;
+ }
+}
