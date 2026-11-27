@@ -729,3 +729,81 @@ html.pkr-game-night.pkr-chip-club body .pkr-dual-root :is(.pkr-dual-gold-button,
 }
 html.pkr-game-night.pkr-chip-club body .pkr-app .pkr-dual-root .pkr-dual-hero button.pkr-dual-gold-button:hover{background:#2F4BB8!important;border-color:#2F4BB8!important;color:#FFFFFF!important;}
 }
+
+/* Standalone player RSVP board: replace retired green/gold site skin with Chip Club
+   without changing RSVP controls, seating geometry, permissions or stored choices. */
+@layer pkr-theme-priority {
+ html.pkr-game-night.pkr-chip-club body .pkr-guest{
+  --pre-ink:#1B1F2A;--pre-muted:#5A6172;--pre-gold:#FFC53D;
+  --pre-border:#E5E0D3;--pkr-a-bg:#F4F1EA;--pkr-a-surface:#FFFFFF;
+  --pkr-a-raised:#F0EDE6;--pkr-a-text:#1B1F2A;--pkr-a-muted:#5A6172;
+  --pkr-a-line:#E5E0D3;--pkr-a-primary:#3E63DD;--pkr-a-on-primary:#FFFFFF;
+  --pkr-a-felt:#0F6B55;
+  background:#F4F1EA!important;color:#1B1F2A!important;
+  background-image:none!important;font-family:var(--font-ui)!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest :is(h1,h2,h3,button,input,select,textarea){
+  font-family:var(--font-ui)!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest :is(button,a,input,select):focus-visible{
+  outline:3px solid #3E63DD!important;outline-offset:2px!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-top{
+  background:#FFFFFF!important;background-image:none!important;
+  border-bottom-color:#E5E0D3!important;color:#1B1F2A!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-top :is(a,span,.pkr-guest-logo){color:#1B1F2A!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-top .pkr-guest-pulse{background:#0E7C4F!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-hero{
+  background:#3E63DD!important;background-image:none!important;
+  border:1px solid #2F4BB8!important;box-shadow:none!important;color:#FFFFFF!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-hero :is(h1,.pkr-guest-subtitle,.pkr-guest-subtitle span){color:#FFFFFF!important;text-shadow:none!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-hero .pkr-guest-kicker{color:#FFC53D!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-stats div{background:#2F4BB8!important;border-color:#849EFF!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-stats strong{color:#FFC53D!important;font-family:var(--font-num)!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-stats span{color:#FFFFFF!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-card{
+  background:#FFFFFF!important;background-image:none!important;border:1px solid #E5E0D3!important;
+  color:#1B1F2A!important;box-shadow:0 1px 0 #E5E0D3,0 10px 24px -14px #1B1F2A30!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-card :is(h1,h2,h3){color:#1B1F2A!important;text-shadow:none!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest :is(.pkr-guest-card-head p,.pkr-guest-empty p,.pkr-guest-seat-heading p,.pkr-guest-footnote){color:#5A6172!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest :is(.pkr-guest-label,.pkr-guest-kicker,.pkr-guest-clear){color:#2F4BB8!important;}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-input{
+  background:#FFFFFF!important;color:#1B1F2A!important;border:1px solid #E5E0D3!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-choice{
+  background:#F0EDE6!important;color:#1B1F2A!important;border-color:#E5E0D3!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-choice.selected{
+  background:#E3E9FF!important;color:#2F4BB8!important;border-color:#3E63DD!important;
+  background-image:none!important;box-shadow:none!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-seat-map .pkr-guest-felt{
+  background:radial-gradient(ellipse at 40% 37%,#13816A,#0F6B55 72%)!important;
+  border-color:#3A2A1E!important;outline-color:#FFC53D!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-seat-map .pkr-guest-seat:not(.selected):not(.taken){
+  background:#E3E9FF!important;color:#2F4BB8!important;border-color:#3E63DD!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-seat-map .pkr-guest-seat.selected{
+  background:#FFC53D!important;background-image:none!important;
+  color:#1B1F2A!important;border-color:#2F4BB8!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-seat-map .pkr-guest-seat.selected span{color:#1B1F2A!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-seat-map .pkr-guest-seat.taken{
+  background:#F0EDE6!important;color:#5A6172!important;border-color:#E5E0D3!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-button{
+  background:#3E63DD!important;background-image:none!important;border-color:#3E63DD!important;
+  color:#FFFFFF!important;box-shadow:none!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest :is(.pkr-guest-outline,.pkr-guest-clear){
+  background:#FFFFFF!important;color:#2F4BB8!important;border-color:#E5E0D3!important;
+ }
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-person{border-bottom-color:#E5E0D3!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-message{background:#F0EDE6!important;color:#5A6172!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-message.error{background:#FBDAD8!important;color:#8E1B12!important;border-color:#C9302C!important}
+ html.pkr-game-night.pkr-chip-club body .pkr-guest .pkr-guest-message.success{background:#D7F2E4!important;color:#075D39!important;border-color:#0E7C4F!important}
+}
