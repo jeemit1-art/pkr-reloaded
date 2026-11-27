@@ -58,7 +58,7 @@ async function currentInvites(env:Env,eventId:string){
 function validState(state:JoinState|null,eventId:string,invites:Map<string,CurrentInvite>):state is JoinState{
   return !!state&&state.event_id===eventId&&invites.get(state.invite_id)?.contact_id===state.contact_id;
 }
-async function approvedRequests(env:Env,eventId:string,invites:Map<string,CurrentInvite>){
+async function approvedRequests(env:Env,eventId:string,invites:Map<string,CurrentInvite>,includeLegacy=true){
   const result=new Map<string,JoinState>();
   // An old contact index is not authority for a new invitation. Verify the
   // claim and its exact, still-live invite ID before using it.
@@ -71,7 +71,7 @@ async function approvedRequests(env:Env,eventId:string,invites:Map<string,Curren
   }));
   // Compatibility for outstanding approvals made by the previous Worker.
   // No name or mobile matching is performed.
-  if(result.size<invites.size&&invites.size){
+  if(includeLegacy&&result.size<invites.size&&invites.size){
     const keys=await listKeys(env,'approved-join:');
     await Promise.all(keys.map(async k=>{
       const state=readState(await env.KV.get(k.name));
@@ -103,15 +103,18 @@ async function clearContactRequests(env:Env,eventId:string,contactId:string){
   // D1 revocation is authoritative; KV clean-up is best effort and the
   // read/decision routes independently reject all superseded invitations.
   try{
+    const live=await currentInvites(env,eventId);
     const keys=await listKeys(env,requestPrefix(eventId));
     await Promise.all(keys.map(async k=>{
       const state=readState(await env.KV.get(k.name));
-      if(state?.event_id===eventId&&state.contact_id===contactId){
+      if(state?.event_id===eventId&&state.contact_id===contactId&&!validState(state,eventId,live)){
         await rememberClaim(env,state,'revoked');
         await env.KV.delete(k.name);
       }
     }));
-    await env.KV.delete('approved-contact:'+eventId+':'+contactId);
+    const pointerKey='approved-contact:'+eventId+':'+contactId;
+    const pointer=await env.KV.get(pointerKey);
+    if(pointer&&!validState(readState(pointer),eventId,live))await env.KV.delete(pointerKey);
   }catch{}
 }
 function privateHeaders(c:any){
@@ -170,8 +173,8 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
       'INSERT INTO group_phone_contacts(id,event_id,display_name,phone_lookup,phone_cipher) VALUES(?,?,?,?,?) '+
       'ON CONFLICT(event_id,phone_lookup) DO NOTHING'
     ).bind(id,eventId,name,lookup,cipher).run();
-    const contact=await c.env.DB.prepare('SELECT id,user_id FROM group_phone_contacts WHERE event_id=? AND phone_lookup=?')
-      .bind(eventId,lookup).first<{id:string;user_id:string|null}>();
+    const contact=await c.env.DB.prepare('SELECT id,user_id,display_name FROM group_phone_contacts WHERE event_id=? AND phone_lookup=?')
+      .bind(eventId,lookup).first<{id:string;user_id:string|null;display_name:string}>();
     if(!contact)return failed(c);
     if(contact.user_id){
       const member=await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
@@ -186,12 +189,15 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
     // Creating a fresh invitation revokes prior outstanding links for this contact.
     const token=randomToken(),tokenHash=await phoneLookup(c.env,'invite',token);
     const inviteId=generateId(),expires=Math.floor(Date.now()/1000)+48*3600;
-    await c.env.DB.batch([
-      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND consumed_at IS NULL')
-        .bind(eventId,contact.id),
-      c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES(?,?,?,?,?,?)')
-        .bind(inviteId,eventId,contact.id,tokenHash,role,expires)
+    const issueGuard='EXISTS (SELECT 1 FROM group_phone_contacts c WHERE c.event_id=? AND c.id=? AND c.user_id IS ? AND NOT EXISTS (SELECT 1 FROM event_members m WHERE m.event_id=c.event_id AND m.user_id=c.user_id))';
+    const issueArgs=[eventId,contact.id,contact.user_id];
+    const results=await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND consumed_at IS NULL AND '+issueGuard)
+        .bind(eventId,contact.id,...issueArgs),
+      c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) SELECT ?,?,?,?,?,? WHERE '+issueGuard)
+        .bind(inviteId,eventId,contact.id,tokenHash,role,expires,...issueArgs)
     ]);
+    if(!results[1].meta.changes)return c.json({error:'The contact membership changed. Refresh before creating another invitation.'},409);
     await clearContactRequests(c.env,eventId,contact.id);
     const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
     const group=await c.env.DB.prepare('SELECT name FROM events WHERE id=?')
@@ -200,7 +206,7 @@ router.post('/events/:id/phone-contacts',authMiddleware,async c=>{
       ' on PKR. Open this one-time link and request to join; I will approve your request: '+url+
       '\nThis link expires in 48 hours.';
     privateHeaders(c);
-    return c.json({ok:true,contact:{id:contact.id,display_name:name,phone:mobile,status:'invited',user_id:contact.user_id,returning:!!contact.user_id},
+    return c.json({ok:true,contact:{id:contact.id,display_name:contact.user_id?contact.display_name:name,phone:mobile,status:'invited',user_id:contact.user_id,returning:!!contact.user_id},
       invite:{url,expires_at:expires,role},whatsapp_url:'https://wa.me/'+mobile.slice(1)+'?text='+encodeURIComponent(message)},201);
   }catch{return failed(c);}
 });
@@ -236,8 +242,8 @@ router.post('/events/:id/phone-contacts/:contactId/link-member',authMiddleware,a
     // that could create a second account for the same contact.
     const updates=[];
     if(!contact.user_id)updates.push(c.env.DB.prepare(
-      'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL'
-    ).bind(userId,eventId,contactId));
+      'UPDATE group_phone_contacts SET user_id=?,updated_at=unixepoch() WHERE event_id=? AND id=? AND user_id IS NULL AND EXISTS (SELECT 1 FROM event_members WHERE event_id=? AND user_id=? AND role!=\'host\') AND NOT EXISTS (SELECT 1 FROM group_phone_contacts WHERE event_id=? AND user_id=? AND id!=?)'
+    ).bind(userId,eventId,contactId,eventId,userId,eventId,userId,contactId));
     updates.push(c.env.DB.prepare(
       'UPDATE group_phone_invites SET consumed_at=unixepoch() WHERE event_id=? AND contact_id=? AND consumed_at IS NULL AND EXISTS (SELECT 1 FROM group_phone_contacts WHERE event_id=? AND id=? AND user_id=?)'
     ).bind(eventId,contactId,eventId,contactId,userId));
@@ -263,14 +269,17 @@ router.delete('/events/:id/phone-contacts/:contactId',authMiddleware,async c=>{
         .bind(id,contact.user_id).first<{role:string}>();
       if(member?.role==='host')return c.json({error:'Cannot remove the group host'},403);
     }
-    // Revoke links and access in one transaction. Keep the account mapping
-    // for a genuine former member; never create another identity on rejoin.
-    await c.env.DB.batch([
-      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=?').bind(id,contactId),
-      c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!=?')
-        .bind(id,contact.user_id||'', 'host'),
+    // Revoke links and access in one transaction. Keep a former member's
+    // original account mapping. Guard against a simultaneous claim/link.
+    const removeGuard='EXISTS (SELECT 1 FROM group_phone_contacts c WHERE c.event_id=? AND c.id=? AND c.user_id IS ?)';
+    const removeArgs=[id,contactId,contact.user_id];
+    const removed=await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM group_phone_invites WHERE event_id=? AND contact_id=? AND '+removeGuard).bind(id,contactId,...removeArgs),
+      c.env.DB.prepare('DELETE FROM event_members WHERE event_id=? AND user_id=? AND role!=? AND '+removeGuard)
+        .bind(id,contact.user_id||'', 'host',...removeArgs),
       ...(!contact.user_id?[c.env.DB.prepare('DELETE FROM group_phone_contacts WHERE event_id=? AND id=? AND user_id IS NULL').bind(id,contactId)]:[])
     ]);
+    if(!contact.user_id&&!removed[2]?.meta.changes)return c.json({error:'This contact has changed or joined. Refresh and review their membership.'},409);
     await clearContactRequests(c.env,id,contactId);
     return c.json({ok:true});
   }catch{return failed(c);}
@@ -291,11 +300,14 @@ router.post('/events/:id/phone-contacts/:contactId/recovery',authMiddleware,asyn
     return c.json({error:'This player does not currently have recoverable membership. Send a fresh rejoin invitation instead.'},409);
   const token=randomToken(),hash=await phoneLookup(c.env,'invite',token);
   const expiry=Math.floor(Date.now()/1000)+48*3600;
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM group_phone_invites WHERE contact_id=? AND event_id=? AND consumed_at IS NULL').bind(contactId,eventId),
-    c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) VALUES(?,?,?,?,?,?)')
-      .bind(generateId(),eventId,contactId,hash,membership.role,expiry)
+  const recoveryGuard='EXISTS (SELECT 1 FROM group_phone_contacts c JOIN event_members m ON m.event_id=c.event_id AND m.user_id=c.user_id WHERE c.event_id=? AND c.id=? AND c.user_id=? AND m.role=? AND m.role!=\'host\')';
+  const recoveryArgs=[eventId,contactId,contact.user_id,membership.role];
+  const issued=await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM group_phone_invites WHERE contact_id=? AND event_id=? AND consumed_at IS NULL AND '+recoveryGuard).bind(contactId,eventId,...recoveryArgs),
+    c.env.DB.prepare('INSERT INTO group_phone_invites(id,event_id,contact_id,token_hash,role,expires_at) SELECT ?,?,?,?,?,? WHERE '+recoveryGuard)
+      .bind(generateId(),eventId,contactId,hash,membership.role,expiry,...recoveryArgs)
   ]);
+  if(!issued[1].meta.changes)return c.json({error:'Membership changed. Refresh the player list and use the correct recovery or rejoin action.'},409);
   await clearContactRequests(c.env,eventId,contactId);
   const phone=await decryptPhone(c.env,contact.phone_cipher);
   const url=c.env.FRONTEND_URL+'/phone-invite/'+token;
@@ -329,9 +341,10 @@ router.post('/phone-invites/:token/request-approval',async c=>{
   const rateKey='join-invite-rate:'+invite.id;
   const invites=await currentInvites(c.env,invite.event_id);
   if(!invites.has(invite.id))return c.json({error:'Invitation expired or unavailable'},409);
-  const approved=await approvedRequests(c.env,invite.event_id,invites);
+  const approved=await approvedRequests(c.env,invite.event_id,invites,false);
   const existing=await pendingRequests(c.env,invite.event_id,invites,approved);
-  if(await c.env.KV.get(rateKey)||approved.has(invite.id)||existing.some(r=>r.state.invite_id===invite.id))
+  const legacyMarker=await c.env.KV.get('approved-contact:'+invite.event_id+':'+invite.contact_id);
+  if(await c.env.KV.get(rateKey)||approved.has(invite.id)||legacyMarker==='1'||existing.some(r=>r.state.invite_id===invite.id))
     return c.json({error:'A join request is already pending or approved for this invitation. Return to your original browser or ask the host for a fresh link.'},429);
   if(existing.length>=100)return c.json({error:'Too many pending requests'},429);
   const claim=randomToken(),hash=await phoneLookup(c.env,'claim',claim);

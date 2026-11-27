@@ -68,7 +68,13 @@ function fixture(state,url,method,body){
  if(p==='/events/'+room.id+'/dashboard-layout')return {event_id:room.id,layout:state.layout,updated_at:now};
  if(p==='/events/'+room.id+'/join-requests')return {requests:[]};
  if(p==='/events/'+room.id+'/push-registrations')return {members:[{user_id:user.id,device_count:2}],definition:'registered_devices_not_delivery_confirmation'};
- if(p==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
+ if(p==='/events/'+room.id+'/phone-contacts')return {contacts:state.inviteAudit?[
+  {id:'joined-jordan',display_name:'Jordan Lee',phone:'+61400000001',user_id:'polish-jordan',status:'approved_awaiting_member'},
+  {id:'joined-casey',display_name:'Casey Brooks',phone:'+61400000002',user_id:'polish-casey',status:'joined',returning:false},
+  {id:'awaiting',display_name:'New Guest',phone:'+61400000003',user_id:null,status:'awaiting_host_approval',returning:false},
+  {id:'former',display_name:'Former Guest',phone:'+61400000004',user_id:'former-id',status:'removed',returning:true},
+  {id:'expired',display_name:'Expired Guest',phone:'+61400000005',user_id:null,status:'expired',returning:false}
+ ]:[]};
  if(p==='/events/'+room.id+'/settlement-ledger')return {games:[finished,older],transfers:transfers.map(item=>({...item,game_id:finished.id}))};
  if(p==='/games/'+upcoming.id)return {...upcoming,status:state.live?'active':upcoming.status,players:seated,rsvps:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps};
  if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps,options:['19:00','20:00']};
@@ -422,6 +428,28 @@ async function checkPayments(page,state,label){
  await screenshot(page,label+'-zero-payment-records');
 }
 
+async function checkInviteDirectory(page,state,label){
+ state.inviteAudit=true;
+ try{
+  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members&view=invite');
+  const joined=page.getByRole('region',{name:'Joined players',exact:true});
+  await joined.waitFor();
+  assert.match(await joined.innerText(),/Jordan Lee[\s\S]*Joined/);
+  assert.match(await joined.innerText(),/Casey Brooks[\s\S]*Joined/);
+  assert.equal(await joined.getByRole('button',{name:'Recover access',exact:true}).count(),2);
+  assert.equal(await joined.getByRole('button',{name:'Invite again',exact:true}).count(),0);
+  assert.equal(await joined.getByText(/waiting for (player|host)/i).count(),0,'Linked active members must not appear pending');
+  const outstanding=page.getByRole('region',{name:'Outstanding invitations',exact:true});
+  assert.match(await outstanding.innerText(),/New Guest[\s\S]*Waiting for host approval/);
+  assert.match(await outstanding.innerText(),/Expired Guest[\s\S]*Invitation expired/);
+  assert.equal(await outstanding.getByText(/Jordan Lee|Casey Brooks/).count(),0);
+  const former=page.getByRole('region',{name:'Former members',exact:true});
+  assert.match(await former.innerText(),/Former Guest[\s\S]*original account retained/);
+  assert.equal(await former.getByRole('button',{name:'Invite to rejoin',exact:true}).count(),1);
+  await screenshot(page,label+'-invite-membership-lifecycle');
+ }finally{state.inviteAudit=false;}
+}
+
 async function checkReportedVisualIssues(page,state,label){
  const original=page.viewportSize();
  state.historical=true;
@@ -510,6 +538,7 @@ async function run(){
    await checkDashboardStatusContrast(page,state,label);
    await checkOutstandingDashboardRecords(page);
    await checkPlayers(page,label);
+   await checkInviteDirectory(page,state,label);
    await checkRsvps(page,state,label);
    await checkReportedVisualIssues(page,state,label);
    await checkPayments(page,state,label);

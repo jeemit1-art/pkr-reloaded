@@ -106,7 +106,7 @@ export default function EventPage() {
   const [phoneRole,setPhoneRole]=useState<'member'|'cohost'>('member');
   const [phoneBusy,setPhoneBusy]=useState(false);
   const [phoneError,setPhoneError]=useState('');
-  const [phoneShare,setPhoneShare]=useState<{whatsapp_url:string;url:string;name:string}|null>(null);
+  const [phoneShare,setPhoneShare]=useState<{whatsapp_url:string;url:string;name:string;purpose?:'invite'|'recovery'|'rejoin'}|null>(null);
   const [selectedInviteGameId,setSelectedInviteGameId]=useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [form, setForm] = useState({scheduled_at:'',location:'',notes:'',seats:'9',game_password:'',repeat:'none',format:'cash',small_blind:'',big_blind:'',starting_chips:''});
@@ -267,6 +267,8 @@ export default function EventPage() {
       setJoinDecisionNotice(approve
         ?request?.recovery
           ?name+' recovery approved. They can complete the original private recovery link to sign back into their existing PKR account. Membership, game history and settlements remain unchanged.'
+          :request?.rejoin
+          ?name+' rejoin approved. They must complete this new private link to restore access to their original account and game history.'
           :name+' approved. They must return to their original PKR invitation on the same device, then tap “Check approval now” to finish joining. The member list will update after that.'
         :name+' request rejected.');
       // Cloudflare KV may be eventually consistent across regions. Keep the
@@ -362,7 +364,7 @@ export default function EventPage() {
     try{
       const result=await api.events.inviteByPhone(id,{display_name:name.trim(),phone:phone.trim(),role});
       setPhoneContacts(list=>[...list.filter(x=>x.id!==result.contact.id),result.contact]);
-      setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.invite.url,name:name.trim()});
+      setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.invite.url,name:result.contact.display_name,purpose:result.contact.returning?'rejoin':'invite'});
       setPhoneName('');setPhoneNumber('');setPhoneRole('member');
     }catch(e:any){setPhoneError(e.message||'Unable to prepare the private invitation.');}
     finally{setPhoneBusy(false);}
@@ -739,7 +741,7 @@ export default function EventPage() {
                 {(['joined','outstanding','former'] as const).map(section=>{
                   const contacts=phoneContacts.map(contact=>{
                     // Roster membership, not a stale invite flag, determines Joined.
-                    const joined=!!contact.user_id&&(event.members||[]).some((member:any)=>member.id===contact.user_id);
+                    const joined=contact.returning===undefined&&!!contact.user_id&&(event.members||[]).some((member:any)=>member.id===contact.user_id);
                     return {...contact,status:joined?'joined':contact.status};
                   }).filter(contact=>section==='joined'?contact.status==='joined':section==='former'?contact.status==='removed':contact.status!=='joined'&&contact.status!=='removed');
                   if(!contacts.length)return null;
@@ -767,7 +769,7 @@ export default function EventPage() {
                       href={'https://wa.me/'+contact.phone.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(
                         'Your PKR join request for '+event.name+' is approved. Please reopen the original invitation in the same browser and tap Check approval now to finish joining. If you no longer have the link, let me know.'
                       )}>Remind to complete</a>}
-                  {contact.status==='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy} onClick={async()=>{try{const result=await api.events.recoverContact(id,contact.id);setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.url,name:contact.display_name});}catch(e:any){alert(e.message);}}}>Recover access</button>}
+                  {contact.status==='joined'&&<button className="btn btn-outline" style={{fontSize:10,padding:'7px 9px'}} disabled={phoneBusy} onClick={async()=>{try{const result=await api.events.recoverContact(id,contact.id);setPhoneShare({whatsapp_url:result.whatsapp_url,url:result.url,name:contact.display_name,purpose:'recovery'});}catch(e:any){alert(e.message);}}}>Recover access</button>}
                   {contact.status==='joined'&&selectedGameId&&
                     <a href={gameWhatsAppLink(contact.phone,selectedGameId)} target="_blank" rel="noreferrer"
                       className="btn btn-outline" style={{textDecoration:'none',fontSize:10,padding:'7px 9px'}}>WhatsApp game</a>}
@@ -803,8 +805,7 @@ export default function EventPage() {
                     .map((member:any)=><option key={member.id} value={member.id}>{member.name} ({member.role})</option>)}
                 </select>
                 <p style={{fontSize:12,color:'var(--muted)',lineHeight:1.5}}>
-                  If they aren't listed above, they have not completed registration. Ask them to reopen their
-                  original invitation and select “Check approval now” instead.
+                  Only unmatched registered players appear here. If they are already linked to another contact, use that contact's recovery action. If they have not joined yet, ask them to complete their original invitation.
                 </p>
                 {linkError&&<p role="alert" style={{color:'var(--red)',fontSize:12}}>{linkError}</p>}
                 <div style={{display:'flex',gap:9,justifyContent:'flex-end',flexWrap:'wrap',marginTop:18}}>
@@ -817,7 +818,7 @@ export default function EventPage() {
             </AppDialog>}
             {phoneShare&&<AppDialog className="modal-overlay" onClick={e=>{if(e.currentTarget===e.target)setPhoneShare(null);}}>
               <div className="modal-sheet">
-                <h2 style={{fontSize:21,marginBottom:9}}>Private WhatsApp invite ready</h2>
+                <h2 style={{fontSize:21,marginBottom:9}}>{phoneShare.purpose==='recovery'?'Private access recovery ready':phoneShare.purpose==='rejoin'?'Private rejoin invitation ready':'Private WhatsApp invite ready'}</h2>
                 <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Send only to {phoneShare.name}.
                   The host must approve the person's join request. This free flow does not verify phone ownership.</p>
                 <div style={{marginBottom:14,padding:12,background:'var(--bg3)',borderRadius:10}}>
@@ -825,13 +826,13 @@ export default function EventPage() {
                 <p style={{fontSize:12,color:'var(--muted)',marginTop:10,textAlign:'center',lineHeight:1.6}}>
                   Have {phoneShare.name} scan this code with their phone camera. The request will appear in
                   this room under Members → Pending join requests. Approve or Reject it there.
-                  The player must then tap “Check approval and join PKR”.
+                  The player must then return to the same link and tap “Check approval now”.
                 </p>
               </div>
               <div className="pkr-invite-preview" aria-label="Private invitation preview">
                   <span><PkrGlyph name="spade"/> PKR · PRIVATE INVITATION</span>
                   <strong>{event.name}</strong>
-                  <p>Hi {phoneShare.name}, you have been invited to join our poker room on PKR. Your host will review the request before access is granted.</p>
+                  <p>Hi {phoneShare.name}, {phoneShare.purpose==='recovery'?'use this link to regain access to your existing PKR account.':phoneShare.purpose==='rejoin'?'use this link to rejoin with your original PKR account and game history.':'you have been invited to join our poker room on PKR.'} Your host will review the request before access is granted.</p>
                   <small>{phoneShare.url}</small>
                 </div>
                 <a href={phoneShare.whatsapp_url} rel="noreferrer" target="_blank" className="btn btn-primary"

@@ -60,7 +60,7 @@ export default function PhoneInvite(){
      const reason=e?.message||'Could not complete joining. Retry Check approval now, or contact the host.';
      // A declined, expired or consumed claim cannot be fixed by endlessly
      // polling. Offer the returning-member recovery guide instead.
-     if(/declin|no longer valid|expired|already redeemed/i.test(reason)){
+     if(/declin|no longer valid|expired|already redeemed|revoked|replaced/i.test(reason)){
        completedRef.current=true;
        try{localStorage.removeItem('pkr:join-claim:'+token);}catch{}
        setNeedsHelp(true);

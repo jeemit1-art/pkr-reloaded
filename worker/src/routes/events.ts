@@ -92,7 +92,7 @@ events.get('/invite/:token', authMiddleware, async (c) => {
   const existing = await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
     .bind(eventId,userId).first<{role:string}>();
   if (!existing) {
-    await c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)').bind(eventId,userId,role).run();
+    await c.env.DB.prepare('INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?) ON CONFLICT(event_id,user_id) DO NOTHING').bind(eventId,userId,role).run();
   } else if (existing.role==='member' && role==='cohost') {
     await c.env.DB.prepare('UPDATE event_members SET role=? WHERE event_id=? AND user_id=?').bind(role,eventId,userId).run();
   }
@@ -103,7 +103,9 @@ events.get('/invite/:token', authMiddleware, async (c) => {
       (SELECT COUNT(*) FROM games WHERE event_id=e.id AND status NOT IN ('cancelled')) as game_count
     FROM events e WHERE e.id=?
   `).bind(eventId).first();
-  return c.json({ok:true,event: event ? clientSafeEvent(event) : null,role});
+  const effective=await c.env.DB.prepare('SELECT role FROM event_members WHERE event_id=? AND user_id=?')
+    .bind(eventId,userId).first<{role:string}>();
+  return c.json({ok:true,event: event ? clientSafeEvent(event) : null,role:effective?.role||role});
 });
 
 events.get('/:id', authMiddleware, async (c) => {

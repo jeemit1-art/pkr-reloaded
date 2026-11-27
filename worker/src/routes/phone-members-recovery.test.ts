@@ -31,7 +31,11 @@ function fixture(){
       queries.push(sql);
       return {bind(..._args:any[]){
         return {
+          async all(){return {results:sql.includes('SELECT id,contact_id,role,expires_at FROM group_phone_invites')?[{id:'inv-1',contact_id:'contact-1',role:'member',expires_at:Math.floor(Date.now()/1000)+7200}]:[]};},
+          async run(){return {meta:{changes:1}};},
           async first():Promise<any>{
+            if(sql.includes('SELECT role FROM event_members'))return {role:'member'};
+            if(sql.includes('SELECT name,email FROM users'))return {name:'Original Member',email:''};
             if(sql.includes('FROM group_phone_contacts WHERE id=? AND event_id=?'))
               return {display_name:'Returning Player',phone_cipher:'synthetic',user_id:'existing-member'};
             if(sql.includes('FROM group_phone_invites WHERE id=? AND event_id=?'))
@@ -85,7 +89,7 @@ describe('member approval and same-account recovery',()=>{
     const secret='a'.repeat(64);
     // The public claim hash is derived from the claimant's secret, never the
     // original phone number. This synthetic fixture uses a predictable hash.
-    f.values.set('approved-join:claim:'+secret,JSON.stringify(f.state));
+    f.values.set('approved-join:claim:'+secret,JSON.stringify({...f.state,claim_hash:'claim:'+secret}));
     const claim=await f.post('/phone-invites/complete-approval',{claim:secret});
     expect(claim.status).toBe(200);
     const body=await claim.json() as any;
