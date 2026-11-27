@@ -23,8 +23,8 @@ const json=(body:unknown,token?:string)=>({method:'POST',headers:{'Content-Type'
 async function fixture(){
  const sqlite=new DatabaseSync(':memory:');
  sqlite.exec('PRAGMA foreign_keys=ON');
- sqlite.exec(readFileSync(new URL('../../staging.schema.sql',import.meta.url),'utf8'));
- sqlite.exec(readFileSync(new URL('../../migrations/20261025_staging_phone_members.sql',import.meta.url),'utf8'));
+ sqlite.exec(readFileSync(new URL('../../staging.schema.sql',(import.meta as ImportMeta & {url:string}).url),'utf8'));
+ sqlite.exec(readFileSync(new URL('../../migrations/20261025_staging_phone_members.sql',(import.meta as ImportMeta & {url:string}).url),'utf8'));
  sqlite.prepare("INSERT INTO users(id,google_sub,email,name,plan) VALUES(?,?,?,?,?)").run(hostId,'host-google','host@fixture.invalid','Host','lifetime');
  sqlite.prepare("INSERT INTO events(id,name,host_id) VALUES(?,?,?)").run(eventId,'Fictional Room',hostId);
  sqlite.prepare("INSERT INTO event_members(event_id,user_id,role) VALUES(?,?,?)").run(eventId,hostId,'host');
