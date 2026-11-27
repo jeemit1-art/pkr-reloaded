@@ -1,89 +1,27 @@
-// Deterministically mirror legacy paint rules into the same cascade layers.
-// Never modify layout or gameplay source. This lets old components share
-// the explicit semantic palette instead of retaining hard-coded white cards.
+// PKR exclusive appearance compiler. All source styles (including route CSS)
+// are processed through this single build step; the original live/public paint
+// is inaccessible under either personal appearance.
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),postcss=require('postcss');
 const src=path.resolve(__dirname,'../src');
-const palette={
-  "light": {
-    "canvas": "#F4F5F2",
-    "surface": "#FFFFFF",
-    "raised": "#EEF1EC",
-    "line": "#D0D9D2",
-    "control": "#71877A",
-    "ink": "#192D27",
-    "muted": "#52645C",
-    "primary": "#166548",
-    "primaryDeep": "#0D4933",
-    "accent": "#165E42",
-    "accentSurface": "#E1F0E7",
-    "accentLine": "#9CBFA8",
-    "gain": "#126641",
-    "gainSurface": "#E2F2E8",
-    "gainLine": "#9BC7AB",
-    "loss": "#A52D38",
-    "lossSurface": "#F9E7E7",
-    "lossLine": "#D5A5A7",
-    "warning": "#79521B",
-    "warningSurface": "#F8ECD4",
-    "warningLine": "#D5BE91",
-    "hero": "#153A2D",
-    "heroLive": "#194D38",
-    "heroDeep": "#102E25",
-    "heroGlow": "#28654D",
-    "heroLiveGlow": "#32795B",
-    "onDark": "#FFFFFF",
-    "onDarkMuted": "#D5E7DB",
-    "onDarkGold": "#F5D58C",
-    "onDarkGain": "#83E3AA",
-    "onDarkLoss": "#FFADAE",
-    "dangerFill": "#9E3441",
-    "warningFill": "#79521B",
-    "goldFill": "#E8C77B",
-    "onGold": "#32250D",
-    "nav": "#FFFFFF",
-    "shadow": "#142D2212"
-  },
-  "dark": {
-    "canvas": "#101916",
-    "surface": "#1B2924",
-    "raised": "#24352E",
-    "line": "#41574C",
-    "control": "#77978A",
-    "ink": "#F1F6F2",
-    "muted": "#BECFC3",
-    "primary": "#176647",
-    "primaryDeep": "#0E4B37",
-    "accent": "#A1E6BD",
-    "accentSurface": "#244839",
-    "accentLine": "#618F72",
-    "gain": "#83E3AA",
-    "gainSurface": "#214536",
-    "gainLine": "#679878",
-    "loss": "#FFADAE",
-    "lossSurface": "#47282D",
-    "lossLine": "#9F666D",
-    "warning": "#F5D58C",
-    "warningSurface": "#49391F",
-    "warningLine": "#A58B5C",
-    "hero": "#153A2D",
-    "heroLive": "#194D38",
-    "heroDeep": "#102E25",
-    "heroGlow": "#28654D",
-    "heroLiveGlow": "#32795B",
-    "onDark": "#FFFFFF",
-    "onDarkMuted": "#D5E7DB",
-    "onDarkGold": "#F5D58C",
-    "onDarkGain": "#83E3AA",
-    "onDarkLoss": "#FFADAE",
-    "dangerFill": "#9E3441",
-    "warningFill": "#79521B",
-    "goldFill": "#E8C77B",
-    "onGold": "#32250D",
-    "nav": "#101E19",
-    "shadow": "#00000026"
-  }
-};
+// A single canonical source for both the runtime CSS tokens and contrast tests.
+const canonicalFile=path.join(src,'app/pkr-personal.css');
+function readPalette(){
+ const root=postcss.parse(fs.readFileSync(canonicalFile,'utf8'),{from:canonicalFile});
+ const palette={light:{},dark:{}};
+ root.walkRules(rule=>{
+  const match=rule.selector.match(/^html\[data-pkr-personal-theme="(light|dark)"\]:not\(:has\(#gameScreen\)\)$/);
+  if(!match)return;
+  rule.walkDecls(/^--pkr-personal-/,d=>{
+   if(d.prop==='--pkr-personal-scheme')return;
+   const key=d.prop.slice('--pkr-personal-'.length).replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
+   palette[match[1]][key]=d.value;
+  });
+ });
+ if(!palette.light.canvas||!palette.dark.canvas||Object.keys(palette.light).length!==Object.keys(palette.dark).length)throw Error('Incomplete canonical PKR palette');
+ return palette;
+}
+const palette=readPalette();
 const kebab=s=>s.replace(/[A-Z]/g,x=>'-'+x.toLowerCase());
 const token=role=>'var(--pkr-personal-'+kebab(role)+')';
 const exactSurface={
@@ -165,62 +103,127 @@ function convert(value,kind){
  if(kind==='fg')out=out.replace(/var\(--(?:pkr-a-primary|blue|gold|gn-coral)\)/g,token('accent'));
  return out;
 }
-const gate=':where([data-pkr-personal-theme]:not(:has(#gameScreen)))';
-function scope(s){
- s=s.trim();
- if(!s||/gameScreen|\.pkr-casino-live-table|\.pkr-approved-game-dock|\.pkr-table-stage|\.pkr-gameplay-reference|\.game-active\b/.test(s))return null;
- if(/^html(?=[.#:\s\[>+~]|$)/.test(s))return s.replace(/^html/,'html'+gate);
- if(/^:root(?=[.#:\s\[>+~]|$)/.test(s))return s.replace(/^:root/,':root'+gate);
- if(/(?:^|\W)html(?:\.|\[|:|\s)/.test(s))return null;
- return ':where(html'+gate+') '+s;
-}
-const names=[
- 'app/pkr-lounge.css','app/pkr-theme-a.css','app/pkr-player-shell.css','app/pkr-navigation-stability.css',
- 'app/room-experience-themes.css','app/real-dual-experiences.css','app/pkr-screen-compositions.css',
- 'app/game-night.css','app/game-night-secondary.css','app/game-night-host.css','app/game-night-player.css',
- 'app/game-night-complete.css','app/game-night-shell.css','app/chip-club.css','app/chip-club-coverage.css','app/pkr-visual-qa.css',
- 'app/account/account.css','app/dashboard/command-centre.css','app/events/[id]/room-dashboard-polish.css','app/games/[id]/share/sharing-centre.css',
- 'app/insights/settlement-filter.css','app/install/guided-setup.css','app/instant/instant.css','app/payments/payments.css',
- 'app/results/results-unified.css','app/results/results.css','components/ClubEngagementPanel.css','components/DashboardDiscoverability.css',
- 'components/GameNightTools.css','components/PlayerRoomDashboard.css','components/PrimaryNavigation.css','components/RoomDashboardDual.css','components/RoomDashboardRefit.css','components/RoomOutstandingCard.css','components/SetupReminder.css'
-];
-function compile(){
- const out=postcss.root();
- out.append(postcss.comment({text:'Generated by compile-personal-theme.cjs; original gameplay untouched.'}));
- for(const name of names){
-  const filename=path.join(src,name),root=postcss.parse(fs.readFileSync(filename,'utf8'),{from:filename});
-  // Keep only the original relative layer and media nesting of paint rules.
-  root.walkAtRules(a=>{
-   if(!['layer','media','supports','container'].includes(a.name)||!a.nodes)a.remove();
-  });
-  root.walkComments(c=>c.remove());
-  root.walkRules(rule=>{
-   const selectors=rule.selectors.map(scope).filter(Boolean);
-   if(!selectors.length){rule.remove();return}
-   rule.selectors=selectors;
-   const ownBg=rule.nodes?.find(d=>d.type==='decl'&&/^(background|background-color)$/.test(d.prop)&&/#[0-9a-fA-F]{3,8}\b/.test(d.value));
-   const bgHex=ownBg?.value.match(/#[0-9a-fA-F]{3,8}\b/)?.[0];
-   const bgRole=bgHex?role(bgHex,'bg'):null;
-   for(const d of [...(rule.nodes||[])]){
-    if(d.type!=='decl'){d.remove();continue}
-    const k=kindFor(d.prop);
-    if(!k){d.remove();continue}
-    // If an old rule paired dark ink with a now-deep accent button, use the
-    // actual on-primary contrast colour; light gold uses dark ink instead.
-    if(d.prop==='color'&&bgRole==='goldFill'){d.value=token('onGold');continue}
-    if(d.prop==='color'&&['primary','primaryDeep','dangerFill','warningFill','hero','heroLive','heroDeep','heroGlow','heroLiveGlow'].includes(bgRole)){
-      const h=d.value.match(/^#[0-9a-fA-F]{3,8}$/)?.[0];
-      if(h&&['ink','muted','accent','gain','loss','warning'].includes(role(h,'fg'))){d.value=token('onDark');continue}
-    }
-    d.value=convert(d.value,k);
-   }
-   if(!rule.nodes?.length)rule.remove();
-  });
-  function prune(n){if(!n.nodes)return;for(const c of [...n.nodes]){prune(c);if(c.nodes&&c.nodes.length===0)c.remove();}}
-  prune(root);out.append(root.nodes);
+// Legacy colour rules and personal colour rules are mutually exclusive.
+// The old cascade is not an active fallback under the new appearance.
+// Split every colour-bearing rule in place, at build time, retaining its
+// original layer, order and specificity (the :where guards add zero).
+// Legacy paint is eligible ONLY on public / gameplay routes. All app paint
+// uses the same light/dark tokens, including old route/component CSS imports.
+const PERSONAL=':where(html[data-pkr-personal-theme]:not(:has(#gameScreen)))';
+const LEGACY=':where(html:not([data-pkr-personal-theme]),html:has(#gameScreen))';
+const splitSelectors=(selector,gate)=>{
+ const list=[];
+ for(let s of postcss.list.comma(selector)){
+  s=s.trim();if(!s)continue;
+  if(/^html(?=[.#:\s\[>+~]|$)/.test(s)){list.push(s.replace(/^html/,'html'+gate));continue;}
+  if(/^:root(?=[.#:\s\[>+~]|$)/.test(s)){list.push(s.replace(/^:root/,':root'+gate));continue;}
+  // A compound starting with a class, universal or functional pseudo may
+  // itself select html (e.g. :is(html,body)); keep that root case as well.
+  if(/^[.[:*]/.test(s))list.push(s.startsWith('*')?'*'+gate+s.slice(1):gate+s);
+  list.push(gate+' '+s);
  }
- fs.writeFileSync(path.join(src,'app/pkr-personal-paint.css'),out.toString()+'\n');
- console.log('Compiled personal appearance paint ('+out.toString().length+' bytes; scoped outside gameplay)');
+ return [...new Set(list)].join(',');
+};
+const alias={
+ '--bg':'canvas','--bg2':'surface','--bg3':'raised','--bg4':'raised',
+ '--white':'ink','--ivory':'ink','--muted':'muted','--faint':'muted',
+ '--gold':'accent','--gold2':'accent','--gold-pale':'accent','--gold-dim':'accent',
+ '--green':'gain','--green-dim':'gain','--red':'loss','--red-dim':'loss','--amber':'warning',
+ '--border':'line','--border-hi':'control','--border-sub':'line','--border2':'control',
+ '--paper':'canvas','--card':'surface','--line':'line','--ink':'ink','--blue':'primary','--blue-deep':'accent',
+ '--gn-paper':'canvas','--gn-ink':'ink','--gn-muted':'muted','--gn-line':'line','--gn-coral':'primary','--gn-green':'gain','--gn-red':'loss',
+ '--pkr-a-bg':'canvas','--pkr-a-surface':'surface','--pkr-a-raised':'raised','--pkr-a-line':'line','--pkr-a-text':'ink','--pkr-a-muted':'muted',
+ '--pkr-a-primary':'primary','--pkr-a-on-primary':'onDark','--pkr-a-money':'ink','--pkr-a-danger':'loss','--pkr-a-positive':'gain','--pkr-a-negative':'loss',
+ '--pkr-ex-bg':'canvas','--pkr-ex-surface':'surface','--pkr-ex-surface-2':'raised','--pkr-ex-ink':'ink','--pkr-ex-secondary':'muted','--pkr-ex-border':'line',
+ '--pkr-ex-accent':'accent','--pkr-ex-accent-light':'accent','--pkr-ex-accent-ink':'ink','--pkr-ex-focus':'accent','--pkr-ex-green':'gain',
+ '--pkr-ex-page':'canvas','--pkr-ex-surface-grad':'raised','--pkr-ex-glow':'shadow',
+ '--rv-border':'line','--rv-soft':'raised','--rv-accent':'accent','--rv-accent-strong':'primary','--rv-ink':'ink','--rv-muted':'muted','--rv-gain':'gain','--rv-loss':'loss',
+ '--pkr-ink':'ink','--pkr-panel':'surface','--pkr-panel-raise':'raised','--pkr-gold':'accent','--pkr-gold-light':'accent',
+ '--pkr-emerald':'accent','--pkr-border':'line','--pkr-copy':'ink','--pkr-dim':'muted'
+};
+const literal=/#(?:[a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{4}|[a-fA-F0-9]{3})(?![a-fA-F0-9])|rgba?\(/;
+const isDarkSurface=role=>['primary','primaryDeep','dangerFill','warningFill','hero','heroLive','heroDeep','heroGlow','heroLiveGlow'].includes(role);
+function recolour(d,rule){
+ const p=d.prop.toLowerCase(),val=d.value;
+ if(p.startsWith('--pkr-personal-'))return val;
+ // Room layouts remain different components. They can no longer supply
+ // their own colours, gradients, or theme photographs to app pages.
+ if(alias[p])return token(alias[p]);
+ if(p==='--pkr-ex-header-image')return 'none';
+ if(p==='color-scheme')return 'var(--pkr-personal-scheme)';
+ if(p==='text-shadow'&&val!=='none')return 'none';
+ if(p==='box-shadow'&&val!=='none'){
+  return val.replace(/#[0-9a-fA-F]{8}(?![0-9a-fA-F])|#[0-9a-fA-F]{6}(?![0-9a-fA-F])|#[0-9a-fA-F]{4}(?![0-9a-fA-F])|#[0-9a-fA-F]{3}(?![0-9a-fA-F])|rgba?\([^)]*\)/g,token('shadow'));
+ }
+ if(p==='scrollbar-color')return token('control')+' '+token('canvas');
+ let kind=kindFor(p);
+ if(!kind&&p.startsWith('--')&&literal.test(val)&&!/url\(/i.test(val)){
+  // Colour-only custom properties unknown to the old mapper cannot
+  // retain a separate theme. A local foreground/surface hint resolves them.
+  if(/(?:ink|fg|text|copy|muted|dim|label|cream|loss|gain|accent)/i.test(p))kind='fg';
+  else if(/(?:line|border|stroke|rail)/i.test(p))kind='border';
+  else kind='bg';
+ }
+ if(!kind&&p==='-webkit-text-fill-color')kind='fg';
+ if(!kind)return val;
+ // Decorative photographs from retired dashboard skins are not a second
+ // backdrop under the app. Actual img elements, avatars and icon URLs stay.
+ if((kind==='bg'||p.startsWith('--'))&&/url\([^)]*(?:pkr-approved-hero|\/images\/casino\/|pkr-hero|pkr-banner)/i.test(val)){
+  if(p.endsWith('image')||p.startsWith('--'))return 'none';
+  return token('surface');
+ }
+ if(p==='color'){
+  const bg=rule.nodes?.find(n=>n.type==='decl'&&/^(background|background-color)$/.test(n.prop));
+  const hex=bg?.value.match(/#[0-9a-fA-F]{3,8}\b/)?.[0];
+  const surface=hex?role(hex,'bg'):null;
+  if(surface==='goldFill')return token('onGold');
+  if(isDarkSurface(surface)&&/^(?:#[0-9a-fA-F]{3,8}|white|black)$/i.test(val))return token('onDark');
+  // Common light-panel foregrounds explicitly become mode-aware ink.
+  if(['canvas','surface','raised','accentSurface','gainSurface','lossSurface','warningSurface'].includes(surface)){
+   const h=val.match(/^#[0-9a-fA-F]{3,8}$/)?.[0];
+   if(h&&['onDark','onDarkMuted','onDarkGold'].includes(role(h,'fg')))return token('ink');
+  }
+ }
+ return convert(val,kind);
 }
-module.exports={palette,role,convert};
-if(require.main===module)compile();
+function inKeyframes(rule){
+ for(let p=rule.parent;p;p=p.parent)if(p.type==='atrule'&&/keyframes$/i.test(p.name))return true;
+ return false;
+}
+function transform(root){
+ const from=root.source?.input?.file||root.source?.input?.from||'';
+ if(/(?:^|[\\/])pkr-personal\.css$/.test(from)||root.nodes.some(n=>n.type==='comment'&&n.text.includes('PKR CANONICAL PERSONAL APPEARANCE')))return;
+ if(root.nodes.some(n=>n.type==='comment'&&n.text.includes('PKR EXCLUSIVE PAINT COMPILED')))return;
+ // Colour animation names are local to a stylesheet. Retain the original
+ // keyframes for gameplay and generate a separate tokenised version only
+ // when a keyframe actually changes. Non-colour animations are untouched.
+ const animated=new Map();
+ root.walkAtRules(/keyframes$/i,at=>{
+  const copy=at.clone();let changed=false;
+  copy.walkDecls(d=>{const next=recolour(d,d.parent);if(next!==d.value){d.value=next;changed=true;}});
+  if(changed){const name=at.params.trim(),next='pkr-personal-'+name;copy.params=next;animated.set(name,next);at.after(copy);}
+ });
+ const rules=[];
+ root.walkRules(rule=>{if(!inKeyframes(rule)&&rule.parent?.type!=='rule')rules.push(rule);});
+ let count=0;
+ for(const rule of rules){
+  const modern=rule.clone();let changed=false;
+  modern.walkDecls(d=>{
+   let value=recolour(d,d.parent);
+   if(/^(?:-webkit-)?animation(?:-name)?$/.test(d.prop)){
+    for(const [old,next] of animated)value=value.replace(new RegExp('(^|[\\s,])'+old.replace(/[.*+?^$${}()|[\]\\]/g,'\\$&')+'(?=$|[\\s,])','g'),'$1'+next);
+   }
+   if(value!==d.value){d.value=value;changed=true;}
+  });
+  if(!changed)continue;
+  const original=rule.selector;
+  rule.selector=splitSelectors(original,LEGACY);
+  modern.selector=splitSelectors(original,PERSONAL);
+  rule.after(modern);count++;
+ }
+ if(count)root.prepend(postcss.comment({text:'PKR EXCLUSIVE PAINT COMPILED: '+count+' mutually exclusive rules'}));
+}
+function plugin(){return {postcssPlugin:'pkr-exclusive-appearance',Once:transform};}
+plugin.postcss=true;
+Object.assign(plugin,{palette,role,convert,recolour,transform,splitSelectors,PERSONAL,LEGACY});
+module.exports=plugin;

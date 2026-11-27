@@ -3,7 +3,7 @@ import AppExperience from '@/components/AppExperience';
 import Script from 'next/script';
 import './pkr-personal.css';
 import localFont from 'next/font/local';
-// Lounge palette precedes the older structural fallback layers.
+// Structural source styles are compiled into mutually exclusive personal and legacy paint.
 import './pkr-lounge.css';
 import './pkr-theme-a.css';
 import './pkr-player-shell.css';
@@ -22,7 +22,6 @@ import './chip-club.css';
 import './chip-club-coverage.css';
 import './pkr-table-readable.css';
 import './pkr-visual-qa.css';
-import './pkr-personal-paint.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

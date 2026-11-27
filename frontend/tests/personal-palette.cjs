@@ -10,3 +10,40 @@ for(const [mode,p] of Object.entries(palette)){
  assert(contrast(p.control,p.surface)>=3,mode+' input control boundary');
 }
 console.log('PASS both personal palettes: text, status, controls, primary action and hero contrast');
+
+const postcss=require('postcss');
+const {transform,PERSONAL,LEGACY}=require('../scripts/compile-personal-theme.cjs');
+const sample=postcss.parse(`
+@layer pkr-lounge {
+ html.pkr-lounge .card { background:#fff!important;color:#1b1f2a!important;padding:12px; }
+ html[data-pkr-room-experience="live"] {--pkr-ex-accent:#66e6a2;--pkr-ex-page:#0b2018}
+ html[data-pkr-room-experience="command"] {--pkr-ex-accent:#e9bf76;--pkr-ex-page:#061410}
+}
+:is(html,body) {background:#fff}
+button {background:#3e63dd;color:#fff}
+#gameScreen .seat {color:#ffc53d}
+@keyframes sampleGlow {from{background:#14242c}to{background:#fff}}
+.test {animation:sampleGlow 1s linear}
+`);
+transform(sample);
+let modernCards=0,legacyCards=0;
+sample.walkRules(rule=>{
+ if(rule.selector.includes('.card')){
+  assert(rule.selector.includes(PERSONAL)||rule.selector.includes(LEGACY),'Old card paint must not match both modes');
+  if(rule.selector.includes(PERSONAL)){
+   modernCards++;
+   assert(rule.toString().includes('var(--pkr-personal-surface)'));
+   assert(rule.toString().includes('var(--pkr-personal-ink)'));
+   assert(!rule.toString().includes('#1b1f2a'));
+  }else{legacyCards++;assert(rule.toString().includes('#1b1f2a'));}
+  assert(rule.toString().includes('padding:12px'));
+ }
+ if(rule.selector.includes(PERSONAL)&&rule.selector.includes('data-pkr-room-experience')){
+  assert(rule.toString().includes('--pkr-ex-accent:var(--pkr-personal-accent)'));
+  assert(rule.toString().includes('--pkr-ex-page:var(--pkr-personal-canvas)'));
+ }
+});
+assert.equal(modernCards,1);assert.equal(legacyCards,1);
+assert(sample.toString().includes('@keyframes pkr-personal-sampleGlow'));
+assert(sample.toString().includes('animation:pkr-personal-sampleGlow 1s linear'));
+console.log('PASS original paint is unreachable on personal routes; room layouts use one palette; shared geometry and legacy game paint preserved.');
