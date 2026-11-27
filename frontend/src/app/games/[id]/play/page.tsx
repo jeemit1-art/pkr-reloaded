@@ -2111,7 +2111,8 @@ function renderTable() {
     var nameExtra=Math.max(0,nameLines-1)*Math.ceil(nameSize*1.18);
     extraHeight=Math.max(extraHeight,nameExtra+(bankLines-1)*14+(resultLines-1)*20+(stackLines-1)*14);
   });
-  cardHeight+=extraHeight;
+  // Extra record label and chip badge line. Preserve the collision-aware canvas.
+  cardHeight+=extraHeight+20;
   // When thirteen players cannot fit at the requested scale, extend the
   // table canvas vertically and scroll it. Never overlap or silently hide seats.
   var minimumHeight=wideTable?(count>=10?520:460):Math.max(440,(maxSide+1)*(cardHeight+9)+34);
@@ -2168,14 +2169,19 @@ function pkrMockupSeatCard(p,sid,bankIn,finalNet,cashed,mode,stackRow){
   var amountClass=cashed?nc(finalNet):bought?'pkr-invested':'zero',banks=seatBankLabel(bankIn).replace(/ in$/,'').replace('.00','');
   var avatar='<span class="seat-chip '+(cashed?'cashed':'seated')+' pkr-game-seat-avatar"><span class="seat-inner">'+pkrAvatar(p)+'</span></span>';
   var badge=cashed?'✓':'•',compact=mode==='compact',mobile=mode==='mobile',chipLabel='';
+  // These are existing bank-equivalent units, not the number of transactions.
+  var bankParts=banks.split(' · '),bankMarkup=bankParts.length===2?
+    '<span class="pkr-seat-bank-unit">'+esc(bankParts[0])+'</span> · <span class="pkr-seat-bank-value">'+esc(bankParts[1])+'</span>':esc(banks);
+  var amountLabel=cashed?'Net result':bought?'Invested':'Seated';
+  var resultAttrs=' data-pkr-amount-label="'+amountLabel+'"';
   if(state.game.hand_tracking&&stackRow&&!cashed){
     if(Number.isSafeInteger(stackRow.chips)&&stackRow.chips>=0){chipLabel=Number(stackRow.chips).toLocaleString('en-AU')+' chips';if(mode==='balanced'&&stackRow.cashValue!==null&&Number.isFinite(stackRow.cashValue))chipLabel+=' · '+pkrSeatMoney(stackRow.cashValue,false);}
     else if(stackRow.source==='review')chipLabel='Check chips';
   }
   var chips=chipLabel?'<span class="seat-stack pkr-game-stack-readout '+(stackRow.source||'issued')+'">'+esc(chipLabel)+'</span>':'';
-  if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
+  if(mobile)return '<span class="pkr-game-seat-card pkr-mobile-rail-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span><span class="pkr-mobile-rail-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+bankMarkup+'</small><strong class="pkr-game-seat-result '+amountClass+'"'+resultAttrs+'>'+esc(amount)+'</strong><span class="pkr-game-seat-status pkr-mobile-rail-status '+statusClass+'">'+status+'</span>'+chips+'</span>';
   var fullAvatar='<span class="pkr-game-full-avatar">'+avatar+(cashed?'<span class="pkr-game-status-dot cashed" aria-label="Cashed out">✓</span>':'')+'</span>';
-  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="pkr-game-compact-name" title="'+esc(pkrSeatDisplayName(p))+'">'+esc(pkrSeatDisplayName(p))+'</strong><span class="seat-money pkr-game-compact-bank">'+esc(banks)+'</span><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong>':'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+esc(banks)+'</small><strong class="pkr-game-seat-result '+amountClass+'">'+esc(amount)+'</strong></span></span>';
+  var main=compact?'<span class="pkr-game-compact-avatar">'+avatar+'<span class="pkr-game-status-dot '+statusClass+'" aria-label="'+status+'">'+badge+'</span></span><strong class="pkr-game-compact-name" title="'+esc(pkrSeatDisplayName(p))+'">'+esc(pkrSeatDisplayName(p))+'</strong><span class="seat-money pkr-game-compact-bank">'+bankMarkup+'</span><strong class="pkr-game-seat-result '+amountClass+'"'+resultAttrs+'>'+esc(amount)+'</strong>':'<span class="pkr-game-seat-main">'+fullAvatar+'<span class="pkr-game-seat-copy"><strong class="seat-label pkr-game-seat-name">'+esc(pkrSeatDisplayName(p))+'</strong><small class="seat-money pkr-game-seat-bank">'+bankMarkup+'</small><strong class="pkr-game-seat-result '+amountClass+'"'+resultAttrs+'>'+esc(amount)+'</strong></span></span>';
   return '<span class="pkr-game-seat-card '+statusClass+'"><span class="pkr-game-seat-number">'+esc(sid.slice(4))+'</span>'+main+chips+'</span>';
 }
 function buildSeats(count,tW,tH,cx,cy,wideTable,seatRows,g){

@@ -936,13 +936,14 @@ export default function EventPage() {
                 const playerName=String(p.display_name||'').trim();
                 const key='history:'+playerName.toLowerCase();
                 const profile=roomProfiles[key];
-                return <div key={key} className="pkr-historical-player-row">
+                return <div key={key} className="pkr-historical-player-row pkr-history-player-card">
                   <span className="pkr-historical-player-avatar">
                     {profile?.avatar_data?<img src={profile.avatar_data} alt=""/>:
                       <span aria-hidden="true">{profile?.avatar_emoji||playerName.charAt(0).toUpperCase()}</span>}
                   </span>
                   <span className="pkr-historical-player-name"><strong>{profile?.screen_name||playerName}</strong>
                     <small>{profile?.screen_name?playerName+' · ':''}{p.games_played||0} recorded games</small></span>
+                  <div className="pkr-history-player-actions" role="group" aria-label={'Actions for '+playerName}>
                   <RecordMetric request={{kind:'player',title:playerName+' — game history',roomId:id,playerId:p.user_id,playerName}}
                     className="pkr-member-history-mini">History</RecordMetric>
                   {isHost&&<button type="button" disabled={!!roomProfileError} className="pkr-member-profile-edit"
@@ -953,6 +954,7 @@ export default function EventPage() {
                     onClick={()=>void setHistoricalArchive(playerName,true)}>
                     {archivePending===playerName?'Removing…':'Remove'}
                   </button>}
+                  </div>
                 </div>;
               })}
             </section>}

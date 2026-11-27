@@ -85,11 +85,12 @@ export default function GameNightHostHome(p:Props){
       <button type="button" onClick={p.onSharing}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 16V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg><span>Sharing options</span></button>
     </div>}
 
-    {game&&!closed&&<section className="pkr-gn-crew" aria-label="Confirmed guests">
-      <header><h2>The table so far</h2><button type="button" onClick={p.onRsvp}>View all</button></header>
+    {game&&!closed&&<section className="pkr-gn-crew pkr-attendance-card" aria-label="Confirmed guests">
+      <header><h2><PkrGlyph name="members"/> The table so far</h2><button type="button" onClick={p.onRsvp}>View all <span aria-hidden="true">›</span></button></header>
       {confirmed&&guests.length>0?<div className="pkr-gn-people-strip">{guests.map((r,i)=><button type="button" onClick={p.onRsvp} key={r.id} aria-label={'View RSVP for '+r.display_name}>
         <span className={'pkr-gn-avatar tone-'+i}>{initials(r.display_name)}<i aria-hidden="true"><PkrGlyph name="check" size={12}/></i></span><strong title={r.display_name}>{r.display_name.split(' ')[0]}</strong>
       </button>)}</div>:<p className="pkr-gn-muted" role="status">{confirmed?'No confirmed RSVPs yet.':p.attendanceState==='unavailable'?'Could not check RSVPs. Open the RSVP board to retry.':'Checking the guest list…'}</p>}
+      {confirmed&&<div className="pkr-seat-preview" aria-hidden="true">{Array.from({length:Math.min(36,Math.max(0,game.seats))},(_,i)=><span key={i} className={i<p.seated?'is-assigned':''}/>)}</div>}
       {confirmed&&<p className="pkr-gn-seat-note"><RecordMetric bare request={{kind:'players',title:'Seated players',gameId:game.id,filter:'seated'}}>{p.seated} seat{p.seated===1?'':'s'} assigned</RecordMetric>
         {' · '}<RecordMetric bare request={{kind:'rsvps',title:'Confirmed RSVPs',gameId:game.id,filter:'yes'}}>{p.going.length} confirmed RSVP{p.going.length===1?'':'s'}</RecordMetric></p>}
     </section>}
