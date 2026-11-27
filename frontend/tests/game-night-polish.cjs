@@ -59,7 +59,7 @@ function fixture(state,url,method,body){
  if(p==='/auth/me')return user;
  if(p==='/events')return [room];
  if(p==='/events/'+room.id)return {...room,members};
- if(p==='/events/'+room.id+'/games')return [...(state.upcoming?[upcoming]:[]),finished,older];
+ if(p==='/events/'+room.id+'/games')return [...(state.upcoming?[state.live?{...upcoming,status:'active'}:upcoming]:[]),finished,older];
  if(p==='/events/'+room.id+'/history')return [finished,older];
  if(p==='/events/'+room.id+'/leaderboard')return leaders;
  if(p==='/events/'+room.id+'/profiles')return {profiles:[{profile_key:'member:polish-jordan',screen_name:null,avatar_data:null,avatar_emoji:'🦊',preferred_contact:'none'}]};
@@ -70,7 +70,7 @@ function fixture(state,url,method,body){
  if(p==='/events/'+room.id+'/push-registrations')return {members:[{user_id:user.id,device_count:2}],definition:'registered_devices_not_delivery_confirmation'};
  if(p==='/events/'+room.id+'/phone-contacts')return {contacts:[]};
  if(p==='/events/'+room.id+'/settlement-ledger')return {games:[finished,older],transfers:transfers.map(item=>({...item,game_id:finished.id}))};
- if(p==='/games/'+upcoming.id)return {...upcoming,players:seated,rsvps:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps};
+ if(p==='/games/'+upcoming.id)return {...upcoming,status:state.live?'active':upcoming.status,players:seated,rsvps:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps};
  if(p==='/games/'+upcoming.id+'/rsvp-board')return {game:upcoming,event:room,players:seated,guests:state.noConfirmed?rsvps.filter(r=>r.status!=='yes'):rsvps,options:['19:00','20:00']};
  for(const game of [finished,older]){
   if(p==='/games/'+game.id)return {...game,players:playersFor(game),rsvps:[],transfers:game.id===finished.id?transfers:[]};
@@ -208,6 +208,41 @@ async function checkFullDashboards(page,state,label){
  assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
  await appearance.getByRole('button',{name:/Command Centre/}).click();
  await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+}
+
+async function checkDashboardStatusContrast(page,state,label){
+ const startingLayout=state.layout,startingWrites=state.layoutWrites;
+ try{
+  for(const [kind,title,bg,fg] of [
+   ['live','LIVE NOW','rgb(18, 99, 71)','rgb(255, 255, 255)'],
+   ['upcoming','UP NEXT','rgb(255, 217, 120)','rgb(56, 38, 0)'],
+   ['empty','NO GAME SCHEDULED','rgb(227, 234, 245)','rgb(35, 60, 97)']
+  ]){
+   state.upcoming=kind!=='empty';state.live=kind==='live';
+   for(const mode of ['command','live']){
+    state.layout=mode;
+    await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+    const dashboard=page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]');
+    await dashboard.waitFor();
+    const status=dashboard.locator('.pkr-dual-status[data-game-state="'+kind+'"]');
+    await status.waitFor({state:'visible'});
+    assert.equal((await status.innerText()).trim(),title,label+' '+mode+' correct status');
+    assert.equal(await colour(status,'backgroundColor'),bg,label+' '+kind+' opaque status surface');
+    assert.equal(await colour(status,'color'),fg,label+' '+kind+' status ink');
+    assert.equal(await colour(status,'backgroundImage'),'none','Do not retain legacy gradients');
+    await readable(status,label+' '+mode+' '+kind+' dashboard status');
+    const bounds=await status.evaluate(el=>{
+     const r=el.getBoundingClientRect(),hero=el.closest('.pkr-dual-hero').getBoundingClientRect();
+     return {inside:r.left>=hero.left&&r.right<=hero.right+1&&r.top>=hero.top&&r.bottom<=hero.bottom+1,clipped:el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1};
+    });
+    assert(bounds.inside&&!bounds.clipped,label+' '+mode+' '+kind+' status overflows '+JSON.stringify(bounds));
+    await screenshot(page,label+'-status-'+mode+'-'+kind);
+   }
+  }
+ }finally{
+  state.upcoming=true;state.live=false;state.layout=startingLayout;state.layoutWrites=startingWrites;
+ }
 }
 
 async function checkOutstandingDashboardRecords(page){
@@ -472,6 +507,7 @@ async function run(){
   page.on('requestfailed',request=>{if(new URL(request.url()).origin===API)requestFailures.push({at:new Date().toISOString(),page:page.url(),url:request.url(),method:request.method(),error:request.failure()?.errorText});});
   try{
    await checkFullDashboards(page,state,label);
+   await checkDashboardStatusContrast(page,state,label);
    await checkOutstandingDashboardRecords(page);
    await checkPlayers(page,label);
    await checkRsvps(page,state,label);

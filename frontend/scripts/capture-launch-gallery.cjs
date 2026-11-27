@@ -95,6 +95,13 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
    const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
   }));
   assert(layers.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),id+' has an overlay hiding the hero: '+JSON.stringify(layers));
+  const status=await page.locator('.pkr-dual-hero .pkr-dual-status').evaluate(el=>{
+   const s=getComputedStyle(el),channels=v=>(v.match(/[\d.]+/g)||[]).map(Number);
+   const lum=rgb=>rgb.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+   const ink=lum(channels(s.color)),bg=lum(channels(s.backgroundColor));
+   return {state:el.dataset.gameState,colour:s.color,background:s.backgroundColor,ratio:(Math.max(ink,bg)+.05)/(Math.min(ink,bg)+.05),opacity:s.opacity};
+  });
+  assert(status.ratio>=4.5&&status.opacity==='1',id+' dashboard game status contrast failed: '+JSON.stringify(status));
  }
  const png=path.join(OUTPUT,id+'.png');
  await page.screenshot({path:png,fullPage,animations:'disabled'});

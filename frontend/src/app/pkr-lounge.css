@@ -176,6 +176,19 @@ html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero-
 html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero :is(h3,p,p small,.pkr-dual-hero-text>span,.pkr-dual-eyebrow>span,.pkr-dual-hero p button) {
   color:#F0F6FF!important;
 }
+/* An opaque, high-contrast status surface; explicit labels, not colour alone. */
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero .pkr-dual-eyebrow>.pkr-dual-status {
+  background:#E3EAF5!important;background-image:none!important;color:#233C61!important;
+  border:1px solid #B7C9E2!important;opacity:1!important;text-shadow:none!important;
+  font-weight:800!important;line-height:1.25!important;white-space:normal!important;
+  overflow-wrap:anywhere!important;text-align:center!important;
+}
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero .pkr-dual-eyebrow>.pkr-dual-status[data-game-state="live"] {
+  background:#126347!important;color:#FFFFFF!important;border-color:#68C9A3!important;
+}
+html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero .pkr-dual-eyebrow>.pkr-dual-status[data-game-state="upcoming"] {
+  background:#FFD978!important;color:#382600!important;border-color:#FFEBB5!important;
+}
 html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero-image,
 html.pkr-game-night.pkr-chip-club.pkr-lounge body .pkr-dual-root .pkr-dual-hero-image svg {
   color:#FFD66A!important;
