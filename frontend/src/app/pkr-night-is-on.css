@@ -934,3 +934,101 @@
   color:#FF7468!important;
  }
 }
+
+
+/* Complete the official brand across deeply nested analytics/roster and payments details. */
+@layer pkr-personal{
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-results-live-stage,.pkr-results-command-stage,.pkr-results-command-hero,.pkr-results-live-hero,
+ .pkr-experience-command-stage,.pkr-experience-players-stage,.pkr-pc-results-ribbon,
+ .pkr-pc-results-podium){
+  background:#182A48!important;background-image:none!important;color:#F5F5EF!important;
+  border-color:#4E6792!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-results-live-stage,.pkr-results-command-stage,.pkr-experience-command-stage,
+ .pkr-experience-players-stage)::before,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-results-live-stage,.pkr-results-command-stage,.pkr-experience-command-stage,
+ .pkr-experience-players-stage)::after{
+  background-image:none!important;content:none!important;display:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-results-live-stage,.pkr-results-command-stage,.pkr-experience-command-stage,
+ .pkr-experience-players-stage) :is(h1,h2,h3,p,small){
+  color:#F5F5EF!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-experience-command-stage .pkr-experience-command-stat{
+  background:#213656!important;border-color:#536C91!important;color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-experience-command-stage .pkr-experience-command-stat :is(strong,span){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-member-roster>div{
+  background:#1C2A43!important;border-color:#486085!important;color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-member-roster>div:hover{
+  background:#26395B!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-member-roster>div :is(h3,strong,p,small){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog{
+  background:#151D2E!important;color:#F5F5EF!important;border:1px solid #4F678C!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog :is(h2,h3,strong,button){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog .pkr-record-row{
+  background:#1C2A43!important;border-color:#455C81!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog [data-money-tone="positive"]{
+  color:#2ACB91!important;-webkit-text-fill-color:#2ACB91!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-record-dialog [data-money-tone="negative"]{
+  color:#FF7468!important;-webkit-text-fill-color:#FF7468!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-metrics>button{
+  background:#18243A!important;border-color:#48618A!important;color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-metrics>button :is(strong,small){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-status{
+  background:#1B2C49!important;color:#F5F5EF!important;background-image:none!important;
+  border:1px solid #59719A!important;font-weight:850!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-status[data-game-state="live"]{
+  background:#2ACB91!important;color:#0B0D14!important;border-color:#2ACB91!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-status[data-game-state="upcoming"]{
+  background:#C7FF3A!important;color:#0B0D14!important;border-color:#C7FF3A!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-status[data-game-state="empty"]{
+  background:#253653!important;color:#F5F5EF!important;border-color:#59719A!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-pay{
+  background:#41242F!important;border-color:#984354!important;color:#FF958F!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-total.is-receive{
+  background:#123A33!important;border-color:#347760!important;color:#2ACB91!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-gn-payment-total.is-pay,.pkr-gn-payment-total.is-receive) :is(button,strong,span,small){
+  color:inherit!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-table-panel,.pkr-dual-felt-empty,.pkr-dual-nextgame,.pkr-dual-attendance,
+ .pkr-dual-nextgame-summary,.pkr-dual-table-count){
+  background:#1A2943!important;background-image:none!important;border-color:#486184!important;
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-table-panel,.pkr-dual-felt-empty,.pkr-dual-attendance) :is(h2,h3,strong,small){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-no-host,.pkr-no-player,.pkr-no-games,.pkr-no-members,.pkr-no-results,.pkr-no-payments-hero) img:not(.pkr-brand-mark):not(.pkr-pc-results-face):not(.pkr-directory-avatar img){
+  object-fit:cover;
+ }
+}
