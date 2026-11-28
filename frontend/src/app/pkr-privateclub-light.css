@@ -1,0 +1,288 @@
+/* Private Casino Club / Vegas Floor: genuine light mode, distinct from Luxe.
+ * Scope: user's saved appearance mode only; excludes protected gameplay.
+ * Hero photography remains dark for legibility, while working surfaces become light.
+ */
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)){
+ --pkr-personal-canvas:#f9f4f1;
+ --pkr-personal-surface:#fffdfb;
+ --pkr-personal-raised:#f4e9ec;
+ --pkr-personal-line:#d9bdc6;
+ --pkr-personal-control:#a07887;
+ --pkr-personal-ink:#302431;
+ --pkr-personal-muted:#654d5d;
+ --pkr-personal-primary:#8b294b;
+ --pkr-personal-primary-deep:#691f39;
+ --pkr-personal-accent:#87324e;
+ --pkr-personal-accent-surface:#f8e4e9;
+ --pkr-personal-accent-line:#cb98a6;
+ --pkr-personal-nav:#fffcf9;
+ --pkr-personal-shadow:#35202b20;
+ --pkr-personal-hero:#24101d;
+ --pkr-personal-hero-deep:#140e1a;
+ --pkr-personal-hero-live:#185645;
+ --pkr-personal-gain:#186448;
+ --pkr-personal-gain-surface:#e2f3e9;
+ --pkr-personal-gain-line:#8bb49d;
+ --pkr-personal-loss:#ac334e;
+ --pkr-personal-loss-surface:#fae9ed;
+ --pkr-personal-loss-line:#dea5b0;
+ --pkr-personal-warning:#79501d;
+ --pkr-personal-warning-surface:#fff1d9;
+ --pkr-personal-warning-line:#d7b67d;
+ --pkr-personal-on-dark:#fffaf6;
+ --pkr-personal-on-dark-muted:#f6dfdf;
+ --pkr-personal-on-dark-gold:#ffcd98;
+ --pkr-personal-on-gold:#251321;
+ --pkr-personal-gold-fill:#f7c58a;
+ --pkr-personal-danger-fill:#a52e48;
+ --pkr-personal-warning-fill:#805b29;
+ --pkr-personal-scheme:light;
+ --pkr-vg-ink:#302431;
+ --pkr-vg-muted:#654d5d;
+ --pkr-vg-cream:#78324b;
+ --pkr-vg-gold:#87324e;
+ --casino-rim:#af6079;
+ --casino-cta:linear-gradient(140deg,#fce6c5,#f7b980 75%,#eea36e);
+ --casino-cta-ink:#281321;
+ color-scheme:light!important;
+}
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  body,.pkr-app.pkr-event,.pkr-app.pkr-dashboard,.pkr-primary-page,.pkr-results-page,
+  .pkr-gn-payment-workspace,.pkr-player-home,.pkr-schedule-page,.pkr-vnext-insights){
+   color:#302431!important;background-color:#f9f4f1!important;
+   background-image:radial-gradient(ellipse 90% 30% at 50% 0%,#f5dce3 0%,transparent 78%),linear-gradient(180deg,#fcf8f5,#f9f4f1)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility),
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility) body{
+  background:#fffdfa!important;background-image:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) body{
+  --white:#302431!important;--ivory:#302431!important;--gold:#87324e!important;
+  --muted:#654d5d!important;--faint:#755f6c!important;
+  --border:#d9bdc6!important;--border-hi:#a07887!important;--border-sub:#e5d5dc!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(.pkr-app.pkr-dashboard,.pkr-app.pkr-event,.pkr-primary-page,.pkr-results-page,.pkr-gn-payment-workspace,.pkr-player-home){
+  --pkr-a-primary:#8b294b!important;--pkr-a-text:#302431!important;
+  --pkr-a-muted:#654d5d!important;color:#302431!important;
+ }
+ /* Fixed navigation is opaque, high contrast and safe for status/safe areas. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-primary-mobile-utility,.pkr-primary-sidebar,.pkr-primary-bottom-nav.pkr-universal-bottom-nav){
+  background:#fffcf9!important;background-image:linear-gradient(180deg,#fffdfb,#faeff0)!important;
+  border-color:#d5b2c1!important;color:#302431!important;
+  box-shadow:0 4px 18px #4d2f451c!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-mobile-utility::before{
+  background:#fffcf9!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-mobile-utility :is(
+  .pkr-primary-mobile-mark,.pkr-primary-club-name,.pkr-primary-account){
+  color:#642842!important;-webkit-text-fill-color:#642842!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-account{
+  background:#fff6f2!important;border-color:#ba849a!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav button{
+  color:#5b4755!important;-webkit-text-fill-color:#5b4755!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav button.active{
+  background:linear-gradient(180deg,#f8dfe7,#fffafa 85%)!important;
+  box-shadow:inset 0 3px 0 #a43c61!important;
+  color:#812c4c!important;-webkit-text-fill-color:#812c4c!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav button.active :is(svg,span,small){
+  color:#812c4c!important;-webkit-text-fill-color:#812c4c!important;
+ }
+ /* Functional surfaces from Home, Players, Results and Payments. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-primary-panel,.pkr-member-card,.pkr-member-roster,.pkr-member-roster>div,
+  .pkr-history-player-card,.pkr-historical-player-roster,.pkr-results-board,.pkr-results-card,
+  .pkr-gn-payment-card,.gn-player-card,.pkr-gn-payment-list,.pkr-results-ledger-row,
+  .pkr-results-history-card,.pkr-primary-metric,.pkr-vnext-card,.pkr-schedule-game){
+  background:#fffdfb!important;border-color:#dfc5ce!important;color:#302431!important;
+  box-shadow:0 5px 16px #442b3712!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-member-subpage,.pkr-member-invite,.pkr-member-request-card,
+  .pkr-member-profile-notice,.pkr-member-empty-approvals,.pkr-approval-alert){
+  color:#302431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-next-actions button,.pkr-pc-shortcuts button,.pkr-pc-player-payments-link,
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button){
+  background:#fffdfb!important;border-color:#dfb4c3!important;
+  color:#3c2a36!important;-webkit-text-fill-color:#3c2a36!important;
+  box-shadow:0 5px 14px #40263017!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-next-actions button,.pkr-pc-shortcuts button,
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button) :is(strong,small){
+  color:#49313f!important;-webkit-text-fill-color:#49313f!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-cf-explore-title h2,.pkr-cf-section-line h2,.pkr-cf-explore .pkr-pc-lobby-bottom-actions button strong){
+  color:#302431!important;-webkit-text-fill-color:#302431!important;
+ }
+ /* A brighter casino-floor work area; stage/table photography stays dramatic. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-app.pkr-event .pkr-casino-floor{
+  color:#302431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-filters{
+  border-color:#d5adb9!important;background:#fffaf9!important;
+  box-shadow:0 4px 15px #59384718!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-filters button{
+  color:#634556!important;-webkit-text-fill-color:#634556!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-filters button[aria-current="page"]{
+  background:#f1d3dc!important;border-bottom-color:#9b3157!important;
+  color:#67243f!important;-webkit-text-fill-color:#67243f!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-cf-section-line h2,.pkr-cf-explore-title h2){
+  color:#302431!important;-webkit-text-fill-color:#302431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-suit{
+  background:#f6e0e6!important;border-color:#d9aabc!important;color:#842e4e!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-kicker{
+  color:#8c3955!important;-webkit-text-fill-color:#8c3955!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-host-quick{
+  background:#fffbf8!important;border-color:#cfa4b4!important;
+  color:#7f2c4a!important;-webkit-text-fill-color:#7f2c4a!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-host-quick span{
+  color:#7f2c4a!important;-webkit-text-fill-color:#7f2c4a!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket{
+  border-color:#cf96a9!important;background:linear-gradient(112deg,#fff7f3,#f4dfe8)!important;
+  box-shadow:0 5px 15px #46273723!important;color:#382535!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket :is(
+  .pkr-pc-lobby-ticket-main,.pkr-pc-lobby-session-copy h2,.pkr-pc-lobby-session-copy p,.pkr-pc-lobby-date){
+  color:#382535!important;-webkit-text-fill-color:#382535!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-lobby-ticket-top{
+  background:#f5e6eb!important;border-color:#d2b1bf!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-lobby-ticket-top>span{
+  color:#71344c!important;-webkit-text-fill-color:#71344c!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-rsvp-quick button{
+  background:#fffaf7!important;border-color:#bc9eaa!important;
+  color:#543344!important;-webkit-text-fill-color:#543344!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-rsvp-quick button:first-child{
+  background:#e5f3eb!important;border-color:#8cbaa0!important;
+  color:#185f46!important;-webkit-text-fill-color:#185f46!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-lobby-actions button{
+  background:#fffdfa!important;border-color:#be9ba9!important;
+  color:#63334d!important;-webkit-text-fill-color:#63334d!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-game-ticket .pkr-pc-lobby-actions button.pkr-pc-lobby-primary{
+  background:linear-gradient(140deg,#f9d6ac,#f7b97e)!important;border-color:#d4a071!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-cf-last-night,.pkr-cf-explore,.pkr-pc-unfinished){
+  background-color:#fff9f5!important;color:#352635!important;border-color:#ddb9c7!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-last-night :is(h3,p){
+  color:#473140!important;-webkit-text-fill-color:#473140!important;
+ }
+ /* The table is still an intentional dark illustration, but not the entire screen. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-empty{
+  border-color:#d6a4b7!important;
+  background:radial-gradient(ellipse at 50% 5%,#fff5f0,#f2e4e6 75%,#ead7df)!important;
+  box-shadow:0 10px 25px #51364520!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-empty-content :is(h2,p){
+  color:#352535!important;-webkit-text-fill-color:#352535!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-schedule{
+  background:linear-gradient(145deg,#8a3152,#541d36)!important;
+  color:#ffeddf!important;-webkit-text-fill-color:#ffeddf!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-schedule :is(span,svg){
+  color:#ffeddf!important;-webkit-text-fill-color:#ffeddf!important;
+ }
+ /* Results / Payments are working screens, not dark slabs. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-results-hero,.pkr-pc-cashier-hero){
+  border-color:#d3a0b3!important;
+  background:linear-gradient(125deg,#fff9f5e8,#f8e2e6dd),url('/images/casino/real-poker-chips.webp') right center/cover!important;
+  background-color:#fff9f5!important;box-shadow:0 6px 24px #4a253f24!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-results-heading h1,.pkr-pc-results-heading p,.pkr-pc-cashier-copy h1,.pkr-pc-cashier-copy p){
+  color:#302431!important;-webkit-text-fill-color:#302431!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-results-heading h1 em,.pkr-pc-cashier-copy h1 em){
+  color:#973659!important;-webkit-text-fill-color:#973659!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-ribbon button{
+  background:#fbeaed!important;border-color:#d3a7b4!important;
+  color:#422c39!important;-webkit-text-fill-color:#422c39!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-ribbon :is(strong,small){
+  color:#422c39!important;-webkit-text-fill-color:#422c39!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-rank{
+  background:linear-gradient(155deg,#fffdf9,#f4e7ea)!important;
+  border-color:#cd9cae!important;color:#302431!important;-webkit-text-fill-color:#302431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-rank :is(strong,small){
+  color:#312431!important;-webkit-text-fill-color:#312431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-history{
+  background:linear-gradient(145deg,#f8e6c4,#f5b87a)!important;
+  color:#241421!important;-webkit-text-fill-color:#241421!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-results-history :is(svg,span){
+  color:#241421!important;-webkit-text-fill-color:#241421!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-cashier-status :is(span,strong){
+  color:#683049!important;-webkit-text-fill-color:#683049!important;
+  background:#f6e4e8!important;border-color:#cea2b2!important;
+ }
+ /* Cosmetic player-directory controls, never data/permissions. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-members-shortcuts{
+  background:#f7e9ed!important;border-color:#d8b7c3!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-members-shortcuts button{
+  color:#634357!important;-webkit-text-fill-color:#634357!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-members-shortcuts button.active{
+  background:#813051!important;border-color:#813051!important;
+  color:#fff9f5!important;-webkit-text-fill-color:#fff9f5!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-search-label{
+  background:#fffdfa!important;border-color:#cfa3b5!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-search-label>span{
+  color:#852e50!important;-webkit-text-fill-color:#852e50!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-search-label input#pkr-member-search{
+  background:transparent!important;border:none!important;
+  color:#302431!important;-webkit-text-fill-color:#302431!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-search-label input#pkr-member-search::placeholder{
+  color:#785e6a!important;opacity:1!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-role-filters{
+  background:#f7edf0!important;border-color:#d9b8c5!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-role-filters button{
+  color:#563d4b!important;-webkit-text-fill-color:#563d4b!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-members-panel .pkr-member-role-filters button[aria-pressed="true"]{
+  background:#833352!important;border-color:#a65172!important;
+  color:#fffaf6!important;-webkit-text-fill-color:#fffaf6!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-directory-roster .pkr-directory-player{
+  background:#fffdfb!important;border-color:#e7d5dc!important;
+ }
+}
