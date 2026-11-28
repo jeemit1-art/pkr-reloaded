@@ -8,6 +8,7 @@ import {
   ensurePushForRoom,isPushSubscribedToEvent,subscribePush,sendRealTestNotification
 } from '@/lib/push';
 import ForegroundSoundToggle from '@/components/ForegroundSoundToggle';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import './guided-setup.css';
 
 type Platform='ios'|'android'|'desktop';
@@ -187,7 +188,7 @@ export default function InstallGuide(){
 
   return <main className="pkr-onboarding pkr-install-vnext pkr-guided-setup">
     <header className="pkr-install-hero">
-      <a href="/dashboard" className="pkr-install-brand">♠ PKR</a>
+      <a href="/dashboard" className="pkr-install-brand"><PkrBrandMark className="pkr-brand-mark--install"/> <span>PKR</span></a>
       <span className="pkr-eyebrow">EASY PHONE SETUP</span>
       <h1>Get PKR ready on your phone.</h1>
       <p>Use PKR straight from WhatsApp. Add it to your Home Screen for quicker access and, on iPhone, to receive background notifications.</p>

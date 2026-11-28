@@ -5,6 +5,7 @@ import {usePathname,useRouter} from 'next/navigation';
 import {api,type Event,getToken} from '@/lib/api';
 import {scrollPageTo} from '@/lib/page-scroll';
 import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import './PrimaryNavigation.css';
 
 type Area='Home'|'Games'|'Players'|'Results'|'Payments';
@@ -129,7 +130,7 @@ export default function PersistentNavigation(){
  const areaLabel=member?'Player navigation':'PKR main navigation';
  return <>
   <aside className="pkr-persistent-nav pkr-primary-sidebar" aria-label={areaLabel}>
-   <div className="pkr-persistent-brand"><span aria-hidden="true"><PkrGlyph name="spade" size={24}/></span> PKR</div>
+   <div className="pkr-persistent-brand"><PkrBrandMark className="pkr-brand-mark--sidebar"/> <span>PKR</span></div>
    <div className="pkr-persistent-room">
     <span>YOUR POKER CLUB</span><strong title={roomLabel}>{roomLabel}</strong>
     {roomChoices.length>1&&<label htmlFor="pkr-desktop-club">Switch club</label>}
@@ -156,7 +157,7 @@ export default function PersistentNavigation(){
    </div>
   </aside>
   <div className="pkr-primary-mobile-utility" aria-label="Poker club and account">
-   <span className="pkr-primary-mobile-mark" aria-hidden="true"><PkrGlyph name="spade" size={27}/></span>
+   <span className="pkr-primary-mobile-mark" aria-hidden="true"><PkrBrandMark className="pkr-brand-mark--header"/></span>
    {roomChoices.length>1?
      <select aria-label="Switch poker club" value={roomId} onChange={e=>chooseRoom(e.target.value)}>
        {roomChoices.map(room=><option key={room.id} value={room.id}>{room.name}</option>)}

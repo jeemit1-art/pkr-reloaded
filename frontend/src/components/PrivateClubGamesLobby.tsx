@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import PkrGlyph from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import type {Game} from '@/lib/api';
 import {isLiveGame} from '@/lib/game-status';
 
@@ -42,6 +43,7 @@ export default function PrivateClubGamesLobby(p:Props){
  return <section className="pkr-privateclub-games pkr-casino-floor" data-testid="private-club-games" aria-label="Private Casino Club game lobby">
   <header className="pkr-cf-hero">
     <img src="/images/casino/real-casino-props.webp" className="pkr-cf-hero-photo" alt="" aria-hidden="true" decoding="async"/>
+    <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--games"/>
     <div className="pkr-cf-hero-pattern" aria-hidden="true"><span className="pkr-cf-holo-card">A<PkrGlyph name="spade" size={33}/></span><span className="pkr-cf-holo-chip">PKR</span></div>
     <div className="pkr-cf-marquee"><span className="pkr-cf-marquee-dot" aria-hidden="true"/><span>PRIVATE CASINO · GAME NIGHT</span></div>
     <div className="pkr-cf-hero-copy">

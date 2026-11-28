@@ -113,6 +113,10 @@ async function test(){
         errors.push(size.name+' launch CTA does not match Chip Blue: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
+      // A new SVG must finish loading before validating its intrinsic width.
+      await guestPage.locator('.pkr-l2-brand-emblem .pkr-brand-mark--landing').first().evaluate(async image=>{
+        if(image instanceof HTMLImageElement)await image.decode().catch(()=>{});
+      });
       const theme=await guestPage.evaluate(()=>{
         const root=getComputedStyle(document.querySelector('.pkr-launch'));
         const price=document.querySelector('.pkr-l2-price');
@@ -124,7 +128,7 @@ async function test(){
           priceFont:price?getComputedStyle(price).fontFamily:'',
           priceColor:price?getComputedStyle(price).color:'',
           proBorder:pro?getComputedStyle(pro).borderTopColor:'',
-          logo:!!document.querySelector('.pkr-l2-brand-emblem svg[data-pkr-icon=spade]'),
+          logo:[...document.querySelectorAll('.pkr-l2-brand-emblem .pkr-brand-mark--landing')].some(img=>img.getAttribute('src')==='/brand/pkr-crest.svg'&&img.naturalWidth>0),
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
@@ -134,7 +138,7 @@ async function test(){
         errors.push(size.name+' Pro pricing card lacks the Chip Club border: '+theme.proBorder);
       if(theme.priceColor!=='rgb(27, 31, 42)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
-      if(!theme.logo)errors.push(size.name+' current vector spade brand is missing');
+      if(!theme.logo)errors.push(size.name+' original PKR crest logo is missing or did not load');
       if(!theme.font.toLowerCase().includes('plus jakarta sans'))
         errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();

@@ -40,6 +40,8 @@ import './pkr-privateclub-light.css';
 import './pkr-universal-avatars.css';
 // One legible rank chip palette for all appearance themes and colour modes.
 import './pkr-rank-chips.css';
+// One real PKR logo, scaled consistently across all themes and the product shell.
+import './pkr-brand-crest.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -52,7 +54,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
   appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black'},
-  icons:{icon:'/icon-192.png',apple:'/icon-192.png'},
+  icons:{icon:[{url:'/brand/pkr-crest.svg',type:'image/svg+xml'},{url:'/icon-192.png',type:'image/png'}],apple:'/icon-192.png'},
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
   description:
     'PKR helps you manage private home poker games: track buy-ins and cash-outs, organize players, run tournament blinds, review leaderboards and see who owes whom. From AUD $9.99/month for hosts.',

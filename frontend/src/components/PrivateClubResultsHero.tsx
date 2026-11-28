@@ -2,6 +2,7 @@
 import PkrGlyph from '@/components/PkrGlyph';
 import RecordMetric from '@/components/RecordMetric';
 import RoomPlayerAvatar from '@/components/RoomPlayerAvatar';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import {rankChipStyle} from '@/lib/rank-chip-palette';
 import type {RoomAvatarSources} from '@/lib/room-player-avatars';
 import type {LeaderboardEntry} from '@/lib/api';
@@ -9,6 +10,7 @@ type Props={club:string;roomId:string;leaders:LeaderboardEntry[];completed:numbe
 export default function PrivateClubResultsHero({club,roomId,leaders,completed,onHistory,avatarSources}:Props){
  const top=leaders.filter(p=>p.user_id).slice().sort((a,b)=>b.total_net-a.total_net).slice(0,3);
  return <section className="pkr-pc-results-hero" data-testid="private-club-results" aria-label="Casino club hall of fame">
+   <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--results"/>
    <div className="pkr-pc-results-heading"><span className="pkr-pc-overline"><PkrGlyph name="trophy" size={15}/> HALL OF FAME</span>
      <h1>The <em>Leaderboard</em></h1><p>{club} · Every game has a story.</p>
    </div>

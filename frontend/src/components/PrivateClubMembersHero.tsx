@@ -1,5 +1,6 @@
 'use client';
 import PkrGlyph from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import type {EventMember} from '@/lib/api';
 
 type Props={club:string;members:EventMember[]};
@@ -16,6 +17,7 @@ export default function PrivateClubMembersHero({club,members}:Props){
    <h1>Our <em>Players</em></h1>
    <div className="pkr-pc-members-count"><PkrGlyph name="members" size={17}/><strong>{members.length}</strong> club members</div>
   </div>
+  <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--members"/>
   <div className="pkr-pc-members-scene" aria-hidden="true">
    <div className="pkr-pc-members-felt"><PkrGlyph name="spade" size={27}/></div>
   </div>
