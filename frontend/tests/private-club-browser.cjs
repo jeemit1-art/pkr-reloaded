@@ -93,8 +93,8 @@ async function runHost(browser,device){
   cases.push('host-'+name);
  }finally{await ctx.close();}
 }
-async function runEmptyHost(browser){
- const {page,ctx,failures}=await boot(browser,390,844,'host');
+async function runEmptyHost(browser,width=390,height=844){
+ const {page,ctx,failures}=await boot(browser,width,height,'host');
  try{
   // Use settled games only; the real production scenario has 46 completed
   // sessions and no upcoming games. No live API is ever contacted.
@@ -145,11 +145,19 @@ async function runEmptyHost(browser){
   }
   assert(computed.fontFamily.includes('Helvetica Neue')||computed.fontFamily.includes('-apple-system'),
    'Use the crisp native iOS system-font stack instead of an overly softened loaded font');
-  assert(computed.documentWidth<=390+4,'There must be no horizontal overflow '+JSON.stringify(computed));
+  assert(computed.documentWidth<=width+4,'There must be no horizontal overflow '+JSON.stringify(computed));
+  const fold=await page.evaluate(()=>{
+   const c=document.querySelector('.pkr-cf-schedule'),nav=document.querySelector('.pkr-universal-bottom-nav');
+   const button=c?.getBoundingClientRect(),bottom=nav?.getBoundingClientRect();
+   return {button:button?.toJSON()||null,navigation:bottom?.toJSON()||null};
+  });
+  assert(fold.button&&fold.navigation,'Both the host action and fixed navigation must be rendered');
+  assert(fold.button.top>=0&&fold.button.bottom<=fold.navigation.top-3,
+   'HOST YOUR NEXT GAME must be entirely above the fixed nav without scrolling on '+width+'px: '+JSON.stringify(fold));
   await validate(page,'empty-host-iphone');
-  await page.screenshot({path:path.join(output,'empty-host-iphone-vegas.png')});
+  await page.screenshot({path:path.join(output,'empty-host-'+width+'-vegas.png')});
   assert.deepEqual(failures,[],'Empty-screen browser errors');
-  cases.push('vegas-empty-iphone');
+  cases.push('vegas-empty-'+width);
  }finally{await ctx.close();}
 }
 
@@ -172,7 +180,8 @@ async function runPlayer(browser){
  const browser=await chromium.launch({headless:true});
  try{
   for(const item of devices)await runHost(browser,item);
-  await runEmptyHost(browser);
+  await runEmptyHost(browser,390,844);
+  await runEmptyHost(browser,320,700);
   await runPlayer(browser);
  }finally{await browser.close();}
  const safari=await webkit.launch({headless:true});
