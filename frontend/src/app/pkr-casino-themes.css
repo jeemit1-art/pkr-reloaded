@@ -828,3 +828,31 @@ html[data-pkr-personal-style="tournament"][data-pkr-personal-theme]:not(:has(#ga
  background:linear-gradient(125deg,#F8D8FF,var(--pkr-personal-surface))!important;border-color:#D47CEC!important;
 }
 }
+/* Casino artwork must also reach the default Game Night home, not only the optional Full dashboard. */
+@layer pkr-personal {
+html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-game-ticket,.gn-player-next,.pkr-dual-nextgame,.pkr-gn-quick-grid>button){
+ position:relative!important;isolation:isolate;overflow:hidden!important;
+}
+html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-game-ticket,.gn-player-next,.pkr-dual-nextgame,.pkr-gn-quick-grid>button)::after{
+ content:"";position:absolute;inset:0 -2% 0 auto;width:46%;height:100%;z-index:0;pointer-events:none;
+ background:var(--casino-art) center / contain no-repeat;opacity:.37;transform:rotate(4deg);
+}
+html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-quick-grid>button::after{
+ opacity:.12;width:42%;background-position:right center;transform:rotate(-8deg);
+}
+html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-game-ticket,.gn-player-next,.pkr-dual-nextgame,.pkr-gn-quick-grid>button)>*{position:relative;z-index:1}
+html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-game-ticket .pkr-gn-date{
+ filter:drop-shadow(0 1px 6px var(--casino-spark));
+}
+@media(max-width:520px){
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-game-ticket,.gn-player-next,.pkr-dual-nextgame)::after{opacity:.22;right:-8%;width:54%}
+}
+}
+/* Present the new casino designs as large artwork tiles, even while Classic or Noir is selected. */
+@layer pkr-personal {
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino>button{flex-direction:column;align-items:stretch;text-align:left;min-height:153px;padding:12px;border-radius:17px}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino .pkr-theme-style-swatch{width:100%;height:85px;flex:0 0 auto;background-size:cover;background-position:center;border-radius:11px}
+html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino .pkr-theme-style-check{position:absolute;right:13px;top:13px;background:var(--pkr-personal-surface);width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--pkr-personal-line);border-radius:50%}
+@media(max-width:440px){html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino{grid-template-columns:minmax(0,1fr)}html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino>button{flex-direction:row;align-items:center;min-height:95px}html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-visual-style-casino .pkr-theme-style-swatch{width:110px;height:66px;flex:0 0 110px}}
+}
