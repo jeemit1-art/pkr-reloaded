@@ -305,7 +305,7 @@ async function check(engine,size){
   await page.getByTestId('player-dashboard').locator('.gn-player-next[aria-busy="false"]').waitFor();
   await page.getByTestId('player-dashboard').locator('[aria-label="My settlement payments"][aria-busy="false"]').waitFor();
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-  assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'default','Installed app must request an opaque native status bar');
+  assert.equal(await page.locator('meta[name=apple-mobile-web-app-status-bar-style]').getAttribute('content'),'black','Installed app must request a dark opaque native status bar');
   if(size.installed){
     await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-installed'));
     const canvas=await page.evaluate(async()=>{
@@ -319,13 +319,13 @@ async function check(engine,size){
     });
     assert.equal(canvas.standalone,true,'The installed Safari code path must be exercised');
     assert.equal(canvas.dark,true,'The phone must request dark system appearance');
-    assert.equal(canvas.root,'rgb(255, 255, 255)','Native status-bar canvas must stay white in an installed dark-mode session');
-    assert.equal(canvas.body,'rgb(255, 255, 255)','The native canvas must remain compatible with the opaque light iOS status bar');
+    assert.equal(canvas.root,'rgb(255, 255, 255)','Classic saved theme keeps its existing light canvas');
+    assert.equal(canvas.body,'rgb(255, 255, 255)','Classic theme body canvas remains unchanged');
     assert.equal(canvas.rootImage,'none');assert.equal(canvas.bodyImage,'none');
-    assert.equal(canvas.colourScheme,'light');assert.equal(canvas.metaScheme,'light');
-    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#ffffff'),'Every native theme-colour hint must be white');
-    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#ffffff');
-    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#ffffff');
+    assert.equal(canvas.colourScheme,'light');assert.equal(canvas.metaScheme,'dark');
+    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#07160f'),'Every native theme-colour hint must match the dark installed status bar');
+    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#07160f');
+    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#07160f');
     assert.equal(canvas.manifest?.display,'standalone');
     await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll'));
     await stationaryRoot(page,'Installed initial view');
