@@ -6,6 +6,7 @@ import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import {useRoomExperience,CasinoStageArt} from '@/components/PokerClubStage';
 import PrivateClubResultsHero from '@/components/PrivateClubResultsHero';
+import RoomPlayerAvatar,{useRoomPlayerAvatarSources} from '@/components/RoomPlayerAvatar';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -31,6 +32,7 @@ export default function ResultsPage(){
  const experience=useRoomExperience();
  const [rooms,setRooms]=useState<Event[]>([]);
  const [selected,setSelected]=useState('');
+ const avatarSources=useRoomPlayerAvatarSources(selected);
  const [games,setGames]=useState<Game[]>([]);
  const [leaders,setLeaders]=useState<LeaderboardEntry[]>([]);
  const [view,setView]=useState<View>('standings');
@@ -185,7 +187,7 @@ export default function ResultsPage(){
      </select></label>}
    </div>
    <PrivateClubResultsHero club={room?.name||'Your private poker club'} roomId={selected}
-     leaders={ordered} completed={settled.length} onHistory={()=>setSection('history')}/>
+     leaders={ordered} completed={settled.length} avatarSources={avatarSources} onHistory={()=>setSection('history')}/>
    {experience==='command'?
     <header className="pkr-results-command-hero" data-testid="command-results-stage"
      aria-label="Command Centre results overview">
@@ -223,6 +225,7 @@ export default function ResultsPage(){
         request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
          playerId:p.user_id,playerName:p.display_name}}>
          <span className="pkr-results-seat-chip">#{i+1}</span>
+         <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-results-seat-avatar"/>
          <span className="pkr-results-seat-player">{p.display_name}</span>
          <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
        </RecordMetric>)}
@@ -259,7 +262,7 @@ export default function ResultsPage(){
             request={{kind:'player',title:player.display_name+' — game history',roomId:selected,
               playerId:player.user_id,playerName:player.display_name}}>
             <span className="pkr-results-command-place">{i===0?<PkrGlyph name="trophy"/>:'0'+(i+1)}</span>
-            <span className="pkr-results-command-person"><strong>{player.display_name}</strong>
+            <span className="pkr-results-command-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
               <small>{player.games_played} games · {player.games_won} profitable</small></span>
             <b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(player.total_net)}</b>
           </RecordMetric>)}
@@ -299,7 +302,7 @@ export default function ResultsPage(){
               kind:'player',title:player.display_name+' — game history',roomId:selected,
               playerId:player.user_id,playerName:player.display_name}}>
             <span className="pkr-results-ledger-position">{String(i+1).padStart(2,'0')}</span>
-            <span className="pkr-results-ledger-person"><strong>{player.display_name}</strong>
+            <span className="pkr-results-ledger-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
              <small>{player.games_played} played · {player.games_won} profitable{player.identity_review_required?' · Identity review':''}</small></span>
             <span className="pkr-results-ledger-games">{player.games_played}<small>played</small></span>
             <span className="pkr-results-ledger-net"><b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
@@ -314,7 +317,7 @@ export default function ResultsPage(){
              kind:'player',title:player.display_name+' — game history',roomId:selected,
              playerId:player.user_id,playerName:player.display_name}}>
             <span className={'pkr-results-live-chip pkr-results-live-chip-'+(i%3)}>{i+1}</span>
-            <span className="pkr-results-live-person"><strong>{player.display_name}</strong>
+            <span className="pkr-results-live-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
              <small>{player.games_played} games · {player.games_won} profitable
                {player.identity_review_required?' · Identity review':''}</small></span>
             <span className="pkr-results-live-net"><b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>
