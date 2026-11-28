@@ -15,6 +15,7 @@ import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
 import GamesSectionTabs from '@/components/GamesSectionTabs';
 import GamesEmptyArena from '@/components/GamesEmptyArena';
+import PrivateClubGamesLobby from '@/components/PrivateClubGamesLobby';
 import {PokerClubStage} from '@/components/PokerClubStage';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
@@ -572,9 +573,26 @@ export default function EventPage() {
           </button>}
         </div>
 
+        {/* The approved lounge is a true alternate composition. The old view stays functional for original styles. */}
+        {tab==='games'&&<div className="pkr-pc-new-games">
+          <PrivateClubGamesLobby club={event.name} games={games} upcoming={upcoming}
+            unfinished={unfinished} settled={settled} isHost={isHost} isOwner={isGroupOwner}
+            onSchedule={()=>setShowCreate(true)}
+            onGame={gameId=>router.push('/games/'+encodeURIComponent(gameId))}
+            onOpenTable={gameId=>router.push('/games/'+encodeURIComponent(gameId)+'/play')}
+            onWatch={gameId=>{const game=games.find(g=>g.id===gameId);if(game?.live_token)router.push('/games/live/'+encodeURIComponent(game.live_token));else router.push('/games/'+encodeURIComponent(gameId));}}
+            onRsvp={(gameId,choice)=>router.push('/games/'+encodeURIComponent(gameId)+'/rsvp'+(choice?'?choice='+choice:''))}
+            onShare={gameId=>openGameNight(gameId)}
+            onRsvpSettings={gameId=>router.push('/games/'+encodeURIComponent(gameId)+'/rsvp?settings=1#pkr-rsvp-settings')}
+            onQuickSeat={gameId=>{setQuickSeatGameId(gameId);setShowQuickSeat(true);}}
+            onCancel={gameId=>setConfirmDelete(gameId)}
+            onDelete={gameId=>setConfirmDelete(gameId+':delete')}
+            onResults={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}
+            onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
+        </div>}
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
-          <div>
+          <div className="pkr-pc-old-games">
             <div className="pkr-room-games-intro pkr-room-games-intro-experience">
               <PokerClubStage kind="games" title="Games" subtitle="Your sessions, tables and live RSVPs."
                 club={event.name}
