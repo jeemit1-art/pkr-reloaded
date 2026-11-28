@@ -1,10 +1,11 @@
 'use client';
 import PkrGlyph from '@/components/PkrGlyph';
 import RecordMetric from '@/components/RecordMetric';
+import RoomPlayerAvatar from '@/components/RoomPlayerAvatar';
+import type {RoomAvatarSources} from '@/lib/room-player-avatars';
 import type {LeaderboardEntry} from '@/lib/api';
-type Props={club:string;roomId:string;leaders:LeaderboardEntry[];completed:number;onHistory:()=>void};
-const initials=(n:string)=>n.trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-export default function PrivateClubResultsHero({club,roomId,leaders,completed,onHistory}:Props){
+type Props={club:string;roomId:string;leaders:LeaderboardEntry[];completed:number;onHistory:()=>void;avatarSources:RoomAvatarSources};
+export default function PrivateClubResultsHero({club,roomId,leaders,completed,onHistory,avatarSources}:Props){
  const top=leaders.filter(p=>p.user_id).slice().sort((a,b)=>b.total_net-a.total_net).slice(0,3);
  return <section className="pkr-pc-results-hero" data-testid="private-club-results" aria-label="Casino club hall of fame">
    <div className="pkr-pc-results-heading"><span className="pkr-pc-overline"><PkrGlyph name="trophy" size={15}/> HALL OF FAME</span>
@@ -19,7 +20,7 @@ export default function PrivateClubResultsHero({club,roomId,leaders,completed,on
      key={leader.user_id}
      request={{kind:'player',title:leader.display_name+' — game history',roomId,playerId:leader.user_id,playerName:leader.display_name}}>
       <span className="pkr-pc-results-medal">{index===0?<PkrGlyph name="trophy" size={23}/>:index+1}</span>
-      <span className="pkr-pc-results-face">{initials(leader.display_name)}</span>
+      <RoomPlayerAvatar player={leader} sources={avatarSources} className="pkr-pc-results-face"/>
       <strong>{leader.display_name}</strong>
       <small>{leader.games_played} games played</small>
     </RecordMetric>):<p className="pkr-pc-results-placeholder">The first completed game starts your hall of fame.</p>}
