@@ -1,0 +1,64 @@
+/* A single casino rank-chip treatment across all saved themes, including
+   light/dark/follow-device. The shade follows the displayed position, never
+   player identity, and cannot alter chips/bank values in active gameplay. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-rank-chip{
+  box-sizing:border-box!important;position:relative;
+  display:grid!important;place-items:center!important;flex-shrink:0!important;
+  min-width:0;overflow:visible!important;
+  background:var(--pkr-rank-fill,#972f4d)!important;
+  background-image:none!important;
+  color:var(--pkr-rank-ink,#fff)!important;
+  -webkit-text-fill-color:var(--pkr-rank-ink,#fff)!important;
+  border:3px dashed var(--pkr-rank-edge,#f8c5d3)!important;
+  border-radius:50%!important;
+  text-shadow:none!important;filter:none!important;opacity:1!important;
+  box-shadow:inset 0 0 0 2px #ffffff30,0 3px 8px #0003!important;
+  font:850 13px/1 var(--font-body),Inter,system-ui,sans-serif!important;
+  font-variant-numeric:tabular-nums!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-rank-chip :is(svg,svg *){
+  color:var(--pkr-rank-ink,#fff)!important;
+  stroke:currentColor!important;
+ }
+ /* The same rank keeps the same shade in the Vegas podium and Classic podium. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-results-rank>.pkr-pc-results-medal{
+  width:32px!important;height:32px!important;min-height:32px!important;
+  margin:0 auto!important;font-size:13px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-results-rank>.pkr-pc-results-medal svg{
+  width:19px!important;height:19px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-results-live-chip{
+  width:36px!important;height:36px!important;font-size:13px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-results-ledger-position{
+  width:33px!important;height:33px!important;font-size:12px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-results-command-place{
+  width:31px!important;height:31px!important;font-size:12px!important;
+ }
+ /* The felt badges are small, so do not cover player photos or payouts. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat>.pkr-results-seat-chip{
+  width:20px!important;height:20px!important;font-size:8px!important;
+  border-width:2px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-board .pkr-standings-row-rank{
+  width:32px!important;height:32px!important;flex:0 0 32px!important;
+  font-size:12px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-board .pkr-standings-medal{
+  width:34px!important;height:34px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-board .pkr-standings-medal svg{
+  width:20px!important;height:20px!important;
+ }
+ @media(max-width:360px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-results-live-chip{
+   width:33px!important;height:33px!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-results-ledger-position{
+   width:30px!important;height:30px!important;
+  }
+ }
+}
