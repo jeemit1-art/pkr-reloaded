@@ -413,3 +413,26 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   min-height:0!important;height:auto!important;
  }
 }
+
+/*
+ * iPhone regression: the old Games empty-state selector was cascading onto the
+ * new action despite its different composition. Bind readable contrast to the
+ * actual Vegas action itself and its text child, not a generic legacy button.
+ */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) 
+ .pkr-app.pkr-event .pkr-pc-new-games .pkr-casino-floor
+ .pkr-cf-empty .pkr-cf-empty-content > button.pkr-cf-schedule,
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) 
+ .pkr-app.pkr-event .pkr-pc-new-games .pkr-casino-floor
+ .pkr-cf-empty .pkr-cf-empty-content > button.pkr-cf-schedule > span,
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) 
+ .pkr-app.pkr-event .pkr-pc-new-games .pkr-casino-floor
+ .pkr-cf-empty .pkr-cf-empty-content > button.pkr-cf-schedule > svg{
+   color:#17111a!important;
+   -webkit-text-fill-color:#17111a!important;
+   text-shadow:none!important;
+   opacity:1!important;
+   filter:none!important;
+ }
+}
