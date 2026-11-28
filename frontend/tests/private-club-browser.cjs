@@ -121,8 +121,8 @@ async function runEmptyHost(browser){
   assert(computed,'CTA/button must have real text nodes');
   assert.equal(computed.textFilter,'none','Do not darken/blend the button text through a CSS filter');
   assert.equal(computed.textOpacity,'1','Gold button wording must not be translucent');
-  assert(/rgb\\(23, 17, 26\\)/.test(computed.textColor),'Button wording must be solid dark ink on gold '+JSON.stringify(computed));
-  assert(/rgb\\(23, 17, 26\\)/.test(computed.textFill),'iOS-specific text fill must be solid dark ink '+JSON.stringify(computed));
+  assert.equal(computed.textColor,'rgb(23, 17, 26)','Button text should be solid dark ink: '+JSON.stringify(computed));
+  assert.equal(computed.textFill,'rgb(23, 17, 26)','WebKit text fill should be solid dark ink: '+JSON.stringify(computed));
   assert(computed.fontFamily.includes('Helvetica Neue')||computed.fontFamily.includes('-apple-system'),
    'Use the crisp native iOS system-font stack instead of an overly softened loaded font');
   assert(computed.documentWidth<=390+4,'There must be no horizontal overflow '+JSON.stringify(computed));
