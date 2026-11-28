@@ -3,20 +3,22 @@
  * No external service, real room or real payment record is contacted. */
 const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {BASE,API,room,initialStorage,createFixture}=require('../scripts/launch-fixture.cjs');
+const {BASE,API,room,initialStorage,createFixture,FIXED_TIME}=require('../scripts/launch-fixture.cjs');
 const output=path.resolve(__dirname,'../../artifacts/private-club');
 fs.mkdirSync(output,{recursive:true});
 const devices=[['small-phone',320,700],['iphone',430,873],['tablet',768,1024],['desktop',1440,900]];
 const cases=[];
 async function boot(browser,w,h,role='host'){
  const fixture=createFixture();fixture.state.role=role;
- const ctx=await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:'reduce'});
+ const ctx=await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU',timezoneId:'Australia/Brisbane',isMobile:w<=430,hasTouch:w<=430});
  await ctx.addInitScript(stored=>{
   for(const [key,value] of Object.entries(stored))localStorage.setItem(key,value);
   localStorage.setItem('pkr_personal_visual_style_v1','private-club');
   localStorage.setItem('pkr_personal_appearance_v1','dark');
+  if(window.innerWidth<=430)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
  },initialStorage);
  const failures=[],page=await ctx.newPage();page.setDefaultTimeout(19000);
+ await page.clock.setFixedTime(new Date(FIXED_TIME));
  page.on('pageerror',error=>failures.push(error.message));
  await ctx.route('**/*',async route=>{
   const request=route.request(),url=new URL(request.url());
@@ -48,7 +50,12 @@ async function runHost(browser,device){
  const [name,w,h]=device;const {page,ctx,failures}=await boot(browser,w,h);
  try{
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
-  await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click().catch(()=>{});
+  try{await page.getByTestId('private-club-host-home').waitFor({state:'visible'});}catch(error){
+   const info=await page.evaluate(()=>({url:location.href,style:document.documentElement.getAttribute('data-pkr-personal-style'),theme:document.documentElement.getAttribute('data-pkr-personal-theme'),body:document.body.innerText.slice(0,1600),rendered:!!document.querySelector('[data-testid="private-club-host-home"]'),display:document.querySelector('.pkr-privateclub-host-surface')?getComputedStyle(document.querySelector('.pkr-privateclub-host-surface')).display:null}));
+   console.error('PRIVATE CLUB HOME DIAGNOSTICS',JSON.stringify({info,failures}));
+   await page.screenshot({path:path.join(output,'failed-host-'+name+'.png')}).catch(()=>{});throw error;
+  }
   assert(await page.locator('.pkr-privateclub-original-host').isHidden(),'Old host dashboard should not overlay approved UI');
   assert(await page.locator('.pkr-pc-entrance').isVisible(),'Cinematic lounge must be visible');
   assert(await page.locator('.pkr-pc-ticket').isVisible(),'Real ticket must be visible');
@@ -86,7 +93,10 @@ async function runPlayer(browser){
  const {page,ctx,failures}=await boot(browser,430,873,'member');
  try{
   await page.goto(BASE+'/dashboard');
-  await page.getByTestId('private-club-player-home').waitFor({state:'visible'});
+  try{await page.getByTestId('private-club-player-home').waitFor({state:'visible'});}catch(error){
+   console.error('PRIVATE CLUB PLAYER DIAGNOSTICS',JSON.stringify({url:page.url(),body:(await page.locator('body').innerText()).slice(0,1500),failures}));
+   await page.screenshot({path:path.join(output,'failed-player.png')}).catch(()=>{});throw error;
+  }
   assert(await page.locator('.gn-player-next').isHidden(),'Player must see approved lounge rather than old summary panel');
   await validate(page,'player');
   await page.screenshot({path:path.join(output,'player-iphone.png')});
