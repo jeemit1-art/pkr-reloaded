@@ -1,0 +1,20 @@
+{
+  "brand": "PKR",
+  "descriptor": "Your Private Poker Club",
+  "tagline": "More poker. Less admin.",
+  "url": "https://mypkr.app",
+  "colors": {
+    "midnight": "#0D0B19",
+    "velvet": "#2B1028",
+    "ruby": "#C94D6C",
+    "antiqueGold": "#EEC98A",
+    "ivory": "#FFF4D5",
+    "felt": "#153C31",
+    "win": "#69D59A",
+    "loss": "#FE8A87"
+  },
+  "typography": {
+    "ui": "Inter Variable, system-ui, sans-serif",
+    "marketing": "Inter Variable, system-ui, sans-serif"
+  }
+}

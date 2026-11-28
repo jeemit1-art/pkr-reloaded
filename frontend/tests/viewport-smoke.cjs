@@ -108,9 +108,13 @@ async function test(){
       });
       if(!closer.ok||closer.src!=='/demo/launch-20261127/desktop-live-table.webp')
         errors.push(size.name+' launch closing lacks the current real poker-table screenshot');
-      const landingCTAColour=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>getComputedStyle(el).backgroundColor);
-      if(landingCTAColour!=='rgb(62, 99, 221)')
-        errors.push(size.name+' launch CTA does not match Chip Blue: '+landingCTAColour);
+      const landingCTA=await guestPage.locator('.pkr-l2-btn-gold').first().evaluate(el=>{
+        const style=getComputedStyle(el);
+        return {image:style.backgroundImage,ink:style.color,height:el.getBoundingClientRect().height};
+      });
+      if(!landingCTA.image.includes('linear-gradient')||!landingCTA.image.includes('255, 244, 213')||
+          landingCTA.ink!=='rgb(36, 21, 34)'||landingCTA.height<42)
+        errors.push(size.name+' launch action must retain a clear PKR gold surface and dark ink: '+JSON.stringify(landingCTA));
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
       // A new SVG must finish loading before validating its intrinsic width.
@@ -132,15 +136,15 @@ async function test(){
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background!=='rgb(244, 241, 234)'||theme.primary.toLowerCase()!=='#3e63dd'||theme.ink.toLowerCase()!=='#1b1f2a')
-        errors.push(size.name+' current launch palette mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(62, 99, 221)')
-        errors.push(size.name+' Pro pricing card lacks the Chip Club border: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(27, 31, 42)'||!theme.priceFont.toLowerCase().includes('plus jakarta sans'))
-        errors.push(size.name+' prices must use readable slate numbers in the bundled Inter font: '+JSON.stringify(theme));
+      if(theme.background!=='rgb(13, 11, 25)'||theme.primary.toLowerCase()!=='#eec98a'||theme.ink.toLowerCase()!=='#fff4d5')
+        errors.push(size.name+' official PKR midnight/gold launch palette mismatch: '+JSON.stringify(theme));
+      if(theme.proBorder!=='rgb(238, 201, 138)')
+        errors.push(size.name+' Pro pricing card must retain a visible PKR gold border: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(255, 244, 213)'||!/(bodyfont|inter)/i.test(theme.priceFont))
+        errors.push(size.name+' host plan prices need readable ivory and sharp bundled typography: '+JSON.stringify(theme));
       if(!theme.logo)errors.push(size.name+' original PKR crest logo is missing or did not load');
-      if(!theme.font.toLowerCase().includes('plus jakarta sans'))
-        errors.push(size.name+' landing headings must use the bundled Inter font: '+theme.font);
+      if(!/(bodyfont|inter)/i.test(theme.font))
+        errors.push(size.name+' landing headings need the sharp bundled UI font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
       if(!planText.includes('$9.99')||!planText.includes('$19.99'))
         errors.push(size.name+' Theme A must preserve Starter and Pro prices');

@@ -1,11 +1,11 @@
 {
-  "name": "PKR Reloaded",
+  "name": "PKR — Your Private Poker Club",
   "short_name": "PKR",
-  "description": "Private poker rooms, mobile RSVPs, buy-ins and settlement — all in one place.",
+  "description": "More poker. Less admin. Private poker nights: invitations, RSVPs, game tracking, results and settlement records.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#07160F",
-  "theme_color": "#07160F",
+  "background_color": "#0D0B19",
+  "theme_color": "#0D0B19",
   "icons": [
     {
       "src": "/brand/pkr-crest.svg",
@@ -36,6 +36,11 @@
       "name": "Game schedule",
       "url": "/schedule",
       "description": "See your upcoming game nights"
+    },
+    {
+      "name": "Results and standings",
+      "url": "/results",
+      "description": "Review saved games and player results"
     }
   ],
   "id": "/dashboard",
