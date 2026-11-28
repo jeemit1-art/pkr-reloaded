@@ -599,6 +599,11 @@ export default function EventPage() {
               <GamesEmptyArena isHost={isHost}
                 onSchedule={()=>setShowCreate(true)}
                 onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
+              <div className="empty-state pkr-casino-original-empty">
+                <div className="empty-state-icon"><PkrGlyph name="games" size={32}/></div>
+                <div className="empty-state-text">No games scheduled yet.</div>
+                {isHost&&<div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
+              </div>
             )}
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
