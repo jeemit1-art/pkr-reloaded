@@ -976,3 +976,16 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   opacity:1!important;font-weight:850!important;
  }
 }
+
+/* Final visual QA: allow the full player game-count label to clear each podium rim. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-podium {
+  margin-bottom:22px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-podium-place {
+  min-height:166px!important;padding-bottom:20px!important;gap:8px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-podium-place small {
+  display:block!important;line-height:1.35!important;margin-top:2px!important;
+ }
+}
