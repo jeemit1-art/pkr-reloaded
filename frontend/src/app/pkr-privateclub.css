@@ -683,3 +683,151 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  .pkr-pc-unfinished-list button span{min-width:0;overflow-wrap:anywhere}
  .pkr-pc-lobby-bottom-actions button:nth-child(3){grid-column:1/-1}
 }
+
+/* Real screenshot QA, Nov 28: artwork visibility, gold/button contrast and compact controls.
+   These overrides are private-club only; real gameplay/settlement logic is unchanged. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene {
+  z-index:0!important;display:block!important;opacity:1!important;
+  background-image:linear-gradient(180deg,rgba(0,10,5,.04) 0%,rgba(0,18,10,.06) 30%,rgba(0,18,10,.62) 66%,#031911F7 94%),
+    url('/images/casino/real-casino-props.webp')!important;
+  background-position:center 42%!important;background-size:cover!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-identity{
+  z-index:4!important;position:relative!important;
+ }
+ /* Physical cards and chip stacks provide a clear gaming identity even when media is dark. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene-card{
+  display:flex!important;position:absolute;z-index:2;top:12%;right:15%;
+  width:62px;height:91px;align-items:center;justify-content:space-between;flex-direction:column;
+  padding:9px 6px;border:2px solid #FFFFFF;border-radius:6px;
+  background:linear-gradient(140deg,#FFFDF5,#EDE9DF)!important;color:#20242D!important;
+  font:900 17px/1 Georgia,serif!important;
+  box-shadow:0 12px 22px #000A,0 0 16px #FFE9B126!important;
+  pointer-events:none;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-card-one{
+  transform:rotate(-16deg)!important;right:22%!important;top:13%!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-card-two{
+  transform:rotate(12deg)!important;right:13%!important;top:17%!important;color:#B02C47!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene-chip {
+  display:block!important;position:absolute;z-index:3;top:30%;right:25%;
+  width:58px;height:58px;border:7px dashed #FDEAB6;border-radius:50%;
+  background:radial-gradient(circle,#9A2041 0 55%,#5B1E35 60%)!important;
+  box-shadow:0 0 0 3px #7F5625,inset 0 0 0 3px #E9D192,0 10px 18px #000A!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-chip-two{
+  top:24%!important;right:39%!important;width:49px;height:49px;transform:rotate(18deg);
+  background:radial-gradient(circle,#172B2B 0 55%,#0D171B 60%)!important;
+ }
+ /* Make the date ticket truly opaque, and readably separate from the felt. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-ticket,.pkr-pc-player-ticket){
+  background-color:#290B14!important; 
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-main-action,.pkr-pc-main-action *,
+ .pkr-pc-members-actions button.pkr-pc-members-primary,.pkr-pc-members-actions button.pkr-pc-members-primary *,
+ .pkr-pc-results-history,.pkr-pc-results-history *,
+ .pkr-pc-lobby-actions button.pkr-pc-lobby-primary,.pkr-pc-lobby-actions button.pkr-pc-lobby-primary *,
+ .pkr-pc-lobby-filter button[aria-current="page"],.pkr-pc-lobby-filter button[aria-current="page"] *,
+ .pkr-pc-lobby-empty>button,.pkr-pc-lobby-empty>button *,
+ .pkr-pc-results-hero .pkr-pc-results-history *) {
+  color:#1E150B!important;-webkit-text-fill-color:#1E150B!important;text-shadow:none!important;
+  opacity:1!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-results-page .pkr-section-tabs button[aria-current="page"],
+ .pkr-results-page .pkr-section-tabs button[aria-current="page"] *,
+ .pkr-gn-payment-sections button[aria-current="page"],
+ .pkr-gn-payment-sections button[aria-current="page"] *,
+ .pkr-gn-payment-sections a[aria-current="page"] *) {
+  color:#211608!important;-webkit-text-fill-color:#211608!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-main-action,.pkr-pc-results-history,.pkr-pc-lobby-actions button.pkr-pc-lobby-primary){
+  font-weight:900!important;letter-spacing:0!important;
+  white-space:normal!important;overflow-wrap:break-word!important;
+ }
+ /* Keep premium controls above graphics but never put graphics above touch targets. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero {
+  position:relative!important;isolation:isolate!important;
+  background-image:linear-gradient(90deg,#052119F2 0%,#06291CCB 45%,#061B0F44 100%),
+   url('/images/casino/real-poker-chips.webp')!important;
+  background-size:cover!important;background-position:center center!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-chip-art{
+  display:block!important;position:absolute;z-index:1;pointer-events:none;
+  right:8%;top:16%;width:105px;height:110px;
+ }
+ .pkr-pc-lobby-chip-art span{position:absolute;display:block;width:61px;height:61px;
+  border-radius:50%;border:7px dashed #FFE7A1;
+  background:radial-gradient(circle,#A32845 0 53%,#641F30 54%);
+  box-shadow:0 0 0 3px #9F7336,inset 0 0 0 3px #F1D495,0 8px 13px #000A}
+ .pkr-pc-lobby-chip-art span:nth-child(1){right:36px;top:24px;background:radial-gradient(circle,#152B2E 0 53%,#0D1822 54%);}
+ .pkr-pc-lobby-chip-art span:nth-child(2){right:4px;top:9px;}
+ .pkr-pc-lobby-chip-art span:nth-child(3){right:16px;top:47px;transform:scale(.80);background:radial-gradient(circle,#155A41 0 53%,#0C382A 54%)}
+ /* Approved Home starts with the lounge, not a second administrative tab bar. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home-switch:has(+ .pkr-privateclub-host-surface) {
+  display:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-approval-alert{
+  display:flex!important;gap:9px!important;align-items:center!important;flex-wrap:wrap!important;
+  margin-bottom:13px!important;padding:9px 12px!important;border-radius:13px!important;
+  background:#203B28!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-approval-alert>strong {
+  font:750 12px/1.35 "PKR Casino Sans",sans-serif!important;
+  color:#F6DB9B!important;-webkit-text-fill-color:#F6DB9B!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-approval-alert>div {
+  display:flex!important;align-items:center!important;margin-top:0!important;gap:5px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-approval-alert button{
+  min-height:33px!important;padding:6px 10px!important;font:850 11px/1.2 "PKR Casino Sans",sans-serif!important;
+  color:#221408!important;-webkit-text-fill-color:#221408!important;text-shadow:none!important;
+ }
+ /* Cashier spacing & artwork, without masking settlement amounts. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-hero{
+  min-height:205px!important;padding:24px 19px 17px!important;
+  background-image:linear-gradient(105deg,#06261DEF 0%,#0B2F21E6 48%,#06190D42 100%),
+   url('/images/casino/real-chip-closeup.webp')!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-copy{position:relative!important;z-index:3!important;}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-status{
+  display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;
+  margin:13px 0 0!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-status :is(span,strong){
+  display:inline-flex!important;align-items:center!important;
+  min-height:23px!important;margin:0!important;padding:5px 9px!important;
+  border-radius:999px!important;font:800 9px/1.2 "PKR Casino Sans",sans-serif!important;
+  color:#FFEBBE!important;-webkit-text-fill-color:#FFEBBE!important;
+  background:#123F2B!important;border:1px solid #BAA36C!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-status strong{
+  background:#43321B!important;border-color:#E5BB73!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-hero-art{
+  z-index:1!important;opacity:.65!important;
+ }
+ .pkr-pc-cashier-chip{display:block;position:absolute;right:13%;top:18%;
+  width:85px;height:85px;border-radius:50%;
+  border:9px dashed #EFD79C;outline:4px solid #966837;
+  box-shadow:0 0 0 3px #322112,inset 0 0 0 3px #FCDE98,0 11px 17px #0009;
+  background:radial-gradient(circle,#81263D 0 53%,#4D162B 54%);}
+ .pkr-pc-cashier-chip-b{right:4%;top:27%;width:64px;height:64px;transform:rotate(-17deg);
+  background:radial-gradient(circle,#0B2933 0 53%,#081C24 54%);}
+ @media(max-width:430px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene-card{
+   transform:scale(.85) rotate(-16deg)!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-card-two{
+   transform:scale(.85) rotate(12deg)!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-copy h1{
+   max-width:82%!important;font-size:29px!important;
+  }
+  .pkr-pc-cashier-chip{right:10%;top:21%;width:64px;height:64px}
+  .pkr-pc-cashier-chip-b{right:1%;top:27%;width:50px;height:50px}
+ }
+}
