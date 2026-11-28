@@ -75,6 +75,7 @@ async function runHost(browser,device){
   const going=page.getByRole('button',{name:/Going/}).first();
   await going.waitFor({state:'visible'});
   await going.click();
+  await page.waitForURL(url=>url.pathname.endsWith('/rsvp')&&url.searchParams.get('choice')==='yes',{timeout:12000});
   assert(new URL(page.url()).searchParams.get('choice')==='yes','Going must navigate to authorised RSVP form');
   assert(!failures.some(e=>/Forbidden fixture mutation|Unexpected API write/.test(e)),'No RSVP may be submitted automatically');
   if(w>=768){
