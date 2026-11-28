@@ -50,7 +50,7 @@ async function runHost(browser,device){
  const [name,w,h]=device;const {page,ctx,failures}=await boot(browser,w,h);
  try{
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
-  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click().catch(()=>{});
+  // The approved lounge is the default, and its legacy Home-view switch is intentionally hidden.
   try{await page.getByTestId('private-club-host-home').waitFor({state:'visible'});}catch(error){
    const info=await page.evaluate(()=>({url:location.href,style:document.documentElement.getAttribute('data-pkr-personal-style'),theme:document.documentElement.getAttribute('data-pkr-personal-theme'),body:document.body.innerText.slice(0,1600),rendered:!!document.querySelector('[data-testid="private-club-host-home"]'),display:document.querySelector('.pkr-privateclub-host-surface')?getComputedStyle(document.querySelector('.pkr-privateclub-host-surface')).display:null}));
    console.error('PRIVATE CLUB HOME DIAGNOSTICS',JSON.stringify({info,failures}));
