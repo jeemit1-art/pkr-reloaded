@@ -1,0 +1,407 @@
+/* PKR PRIVATE CASINO CLUB — VEGAS FLOOR V2
+ * Intent: a distinct experience, not the Luxe Casino palette with a new title.
+ * Crisp, system-rendered typography, high-contrast CTAs and a real poker-floor UI.
+ * Only personal style "private-club"; excludes the protected live poker table.
+ */
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)){
+ --pkr-personal-canvas:#090910;
+ --pkr-personal-surface:#15131f;
+ --pkr-personal-raised:#201b2d;
+ --pkr-personal-line:#665461;
+ --pkr-personal-control:#c9b6bb;
+ --pkr-personal-ink:#fff9f4;
+ --pkr-personal-muted:#d5c9ce;
+ --pkr-personal-primary:#9a2439;
+ --pkr-personal-primary-deep:#601729;
+ --pkr-personal-accent:#ffcc9d;
+ --pkr-personal-accent-surface:#3a1f30;
+ --pkr-personal-accent-line:#c87976;
+ --pkr-personal-nav:#100e18;
+ --pkr-personal-hero:#25101d;
+ --pkr-personal-hero-deep:#0a0c16;
+ --pkr-personal-hero-live:#163b35;
+ --pkr-personal-on-dark:#fffdfa;
+ --pkr-personal-on-dark-muted:#e3d8d9;
+ --pkr-personal-gold-fill:#ffcf8d;
+ --pkr-personal-on-gold:#171019;
+ --casino-cta:linear-gradient(145deg,#ffefd0 0%,#ffbf78 72%,#e78e4f 100%);
+ --casino-cta-ink:#161019;
+ --pkr-vg-ink:#fffaf6;
+ --pkr-vg-cream:#fce5d6;
+ --pkr-vg-muted:#d9c8ce;
+ --pkr-vg-red:#ff5e73;
+ --pkr-vg-coral:#ff966a;
+ --pkr-vg-gold:#ffda98;
+ --pkr-vg-teal:#54dfc6;
+ --pkr-vg-font:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,system-ui,sans-serif;
+ color-scheme:dark;
+}
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ body,.pkr-app.pkr-event,.pkr-app.pkr-dashboard,.pkr-primary-page,.pkr-results-page,
+ .pkr-gn-payment-workspace,.pkr-player-home){
+  color:#fffaf6!important;
+  background-color:#090910!important;
+  background-image:radial-gradient(ellipse 90% 27% at 50% -4%,#552338 0%,transparent 75%),linear-gradient(180deg,#100e18,#090910 65%)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility),
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility) body{
+  background:#090910!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-primary-mobile-utility,.pkr-primary-sidebar){
+  background:#14101b!important;
+  background-image:linear-gradient(135deg,#18101c,#0c0c16)!important;
+  border-color:#af6459!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
+  background:linear-gradient(180deg,#20101e,#0a0a12)!important;
+  border-top:1px solid #b65e66!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav button.active{
+  background:linear-gradient(180deg,#d7485a32,transparent 78%)!important;
+  box-shadow:inset 0 3px 0 #ff7b86!important;
+  color:#ffe0aa!important;-webkit-text-fill-color:#ffe0aa!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-mobile-utility :is(.pkr-primary-mobile-mark,.pkr-primary-club-name,.pkr-primary-account){
+  color:#fff3e6!important;-webkit-text-fill-color:#fff3e6!important;
+  text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-account{
+  background:#241b2c!important;border-color:#d17c73!important;
+ }
+ /* Crisp legible type. No filter, opacity tricks or text-gradient masks on labels. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-casino-floor,.pkr-casino-floor button,.pkr-casino-floor h1,.pkr-casino-floor h2,.pkr-casino-floor h3,
+ .pkr-casino-floor span,.pkr-casino-floor p,.pkr-casino-floor strong,.pkr-casino-floor small,
+ .pkr-privateclub-home,.pkr-privateclub-home button,.pkr-privateclub-player,
+ .pkr-primary-mobile-utility,.pkr-primary-bottom-nav){
+  font-family:var(--pkr-vg-font)!important;
+  -webkit-font-smoothing:auto!important;
+  text-rendering:optimizeLegibility;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-casino-floor button,.pkr-casino-floor button *,.pkr-privateclub-home button,
+ .pkr-privateclub-home button *,.pkr-pc-members-actions button,.pkr-pc-members-actions button *,
+ .pkr-pc-results-history,.pkr-pc-results-history *){
+  text-shadow:none!important;
+ }
+ /* The old golden CTA had pale/hidden letters: cancel every inherited filter. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-cf-schedule,.pkr-cf-schedule *,.pkr-pc-main-action,.pkr-pc-main-action *,
+ .pkr-pc-lobby-primary,.pkr-pc-lobby-primary *,.pkr-pc-members-primary,.pkr-pc-members-primary *,
+ .pkr-pc-results-history,.pkr-pc-results-history *){
+  color:#17111a!important;-webkit-text-fill-color:#17111a!important;
+  filter:none!important;opacity:1!important;text-shadow:none!important;
+  font-weight:850!important;
+  text-decoration:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-cf-filters button[aria-current="page"] span,.pkr-cf-filters button[aria-current="page"] small){
+  filter:none!important;opacity:1!important;
+  color:#fff9ee!important;-webkit-text-fill-color:#fff9ee!important;
+ }
+ /* Wider line height and stronger small-size text on all five destinations. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-overline,.pkr-pc-ticket-info p,.pkr-pc-next-actions button small,.pkr-pc-members-count,.pkr-pc-results-heading p){
+  font-family:var(--pkr-vg-font)!important;
+  font-weight:650!important;
+  text-shadow:none!important;
+ }
+ /* Faint green re-skin boxes are not the visual language of the casino floor. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-pc-entrance,.pkr-pc-player-scene,.pkr-pc-members-hero,.pkr-pc-results-hero,.pkr-pc-cashier-hero){
+  background-color:#170c1c!important;
+  border-color:#c17c6f!important;
+  box-shadow:0 13px 32px #0008,inset 0 0 0 1px #ffd3a514!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-ticket,.pkr-pc-player-ticket){
+  border-color:#ec9778!important;
+  background:linear-gradient(122deg,#49152f,#72243c 57%,#240f21)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-shortcuts button,.pkr-pc-next-actions button,.pkr-pc-player-payments-link){
+  background:linear-gradient(135deg,#292039,#151421)!important;
+  border-color:#a17e8d!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-podium-place,.pkr-pc-results-rank,.pkr-gn-payment-card,.pkr-results-card,.gn-player-card){
+  background:linear-gradient(145deg,#291c30,#15131f)!important;
+  border-color:#a27981!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-members-intro h1 em,.pkr-pc-results-heading h1 em,.pkr-pc-cashier-copy h1 em){
+  color:#ffb192!important;-webkit-text-fill-color:#ffb192!important;
+ }
+}
+
+/* THE VEGAS POKER FLOOR — full structural redesign of the Games screen. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-event .pkr-casino-floor{
+  display:flex!important;flex-direction:column!important;gap:0!important;
+  width:100%!important;max-width:980px!important;margin:0 auto 28px!important;
+  color:var(--pkr-vg-ink)!important;font-family:var(--pkr-vg-font)!important;
+ }
+ .pkr-casino-floor *{box-sizing:border-box}
+ .pkr-cf-hero{
+  position:relative;isolation:isolate;display:block;
+  min-height:330px;overflow:hidden;
+  border:1px solid #a85a5d;border-radius:20px;
+  background:#090e17;
+  box-shadow:0 18px 35px #0009,inset 0 0 0 1px #ffbaa91b;
+ }
+ .pkr-cf-hero::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,#080d17fa 1%,#11101ce8 40%,#1a091da0 73%,#180d1a5a 100%),
+  radial-gradient(circle at 85% 28%,#ff785246,transparent 55%);
+ }
+ .pkr-cf-hero-photo{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+  display:block;object-fit:cover;object-position:72% 43%;filter:saturate(1.25) contrast(1.17);opacity:.78}
+ .pkr-cf-hero-pattern{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+ .pkr-cf-holo-card{position:absolute;right:13%;top:19%;width:67px;height:94px;display:flex;
+  flex-direction:column;justify-content:space-between;padding:8px;
+  border:1px solid #ffe7d7;border-radius:7px;background:linear-gradient(135deg,#fff2dc,#dfc1af);
+  color:#2b1824;font:900 21px/1 Georgia,serif;transform:rotate(17deg);
+  box-shadow:0 14px 26px #000a;opacity:.88}
+ .pkr-cf-holo-chip{position:absolute;right:3%;top:35%;width:82px;height:82px;
+  display:grid;place-items:center;border-radius:50%;border:9px dashed #f9dbb7;
+  outline:4px solid #c0454e;background:radial-gradient(circle,#ae2949,#4c1638);
+  box-shadow:0 0 0 7px #17151f,0 9px 23px #000b;
+  color:#ffdfc1;font:900 13px/1 var(--pkr-vg-font);transform:rotate(-17deg)}
+ .pkr-cf-marquee{position:relative;z-index:3;display:flex;align-items:center;gap:9px;
+  height:42px;padding:0 20px;border-bottom:1px solid #ff757c69;background:#150d1bd9;
+  color:#ffddd0;font:850 10px/1.2 var(--pkr-vg-font);letter-spacing:.12em}
+ .pkr-cf-marquee-dot{width:9px;height:9px;border-radius:50%;background:#ff6472;
+  box-shadow:0 0 0 4px #ff5e7323,0 0 16px #ff5e73}
+ .pkr-cf-hero-copy{position:relative;z-index:3;min-width:0;padding:29px 20px 25px}
+ .pkr-cf-hero-kicker{display:block;font:850 11px/1.25 var(--pkr-vg-font);
+  color:#ffb69f;letter-spacing:.12em}
+ .pkr-cf-hero-copy h1{display:flex;flex-direction:column;align-items:flex-start;
+  margin:7px 0 12px!important;max-width:96%;text-align:left;
+  font:1000 clamp(36px,8vw,70px)/.99 var(--pkr-vg-font)!important;
+  letter-spacing:-.07em!important;color:#fffaf7!important;
+  -webkit-text-fill-color:#fffaf7!important;text-shadow:none!important}
+ .pkr-cf-hero-copy h1 em{font-style:normal;color:#ff677c!important;
+  -webkit-text-fill-color:#ff677c!important}
+ .pkr-cf-hero-copy h1>span{display:block;color:#fff9ed!important;-webkit-text-fill-color:#fff9ed!important}
+ .pkr-cf-hero-copy p{margin:0!important;font:750 13px/1.35 var(--pkr-vg-font)!important;
+  color:#fff1e5!important;-webkit-text-fill-color:#fff1e5!important;
+  overflow-wrap:anywhere}
+ .pkr-cf-hero-metrics{position:relative;z-index:3;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+  padding:0 8px;background:linear-gradient(90deg,#210f23f5,#1b1723f3);
+  border-top:1px solid #a6626e}
+ .pkr-cf-hero-metrics button{display:flex;flex-direction:column;justify-content:center;align-items:center;
+  min-width:0;gap:4px;min-height:75px;padding:8px 3px;border:0!important;border-radius:0!important;
+  background:transparent!important;color:#fff5eb!important;box-shadow:none!important;
+  font-family:var(--pkr-vg-font)!important}
+ .pkr-cf-hero-metrics button:not(:last-child){border-right:1px solid #8e627458!important}
+ .pkr-cf-hero-metrics button strong{font:900 28px/1 var(--pkr-vg-font)!important;
+  color:#fffaf3!important;-webkit-text-fill-color:#fffaf3!important}
+ .pkr-cf-hero-metrics button span{display:inline-flex;align-items:center;gap:5px;
+  font:850 10px/1.2 var(--pkr-vg-font)!important;color:#ead7d7!important;
+  -webkit-text-fill-color:#ead7d7!important;letter-spacing:.11em}
+ .pkr-cf-live-dot,.pkr-cf-ticket-status-dot{width:7px;height:7px;background:#ff667a;border-radius:50%;
+  box-shadow:0 0 9px #ff667a;display:inline-block;flex:none}
+ .pkr-cf-filters{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0!important;margin:14px 0 22px!important;padding:0!important;
+  border:1px solid #8c6171!important;border-radius:13px!important;
+  background:#13121d!important;box-shadow:0 8px 22px #0006!important;overflow:hidden}
+ .pkr-cf-filters button{display:flex!important;flex-direction:row!important;align-items:center;justify-content:center;
+  min-height:53px!important;gap:6px!important;padding:12px 3px!important;
+  border:0!important;border-radius:0!important;border-bottom:3px solid transparent!important;
+  background:transparent!important;box-shadow:none!important;
+  font:800 13px/1.2 var(--pkr-vg-font)!important;
+  color:#e7dce1!important;-webkit-text-fill-color:#e7dce1!important}
+ .pkr-cf-filters button[aria-current="page"]{
+  border-bottom:3px solid #ff6a77!important;
+  background:#431d33!important;
+  color:#fff9f4!important;-webkit-text-fill-color:#fff9f4!important}
+ .pkr-cf-filters button small{font:850 11px/1 var(--pkr-vg-font)!important;
+  color:#ffddce!important;-webkit-text-fill-color:#ffddce!important;
+  padding:2px 5px;border-radius:6px;background:#71324c!important;opacity:1!important}
+ .pkr-cf-filters button[aria-current="page"] small{background:#e27072!important;
+  color:#181018!important;-webkit-text-fill-color:#181018!important}
+ .pkr-cf-section-line{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  min-height:58px;padding:0 2px;margin:0 0 12px}
+ .pkr-cf-section-line>div{display:flex;align-items:center;gap:10px;min-width:0}
+ .pkr-cf-suit{display:grid;place-items:center;flex:0 0 33px;width:33px;height:33px;
+  background:#422035;border:1px solid #b86275;border-radius:8px;color:#ffcfbd;
+  font:900 23px/1 Georgia,serif}
+ .pkr-cf-kicker{font:900 10px/1.2 var(--pkr-vg-font)!important;
+  letter-spacing:.13em;color:#ff9fa0!important;-webkit-text-fill-color:#ff9fa0!important}
+ .pkr-cf-section-line h2{margin:3px 0 0!important;
+  font:900 19px/1.16 var(--pkr-vg-font)!important;
+  color:#fffaf6!important;-webkit-text-fill-color:#fffaf6!important}
+ .pkr-cf-host-quick{display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:7px!important;min-height:42px!important;flex:none;padding:8px 10px!important;
+  background:#211626!important;border:1px solid #d27a75!important;border-radius:9px!important;
+  color:#ffe8dc!important;-webkit-text-fill-color:#ffe8dc!important;
+  font:850 12px/1.2 var(--pkr-vg-font)!important}
+ .pkr-cf-host-quick span{color:#ffe8dc!important;-webkit-text-fill-color:#ffe8dc!important}
+ .pkr-cf-session-list{display:grid;gap:12px}
+ .pkr-cf-game-ticket{
+  background:linear-gradient(116deg,#242030,#381a32 80%,#1c1726)!important;
+  border:1px solid #cf877e!important;border-left:5px solid #ff6579!important;border-radius:12px!important;
+  color:#fff8f2!important;box-shadow:0 8px 22px #0007!important}
+ .pkr-cf-game-ticket.is-live{border-left-color:#60e5ca!important;border-color:#63b9ae!important;
+  background:linear-gradient(116deg,#182c31,#1b3540 70%,#1a2330)!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-ticket-top{background:#181321!important;
+  border-color:#8c6772!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-ticket-top>span{font-size:11px!important;
+  color:#ffc7be!important;-webkit-text-fill-color:#ffc7be!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-ticket-main{padding:16px!important}
+ .pkr-cf-ticket-art{display:flex;position:absolute;right:16px;top:0;bottom:0;align-items:center;
+  gap:4px;z-index:1;pointer-events:none;opacity:.13}
+ .pkr-cf-ticket-art span{font:900 65px/1 Georgia,serif;color:#fff9ed}
+ .pkr-cf-ticket-art span:last-child{color:#ff788e}
+ .pkr-cf-game-ticket .pkr-pc-lobby-date{border-color:#bd8798!important;
+  color:#fff5e8!important;-webkit-text-fill-color:#fff5e8!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-session-copy{z-index:3}
+ .pkr-cf-game-ticket .pkr-pc-lobby-session-copy :is(h2,p,span){
+  color:#fff7ed!important;-webkit-text-fill-color:#fff7ed!important}
+ .pkr-cf-game-ticket .pkr-pc-rsvp-quick button{background:#302b39!important;border:1px solid #a98a99!important;
+  color:#fffaf3!important;-webkit-text-fill-color:#fffaf3!important;
+  font:800 12px/1.25 var(--pkr-vg-font)!important;min-height:47px!important}
+ .pkr-cf-game-ticket .pkr-pc-rsvp-quick button:first-child{background:#205d4c!important;
+  border-color:#71d6b6!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-actions button{min-height:48px!important;
+  background:#1d1b29!important;color:#fff2ea!important;-webkit-text-fill-color:#fff2ea!important;
+  border:1px solid #b27f86!important;font-size:12px!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-actions button.pkr-pc-lobby-primary{
+  background:linear-gradient(145deg,#fff1d9,#ffbe88)!important;border-color:#ffebd0!important}
+ .pkr-cf-game-ticket .pkr-pc-lobby-primary *{color:#17111a!important;-webkit-text-fill-color:#17111a!important;opacity:1!important}
+ /* Major change: hero-like poker table rather than the Luxe green empty-state card. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-cf-empty{
+  position:relative!important;isolation:isolate;display:flex!important;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px!important;min-height:375px;
+  padding:22px 16px 23px!important;margin:0!important;border:1px solid #ae667b!important;
+  border-radius:16px!important;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 8%,#3c2137 0%,#17121f 57%,#100f18 90%)!important;
+  box-shadow:inset 0 1px 0 #fdb6a122,0 11px 24px #0008!important;
+ }
+ .pkr-cf-tabletop{height:168px;width:min(100%,295px);display:grid;place-items:center;min-height:0;flex:none}
+ .pkr-cf-table-rim{position:relative;width:100%;height:145px;display:grid;place-items:center;
+  transform:perspective(300px) rotateX(20deg);
+  border-radius:50%;border:14px solid #925044;
+  background:linear-gradient(125deg,#b27b5d,#472e3a);
+  box-shadow:0 0 0 4px #edb98c,0 16px 25px #000a,inset 0 0 0 3px #f9cb8a}
+ .pkr-cf-felt{position:relative;display:grid;place-items:center;width:100%;height:100%;
+  border-radius:50%;border:2px solid #94b99b;
+  background:radial-gradient(ellipse at 45% 34%,#195a4b,#06372d 75%);
+  box-shadow:inset 0 0 16px #021a14a8}
+ .pkr-cf-felt-brand{font:900 32px/1 var(--pkr-vg-font)!important;color:#e7cc8a!important;
+  -webkit-text-fill-color:#e7cc8a!important;opacity:.32}
+ .pkr-cf-table-card{position:absolute;display:flex;flex-direction:column;justify-content:space-between;
+  padding:6px 7px;background:#fff9ed;border:1px solid #fff;width:44px;height:68px;
+  border-radius:5px;color:#1b1523;font:900 18px/1 Georgia,serif!important;
+  box-shadow:0 5px 12px #0008}
+ .pkr-cf-table-card.one{top:8%;left:18%;transform:rotate(-19deg)}
+ .pkr-cf-table-card.two{top:7%;left:33%;transform:rotate(15deg);color:#b62f48}
+ .pkr-cf-table-chip{position:absolute;right:19%;top:45%;width:38px;height:38px;
+  border-radius:50%;border:6px dashed #fce4ad;outline:2px solid #762a48;
+  background:#ba3854;box-shadow:0 6px 12px #0008}
+ .pkr-cf-table-chip.chip-two{right:10%;top:37%;background:#142f40;transform:scale(.85)}
+ .pkr-cf-empty-content{position:relative;z-index:2;display:flex;flex-direction:column;
+  align-items:center;max-width:440px;width:100%;min-width:0;text-align:center;gap:9px}
+ .pkr-cf-empty-content h2{margin:1px 0 0!important;
+  font:900 clamp(21px,4.8vw,27px)/1.15 var(--pkr-vg-font)!important;
+  color:#fffaf3!important;-webkit-text-fill-color:#fffaf3!important;
+  text-shadow:none!important;letter-spacing:-.035em}
+ .pkr-cf-empty-content p{font:600 13px/1.43 var(--pkr-vg-font)!important;
+  max-width:330px;margin:0 0 2px!important;color:#efe4e5!important;
+  -webkit-text-fill-color:#efe4e5!important;text-shadow:none!important}
+ .pkr-cf-schedule{position:relative;display:flex!important;align-items:center!important;
+  justify-content:center!important;gap:8px!important;flex-wrap:nowrap!important;
+  min-height:55px!important;width:100%!important;max-width:340px!important;
+  margin-top:6px!important;padding:12px 12px!important;
+  border:1px solid #ffe5c4!important;border-radius:11px!important;
+  background:linear-gradient(145deg,#ffedcd 0%,#ffbd7c 90%)!important;
+  box-shadow:inset 0 1px 0 #fff9e0,0 5px 0 #71472d,0 9px 15px #0008!important;
+  color:#17111a!important;-webkit-text-fill-color:#17111a!important;
+  font:900 13px/1.2 var(--pkr-vg-font)!important;
+  letter-spacing:0!important;text-shadow:none!important;filter:none!important;opacity:1!important}
+ .pkr-cf-schedule :is(span,svg){color:#17111a!important;
+  -webkit-text-fill-color:#17111a!important;filter:none!important;opacity:1!important;
+  text-shadow:none!important}
+ .pkr-cf-last-night{display:flex;align-items:center;gap:12px;min-width:0;margin-top:14px;
+  padding:13px 14px;border:1px solid #875b6a;border-radius:13px;background:#201a27}
+ .pkr-cf-last-night-crest{flex:0 0 40px;height:40px;display:grid;place-items:center;
+  border:1px solid #c8997a;border-radius:10px;background:#3d2c32;color:#ffcf95}
+ .pkr-cf-last-night>div:nth-child(2){flex:1;min-width:0}
+ .pkr-cf-last-night h3{margin:4px 0!important;font:850 15px/1.25 var(--pkr-vg-font)!important;color:#fff6ef!important}
+ .pkr-cf-last-night p{font:650 12px/1.3 var(--pkr-vg-font)!important;color:#dfd1d6!important;margin:0!important}
+ .pkr-cf-last-night>button{background:#2e2233!important;border:1px solid #ae7281!important;
+  width:40px;height:40px;border-radius:10px!important;color:#f5cab9!important}
+ .pkr-cf-explore{margin-top:16px}
+ .pkr-cf-explore-title{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
+ .pkr-cf-explore-title h2{margin:4px 0 0!important;
+  font:950 20px/1.13 var(--pkr-vg-font)!important;letter-spacing:-.025em;
+  color:#fff8ee!important;-webkit-text-fill-color:#fff8ee!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px!important;margin:0!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button{min-height:100px!important;display:flex!important;
+  flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;
+  gap:10px!important;min-width:0;padding:13px 11px!important;
+  background:linear-gradient(135deg,#272033,#151522)!important;
+  border:1px solid #9a7584!important;border-radius:14px!important;
+  color:#fff9ef!important;-webkit-text-fill-color:#fff9ef!important;
+  font-family:var(--pkr-vg-font)!important;text-align:left!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button:nth-child(3){grid-column:1/-1;min-height:75px!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button>span:nth-child(2){
+  flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button strong{font:850 13px/1.22 var(--pkr-vg-font)!important;
+  color:#fffaf3!important;-webkit-text-fill-color:#fffaf3!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button small{font:650 11px/1.25 var(--pkr-vg-font)!important;
+  color:#dac6ce!important;-webkit-text-fill-color:#dac6ce!important}
+ .pkr-cf-explore .pkr-pc-lobby-bottom-actions button>svg:last-child{color:#ffbe9d}
+ .pkr-cf-tool-icon{display:grid;place-items:center;flex:0 0 42px;height:42px;
+  border-radius:12px;border:1px solid #b38994;background:#482639;color:#ffcca5}
+ .pkr-cf-tool-icon.results{background:#47302b;border-color:#c9987b;color:#ffe5b6}
+ .pkr-cf-tool-icon.invite{background:#123d3e;border-color:#4eb1a5;color:#94f0d7}
+ .pkr-cf-unfinished{display:flex;flex-direction:column}
+ .pkr-casino-floor :is(button,a):focus-visible{outline:3px solid #ffe0a1!important;outline-offset:3px!important}
+ @media(min-width:790px){
+  .pkr-cf-hero{min-height:375px}
+  .pkr-cf-hero-copy{padding:45px 36px 35px}
+  .pkr-cf-hero-copy h1{font-size:66px!important}
+  .pkr-cf-marquee{padding:0 34px}
+  .pkr-cf-hero-photo{object-position:center 45%}
+  .pkr-cf-holo-card{right:24%}
+  .pkr-cf-holo-chip{right:16%}
+  .pkr-cf-empty{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);
+   gap:25px!important;min-height:310px!important;align-items:center!important;text-align:left!important}
+  .pkr-cf-tabletop{height:185px;max-width:330px;width:100%}
+  .pkr-cf-empty-content{align-items:flex-start;text-align:left}
+  .pkr-cf-empty-content p{text-align:left}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button:nth-child(3){grid-column:auto}
+ }
+ @media(max-width:440px){
+  .pkr-cf-hero{min-height:307px}
+  .pkr-cf-hero-copy{padding:27px 18px 23px}
+  .pkr-cf-hero-copy h1{font-size:clamp(36px,9.2vw,44px)!important}
+  .pkr-cf-holo-card{right:13%;top:22%;opacity:.45}
+  .pkr-cf-holo-chip{right:1%;top:39%;opacity:.7;transform:rotate(-17deg) scale(.78)}
+  .pkr-cf-hero-metrics button{min-height:68px}
+  .pkr-cf-filters button{font-size:12px!important;min-height:50px!important}
+  .pkr-cf-section-line h2{font-size:16px!important}
+  .pkr-cf-host-quick{font-size:11px!important}
+  .pkr-cf-empty{min-height:370px!important}
+  .pkr-cf-tabletop{height:155px}
+  .pkr-cf-table-rim{height:126px;max-width:273px}
+  .pkr-cf-empty-content h2{font-size:21px!important}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button{min-height:88px!important;padding:12px 7px!important;gap:7px!important}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button strong{font-size:12px!important}
+  .pkr-cf-tool-icon{flex-basis:35px;height:37px}
+ }
+ @media(max-width:360px){
+  .pkr-cf-hero-copy h1{font-size:35px!important}
+  .pkr-cf-holo-card{display:none}
+  .pkr-cf-holo-chip{opacity:.3}
+  .pkr-cf-section-line{flex-wrap:wrap}
+  .pkr-cf-host-quick{margin-left:auto}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions{grid-template-columns:1fr}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button:nth-child(3){grid-column:auto}
+  .pkr-cf-explore .pkr-pc-lobby-bottom-actions button{min-height:74px!important}
+ }
+ @media(prefers-reduced-motion:no-preference){
+  .pkr-cf-schedule,.pkr-cf-explore button,.pkr-cf-filters button{transition:background .14s ease,transform .14s ease,border-color .14s ease}
+  .pkr-cf-schedule:active,.pkr-cf-explore button:active{transform:scale(.985)}
+ }
+}
