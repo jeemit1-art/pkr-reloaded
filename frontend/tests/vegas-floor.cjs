@@ -22,7 +22,7 @@ assert(jsx.includes('p.unfinished.map'),'Unfinished historic sessions must remai
 assert(jsx.includes('p.settled.slice()'),'The archive must use recorded settled games');
 assert(css.includes('-webkit-font-smoothing:auto'),'Use crisp native font rasterisation, not translucent text');
 assert(css.includes('filter:none!important;opacity:1!important'),'Buttons must not inherit the previous darkening/opacity trick');
-assert(css.includes('color:#17111a!important;-webkit-text-fill-color:#17111a!important'),
- 'Primary CTA must have solid dark ink on a light solid metallic button');
+assert(css.includes('background-color:#241423!important')&&css.includes('color:#ffcc9d!important;-webkit-text-fill-color:#ffcc9d!important'),
+ 'Primary CTA must have a solid dark backdrop behind opaque light casino text');
 assert(css.includes('@media(max-width:360px)'),'Small-screen control widths must be covered');
 console.log('PASS Vegas floor: distinct structure, sharp readable text, safe callbacks, archived games and gameplay exclusion');
