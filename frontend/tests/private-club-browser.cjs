@@ -35,7 +35,7 @@ async function boot(browser,w,h,role='host',appearance='dark'){
 async function validate(page,label,ignoreClipped=[]){
  await page.evaluate(()=>document.fonts.ready);
  const issues=await page.evaluate(ignore=>{
-  const all=[...document.querySelectorAll('.pkr-pc-main-action,.pkr-pc-shortcuts button,.pkr-pc-lobby-filter button,.pkr-pc-lobby-actions button,.pkr-pc-rsvp-quick button,.pkr-pc-next-actions button')];
+  const all=[...document.querySelectorAll('.pkr-no-hero-cta,.pkr-no-tools-grid button,.pkr-no-ticket-footer button,.pkr-no-player-next-actions button,.pkr-pc-lobby-filter button,.pkr-pc-lobby-actions button,.pkr-pc-rsvp-quick button,.pkr-no-player-links button')];
   const visible=all.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).visibility!=='hidden'});
   return {width:innerWidth,scroll:document.documentElement.scrollWidth,
    clipped:visible.filter(el=>!ignore.some(t=>el.textContent?.includes(t))&&(el.scrollWidth>el.clientWidth+4||el.scrollHeight>el.clientHeight+4)).map(el=>({text:el.textContent,w:el.clientWidth,scroll:el.scrollWidth,h:el.clientHeight,sh:el.scrollHeight})),
@@ -56,9 +56,9 @@ async function verifyBrandMark(page,context,selector){
     intrinsic:image.naturalWidth,opacity:Number(style.opacity),
     left:rect.left,right:rect.right,top:rect.top};
  });
- assert.equal(result.src,'/brand/pkr-crest.svg',context+' must use the real shared logo');
+ assert.equal(result.src,'/brand/pkr-night-mark.svg',context+' must use approved Open Chip K');
  assert(result.intrinsic>0,context+' logo must load correctly: '+JSON.stringify(result));
- assert(result.width>=28&&result.height>=28,context+' mark is too small: '+JSON.stringify(result));
+ assert(result.width>=24&&result.height>=24,context+' mark is too small: '+JSON.stringify(result));
  assert(result.opacity>0&&result.opacity<=1,context+' logo must be visible and not obstruct copy');
  assert(result.left>=-1&&result.right<=await page.evaluate(()=>innerWidth)+1,
   context+' logo must not stick out of phone viewport '+JSON.stringify(result));
@@ -74,19 +74,21 @@ async function runHost(browser,device){
    await page.screenshot({path:path.join(output,'failed-host-'+name+'.png')}).catch(()=>{});throw error;
   }
   assert(await page.locator('.pkr-privateclub-original-host').isHidden(),'Old host dashboard should not overlay approved UI');
-  assert(await page.locator('.pkr-pc-entrance').isVisible(),'Cinematic lounge must be visible');
-  assert(await page.locator('.pkr-pc-ticket').isVisible(),'Real ticket must be visible');
-  await verifyBrandMark(page,name+' Home','.pkr-pc-entrance .pkr-brand-mark--host');
+  assert(await page.locator('.pkr-no-hero').isVisible(),'Approved blue game-night banner must be visible');
+  assert(await page.locator('.pkr-no-next-ticket').isVisible(),'Real branded game-night pass must be visible');
+  await verifyBrandMark(page,name+' Home','.pkr-no-ticket-mark');
+   const hero=await page.locator('.pkr-no-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.equal(hero,'rgb(16, 70, 248)',name+' Home must use official PKR blue');
   await validate(page,name+' host');
   await page.screenshot({path:path.join(output,'host-'+name+'.png')});
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-games').waitFor({state:'visible'});
   assert(await page.locator('.pkr-pc-old-games').isHidden(),'The old generic dashboard must not be visible beneath lobby');
-  assert(await page.locator('.pkr-cf-hero').isVisible(),'This must be the different Vegas poker-floor composition');
-  assert(await page.getByRole('heading',{name:/THE POKER FLOOR/i}).isVisible(),'The distinctive floor marquee should be readable');
+  assert(await page.locator('.pkr-no-games-hero').isVisible(),'Games must use the official PKR blue banner');
+  assert(await page.getByRole('heading',{name:/THE NIGHT IS ON/i}).isVisible(),'Approved PKR brand heading must be readable');
   assert(await page.locator('.pkr-cf-hero-metrics button').count()===3,'Real game metrics must be in the hero');
   assert.equal(await page.locator('.pkr-pc-lobby-filter button').count(),3);
-  await verifyBrandMark(page,name+' Games','.pkr-cf-hero .pkr-brand-mark--games');
+  assert.equal(await page.locator('.pkr-cf-hero-photo').count(),0,name+' Games cannot show casino stock photography');
   await validate(page,name+' Games');
   await page.screenshot({path:path.join(output,'games-'+name+'.png')});
   await page.getByRole('navigation',{name:'Game lobby filters'}).getByRole('button',{name:/Live/}).click();
@@ -106,7 +108,7 @@ async function runHost(browser,device){
   // Player directory must show one action pathway, not a second hero menu and podium.
   await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-players').waitFor({state:'visible'});
-  await verifyBrandMark(page,name+' Players','.pkr-pc-members-hero .pkr-brand-mark--members');
+  assert(await page.locator('.pkr-no-members-stamps').isVisible(),name+' Players must show brand-numbered member badges');
   assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-podium').count(),0,
    'Player rankings belong in Results; do not duplicate podium in Directory');
   assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-members-actions button').count(),0,
@@ -142,68 +144,44 @@ async function runHost(browser,device){
 async function runEmptyHost(browser,width=390,height=844){
  const {page,ctx,failures}=await boot(browser,width,height,'host');
  try{
-  // Use settled games only; the real production scenario has 46 completed
-  // sessions and no upcoming games. No live API is ever contacted.
   await page.route('**/events/'+room.id+'/games',route=>route.fulfill({
    status:200,contentType:'application/json',body:JSON.stringify(settled),
    headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true',
-    'access-control-allow-headers':'Content-Type,Authorization',
-    'access-control-allow-methods':'GET,POST,PUT,OPTIONS'}
+   'access-control-allow-headers':'Content-Type,Authorization',
+   'access-control-allow-methods':'GET,POST,PUT,OPTIONS'}
   }));
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
-  await page.locator('.pkr-cf-schedule').waitFor({state:'visible'});
+  const button=page.locator('.pkr-cf-schedule');
+  await button.waitFor({state:'visible'});
   await page.evaluate(()=>document.fonts.ready);
-  assert(await page.locator('.pkr-cf-table-rim').isVisible(),'The new felt table empty state must be visible');
+  assert(await page.locator('.pkr-no-empty-icon').isVisible(),'The official PKR mark must replace the old casino scenery');
+  assert.equal(await page.locator('.pkr-cf-table-rim').count(),0,'No illustrated fake poker table in empty state');
   assert(await page.getByText('Ready for the next deal?').isVisible(),'The new empty-state heading must be visible');
-  const computed=await page.evaluate(()=>{
-   const button=document.querySelector('.pkr-cf-schedule'),span=button?.querySelector('span'),filter=document.querySelector('.pkr-cf-filters button[aria-current="page"] span');
-   if(!button||!span||!filter)return null;
-   const b=getComputedStyle(button),s=getComputedStyle(span),f=getComputedStyle(filter);
-   return {buttonColor:b.color,bgColor:b.backgroundColor,bgImage:b.backgroundImage,textColor:s.color,textFill:s.getPropertyValue('-webkit-text-fill-color'),
-    textFilter:s.filter,textOpacity:s.opacity,fontFamily:s.fontFamily,fontWeight:s.fontWeight,
-    filterColor:f.color,filterOpacity:f.opacity,filterFilter:f.filter,
-    box:button.getBoundingClientRect().toJSON(),documentWidth:document.documentElement.scrollWidth};
+  const computed=await button.evaluate(el=>{
+   const text=el.querySelector('span'),style=getComputedStyle(el),foreground=text?getComputedStyle(text):null;
+   return {background:style.backgroundColor,image:style.backgroundImage,ink:style.color,
+    text:foreground?.color,fill:foreground?.getPropertyValue('-webkit-text-fill-color'),
+    font:style.fontFamily,height:el.getBoundingClientRect().height,
+    width:el.getBoundingClientRect().width};
   });
-  assert(computed,'CTA/button must have real text nodes');
-  assert.equal(computed.textFilter,'none','Do not darken/blend the button text through a CSS filter');
-  assert.equal(computed.textOpacity,'1','CTA wording must not be translucent');
-  assert(computed.bgColor.startsWith('rgb(')&&computed.bgColor!=='rgba(0, 0, 0, 0)','CTA must have opaque browser-painted dark backing: '+JSON.stringify(computed));
-  assert(computed.bgImage.includes('linear-gradient'),'CTA must retain the casino button gradient');
-  assert(computed.textColor.startsWith('rgb('),'CTA must use a solid computed text colour');
-  assert.equal(computed.textFill,computed.textColor,'WebKit fill must match the real rendered foreground, not a hidden overlay');
-  const luminance=rgb=>{
-   const channels=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);
-   assert.equal(channels.length,3,'Computed RGB must have three components: '+rgb);
-   return channels.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
-    .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
-  };
-  const contrast=(a,b)=>{
-   const l1=luminance(a),l2=luminance(b);
-   return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05);
-  };
-  const solidRatio=contrast(computed.textColor,computed.bgColor);
-  assert(solidRatio>=7,'CTA text against opaque backing must be AAA readable (actual '+solidRatio.toFixed(2)+'): '+JSON.stringify(computed));
-  const stops=[...computed.bgImage.matchAll(/rgba?\([^)]+\)/g)].map(match=>match[0]);
-  assert(stops.length>=2,'Casino button needs gradient stop colours for contrast verification');
-  for(const stop of stops){
-   const ratio=contrast(computed.textColor,stop);
-   assert(ratio>=4.5,'CTA text must be AA-readable across its entire gradient (stop '+stop+', actual '+ratio.toFixed(2)+'): '+JSON.stringify(computed));
-  }
-  assert(computed.fontFamily.includes('Helvetica Neue')||computed.fontFamily.includes('-apple-system'),
-   'Use the crisp native iOS system-font stack instead of an overly softened loaded font');
-  assert(computed.documentWidth<=width+4,'There must be no horizontal overflow '+JSON.stringify(computed));
+  assert.equal(computed.background,'rgb(199, 255, 58)','The primary host CTA must use approved PKR citron: '+JSON.stringify(computed));
+  assert.equal(computed.image,'none','Do not use gradient imagery for buttons');
+  assert.equal(computed.ink,'rgb(11, 13, 20)','Dark solid ink is required on a light CTA');
+  assert(/Inter|bodyFont/i.test(computed.font),'Use crisp bundled UI typography: '+JSON.stringify(computed));
+  assert(computed.height>=44&&computed.width>=140,'Tap target must be accessible: '+JSON.stringify(computed));
+  await button.scrollIntoViewIfNeeded();
   const fold=await page.evaluate(()=>{
-   const c=document.querySelector('.pkr-cf-schedule'),nav=document.querySelector('.pkr-universal-bottom-nav');
-   const button=c?.getBoundingClientRect(),bottom=nav?.getBoundingClientRect();
-   return {button:button?.toJSON()||null,navigation:bottom?.toJSON()||null};
+   const btn=document.querySelector('.pkr-cf-schedule')?.getBoundingClientRect();
+   const nav=document.querySelector('.pkr-universal-bottom-nav')?.getBoundingClientRect();
+   return {button:btn?.toJSON(),navigation:nav?.toJSON()};
   });
-  assert(fold.button&&fold.navigation,'Both the host action and fixed navigation must be rendered');
-  assert(fold.button.top>=0&&fold.button.bottom<=fold.navigation.top-3,
-   'HOST YOUR NEXT GAME must be entirely above the fixed nav without scrolling on '+width+'px: '+JSON.stringify(fold));
-  await validate(page,'empty-host-iphone');
-  await page.screenshot({path:path.join(output,'empty-host-'+width+'-vegas.png')});
+  assert(fold.button&&fold.navigation,'Host action and fixed bottom navigation must exist');
+  assert(fold.button.top>=0&&fold.button.bottom<=fold.navigation.top+2,
+    'Host CTA must be reachable without the fixed footer covering it: '+JSON.stringify(fold));
+  await validate(page,'empty-host-'+width);
+  await page.screenshot({path:path.join(output,'empty-host-'+width+'-night.png')});
   assert.deepEqual(failures,[],'Empty-screen browser errors');
-  cases.push('vegas-empty-'+width);
+  cases.push('official-empty-'+width);
  }finally{await ctx.close();}
 }
 
@@ -231,74 +209,54 @@ async function runSafariMembers(browser){
  }finally{await ctx.close()}
 }
 
-async function runLightMode(browser){
+async function runCanonicalFromLegacyPreference(browser){
+ // A member with an old saved light preference must still get ONE approved PKR identity.
  const {page,ctx,failures}=await boot(browser,390,844,'host','light');
  try{
   await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-players').waitFor({state:'visible'});
-  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light','Light colour preference must apply on private-club routes');
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark','Legacy light preference must not override official PKR design');
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club','The approved brand is canonical');
   const colours=await page.evaluate(()=>{
    const app=document.querySelector('.pkr-app.pkr-event'),nav=document.querySelector('.pkr-primary-bottom-nav.pkr-universal-bottom-nav');
-   const card=document.querySelector('.pkr-directory-player');
-   return {scheme:getComputedStyle(document.documentElement).colorScheme,
-    canvas:getComputedStyle(app).backgroundColor,nav:getComputedStyle(nav).backgroundColor,
-    card:card?getComputedStyle(card).backgroundColor:null,
-    bodyInk:getComputedStyle(app).color};
+   const hero=document.querySelector('.pkr-no-members');
+   return {canvas:getComputedStyle(app).backgroundColor,nav:getComputedStyle(nav).backgroundColor,hero:getComputedStyle(hero).backgroundColor};
   });
-  const channels=rgb=>(rgb?.match(/\d+/g)||[]).slice(0,3).map(Number);
-  const bright=rgb=>{const a=channels(rgb);return a.length===3&&a.every(v=>v>=215);};
-  const luminance=rgb=>{
-   const a=channels(rgb).map(c=>{const v=c/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
-   return a.length===3?a[0]*0.2126+a[1]*0.7152+a[2]*0.0722:0;
-  };
-  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
-  assert.equal(colours.scheme,'light','Colour mode must set browser light controls '+JSON.stringify(colours));
-  assert(bright(colours.canvas)&&bright(colours.nav)&&bright(colours.card),
-   'Light mode must have bright real canvas, bottom nav and player cards '+JSON.stringify(colours));
-  assert(contrast(colours.bodyInk,colours.canvas)>=4.5,'Light mode must use AA-readable text '+JSON.stringify(colours));
+  assert.equal(colours.canvas,'rgb(11, 13, 20)','Official PKR canvas must use ink');
+  assert.equal(colours.nav,'rgb(13, 20, 36)','Official PKR navigation must be opaque');
+  assert.equal(colours.hero,'rgb(21, 31, 53)','Official Players card must use branded slate');
   const player=page.locator('.pkr-directory-player').first();
   assert(await player.isVisible(),'At least one member card must render');
-  assert(await player.locator('.pkr-directory-history').isVisible(),'Game history is always one tap away');
+  assert(await player.locator('.pkr-directory-history').isVisible(),'Game history is one tap away');
   const details=player.getByRole('button',{name:/Details/});
-  await details.click();
-  assert(await player.locator('.pkr-directory-extra').isVisible(),'Advanced member actions must expand on demand');
-  assert(await player.getByRole('button',{name:/Edit player profile/}).isVisible(),'Profile editing must remain accessible');
+  await details.click();assert(await player.locator('.pkr-directory-extra').isVisible(),'Member editing must expand when authorised');
+  assert(await player.getByRole('button',{name:/Edit player profile/}).isVisible(),'The host keeps edit actions');
   await player.getByRole('button',{name:/Less/}).click();
-  assert.equal(await player.locator('.pkr-directory-extra').count(),0,'Details must collapse cleanly');
-  await validate(page,'light members');
-  await page.screenshot({path:path.join(output,'players-light-iphone.png')});
+  assert.equal(await player.locator('.pkr-directory-extra').count(),0,'Member details must collapse');
+  await validate(page,'official brand members');
+  await page.screenshot({path:path.join(output,'players-official-iphone.png')});
   await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
-  const homeScene=await page.locator('.pkr-pc-entrance').evaluate(el=>getComputedStyle(el).backgroundColor);
-  const homeTicket=await page.locator('.pkr-pc-ticket').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert(bright(homeScene)&&bright(homeTicket),'Light Home first fold must be bright, not just the page background: '+JSON.stringify({homeScene,homeTicket}));
-  await page.screenshot({path:path.join(output,'home-light-iphone.png')});
+  const host=await page.locator('.pkr-no-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert.equal(host,'rgb(16, 70, 248)','Host hero must be official blue');
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-games').waitFor({state:'visible'});
-  const filter=await page.locator('.pkr-cf-filters').evaluate(el=>getComputedStyle(el).backgroundColor);
-  const gameScene=await page.locator('.pkr-cf-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert(bright(filter)&&bright(gameScene),'Light Games first-fold hero and filters must be bright: '+JSON.stringify({gameScene,filter}));
-  await page.screenshot({path:path.join(output,'games-light-iphone.png')});
+  const games=await page.locator('.pkr-no-games-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert.equal(games,'rgb(16, 70, 248)','Games hero must use exactly the same blue');
   await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-results').waitFor({state:'visible'});
-  await verifyBrandMark(page,'Light Results','.pkr-pc-results-hero .pkr-brand-mark--results');
-  const results=await page.locator('.pkr-pc-results-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert(bright(results),'Light Results hero must be a light working surface: '+results);
+  assert(await page.locator('.pkr-no-results').isVisible(),'Results must use official branded header');
   await page.goto(BASE+'/payments?room='+room.id,{waitUntil:'domcontentloaded'});
-  await page.locator('.pkr-pc-cashier-hero').waitFor({state:'visible'});
-  await verifyBrandMark(page,'Light Payments','.pkr-pc-cashier-hero .pkr-brand-mark--payments');
-  const payments=await page.locator('.pkr-pc-cashier-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert(bright(payments),'Light Payments hero must be a light working surface: '+payments);
+  await page.locator('.pkr-no-payments-hero').waitFor({state:'visible'});
+  assert(await page.locator('.pkr-gn-payment-workspace').isVisible(),'Payments remain interactive');
   await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
   const settings=page.getByTestId('personal-appearance');
   await settings.waitFor({state:'visible'});
-  await settings.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Dark'}).click();
-  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark','Dark selection must switch immediately');
-  await settings.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Light'}).click();
-  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light','Light selection must restore immediately');
-  assert.deepEqual(failures,[],'Light appearance browser/API errors');
-  cases.push('light-theme-and-compact-players');
- }finally{await ctx.close()}
+  assert(await settings.getByText('PKR identity').isVisible(),'Account should describe the official brand');
+  assert.equal(await settings.locator('[data-style-option]').count(),0,'There must not be another casino theme picker');
+  assert.deepEqual(failures,[],'Brand parity browser/API errors');
+  cases.push('single-brand-legacy-preference');
+ }finally{await ctx.close();}
 }
 
 async function runPlayer(browser){
@@ -309,7 +267,8 @@ async function runPlayer(browser){
    console.error('PRIVATE CLUB PLAYER DIAGNOSTICS',JSON.stringify({url:page.url(),body:(await page.locator('body').innerText()).slice(0,1500),failures}));
    await page.screenshot({path:path.join(output,'failed-player.png')}).catch(()=>{});throw error;
   }
-  assert(await page.locator('.gn-player-next').isHidden(),'Player must see approved lounge rather than old summary panel');
+  assert(await page.locator('.pkr-no-player-pass').isVisible(),'Player must see the club member pass');
+   assert(await page.locator('.pkr-no-player-next').isVisible(),'Player must see their real next game');
   await validate(page,'player');
   await page.screenshot({path:path.join(output,'player-iphone.png')});
   assert.deepEqual(failures,[]);
@@ -323,12 +282,12 @@ async function runPlayer(browser){
   await runEmptyHost(browser,390,844);
   await runEmptyHost(browser,320,700);
   await runPlayer(browser);
-  await runLightMode(browser);
+  await runCanonicalFromLegacyPreference(browser);
  }finally{await browser.close();}
  const safari=await webkit.launch({headless:true});
  try{
   await runHost(safari,['safari-iphone',390,844]);
   await runSafariMembers(safari);
  }finally{await safari.close();}
- console.log('PASS Private Casino Club browser: '+cases.join(', '));
+ console.log('PASS The Night Is On browser: '+cases.join(', '));
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
