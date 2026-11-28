@@ -1,12 +1,11 @@
 'use client';
 import PkrGlyph from '@/components/PkrGlyph';
-import PkrBrandMark from '@/components/PkrBrandMark';
 import type {EventMember} from '@/lib/api';
 
 type Props={club:string;members:EventMember[]};
 
 /**
- * Private Casino Club players: one compact directory introduction.
+ * Approved PKR directory intro. Real member count; no replica podium.
  * Rankings already belong to Results, and the live roster/invitation/approval
  * tabs immediately below are the single source of navigation actions.
  */

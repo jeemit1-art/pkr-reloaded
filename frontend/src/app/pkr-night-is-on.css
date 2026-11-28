@@ -819,3 +819,118 @@
   }
  }
 }
+
+
+/* Shared record-backed command centre, Insights, calendar and game-detail screens.
+   Do not allow the older green/ruby casino layer to reappear when the user switches views. */
+@layer pkr-personal{
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-hero,.pkr-dual-hero-command,.pkr-dual-hero-live,.pkr-vnext-insights-top,
+ .pkr-casino-game-summary,.pkr-game-summary,.pkr-gn-home-hero,.pkr-schedule-hero,
+ .pkr-insights-intro,.pkr-payments-stage){
+  background:#182A48!important;background-image:none!important;border-color:#48658F!important;
+  color:#F5F5EF!important;box-shadow:0 8px 21px #0005!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-hero,.pkr-dual-hero-command,.pkr-dual-hero-live,.pkr-vnext-insights-top,
+ .pkr-casino-game-summary,.pkr-game-summary,.pkr-gn-home-hero)::before,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-hero,.pkr-dual-hero-command,.pkr-dual-hero-live,.pkr-vnext-insights-top,
+ .pkr-casino-game-summary,.pkr-game-summary,.pkr-gn-home-hero)::after{
+  display:none!important;content:none!important;background-image:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-hero,.pkr-dual-hero-command,.pkr-dual-hero-live,.pkr-vnext-insights-top,
+ .pkr-casino-game-summary,.pkr-game-summary,.pkr-gn-home-hero) :is(h1,h2,h3,h4){
+  color:#F5F5EF!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-dual-hero,.pkr-dual-hero-command,.pkr-dual-hero-live,.pkr-vnext-insights-top,
+ .pkr-casino-game-summary,.pkr-game-summary,.pkr-gn-home-hero) :is(p,span,small){
+  color:#D2DEEF!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-gold-button,
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-primary{
+  background:#C7FF3A!important;color:#0B0D14!important;border:1px solid #C7FF3A!important;
+  -webkit-text-fill-color:#0B0D14!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-hero .pkr-dual-gold-button :is(span,svg){
+  color:#0B0D14!important;-webkit-text-fill-color:#0B0D14!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-room-outstanding,.pkr-dual-summary,.pkr-dual-card,.pkr-insights-kpi,.pkr-insights-balance-tiles>div,
+ .pkr-insights-payment-summary>div,.pkr-dual-metrics>div,.pkr-dual-panel){
+  background:#18243A!important;background-image:none!important;color:#F5F5EF!important;
+  border-color:#465E82!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-room-outstanding,.pkr-dual-summary,.pkr-dual-card,.pkr-insights-kpi) :is(p,small,span){
+  color:#CEDAE9!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-room-outstanding-total{
+  color:#C7FF3A!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-vnext-insights{
+  background:#0B0D14!important;background-image:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-vnext-insights-stats .pkr-insights-kpi{
+  background:#18243A!important;border:1px solid #48658A!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-vnext-bar-column,.pkr-vnext-game-row,.pkr-insights-player-mobile-row,
+ .pkr-vnext-data-table,.pkr-vnext-table-scroll){
+  color:#F5F5EF!important;background:#17233A!important;border-color:#465C7C!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-vnext-data-table,.pkr-insights-trend) :is(th,td){
+  color:#E0E7F3!important;border-color:#435475!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-gn-payment-filters,.pkr-gn-payment-totals,.pkr-gn-payment-list-heading,
+ .pkr-gn-payment-search-tools,.pkr-results-player-row,.pkr-results-command-row,
+ .pkr-results-live-table,.pkr-member-directory,.pkr-member-roster){
+  background:#121D30!important;background-image:none!important;color:#F5F5EF!important;
+  border-color:#415A7E!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-totals :is(h2,span,strong){
+  color:#F5F5EF!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-card .pkr-gn-payment-amount{
+  font-weight:850!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-appearance{
+  background:#152039!important;border:1px solid #466189!important;padding:22px!important;border-radius:17px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-appearance h2{
+  color:#C7FF3A!important;margin-bottom:17px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-brand-identity{
+  background:#0B0D14!important;display:flex!important;align-items:center!important;
+  gap:16px!important;flex-wrap:wrap!important;border:1px solid #53688C!important;
+  border-radius:15px!important;padding:17px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-brand-identity img{
+  width:min(100%,245px)!important;height:auto!important;object-fit:contain!important;max-width:100%!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-brand-identity span{
+  font:900 italic 14px var(--font-body),Inter,sans-serif!important;
+  color:#C7FF3A!important;letter-spacing:.055em!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-appearance p{
+  color:#C7D2E4!important;font-size:13px!important;line-height:1.6!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-no-members-stamps:empty{display:none!important}
+ /* Hide old casino scene markup, not the actual user's photo/avatar or the poker table. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-casino-stage-art,.pkr-casino-art-asset,.pkr-casino-empty-arena,.pkr-pc-scene-chip,
+ .pkr-pc-scene-card,.pkr-casino-art-chip,.pkr-casino-art-card,.pkr-casino-art-halo){
+  display:none!important;background-image:none!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-insights-trend,.pkr-dual-data-card,.pkr-primary-metric) :is(.is-profit,.is-positive,.pkr-vnext-positive){
+  color:#2ACB91!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+ .pkr-insights-trend,.pkr-dual-data-card,.pkr-primary-metric) :is(.is-loss,.is-negative,.pkr-vnext-negative){
+  color:#FF7468!important;
+ }
+}
