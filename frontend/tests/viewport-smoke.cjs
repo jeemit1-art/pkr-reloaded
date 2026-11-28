@@ -113,6 +113,10 @@ async function test(){
         errors.push(size.name+' launch CTA does not match Chip Blue: '+landingCTAColour);
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
+      // A new SVG must finish loading before validating its intrinsic width.
+      await guestPage.locator('.pkr-l2-brand-emblem .pkr-brand-mark--landing').first().evaluate(async image=>{
+        if(image instanceof HTMLImageElement)await image.decode().catch(()=>{});
+      });
       const theme=await guestPage.evaluate(()=>{
         const root=getComputedStyle(document.querySelector('.pkr-launch'));
         const price=document.querySelector('.pkr-l2-price');
