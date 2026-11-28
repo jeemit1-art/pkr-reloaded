@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" role="img" aria-label="PKR - Your private poker club"><svg x="22" y="27" width="166" height="166" viewBox="0 0 144 144">
+  <defs>
+    <linearGradient id="pkr-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF4D5"/>
+      <stop offset=".20" stop-color="#EEC98A"/>
+      <stop offset=".49" stop-color="#AF682E"/>
+      <stop offset=".70" stop-color="#F5D599"/>
+      <stop offset="1" stop-color="#985125"/>
+    </linearGradient>
+    <radialGradient id="pkr-velvet" cx=".36" cy=".24" r=".87">
+      <stop offset="0" stop-color="#6A1D3B"/>
+      <stop offset=".50" stop-color="#2B1028"/>
+      <stop offset="1" stop-color="#0D0B19"/>
+    </radialGradient>
+    <linearGradient id="pkr-ruby" x1=".10" y1="0" x2=".91" y2="1">
+      <stop offset="0" stop-color="#F09AA4"/>
+      <stop offset=".16" stop-color="#C94D6C"/>
+      <stop offset=".52" stop-color="#752442"/>
+      <stop offset=".90" stop-color="#3B1737"/>
+      <stop offset="1" stop-color="#9A3759"/>
+    </linearGradient>
+    <filter id="pkr-glow" x="-22%" y="-22%" width="144%" height="144%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#08050D" flood-opacity=".57"/>
+    </filter>
+  </defs>
+  <circle cx="72" cy="72" r="67" fill="#100B18" stroke="#A66C40" stroke-width="2"/>
+  <circle cx="72" cy="72" r="63" fill="url(#pkr-gold)"/>
+  <circle cx="72" cy="72" r="56" fill="url(#pkr-velvet)" stroke="#442334" stroke-width="1.7"/>
+  <circle cx="72" cy="72" r="51.5" fill="none" stroke="#F2CD95" stroke-width="1.7" opacity=".70"/>
+  <g stroke="#FFF0D0" stroke-width="4.5" stroke-linecap="round" opacity=".96">
+    <path d="M72 10v9M72 125v9M10 72h9M125 72h9"/>
+    <path d="M29 29l6.5 6.5M108.5 108.5l6.5 6.5M115 29l-6.5 6.5M35.5 108.5l-6.5 6.5"/>
+  </g>
+  <g filter="url(#pkr-glow)">
+    <path d="M68.3 84.3c1.7 14.6-2.6 22.7-10.7 27.8h28.8c-8.1-5.1-12.4-13.2-10.7-27.8" fill="url(#pkr-gold)" stroke="#FFE0A4" stroke-width="1.7" stroke-linejoin="round"/>
+    <path d="M72 28C64 38.6 47.8 51.6 40.3 61.6c-9.1 12.1-7.7 24.1 1 31.3 8.5 7.1 22.5 4.8 30.7-5.1 8.2 9.9 22.2 12.2 30.7 5.1 8.7-7.2 10.1-19.2 1-31.3C96.2 51.6 80 38.6 72 28Z" fill="url(#pkr-ruby)" stroke="url(#pkr-gold)" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M71.6 40.6c-7.2 9.6-20.9 20.5-26.8 28.6-4.1 5.7-4.9 12.7-1 16.6" fill="none" stroke="#FFD5C8" stroke-width="3" stroke-linecap="round" opacity=".70"/>
+    <path d="M72 57.5l3.3 7.6 7.6 3.3-7.6 3.3-3.3 7.6-3.3-7.6-7.6-3.3 7.6-3.3Z" fill="#FFDDA1" stroke="#FFEED0" stroke-width=".7"/>
+  </g>
+</svg><text x="212" y="118" fill="#FFF4D5" font-family="Arial,Helvetica,sans-serif" font-size="104" font-weight="800" letter-spacing="6">PKR</text><text x="217" y="156" fill="#EEC98A" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" letter-spacing="4.6">YOUR PRIVATE POKER CLUB</text></svg>
