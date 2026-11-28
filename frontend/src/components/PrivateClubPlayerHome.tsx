@@ -1,5 +1,6 @@
 'use client';
 import PkrGlyph from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import type {Event,Game} from '@/lib/api';
 import {isLiveGame} from '@/lib/game-status';
 
@@ -11,6 +12,7 @@ export default function PrivateClubPlayerHome(p:Props){
   <div className="pkr-pc-player-scene">
    <img className="pkr-pc-player-photo" src="/images/pkr-approved-hero-desktop.webp"
      alt="" aria-hidden="true" decoding="async"/>
+   <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--player"/>
    <span className="pkr-pc-overline">WELCOME TO YOUR PRIVATE CLUB</span>
    <h1>{p.room.name}</h1>
    <span className="pkr-pc-honor"><PkrGlyph name="spade" size={17}/>{live?'A GAME IS LIVE':game?'YOUR NEXT POKER NIGHT':'THE TABLE IS READY WHEN YOU ARE'}</span>
