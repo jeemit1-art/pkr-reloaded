@@ -966,3 +966,13 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   position:relative!important;z-index:2!important;
  }
 }
+
+
+/* Make the active Results tab legible regardless of inherited casino label tones. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page .pkr-section-tabs button[aria-current="page"] > .pkr-pc-results-tab-label{
+  color:#211507!important;-webkit-text-fill-color:#211507!important;
+  filter:brightness(0)!important;text-shadow:none!important;
+  opacity:1!important;font-weight:850!important;
+ }
+}
