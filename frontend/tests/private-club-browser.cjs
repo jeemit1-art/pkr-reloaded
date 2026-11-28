@@ -238,7 +238,7 @@ async function runLightMode(browser){
   const details=player.getByRole('button',{name:/Details/});
   await details.click();
   assert(await player.locator('.pkr-directory-extra').isVisible(),'Advanced member actions must expand on demand');
-  assert(await player.getByRole('button',{name:/Edit profile/}).isVisible(),'Profile editing must remain accessible');
+  assert(await player.getByRole('button',{name:/Edit player profile/}).isVisible(),'Profile editing must remain accessible');
   await player.getByRole('button',{name:/Less/}).click();
   assert.equal(await player.locator('.pkr-directory-extra').count(),0,'Details must collapse cleanly');
   await validate(page,'light members');
