@@ -25,6 +25,11 @@ for(const name of ['pkr-casino-art-card','pkr-casino-art-chip','pkr-casino-art-h
 assert(tabs.includes('PkrGlyph')&&tabs.includes('aria-current'),'Three sections need real icons and current-tab state');
 assert(empty.includes('No games scheduled yet.')&&empty.includes('onClick={isHost?onSchedule:onCalendar}'),'Empty view must take real host or member action');
 assert(games.includes('<GamesEmptyArena isHost={isHost}'),'Games must use the functioning empty view');
+assert(games.includes('pkr-casino-original-empty'),'Original themes must retain their prior empty view');
+assert(css.includes('.pkr-casino-stage-art, .pkr-casino-empty-arena { display:none!important; }'),'Casino artwork must be absent in unselected themes');
+assert(css.includes('.pkr-casino-original-empty{display:none!important}'),'Original empty screen must be hidden only for opt-in casino styles');
+assert(read('src/app/results/page.tsx').includes('<CasinoStageArt kind="games"/>'),'Results must include original artwork');
+
 assert(games.includes('onSchedule={()=>setShowCreate(true)}'),'Do not replace the existing game scheduler');
 assert(games.includes("onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}"),'Calendar must preserve club context');
 assert(css.includes('@media(max-width:600px)')&&css.includes('@media(max-width:360px)'),'Narrow phone layouts must be covered');
