@@ -38,9 +38,9 @@ function PaymentsWorkspace(){
  return <div className="pkr-gn-payment-workspace" data-payment-section={tools?'ledger':'overview'}>
   <nav className="pkr-gn-payment-sections" aria-label="Payment sections">
    <Link href={sectionHref('overview')} aria-current={!tools?'page':undefined} scroll={false}
-     onNavigate={()=>preservePageScrollForNavigation(sectionHref('overview'))}>Overview</Link>
+     onNavigate={()=>preservePageScrollForNavigation(sectionHref('overview'))}><span>Overview</span></Link>
    <Link href={sectionHref('ledger')} aria-current={tools?'page':undefined} scroll={false}
-     onNavigate={()=>preservePageScrollForNavigation(sectionHref('ledger'))}>Ledger &amp; tools</Link>
+     onNavigate={()=>preservePageScrollForNavigation(sectionHref('ledger'))}><span>Ledger &amp; tools</span></Link>
   </nav>
   {tools?<section className="pkr-gn-payment-ledger" aria-label="Payment ledger and tools"><LedgerAndTools/></section>:<GameNightPayments/>}
  </div>;
