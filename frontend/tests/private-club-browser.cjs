@@ -121,13 +121,28 @@ async function runEmptyHost(browser){
   assert(computed,'CTA/button must have real text nodes');
   assert.equal(computed.textFilter,'none','Do not darken/blend the button text through a CSS filter');
   assert.equal(computed.textOpacity,'1','CTA wording must not be translucent');
-  assert.equal(computed.bgColor,'rgb(36, 20, 35)','CTA must have an opaque dark background beneath light text: '+JSON.stringify(computed));
-  assert(computed.bgImage.includes('linear-gradient'),'CTA must retain the casino button treatment');
-  assert.equal(computed.textColor,'rgb(255, 204, 157)','Button text must remain solid light casino ink: '+JSON.stringify(computed));
-  assert.equal(computed.textFill,'rgb(255, 204, 157)','WebKit light text fill must be solid: '+JSON.stringify(computed));
-  const luminance=rgb=>(rgb.match(/\d+/g)||[]).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
-  const fg=luminance(computed.textColor),bg=luminance(computed.bgColor),contrast=(Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05);
-  assert(contrast>=7,'CTA text/background WCAG AAA contrast must be at least 7:1 (actual '+contrast.toFixed(2)+'): '+JSON.stringify(computed));
+  assert(computed.bgColor.startsWith('rgb(')&&computed.bgColor!=='rgba(0, 0, 0, 0)','CTA must have opaque browser-painted dark backing: '+JSON.stringify(computed));
+  assert(computed.bgImage.includes('linear-gradient'),'CTA must retain the casino button gradient');
+  assert(computed.textColor.startsWith('rgb('),'CTA must use a solid computed text colour');
+  assert.equal(computed.textFill,computed.textColor,'WebKit fill must match the real rendered foreground, not a hidden overlay');
+  const luminance=rgb=>{
+   const channels=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);
+   assert.equal(channels.length,3,'Computed RGB must have three components: '+rgb);
+   return channels.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
+    .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+  };
+  const contrast=(a,b)=>{
+   const l1=luminance(a),l2=luminance(b);
+   return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05);
+  };
+  const solidRatio=contrast(computed.textColor,computed.bgColor);
+  assert(solidRatio>=7,'CTA text against opaque backing must be AAA readable (actual '+solidRatio.toFixed(2)+'): '+JSON.stringify(computed));
+  const stops=[...computed.bgImage.matchAll(/rgba?\([^)]+\)/g)].map(match=>match[0]);
+  assert(stops.length>=2,'Casino button needs gradient stop colours for contrast verification');
+  for(const stop of stops){
+   const ratio=contrast(computed.textColor,stop);
+   assert(ratio>=4.5,'CTA text must be AA-readable across its entire gradient (stop '+stop+', actual '+ratio.toFixed(2)+'): '+JSON.stringify(computed));
+  }
   assert(computed.fontFamily.includes('Helvetica Neue')||computed.fontFamily.includes('-apple-system'),
    'Use the crisp native iOS system-font stack instead of an overly softened loaded font');
   assert(computed.documentWidth<=390+4,'There must be no horizontal overflow '+JSON.stringify(computed));
