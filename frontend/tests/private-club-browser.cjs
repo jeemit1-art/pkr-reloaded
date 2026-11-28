@@ -243,10 +243,17 @@ async function runLightMode(browser){
   assert.equal(await player.locator('.pkr-directory-extra').count(),0,'Details must collapse cleanly');
   await validate(page,'light members');
   await page.screenshot({path:path.join(output,'players-light-iphone.png')});
+  await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+  const homeScene=await page.locator('.pkr-pc-entrance').evaluate(el=>getComputedStyle(el).backgroundColor);
+  const homeTicket=await page.locator('.pkr-pc-ticket').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(homeScene)&&bright(homeTicket),'Light Home first fold must be bright, not just the page background: '+JSON.stringify({homeScene,homeTicket}));
+  await page.screenshot({path:path.join(output,'home-light-iphone.png')});
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-games').waitFor({state:'visible'});
   const filter=await page.locator('.pkr-cf-filters').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert(bright(filter),'Light Games filters must be bright, not forced dark: '+filter);
+  const gameScene=await page.locator('.pkr-cf-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(filter)&&bright(gameScene),'Light Games first-fold hero and filters must be bright: '+JSON.stringify({gameScene,filter}));
   await page.screenshot({path:path.join(output,'games-light-iphone.png')});
   await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-results').waitFor({state:'visible'});
