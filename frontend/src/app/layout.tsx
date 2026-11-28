@@ -28,6 +28,8 @@ import './pkr-experience-consolidation.css';
 import './pkr-casino-themes.css';
 // New responsive casino compositions; only the four opt-in experiences are affected.
 import './pkr-casino-rebuild.css';
+// Approved Private Casino Club: real screens, retained workflows and responsive navigation.
+import './pkr-privateclub.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
