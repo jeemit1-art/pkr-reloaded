@@ -477,6 +477,7 @@ async function checkInviteDirectory(page,state,label){
  }finally{state.inviteAudit=false;}
 }
 
+
 async function checkReportedVisualIssues(page,state,label){
  const original=page.viewportSize();
  state.historical=true;
@@ -484,54 +485,43 @@ async function checkReportedVisualIssues(page,state,label){
   await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members&view=roster');
   const cards=page.locator('.pkr-history-player-card');
   await cards.first().waitFor({state:'visible'});
-  assert.equal(await cards.count(),2);
+  assert.equal(await cards.count(),2,'Actual former member history must be retained');
   const historical=cards.filter({hasText:'Christopher Nguyen'});
   for(const width of [320,360,390,430,768,1440]){
    await page.setViewportSize({width,height:844});
-   await readable(historical.locator('.pkr-historical-player-name strong'),'Saved player name at '+width);
-   await readable(historical.locator('.pkr-historical-player-name small'),'Saved game count at '+width);
+   await readable(historical.locator('.pkr-historical-player-name strong'),'Saved player name '+width);
+   await readable(historical.locator('.pkr-historical-player-name small'),'Saved games '+width);
    const actions=historical.locator('.pkr-history-player-actions>button');
    assert.equal(await actions.count(),3);
-   for(const button of await actions.all())await readable(button,'Saved player action at '+width);
-   const geometry=await historical.evaluate(node=>{
+   for(const button of await actions.all())await readable(button,'Former player action '+width);
+   const geom=await historical.evaluate(node=>{
     const c=node.getBoundingClientRect(),buttons=[...node.querySelectorAll('.pkr-history-player-actions>button')];
-    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3,card:c.toJSON(),actions:buttons.map(b=>({label:b.textContent,rect:b.getBoundingClientRect().toJSON()}))};
+    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3};
    });
-   assert(geometry.within&&!geometry.overflow,'Saved player controls outside card at '+width+': '+JSON.stringify(geometry));
+   assert(geom.within&&!geom.overflow,'History action outside card at '+width+': '+JSON.stringify(geom));
   }
   await page.setViewportSize(original);await screenshot(page,label+'-historical-player-polish');
   state.historical=false;state.upcoming=false;state.layout='command';
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-  const schedule=page.locator('.pkr-dual-nextgame .pkr-schedule-cta');
-  await schedule.waitFor();
-  assert.match(await schedule.innerText(),/Schedule a game/);
-  await readable(schedule,'No-session schedule CTA');
-  assert.equal(await colour(schedule,'color'),'rgb(255, 255, 255)');
+  await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+  const action=page.locator('.pkr-no-hero-cta');
+  await readable(action,'New no-session PKR schedule action');
+  assert.match(await action.innerText(),/SCHEDULE YOUR GAME|GAME CALENDAR/i);
+  assert.equal(await colour(action,'color'),'rgb(11, 13, 20)','Schedule action needs dark ink on citron');
   await screenshot(page,label+'-no-session-contrast');
   state.upcoming=true;state.noConfirmed=true;
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
-  const crew=page.locator('.pkr-attendance-card');
-  await crew.getByText('No confirmed RSVPs yet.',{exact:true}).waitFor();
-  assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
-  assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
-  const ticket=page.locator('.pkr-gn-game-ticket');
-  assert.equal(await colour(ticket,'backgroundColor'),'rgb(25, 77, 56)','Game Night uses an emerald ticket');
-  await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
- assert(Number(await colour(ticket.locator('.pkr-gn-when h2'),'fontWeight'))>=780,'Game night headline needs a deliberate heavy weight');
- const activeLabel=page.locator('.pkr-primary-bottom-nav button.active small:visible,.pkr-primary-sidebar nav button.active span:visible').first();
- await readable(activeLabel,'Selected navigation label');
- assert(Number(await colour(activeLabel,'fontWeight'))>=750,'Active navigation must be bold as well as high contrast');
-  assert.equal(await colour(crew,'backgroundColor'),'rgb(226, 242, 232)','Attendance has a recognisably green surface');
+  const ticket=page.locator('.pkr-no-next-ticket');await ticket.waitFor({state:'visible'});
+  const count=page.locator('.pkr-no-stat').first();
+  await count.waitFor({state:'visible'});
+  await readable(ticket.locator('.pkr-no-ticket-copy h3'),'PKR game pass title');
+  const heading=await colour(ticket,'backgroundColor');
+  assert.equal(heading,'rgb(23, 36, 61)','Approved PKR ticket surface is not displayed');
+  const confirmed=await count.locator('strong').innerText();
+  assert.equal(confirmed,'0','Real RSVP count must show zero, never fictional players');
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-  assert.equal(await colour(nav,'backgroundColor'),'rgb(255, 255, 255)','Shared navigation must use opaque neutral navigation');
-  const activeNavLabel=page.locator('.pkr-primary-bottom-nav:visible button.active small,.pkr-primary-sidebar:visible nav button.active span').first();
-  assert.equal(await colour(activeNavLabel,'color'),'rgb(22, 94, 66)','Selected label is readable forest ink on soft green');
-  await readable(activeNavLabel,'Selected navigation label');
-  await readable(crew.locator('h2'),'Attendance heading');
-  await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
-  for(const b of await crew.locator('.pkr-gn-seat-note>button').all())await readable(b,'Attendance count action');
+  assert.equal(await colour(nav,'backgroundColor'),'rgb(13, 20, 36)','App header/navigation should be solid PKR navy');
+  await readable(ticket.locator('.pkr-no-ticket-copy h3'),'Branded upcoming game summary');
   await screenshot(page,label+'-assigned-with-no-rsvps');
  }finally{
   state.historical=false;state.upcoming=true;state.noConfirmed=false;
@@ -571,23 +561,32 @@ async function checkSettledResultShare(page,state,label){
  }finally{state.unreconciled=false;}
 }
 
+
 async function checkPersonalAppearance(page,state,label){
  const original=page.viewportSize();
  await gotoFixturePage(page,BASE+'/account');
- const modes=page.getByRole('group',{name:'App colour mode'});
- await modes.waitFor();
- await modes.getByRole('button',{name:'Dark',exact:true}).click();
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
- assert.equal(await modes.getByRole('button',{name:'Dark',exact:true}).getAttribute('aria-pressed'),'true');
- assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'dark');
+ const appearance=page.getByTestId('personal-appearance');
+ await appearance.waitFor({state:'visible'});
+ assert.match(await appearance.innerText(),/PKR identity/);
+ assert.match(await appearance.innerText(),/THE NIGHT IS ON/);
+ assert.equal(await appearance.locator('[data-style-option]').count(),0,'One approved PKR identity, no casino picker');
+ assert.equal(await appearance.locator('img').first().getAttribute('src'),'/brand/pkr-night-logo.svg');
+ await page.evaluate(()=>{
+  localStorage.setItem('pkr_personal_appearance_v1','light');
+  localStorage.setItem('pkr_personal_visual_style_v1','noir');
+ });
+ await page.reload({waitUntil:'domcontentloaded'});
+ await appearance.waitFor({state:'visible'});
+ assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark','Saved light mode must not overpaint the brand');
+ assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club','Saved Noir mode must not create a new variant');
  const routes=[
   ['/account','.pkr-account-page','.pkr-personal-appearance h2'],
-  ['/dashboard','.pkr-app.pkr-dashboard','.pkr-gn-page-head h1'],
-  ['/events/'+room.id+'?tab=games','.pkr-app.pkr-event','.pkr-room-games-intro h1'],
-  ['/events/'+room.id+'?tab=members','.pkr-app.pkr-event','.pkr-member-history-link strong'],
+  ['/dashboard','.pkr-app.pkr-dashboard','.pkr-no-hero h1'],
+  ['/events/'+room.id+'?tab=games','.pkr-app.pkr-event','.pkr-no-games-hero h1'],
+  ['/events/'+room.id+'?tab=members','.pkr-app.pkr-event','.pkr-no-members h1'],
   ['/events/'+room.id+'?tab=night','.pkr-app.pkr-event','.pkr-gn-page-head,.pkr-night-title,.pkr-club-header h3'],
-  ['/results?room='+room.id,'.pkr-results-page','.pkr-results-command-title h1,.pkr-results-live-intro h1'],
-  ['/payments?room='+room.id+'&paymentsScope=mine','.pkr-gn-payment-workspace','.pkr-gn-payment-total strong'],
+  ['/results?room='+room.id,'.pkr-results-page','.pkr-no-results h1'],
+  ['/payments?room='+room.id+'&paymentsScope=mine','.pkr-gn-payment-workspace','.pkr-no-payments-hero h1'],
   ['/schedule','.pkr-schedule-page','.pkr-schedule-hero h1'],
   ['/games/'+finished.id,'.pkr-app.pkr-game-detail','.pkr-casino-game-summary h1,.pkr-casino-game-summary .display']
  ];
@@ -596,13 +595,14 @@ async function checkPersonalAppearance(page,state,label){
   for(const [route,container,heading] of routes){
    await gotoFixturePage(page,BASE+route);
    await page.locator(container).first().waitFor();
-   await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
-   const surface=await colour(page.locator(container).first(),'backgroundColor');
-   assert.equal(surface,'rgb(16, 25, 22)',route+' dark canvas');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark',route+' official dark brand');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club',route+' official brand only');
+   const canvas=await colour(page.locator(container).first(),'backgroundColor');
+   assert.equal(canvas,'rgb(11, 13, 20)',route+' must use PKR ink, not an older casino theme');
    const headings=page.locator(heading+':visible');
-   if(await headings.count())await readable(headings.first(),route+' dark text');
+   if(await headings.count())await readable(headings.first(),route+' branded text');
    const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(16, 30, 25)');
+   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(13, 20, 36)',route+' must use opaque PKR navigation');
    const audit=await page.locator(container).first().evaluate(root=>{
     const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
     const controls=[...root.querySelectorAll('button:not([disabled]),a.btn,summary,input:not([type=hidden]),select,textarea')].filter(visible);
@@ -616,102 +616,91 @@ async function checkPersonalAppearance(page,state,label){
     return {overflow,bodyWidth:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth),viewport:innerWidth};
    });
    assert(audit.bodyWidth<=audit.viewport+4,route+' page overflow '+JSON.stringify(audit));
-   assert.deepEqual(audit.overflow,[],route+' clipped actions');
+   assert.deepEqual(audit.overflow,[],route+' clipped action');
    if(route.startsWith('/games/')){
     await page.getByRole('button',{name:'Share group-safe results',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Share group-safe results'});
     await dialog.getByRole('textbox',{name:'Group results message'}).waitFor();
-    await readable(dialog.getByRole('link',{name:'Open WhatsApp'}),'Dark WhatsApp action');
-    await readable(dialog.getByRole('textbox',{name:'Group results message'}),'Dark message preview');
-    await screenshot(page,label+'-dark-results-share-'+size.width);
+    await readable(dialog.getByRole('link',{name:'Open WhatsApp'}),'Brand WhatsApp share action');
+    await readable(dialog.getByRole('textbox',{name:'Group results message'}),'Branded message preview');
+    await screenshot(page,label+'-brand-results-share-'+size.width);
     await dialog.getByRole('button',{name:'Close results sharing'}).click();
    }
-   if(size.width===original.width)await screenshot(page,label+'-dark-'+route.split('?')[0].split('/').filter(Boolean).join('-'));
+   if(size.width===original.width)await screenshot(page,label+'-official-'+route.split('?')[0].split('/').filter(Boolean).join('-'));
   }
  }
- await gotoFixturePage(page,BASE+'/account');
- await modes.getByRole('button',{name:'Follow device',exact:true}).click();
- await page.emulateMedia({colorScheme:'light'});
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
- await page.emulateMedia({colorScheme:'dark'});
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
- await page.getByRole('button',{name:'Light',exact:true}).click();
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
- assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'light');
- await page.reload({waitUntil:'domcontentloaded'});
- await page.getByRole('group',{name:'App colour mode'}).waitFor();
- assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light');
- await screenshot(page,label+'-light-appearance');
  await page.setViewportSize(original);
+ await gotoFixturePage(page,BASE+'/account');
+ assert.equal(await appearance.locator('[data-style-option]').count(),0);
 }
 
 // Regression for the reported iPhone/PWA snapshot: check the actual text
 // ranges, not only document width. An overflowing label can be entirely
 // inside the viewport and still overlap the adjacent action.
+
 async function checkDashboardCardReadability(page,state,label){
  const original=page.viewportSize();
  try{
   state.layout='live';state.live=false;
-  for(const mode of ['light','dark']){
-   await gotoFixturePage(page,BASE+'/account');
-   await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:mode==='light'?'Light':'Dark',exact:true}).click();
-   await page.waitForFunction(value=>document.documentElement.dataset.pkrPersonalTheme===value,mode);
-   for(const upcoming of [false,true]){
-    state.upcoming=upcoming;
-    await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-    const panel=page.locator('.pkr-dual-table-panel');
-    await panel.waitFor();
-    if(upcoming){
-     await panel.getByRole('button',{name:'View underlying records: Table seats',exact:true}).first().waitFor();
-     await page.waitForFunction(()=>document.querySelector('.pkr-dual-table-count')?.textContent.includes('players'));
-    }else{
-     assert.equal(await panel.getByRole('button',{name:/View table/}).count(),0);
-     assert.equal(await panel.locator('.pkr-dual-table-count').count(),0);
-     assert.equal(await page.getByRole('button',{name:/See all RSVPs/}).count(),0);
-     await panel.getByRole('button',{name:'Schedule a game',exact:true}).waitFor();
-     await readable(panel.locator('.pkr-dual-felt-empty'),'Empty felt message '+mode);
-     await readable(page.locator('.pkr-dual-no-rsvps'),'Empty attendance '+mode);
-    }
-    for(const width of [320,375,430,768,1024,1440]){
-     await page.setViewportSize({width,height:original.height});
-     await page.waitForTimeout(100);
-     const issues=await page.locator('.pkr-dual-root').evaluate(root=>{
-      const issues=[],visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
-      for(const row of root.querySelectorAll('.pkr-dual-section-title,.pkr-dual-panel-actions,.pkr-dual-attendance-summary')){
-       if(!visible(row))continue;
-       const children=[...row.children].filter(visible),parent=row.getBoundingClientRect();
-       for(const child of children){
-        const b=child.getBoundingClientRect();
-        if(b.left<parent.left-2||b.right>parent.right+2||b.top<parent.top-2||b.bottom>parent.bottom+2)issues.push('outside header '+child.textContent);
-        if(child.matches('button,h3,small,span')){
-         const range=document.createRange();range.selectNodeContents(child);
-         for(const rect of range.getClientRects()){
-          if(rect.width>0&&(rect.left<b.left-2||rect.right>b.right+2||rect.top<b.top-2||rect.bottom>b.bottom+2))issues.push('clipped text '+child.textContent);
-         }
+  await gotoFixturePage(page,BASE+'/account');
+  await page.evaluate(()=>{
+   localStorage.setItem('pkr_personal_appearance_v1','light');
+   localStorage.setItem('pkr_personal_visual_style_v1','luxe');
+  });
+  for(const upcoming of [false,true]){
+   state.upcoming=upcoming;
+   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club');
+   await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+   const panel=page.locator('.pkr-dual-table-panel');await panel.waitFor();
+   if(upcoming){
+    await panel.getByRole('button',{name:'View underlying records: Table seats',exact:true}).first().waitFor();
+    await page.waitForFunction(()=>document.querySelector('.pkr-dual-table-count')?.textContent.includes('players'));
+   }else{
+    assert.equal(await panel.getByRole('button',{name:/View table/}).count(),0);
+    assert.equal(await panel.locator('.pkr-dual-table-count').count(),0);
+    assert.equal(await page.getByRole('button',{name:/See all RSVPs/}).count(),0);
+    await panel.getByRole('button',{name:'Schedule a game',exact:true}).waitFor();
+    await readable(panel.locator('.pkr-dual-felt-empty'),'Empty table message');
+    await readable(page.locator('.pkr-dual-no-rsvps'),'Empty RSVP message');
+   }
+   for(const width of [320,375,430,768,1024,1440]){
+    await page.setViewportSize({width,height:original.height});
+    await page.waitForTimeout(100);
+    const issues=await page.locator('.pkr-dual-root').evaluate(root=>{
+     const issues=[],visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
+     for(const row of root.querySelectorAll('.pkr-dual-section-title,.pkr-dual-panel-actions,.pkr-dual-attendance-summary')){
+      if(!visible(row))continue;
+      const children=[...row.children].filter(visible),parent=row.getBoundingClientRect();
+      for(const child of children){
+       const b=child.getBoundingClientRect();
+       if(b.left<parent.left-2||b.right>parent.right+2||b.top<parent.top-2||b.bottom>parent.bottom+2)issues.push('outside header '+child.textContent);
+       if(child.matches('button,h3,small,span')){
+        const range=document.createRange();range.selectNodeContents(child);
+        for(const rect of range.getClientRects()){
+         if(rect.width>0&&(rect.left<b.left-2||rect.right>b.right+2||rect.top<b.top-2||rect.bottom>b.bottom+2))issues.push('clipped text '+child.textContent);
         }
        }
-       for(let a=0;a<children.length;a++)for(let b=a+1;b<children.length;b++){
-        const x=children[a].getBoundingClientRect(),y=children[b].getBoundingClientRect();
-        if(Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2)issues.push('overlap '+children[a].textContent+' / '+children[b].textContent);
-       }
       }
-      return issues;
-     });
-     assert.deepEqual(issues,[],label+' '+mode+' '+width+' upcoming='+upcoming+' internal header geometry');
-     await readable(panel.locator('h3'),'Snapshot title '+mode);
-     for(const button of await panel.locator('.pkr-dual-panel-actions>button').all())await readable(button,'Snapshot action '+mode);
-     if(upcoming)for(const button of await page.locator('.pkr-dual-attendance-summary>button').all())await readable(button,'RSVP metric '+mode);
-     if(width===430)await screenshot(page,label+'-snapshot-'+mode+'-'+(upcoming?'scheduled':'empty'));
-    }
-    assert.equal(await panel.locator('.pkr-dual-panel-actions button:disabled').count(),0);
+      for(let a=0;a<children.length;a++)for(let b=a+1;b<children.length;b++){
+       const x=children[a].getBoundingClientRect(),y=children[b].getBoundingClientRect();
+       if(Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2)issues.push('overlap '+children[a].textContent+' / '+children[b].textContent);
+      }
+     }
+     return issues;
+    });
+    assert.deepEqual(issues,[],label+' '+width+' upcoming='+upcoming+' PKR dashboard controls must not overlap');
+    await readable(panel.locator('h3'),'Snapshot title');
+    for(const button of await panel.locator('.pkr-dual-panel-actions>button').all())await readable(button,'Snapshot action');
+    if(upcoming)for(const button of await page.locator('.pkr-dual-attendance-summary>button').all())await readable(button,'Real RSVP metric');
+    if(width===430)await screenshot(page,label+'-official-snapshot-'+(upcoming?'scheduled':'empty'));
    }
+   assert.equal(await panel.locator('.pkr-dual-panel-actions button:disabled').count(),0);
   }
  }finally{
   state.upcoming=true;state.live=false;state.layout='command';
   await page.setViewportSize(original);
-  await gotoFixturePage(page,BASE+'/account');
-  await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Light',exact:true}).click();
  }
 }
 
