@@ -133,14 +133,13 @@ export default function PrivateClubGamesLobby(p:Props){
      </div></div>
    </div>
    <div className="pkr-cf-empty-content">
-    <span className="pkr-cf-kicker">{filter==='upcoming'?'YOUR TABLE AWAITS':filter==='live'?'THE LIGHTS ARE ON':'YOUR HALL OF FAME'}</span>
     <h2>{filter==='upcoming'?'Ready for the next deal?':filter==='live'?'No live table right now':'No completed nights yet'}</h2>
-    <p>{emptyCopy}</p>
     <button type="button" className="pkr-cf-schedule" onClick={filter==='upcoming'&&p.isHost?p.onSchedule:filter==='completed'?p.onResults:p.onCalendar}>
      <PkrGlyph name={filter==='upcoming'&&p.isHost?'schedule':filter==='completed'?'trophy':'clock'} size={21}/>
      <span>{filter==='upcoming'&&p.isHost?'HOST YOUR NEXT GAME':filter==='completed'?'VIEW LEADERBOARD':'OPEN GAME CALENDAR'}</span>
      <PkrGlyph name="chevron-right" size={19}/>
     </button>
+    <p>{emptyCopy}</p>
    </div>
   </section>}
 
