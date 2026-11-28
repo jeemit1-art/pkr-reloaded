@@ -24,6 +24,8 @@ export default function PrivateClubHostHome(p:Props){
  const openPrimary=game?p.onGame:p.canManageGames?p.onSchedule:p.onCalendar;
  return <section className="pkr-privateclub-home" data-testid="private-club-host-home" aria-label="Private Casino Club home">
   <div className="pkr-pc-entrance">
+   <img className="pkr-pc-entrance-photo" src="/images/pkr-approved-hero-desktop.webp"
+      alt="" aria-hidden="true" decoding="async" fetchPriority="high"/>
    <div className="pkr-pc-scene" aria-hidden="true">
     <span className="pkr-pc-scene-beam"/><span className="pkr-pc-scene-felt"/>
     <span className="pkr-pc-scene-chip pkr-pc-chip-one"/><span className="pkr-pc-scene-chip pkr-pc-chip-two"/>
