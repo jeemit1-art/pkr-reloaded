@@ -28,7 +28,7 @@ jobs:
           - name: access-and-layout
             suites: app-experience member-access-guidance unified-player-access room-member-profiles single-header-responsive
           - name: appearance-and-updates
-            suites: private-club-browser game-night-polish app-release-updates swipe-data-windows casino-browser
+            suites: private-club-browser game-night-polish app-release-updates swipe-data-windows casino-browser shared-player-avatars
           - name: all-viewports
             suites: viewport-smoke
           - name: dashboard-overflow

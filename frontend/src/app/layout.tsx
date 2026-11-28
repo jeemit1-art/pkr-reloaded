@@ -36,6 +36,8 @@ import './pkr-vegas-floor.css';
 import './pkr-member-directory.css';
 // Private Casino Club: explicit light and dark variants; keep live table unchanged.
 import './pkr-privateclub-light.css';
+// Shared real player avatars and readable fallbacks across every saved appearance.
+import './pkr-universal-avatars.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

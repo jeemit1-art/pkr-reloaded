@@ -1,6 +1,7 @@
 'use client';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
+import RoomPlayerAvatar,{useRoomPlayerAvatarSources} from '@/components/RoomPlayerAvatar';
 
 
 import {useMemo,useState} from 'react';
@@ -22,6 +23,7 @@ const sortLabels:Record<SortKey,string>={
 };
 
 export default function StandingsBoard({leaders,settledGames,onSelectPlayer,roomId}:BoardProps){
+  const avatarSources=useRoomPlayerAvatarSources(roomId||'');
   const [sort,setSort]=useState<SortKey>('net');
   const [query,setQuery]=useState('');
   const [minGames,setMinGames]=useState(false);
@@ -60,6 +62,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
             aria-label={'Open '+p.display_name+' game history, rank '+(i+1)}>
             <span className="pkr-standings-medal" aria-hidden="true"><PkrGlyph name={i===0?'trophy':'medal'} size={28}/></span>
             <span className="pkr-standings-rank-label">#{i+1} ALL TIME</span>
+            <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-standings-podium-avatar"/>
             <strong title={p.display_name}>{p.display_name}</strong>
             <b className={p.total_net<0?'loss':'gain'}>{fmtSign(p.total_net)}</b>
             <small>{p.games_played} games · {p.games_won} profitable</small>
@@ -80,7 +83,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
             key={p.user_id||p.display_name} onClick={()=>onSelectPlayer(p.display_name)}
             aria-label={'Open '+p.display_name+' profile, '+fmtSign(p.total_net)+' total net'}>
             <span className="pkr-standings-row-rank">{i+1}</span>
-            <span className="pkr-standings-avatar" aria-hidden="true">{p.display_name.trim().charAt(0).toUpperCase()||<PkrGlyph name="account"/>}</span>
+            <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-standings-avatar"/>
             <span className="pkr-standings-player">
               <strong>{p.display_name}</strong>
               <small>{p.games_played} games · {p.games_won} profitable · {p.games_played?Math.round(p.games_won/p.games_played*100):0}%</small>
