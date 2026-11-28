@@ -13,7 +13,7 @@ type Props={
  onWatch:(id:string)=>void;onRsvp:(id:string,choice?:'yes'|'maybe'|'no')=>void;
  onShare:(id:string)=>void;onRsvpSettings:(id:string)=>void;
  onQuickSeat:(id:string)=>void;onCancel:(id:string)=>void;onDelete:(id:string)=>void;
- onResults:()=>void;onCalendar:()=>void;
+ onResults:()=>void;onCalendar:()=>void;onSharing:()=>void;
 };
 const options:[Filter,string][]=[['upcoming','Upcoming'],['live','Live'],['completed','Completed']];
 const timeInBrisbane=(seconds:number)=>new Date(seconds*1000).toLocaleTimeString('en-AU',{timeZone:'Australia/Brisbane',hour:'numeric',minute:'2-digit'});
@@ -102,14 +102,21 @@ export default function PrivateClubGamesLobby(p:Props){
     {filter==='upcoming'&&p.isHost?'SCHEDULE A GAME':filter==='completed'?'VIEW RESULTS':'OPEN CALENDAR'}
     <PkrGlyph name="chevron-right" size={18}/></button>
   </div>}
-  {p.unfinished.length>0&&<div className="pkr-pc-unfinished">
-    <PkrGlyph name="history" size={19}/><span><strong>{p.unfinished.length} historical unfinished game{p.unfinished.length===1?'':'s'}</strong>
-    <small>Preserved for review — not counted as currently live.</small></span>
-    <button type="button" onClick={()=>p.onGame(p.unfinished[0].id)}>Review</button>
-   </div>}
+  {p.unfinished.length>0&&<section className="pkr-pc-unfinished" aria-label="Historical unfinished game sessions">
+    <div className="pkr-pc-unfinished-summary"><PkrGlyph name="history" size={19}/>
+      <span><strong>{p.unfinished.length} historical unfinished game{p.unfinished.length===1?'':'s'}</strong>
+      <small>Preserved for review — not counted as currently live.</small></span></div>
+    <div className="pkr-pc-unfinished-list">
+      {p.unfinished.map(game=><button type="button" key={game.id} onClick={()=>p.onGame(game.id)}>
+        <span>{dateInBrisbane(game.scheduled_at,{day:'numeric',month:'short',year:'numeric'})} · {timeInBrisbane(game.scheduled_at)}</span>
+        <PkrGlyph name="chevron-right" size={17}/>
+       </button>)}
+    </div>
+   </section>}
   <div className="pkr-pc-lobby-bottom-actions">
     <button type="button" onClick={p.onCalendar}><PkrGlyph name="schedule" size={18}/> Game calendar</button>
     <button type="button" onClick={p.onResults}><PkrGlyph name="history" size={18}/> Completed nights</button>
+    <button type="button" onClick={p.onSharing}><PkrGlyph name="members" size={18}/> RSVPs &amp; Sharing</button>
   </div>
  </section>;
 }
