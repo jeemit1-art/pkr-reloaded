@@ -146,7 +146,14 @@ async function captureCase(page,size,item,errors){
  }
 }
 const fullDashboard=mode=>async page=>{
- await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+ const privateHome=page.getByTestId('private-club-host-home');
+ if(await privateHome.isVisible().catch(()=>false)){
+   // The approved Home replaces the old switch with a working Control centre action.
+   await privateHome.getByRole('button',{name:/Club control centre/}).click();
+ }else{
+   const full=page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true});
+   if(await full.isVisible().catch(()=>false))await full.click();
+ }
  const appearance=page.getByRole('group',{name:'Host poker room appearance'});
  await appearance.getByRole('button',{name:new RegExp(mode==='live'?'Live Poker':'Command Centre')}).click();
  await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor({state:'visible'});
@@ -158,9 +165,9 @@ async function captureApp(browser){
   try{
    const prefix=label+'-';
    const items=[
-    {id:prefix+'home',title:'Game night home',category:'Planning & club',route:'/dashboard?room='+room.id,ready:'[data-testid="private-club-host-home"]',action:async page=>page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click()},
-    {id:prefix+'command-centre',title:'Full dashboard · Command Centre',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-gn-home-switch',action:fullDashboard('command')},
-    {id:prefix+'live-dashboard',title:'Full dashboard · Live Poker',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-gn-home-switch',action:fullDashboard('live')},
+    {id:prefix+'home',title:'Game night home',category:'Planning & club',route:'/dashboard?room='+room.id,ready:'[data-testid="private-club-host-home"]'},
+    {id:prefix+'command-centre',title:'Full dashboard · Command Centre',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-app.pkr-dashboard',action:fullDashboard('command')},
+    {id:prefix+'live-dashboard',title:'Full dashboard · Live Poker',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-app.pkr-dashboard',action:fullDashboard('live')},
    ];
    if(label==='mobile'||label==='desktop')items.push(
     {id:prefix+'games',title:'Game sessions',category:'Planning & club',route:'/events/'+room.id+'?tab=games',ready:'[data-testid="private-club-games"]'},
