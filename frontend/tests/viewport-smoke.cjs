@@ -112,13 +112,12 @@ async function test(){
         const style=getComputedStyle(el);
         return {image:style.backgroundImage,ink:style.color,height:el.getBoundingClientRect().height};
       });
-      if(!landingCTA.image.includes('linear-gradient')||!landingCTA.image.includes('255, 244, 213')||
-          landingCTA.ink!=='rgb(36, 21, 34)'||landingCTA.height<42)
-        errors.push(size.name+' launch action must retain a clear PKR gold surface and dark ink: '+JSON.stringify(landingCTA));
+      if(landingCTA.image!=='none'||landingCTA.ink!=='rgb(11, 13, 20)'||landingCTA.height<42)
+        errors.push(size.name+' PKR citron CTA must use flat solid backing and readable ink: '+JSON.stringify(landingCTA));
       if(await guestPage.locator('.pkr-l2-step').count()!==4)
         errors.push(size.name+' launch planning, invitations, game and records explanation is incomplete');
       // A new SVG must finish loading before validating its intrinsic width.
-      await guestPage.locator('.pkr-l2-brand-emblem .pkr-brand-mark--landing').first().evaluate(async image=>{
+      await guestPage.locator('.pkr-no-marketing-logo').first().evaluate(async image=>{
         if(image instanceof HTMLImageElement)await image.decode().catch(()=>{});
       });
       const theme=await guestPage.evaluate(()=>{
@@ -132,17 +131,17 @@ async function test(){
           priceFont:price?getComputedStyle(price).fontFamily:'',
           priceColor:price?getComputedStyle(price).color:'',
           proBorder:pro?getComputedStyle(pro).borderTopColor:'',
-          logo:[...document.querySelectorAll('.pkr-l2-brand-emblem .pkr-brand-mark--landing')].some(img=>img.getAttribute('src')==='/brand/pkr-crest.svg'&&img.naturalWidth>0),
+          logo:[...document.querySelectorAll('.pkr-no-marketing-logo')].some(img=>img.getAttribute('src')==='/brand/pkr-night-logo.svg'&&img.naturalWidth>0),
           font:getComputedStyle(document.querySelector('.pkr-l2-hero h1')).fontFamily,
         };
       });
-      if(theme.background!=='rgb(13, 11, 25)'||theme.primary.toLowerCase()!=='#eec98a'||theme.ink.toLowerCase()!=='#fff4d5')
-        errors.push(size.name+' official PKR midnight/gold launch palette mismatch: '+JSON.stringify(theme));
-      if(theme.proBorder!=='rgb(238, 201, 138)')
-        errors.push(size.name+' Pro pricing card must retain a visible PKR gold border: '+theme.proBorder);
-      if(theme.priceColor!=='rgb(255, 244, 213)'||!/(bodyfont|inter)/i.test(theme.priceFont))
-        errors.push(size.name+' host plan prices need readable ivory and sharp bundled typography: '+JSON.stringify(theme));
-      if(!theme.logo)errors.push(size.name+' original PKR crest logo is missing or did not load');
+      if(theme.background!=='rgb(11, 13, 20)'||theme.primary.toLowerCase()!=='#ff5a4d'||theme.ink.toLowerCase()!=='#f5f5ef')
+        errors.push(size.name+' PKR ink/coral/paper palette mismatch: '+JSON.stringify(theme));
+      if(theme.proBorder!=='rgb(199, 255, 58)')
+        errors.push(size.name+' Pro plan must use citron border: '+theme.proBorder);
+      if(theme.priceColor!=='rgb(245, 245, 239)'||!/(bodyfont|inter)/i.test(theme.priceFont))
+        errors.push(size.name+' Plans must be readable in bundled Inter: '+JSON.stringify(theme));
+      if(!theme.logo)errors.push(size.name+' approved PKR logo failed to load');
       if(!/(bodyfont|inter)/i.test(theme.font))
         errors.push(size.name+' landing headings need the sharp bundled UI font: '+theme.font);
       const planText=await guestPage.locator('.pkr-l2-plan-grid').innerText();
@@ -274,40 +273,18 @@ async function test(){
     try{
      await page.goto(BASE+item.url,{waitUntil:'domcontentloaded',timeout:40000});
      if(item.id==='dashboard'){
-       await page.locator('[data-testid="game-night-host-home"]').waitFor({state:'visible'});
-       const classicPaint=await page.evaluate(()=>{
-         const pick=s=>{const el=document.querySelector(s);return el?getComputedStyle(el):null;};
-         return {headline:pick('.pkr-gn-page-head h1>span')?.color||'',
-           primary:pick('.pkr-gn-home .pkr-gn-primary')?.backgroundColor||'',
-           mobileMark:pick('.pkr-primary-mobile-mark')?.color||'',
-           approval:pick('.pkr-approval-alert')?.backgroundColor||''};
+       await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+       const brand=await page.evaluate(()=>{
+        const hero=document.querySelector('.pkr-no-hero'),action=hero?.querySelector('.pkr-no-hero-cta');
+        const pass=document.querySelector('.pkr-no-next-ticket');
+        return {blue:hero?getComputedStyle(hero).backgroundColor:null,title:hero?.querySelector('h1')?.textContent||'',
+         action:action?getComputedStyle(action).backgroundColor:null,ink:action?getComputedStyle(action).color:null,
+         pass:!!pass&&pass.getBoundingClientRect().height>100,mark:pass?.querySelector('img')?.getAttribute('src'),
+         payments:[...document.querySelectorAll('.pkr-no-stat')].some(el=>el.textContent?.includes('PAYMENTS'))};
        });
-       if(classicPaint.headline&&classicPaint.headline!=='rgb(22, 94, 66)')
-         errors.push(size.name+' Chip Club Game Night headline wrong: '+JSON.stringify(classicPaint));
-       if(classicPaint.primary&&classicPaint.primary!=='rgb(22, 101, 72)')
-         errors.push(size.name+' Chip Club Game Night button wrong: '+JSON.stringify(classicPaint));
-       if(classicPaint.approval&&classicPaint.approval!=='rgb(225, 240, 231)')
-         errors.push(size.name+' Chip Club approval banner wrong: '+JSON.stringify(classicPaint));
-       // The host's payment attention card must show its record text and a
-       // genuinely usable Review button, not a narrow blue overflow strip.
-       const paymentCard=await page.evaluate(()=>{
-         const card=document.querySelector('.pkr-gn-attention');
-         const details=card?.querySelector('.pkr-gn-attention-record');
-         const review=card?.querySelector('button:last-child');
-         if(!card||!details||!review)return {present:false};
-         const box=el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,top:b.top,bottom:b.bottom};};
-         return {present:true,card:box(card),details:box(details),review:box(review),
-           detailsBackground:getComputedStyle(details).backgroundColor,
-           reviewBackground:getComputedStyle(review).backgroundColor,
-           reviewText:review.textContent?.trim()};
-       });
-       if(!paymentCard.present||paymentCard.detailsBackground!=='rgba(0, 0, 0, 0)'||
-          paymentCard.reviewBackground!=='rgb(22, 101, 72)'||
-          paymentCard.review.width<80||paymentCard.reviewText!=='Review'||
-          paymentCard.details.left<paymentCard.card.left-1||
-          paymentCard.review.right>paymentCard.card.right+1||
-          paymentCard.details.right>paymentCard.review.left+1&&size.width>500)
-         errors.push(size.name+' host payment Review card has clipped/overlapping content: '+JSON.stringify(paymentCard));
+       if(brand.blue!=='rgb(16, 70, 248)'||!brand.title.includes('THE NIGHT')||brand.action!=='rgb(199, 255, 58)'||
+          brand.ink!=='rgb(11, 13, 20)'||!brand.pass||brand.mark!=='/brand/pkr-night-mark.svg'||!brand.payments)
+         errors.push(size.name+' PKR host banner, game pass and functional record cards regressed: '+JSON.stringify(brand));
        await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
      }
      await page.locator(item.ready).waitFor({state:'visible',timeout:25000});
@@ -344,29 +321,7 @@ async function test(){
        }else if(nav.mobile||!nav.sidebar)
          errors.push(size.name+' '+item.id+' desktop navigation mismatch '+JSON.stringify(nav));
      }
-     // Chip Club visual contract: classic Game Night must not keep the old coral
-     // approval action, home primary button or active bottom navigation.
-     if(item.id==='dashboard'){
-       const paint=await page.evaluate(()=>{
-         const alert=document.querySelector('.pkr-approval-alert');
-         const primary=alert?.querySelector('.btn-primary');
-         const game=document.querySelector('.pkr-gn-home .pkr-gn-primary');
-         const selected=document.querySelector('.pkr-primary-bottom-nav button.active');
-         const style=el=>el?getComputedStyle(el):null;
-         return {
-           approvalBackground:style(alert)?.backgroundColor||'',
-           approvalButton:style(primary)?.backgroundColor||'',
-           gameButton:style(game)?.backgroundColor||'',
-           activeNav:style(selected)?.color||'',
-         };
-       });
-       if(paint.approvalBackground&&paint.approvalBackground!=='rgb(225, 240, 231)')
-         errors.push(size.name+' old approval palette remained: '+JSON.stringify(paint));
-       if(paint.approvalButton&&paint.approvalButton!=='rgb(22, 101, 72)')
-         errors.push(size.name+' old approval button colour remained: '+JSON.stringify(paint));
-       if(paint.gameButton&&paint.gameButton!=='rgb(22, 101, 72)')
-         errors.push(size.name+' old Game Night primary colour remained: '+JSON.stringify(paint));
-     }
+     // The approved Host Home is checked for brand and data-bound controls above.
      // Publish dashboard before mutation tests (which reopen an archived room).
      if(item.id==='dashboard'){
        await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
@@ -399,19 +354,13 @@ async function test(){
        });
        if(!visualContract.brandVisible||!visualContract.oldTopbarHidden||!visualContract.accountVisible)
          errors.push(size.name+' mockup header/branding contract failed '+JSON.stringify(visualContract));
-       if(visualContract.paymentBackground!=='rgb(255, 255, 255)')
-         errors.push(size.name+' full dashboard payment card retained the previous dark palette: '+JSON.stringify(visualContract));
-       // The Lounge redesign deliberately retires the pale photographic wash.
-       // Verify the actual saturated surface, white heading and absence of
-       // overlay pseudo-elements, rather than simply removing visual coverage.
-       if(visualContract.heroSurface!=='rgb(21, 58, 45)'||
-          !visualContract.heroGradient.includes('radial-gradient')||
-          !visualContract.heroGradient.includes('40, 101, 77')||
-          visualContract.heroHeading!=='rgb(255, 255, 255)'||
-          visualContract.heroArtwork!=='none'||visualContract.heroOverlays.length!==2||
+       if(visualContract.paymentBackground!=='rgb(24, 36, 58)')
+         errors.push(size.name+' Full dashboard record card must use branded slate: '+JSON.stringify(visualContract));
+       if(visualContract.heroSurface!=='rgb(24, 42, 72)'||visualContract.heroGradient!=='none'||
+          visualContract.heroHeading!=='rgb(245, 245, 239)'||visualContract.heroArtwork!=='none'||
           !visualContract.heroOverlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
-         errors.push(size.name+' Lounge dashboard hero visual contract failed: '+JSON.stringify(visualContract));
-
+         errors.push(size.name+' Dashboard should use solid slate and no abstract imagery: '+JSON.stringify(visualContract));
+       }
        // Host switches between BOTH approved variants on every viewport.
        const toggle=page.getByRole('button',{name:/Live Poker/});
        if(!await toggle.isVisible())errors.push(size.name+' host layout chooser missing');
@@ -434,8 +383,8 @@ async function test(){
              const title=getComputedStyle(node.querySelector('h1')),paint=getComputedStyle(node);
              return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),font:title.fontFamily};
            });
-           if(livePaint.surface!=='rgb(25, 77, 56)'||livePaint.ink!=='rgb(255, 255, 255)'||livePaint.weight<780||!livePaint.font.toLowerCase().includes('plus jakarta sans'))
-             errors.push(size.name+' Live Results needs a strong emerald hero with bold white heading: '+JSON.stringify(livePaint));
+           if(livePaint.surface!=='rgb(24, 42, 72)'||livePaint.ink!=='rgb(245, 245, 239)'||livePaint.weight<750||!/(bodyfont|inter)/i.test(livePaint.font))
+             errors.push(size.name+' Live results header should be PKR slate and paper: '+JSON.stringify(livePaint));
            await page.getByRole('navigation',{name:'Results sections'}).getByRole('button',{name:'History'}).click();
            await page.locator('.pkr-results-history-card').first().waitFor({state:'visible'});
            if(!await page.locator('.pkr-results-history-view .pkr-results-section-head').isVisible())
@@ -453,8 +402,7 @@ async function test(){
            await page.locator('.pkr-results-live-player').first().waitFor({state:'visible'});
            const photo=await page.locator('[data-testid="live-results-stage"]').evaluate(node=>
              getComputedStyle(node).backgroundImage);
-           if(!photo.includes('linear-gradient')&&!photo.includes('radial-gradient'))
-             errors.push(size.name+' Live Poker artwork not applied to Results page');
+           if(photo!=='none')errors.push(size.name+' Results should never include abstract image gradients: '+photo);
             await page.screenshot({path:path.join(output,size.name+'-results-live-first-screen.png'),fullPage:false});
             await page.screenshot({path:path.join(output,size.name+'-results-live.png'),fullPage:true});
            await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
