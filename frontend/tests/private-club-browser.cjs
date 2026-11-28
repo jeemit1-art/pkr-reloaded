@@ -91,6 +91,9 @@ async function runHost(browser,device){
   const directoryNav=page.getByRole('navigation',{name:'Members quick actions'});
   assert.equal(await directoryNav.locator('button').count(),3,'Keep exactly one Directory, Invite & QR, Approvals action bar for host');
   assert(await page.locator('#pkr-member-search').isVisible(),'The searchable member list must appear beneath the action bar');
+  const searchRect=await page.locator('.pkr-member-search-label').boundingBox();
+  assert(searchRect&&searchRect.height>=43&&searchRect.height<=62,
+   'Member search must remain a compact single-line control, never a 250px desktop panel: '+JSON.stringify(searchRect));
   assert(await page.getByRole('group',{name:'Filter members by role'}).isVisible(),'All / Admins / Players filters remain available');
   const heroRect=await page.getByTestId('private-club-players').boundingBox();
   assert(heroRect&&heroRect.height<=195,'Compact Players header must not consume the entire mobile fold: '+JSON.stringify(heroRect));
