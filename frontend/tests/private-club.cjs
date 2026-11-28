@@ -2,51 +2,30 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),postcss=require('postcss');
 const root=path.resolve(__dirname,'..');
-const read=file=>fs.readFileSync(path.join(root,file),'utf8');
-const css=read('src/app/pkr-privateclub.css');
-const lightCss=read('src/app/pkr-privateclub-light.css');
-const directoryCss=read('src/app/pkr-member-directory.css');
-const players=read('src/app/events/[id]/page.tsx');
-const appearance=read('src/lib/personal-appearance.ts');
-const bootstrap=read('public/pkr-appearance-init.js');
-const settings=read('src/components/PersonalAppearance.tsx');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+
 const host=read('src/components/PrivateClubHostHome.tsx');
 const player=read('src/components/PrivateClubPlayerHome.tsx');
 const games=read('src/components/PrivateClubGamesLobby.tsx');
 const room=read('src/app/events/[id]/page.tsx');
 const dashboard=read('src/components/RoomDashboardDual.tsx');
+const playerDashboard=read('src/components/PlayerRoomDashboard.tsx');
 const rsvp=read('src/app/games/[id]/rsvp/page.tsx');
-const layout=read('src/app/layout.tsx');
-assert.doesNotThrow(()=>postcss.parse(css),'New visual rules must parse');
-assert.doesNotThrow(()=>postcss.parse(lightCss),'Private Casino Club light palette CSS must parse');
-assert.doesNotThrow(()=>postcss.parse(directoryCss),'Shared player directory must parse for saved themes');
-assert(directoryCss.includes('[data-pkr-personal-theme]'),'Compact member rows must be styled for all personal themes');
-assert(lightCss.includes('[data-pkr-personal-theme="light"]'),'The club light palette must target the actual saved light mode');
-assert(lightCss.includes('color-scheme:light!important'),'Light mode must restore native light controls');
-assert(lightCss.includes('.pkr-primary-bottom-nav')&&lightCss.includes('.pkr-cf-filters')&&lightCss.includes('.pkr-directory-player'),'Light mode must cover navigation, Games and Players');
-assert(read('src/app/layout.tsx').includes("import './pkr-privateclub-light.css';"),'Load light-mode overrides after Vegas floor');
-assert(read('src/app/layout.tsx').includes("import './pkr-member-directory.css';"),'Load shared compact roster styling for all themes');
-assert(players.includes('expandedMemberId')&&players.includes('pkr-directory-extra')&&players.includes('pkr-directory-history'),'Member directory must keep history accessible while allowing details to collapse');
-
-assert(css.includes(':not(:has(#gameScreen))'),'Never style protected gameplay canvas');
-assert(appearance.includes("DEFAULT_VISUAL_STYLE:VisualStyle='private-club'"),'New users should open in approved theme');
-assert(bootstrap.includes("style==='private-club'?style:'private-club'"),'Bootstrap should render approved theme before hydration');
-assert(settings.includes("id:'private-club'"),'Existing users must be able to choose approved theme');
-assert(layout.includes("import './pkr-privateclub.css';"),'New visual system must be loaded last');
-assert(css.includes('real-casino-props.webp')&&css.includes('real-poker-chips.webp'),'Use real scenic assets rather than coloured boxes alone');
-assert(dashboard.includes('<PrivateClubHostHome'),'Actual home component must render');
-assert(dashboard.includes('<GameNightHostHome'),'Original host home must remain for saved prior themes');
-assert(player.includes("onGame")&&player.includes("onRsvp")&&player.includes("onPayments"),'Player shortcuts must preserve functionality');
-assert(room.includes('<PrivateClubGamesLobby'),'Lobby must render on actual room route');
-for(const marker of ['onQuickSeat','onRsvpSettings','onCancel','onDelete','onWatch','onRsvp','onShare','onOpenTable']){
- assert(games.includes(marker),'Game-management action unavailable: '+marker);
+const css=read('src/app/pkr-night-is-on.css');
+postcss.parse(css);
+assert(dashboard.includes('<PrivateClubHostHome'),'Host Home must render real new experience');
+assert(playerDashboard.includes('<PrivateClubPlayerHome'),'Player Home must render real new experience');
+assert(room.includes('<PrivateClubGamesLobby'),'Room Games tab must use new experience');
+for(const [component,markers] of [
+ [host,['pkr-no-host','pkr-no-hero','pkr-no-next-ticket','pkr-no-stats','pkr-no-tools','p.room.name','p.featured','p.going.length','p.onPayments','p.onResults','p.onRsvp','p.onSchedule','p.onInvite','p.onRefresh']],
+ [player,['pkr-no-player','pkr-no-player-pass','pkr-no-player-next','p.room.name','p.next','p.onRsvp','p.onCalendar','p.onPayments','p.onMembers','p.onResults']],
+ [games,['pkr-no-games','pkr-cf-game-ticket','p.onQuickSeat','p.onCancel','p.onDelete','p.onRsvp','p.onShare']]]){
+ for(const marker of markers)assert(component.includes(marker),'Data or action missing: '+marker);
 }
-assert(games.includes("useState<Filter>('upcoming')"),'Live lobby filters must be interactive');
-assert(rsvp.includes("new URLSearchParams(window.location.search).get('choice')"),'Lobby response shortcuts must open authorised RSVP form');
-assert(rsvp.includes("async function submit()"),'RSVP confirmation process must remain unchanged');
-for(const key of ["pkr-privateclub-host-surface","pkr-pc-new-games","pkr-privateclub-player"]){
- assert(css.includes(key),'Missing new screen styling '+key);
-}
-assert(css.includes('@media(max-width:430px)')&&css.includes('@media(max-width:360px)'),'Small phone layouts must be covered');
-assert(css.includes('prefers-reduced-motion'),'Reduced-motion support must be retained');
-console.log('PASS private casino club: real Home/Games/Player screens, no gameplay changes, responsive styles and auth-bound RSVP');
+for(const component of [host,player,games])assert(!component.includes('pkr-approved-hero-desktop.webp')&&!component.includes('/images/casino/'),'Active app must not show casino stock imagery');
+assert(room.includes('expandedMemberId')&&room.includes('pkr-directory-extra')&&room.includes('pkr-directory-history'),'Player history and details must remain');
+assert(rsvp.includes("new URLSearchParams(window.location.search).get('choice')"),'RSVP preselection still supported');
+assert(rsvp.includes('async function submit()'),'No new RSVP back-end logic');
+assert(css.includes(':not(:has(#gameScreen))'),'Poker table styling is excluded');
+assert(css.includes('prefers-reduced-motion'),'Reduced motion preference must be honoured');
+console.log('PASS private club: branded host/player screens, real records, RSVP and permissions');

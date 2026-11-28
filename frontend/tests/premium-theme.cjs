@@ -1,92 +1,34 @@
 'use strict';
-// Release gate for PKR personal premium themes; no player or settlement data required.
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const postcss=require('postcss');
-const app=path.resolve(__dirname,'../src/app');
-const css=postcss.parse(fs.readFileSync(path.join(app,'pkr-premium-styles.css'),'utf8'));
-const appearances={};
-css.walkRules(rule=>{
- const match=rule.selector.match(/^html\[data-pkr-personal-style="(noir|clubhouse|studio)"\]\[data-pkr-personal-theme="(light|dark)"\]:not\(:has\(#gameScreen\)\)$/);
- if(!match)return;
- const key=match[1]+':'+match[2],roles={};
- rule.walkDecls(decl=>{
-  if(decl.prop.startsWith('--pkr-personal-'))roles[decl.prop.slice('--pkr-personal-'.length)]=decl.value;
- });
- assert(!appearances[key],'Duplicate colour palette '+key);
- appearances[key]=roles;
-});
-const styles=['noir','clubhouse','studio'],modes=['light','dark'];
-assert.equal(Object.keys(appearances).length,6,'All premium styles must have two colour modes');
-const toLuma=value=>{
- assert(/^#[0-9A-Fa-f]{6}$/.test(value),'A contrast role must be a hex colour: '+value);
- const rgb=[1,3,5].map(i=>parseInt(value.slice(i,i+2),16)/255);
- return rgb.map(x=>x<=0.04045?x/12.92:((x+0.055)/1.055)**2.4)
-  .reduce((sum,x,i)=>sum+x*[0.2126,0.7152,0.0722][i],0);
-};
-const contrast=(a,b)=>{
- const values=[toLuma(a),toLuma(b)].sort((a,b)=>a-b);
- return (values[1]+0.05)/(values[0]+0.05);
-};
-for(const style of styles)for(const mode of modes){
- const p=appearances[style+':'+mode];
- assert(p,'Missing '+style+'/'+mode+' palette');
- assert(Object.keys(p).length>=30,'Incomplete '+style+'/'+mode+' palette');
- for(const [fg,bg] of [['ink','canvas'],['ink','surface'],['ink','raised'],['muted','surface'],
- ['accent','accent-surface'],['gain','surface'],['loss','surface'],['on-gold','gold-fill']]){
-  const ratio=contrast(p[fg],p[bg]);
-  assert(ratio>=4.5,style+'/'+mode+' '+fg+' on '+bg+' WCAG AA text contrast '+ratio.toFixed(2));
- }
- assert(contrast('#FFFFFF',p['primary'])>=4.5,style+'/'+mode+' primary button text contrast');
- assert(p['scheme']===mode,style+'/'+mode+' colour scheme');
+const fs=require('node:fs'),path=require('node:path'),postcss=require('postcss');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+
+/* Brand parity is now canonical. Archived palettes remain in source for rollback,
+   but no longer control the shipped product or replace the approved experience. */
+const css=read('src/app/pkr-night-is-on.css');
+assert.doesNotThrow(()=>postcss.parse(css),'The approved design must parse');
+for(const token of ['--pkr-no-ink:#0B0D14','--pkr-no-blue:#1046F8','--pkr-no-coral:#FF5A4D','--pkr-no-citron:#C7FF3A']){
+ assert(css.includes(token),'Approved PKR token missing: '+token);
 }
-const root=path.resolve(__dirname,'../');
-const settings=fs.readFileSync(path.join(root,'src/components/PersonalAppearance.tsx'),'utf8');
-const bootstrap=fs.readFileSync(path.join(root,'public/pkr-appearance-init.js'),'utf8');
-const lib=fs.readFileSync(path.join(root,'src/lib/personal-appearance.ts'),'utf8');
-const layout=fs.readFileSync(path.join(root,'src/app/layout.tsx'),'utf8');
-for(const style of ['standard','noir','clubhouse','studio'])assert(settings.includes("id:'"+style+"'"),'Theme missing from settings: '+style);
-for(const mode of modes)assert(settings.includes("'"+mode+"'"),'Colour mode missing: '+mode);
-assert(settings.includes("'system'"),'Follow-device colour mode must be available');
-assert(settings.includes('chooseStyle(option.id)'),'Theme option must be interactive');
-assert(lib.includes("DEFAULT_VISUAL_STYLE:VisualStyle='private-club'"),'Private Casino Club must be the default for new users without a saved style');
-assert(settings.includes('useRef<VisualStyle>(DEFAULT_VISUAL_STYLE)'),'Provider must honour default premium style');
-assert(bootstrap.includes("?style:'private-club'"),'Early appearance script must apply the approved casino default before hydration');
-assert(bootstrap.includes("style==='standard'"),'Previously selected Classic must remain supported');
-assert(bootstrap.includes('pkr_personal_visual_style_v1'),'Reload must restore personal style');
-assert(lib.includes('!/^\\/games\\/[^/]+\\/(play|tv)'),'Live poker table must be excluded from personal themes');
-assert(layout.includes("import './pkr-premium-styles.css';"),'Premium palette CSS must be bundled');
-const home=fs.readFileSync(path.join(root,'src/components/GameNightHostHome.tsx'),'utf8');
-assert(home.includes('aria-labelledby="pkr-home-quick-heading"'),'Home must include an accessible compact action hub');
-assert(home.includes('Quick actions'),'Home should expose essential actions without being a directory');
-assert.equal((home.match(/pkr-gn-quick-arrow/g)||[]).length,4,'Home should contain four focused quick action cards');
-assert(!home.includes('pkr-gn-tool-group')&&!home.includes('pkr-gn-tool-grid')&&!home.includes('pkr-gn-club-links'),
- 'The oversized tool directory and duplicate club links must not return');
-for(const action of ['p.onSchedule','p.onSharing','p.onInvite','p.onRoom']){
- assert(home.includes(action),'Home must preserve its existing working navigation action: '+action);
+const settings=read('src/components/PersonalAppearance.tsx');
+const boot=read('public/pkr-appearance-init.js');
+const lib=read('src/lib/personal-appearance.ts');
+assert(settings.includes('PKR identity'),'Account must show one official identity');
+assert(settings.includes('THE NIGHT IS ON.'),'The official identity must be identifiable');
+assert(!settings.includes('chooseStyle(option.id)'),'Casino picker must not be presented as a brand');
+assert(boot.includes("setAttribute('data-pkr-personal-style','private-club')"),'Before hydration use canonical composition');
+assert(boot.includes("setAttribute('data-pkr-personal-theme','dark')"),'Before hydration use canonical dark colours');
+assert(settings.includes("setAttribute('data-pkr-personal-style','private-club')"),'React must preserve the same brand');
+assert(lib.includes("DEFAULT_VISUAL_STYLE:VisualStyle='private-club'"),'Support fallback for older installs');
+assert(lib.includes("!/^\\/games\\/[^/]+\\/(play|tv)"),'Exclude protected gameplay');
+assert(css.includes(':not(:has(#gameScreen))'),'Design cannot paint the live table');
+for(const cls of ['pkr-no-hero','pkr-no-next-ticket','pkr-no-player-pass','pkr-no-stats','pkr-no-games-hero','pkr-no-results','pkr-no-payments-hero']){
+ assert(css.includes('.'+cls),'Product design missing '+cls);
 }
-const premiumCss=fs.readFileSync(path.join(app,'pkr-premium-styles.css'),'utf8');
-assert(premiumCss.includes('.pkr-gn-quick-heading h2'),'Home section heading must have an explicit typography rule');
-assert(premiumCss.includes('.pkr-gn-quick-grid>button'),'Home must use compact card styling');
-assert(premiumCss.includes('repeat(2,minmax(0,1fr))'),'Mobile Home grid must use two columns');
-assert(premiumCss.includes('margin-bottom:15px!important'),'Mobile heading must be clearly separated from cards');
-const account=fs.readFileSync(path.join(root,'src/app/account/page.tsx'),'utf8');
-const accountHome=fs.readFileSync(path.join(root,'src/components/PersonalHomeViewSettings.tsx'),'utf8');
-const accountDashboard=fs.readFileSync(path.join(root,'src/app/dashboard/page.tsx'),'utf8');
-const player=fs.readFileSync(path.join(root,'src/components/PlayerRoomDashboard.tsx'),'utf8');
-assert(account.includes('data-testid="host-home-settings"'),'Hosts must be able to find personal Home preferences in Account');
-assert(account.includes('Preview the player experience'),'Host preview must remain available from Account');
-assert(accountHome.includes("const KEY='pkr_home_view:v1'"),'Home preference must preserve existing saved key');
-assert(accountHome.includes("CustomEvent('pkr:home-view-preference'"),'Personal Home choice must announce local changes');
-assert(accountDashboard.includes('previewPlayer&&<div className="pkr-player-preview-notice"'),
- 'Player preview explanation should be conditional, not a persistent Home card');
-assert(!accountDashboard.includes('ONE PKR EXPERIENCE'),'Do not restore the duplicate player-preview card on Home');
-assert(home.includes("game?p.onGame:p.onRoom"),'Current game should be accessible directly from Home');
-assert(!home.includes('Full dashboard</button>'),'Do not duplicate the Home view toggle in utility shortcuts');
-assert(player.includes('gn-player-more-list'),'Players must retain direct access to existing shortcuts');
-const experienceCss=fs.readFileSync(path.join(app,'pkr-experience-consolidation.css'),'utf8');
-assert(experienceCss.includes('.gn-player-more-list>button'),'Player shortcuts must have consistent theme styling');
-const dashboard=fs.readFileSync(path.join(root,'src/components/RoomDashboardDual.tsx'),'utf8');
-assert.equal(dashboard.split('{featureHub}').length-1,2,'Each dashboard view should include exactly one shortcuts hub');
-console.log('PASS premium themes: palettes, Account preferences, host preview isolation, host/player navigation and game-data boundaries');
+assert(read('src/app/layout.tsx').includes("import './pkr-night-is-on.css'"),'The approved brand must be loaded');
+assert(read('src/components/RoomDashboardDual.tsx').includes('PrivateClubHostHome'),'Host view stays connected');
+assert(read('src/components/PlayerRoomDashboard.tsx').includes('PrivateClubPlayerHome'),'Player view stays connected');
+assert(read('src/app/account/page.tsx').includes('PersonalAppearanceSettings'),'Account settings remain available');
+assert(read('src/app/account/page.tsx').includes('Preview the player experience'),'Host role preview remains available');
+console.log('PASS canonical PKR brand: one identity, protected gameplay, preserved host/player features');

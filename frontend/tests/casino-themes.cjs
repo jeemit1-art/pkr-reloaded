@@ -1,37 +1,21 @@
 'use strict';
-/* Four opt-in casino designs are theme paint, not changes to poker results or payment records. */
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),postcss=require('postcss');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const style=read('src/app/pkr-casino-themes.css');
-const src=read('src/lib/personal-appearance.ts');
-const settings=read('src/components/PersonalAppearance.tsx');
-const init=read('public/pkr-appearance-init.js');
-const layout=read('src/app/layout.tsx');
-const nav=read('src/components/PersistentNavigation.tsx');
-const postcss=require('postcss');
-postcss.parse(style);
-for(const name of ['luxe','neon','vip','tournament']){
- for(const mode of ['light','dark']){
-  const selector='html[data-pkr-personal-style="'+name+'"][data-pkr-personal-theme="'+mode+'"]:not(:has(#gameScreen))';
-  assert(style.includes(selector),'Missing independently authored '+name+' '+mode+' palette');
- }
- assert(style.includes('/images/casino/art-'+name+'.svg'),'Casino artwork missing from theme '+name);
- assert(read('public/images/casino/art-'+name+'.svg').startsWith('<svg'),'SVG art must be real markup for '+name);
- assert(settings.includes("id:'"+name+"'"),'Interactive Account selector missing '+name);
- assert(init.includes("style==='"+name+"'"),'Anti-flash script missing '+name);
- assert(src.includes("value==='"+name+"'"),'Saved preference guard missing '+name);
-}
-assert.equal((settings.match(/chooseStyle\(option.id\)/g)||[]).length,2,'Both theme groups must be interactive');
-for(const label of ['Home','Games','Players','Results','Payments'])assert(nav.includes("name:'"+label+"'"),'Keep the five working destinations');
-assert(style.includes(':not(:has(#gameScreen))'),'Gameplay must not be restyled');
-assert(src.includes("!/^\\/games\\/[^/]+\\/(play|tv)"),'Live table must retain original protection');
-assert(layout.includes("import './pkr-casino-themes.css';"),'Must be loaded with root design CSS');
-assert(!style.includes('background-image:none!important;\n --casino'),'Casino artwork should not be hidden');
-assert(!style.includes('font-family:url'),'No font path injection');
-for(const cls of ['pkr-dual-hero','pkr-dual-metrics','gn-player-next','pkr-results-command-hero','pkr-gn-payment-totals','pkr-primary-bottom-nav','pkr-visual-style-casino']){
- assert(style.includes(cls),'Missing coverage for '+cls);
-}
-console.log('PASS casino themes: eight palettes, source assets, saved selection, five tabs, host/player/results/payments and original gameplay boundary');
+
+/* Legacy palettes remain reviewable, but the user approved only one new brand. */
+const legacy=read('src/app/pkr-casino-themes.css');
+postcss.parse(legacy);
+for(const style of ['luxe','neon','vip','tournament'])
+ assert(legacy.includes('data-pkr-personal-style="'+style+'"'),'Retain previous look for rollback: '+style);
+const app=read('src/components/PersonalAppearance.tsx');
+const boot=read('public/pkr-appearance-init.js');
+const css=read('src/app/pkr-night-is-on.css');
+assert(app.includes('PKR identity')&&!app.includes('data-style-option='),'No new theme variant selector');
+assert(boot.includes("'private-club'"),'Canonical HTML composition must be applied pre-hydration');
+for(const label of ['Home','Games','Players','Results','Payments'])assert(read('src/components/PersistentNavigation.tsx').includes("name:'"+label+"'"),'Navigation missing '+label);
+assert(css.includes('--pkr-no-ink:#0B0D14'),'The design must have one ink');
+assert(css.includes(':not(:has(#gameScreen))'),'Protected gameplay must be excluded');
+assert(read('src/lib/personal-appearance.ts').includes("!/^\\/games\\/[^/]+\\/(play|tv)"),'Live poker remains separate');
+console.log('PASS PKR identity consistency: one approved brand, five destinations, archived theme data intact');
