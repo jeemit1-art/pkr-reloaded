@@ -1,0 +1,114 @@
+/* PKR brand crest. One original, sharp SVG shared by every visual theme.
+ * Repeat subtly, never on top of live gameplay or interactive controls.
+ * All marks are decorative except the surrounding navigation / landing links. */
+.pkr-brand-mark{
+ display:block;box-sizing:border-box;
+ width:100%;height:100%;max-width:100%;max-height:100%;
+ object-fit:contain;object-position:center;
+ opacity:1;filter:none;user-select:none;-webkit-user-drag:none;
+ pointer-events:none;
+}
+.pkr-primary-mobile-mark .pkr-brand-mark--header{
+ width:33px!important;height:33px!important;max-width:none!important;
+ filter:drop-shadow(0 1px 3px rgba(0,0,0,.24));
+}
+.pkr-primary-mobile-mark:has(.pkr-brand-mark--header){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 36px!important;width:36px!important;min-width:36px!important;
+ height:38px!important;line-height:1!important;overflow:visible!important;
+}
+.pkr-primary-sidebar .pkr-persistent-brand{
+ display:flex;align-items:center;gap:11px;min-width:0;
+}
+.pkr-primary-sidebar .pkr-brand-mark--sidebar{
+ width:40px!important;height:40px!important;flex:0 0 40px!important;
+ filter:drop-shadow(0 2px 4px #0005);
+}
+.pkr-primary-sidebar .pkr-persistent-brand span{min-width:0}
+.pkr-l2-brand .pkr-l2-brand-emblem:has(.pkr-brand-mark--landing){
+ display:grid;place-items:center;flex:0 0 auto;
+}
+.pkr-l2-brand .pkr-brand-mark--landing{
+ width:40px!important;height:40px!important;
+ filter:drop-shadow(0 3px 6px rgba(25,7,18,.32));
+}
+.pkr-install-brand:has(.pkr-brand-mark--install){
+ display:inline-flex!important;align-items:center;gap:9px;
+ text-decoration:none!important;
+}
+.pkr-brand-mark--install{
+ width:37px!important;height:37px!important;flex:0 0 37px!important;
+}
+/* Small authentic emblem, not a huge repeated wallpaper. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-primary-page-head,.pkr-gn-payments-heading,.pkr-results-room-bar
+ ){
+  position:relative;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-primary-page-head,.pkr-gn-payments-heading,.pkr-results-room-bar
+ )::after{
+  content:"";position:absolute;right:8px;top:4px;
+  width:clamp(32px,5vw,54px);height:clamp(32px,5vw,54px);
+  pointer-events:none;user-select:none;z-index:0;opacity:.11;
+  background:url('/brand/pkr-crest.svg') center/contain no-repeat;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-primary-page-head,.pkr-gn-payments-heading,.pkr-results-room-bar
+ ) > *{position:relative;z-index:1}
+ /* Hero crest placement: restrained, behind copy and clear of all buttons. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-brand-mark--hero{
+  position:absolute!important;right:clamp(10px,3vw,31px)!important;
+  top:clamp(48px,11vw,74px)!important;
+  width:clamp(84px,20vw,155px)!important;height:auto!important;aspect-ratio:1!important;
+  max-height:none!important;pointer-events:none!important;user-select:none!important;
+  opacity:.19!important;filter:none!important;z-index:1!important;
+  transform:rotate(8deg);transform-origin:center;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-brand-mark--hero{opacity:.22!important}
+ html[data-pkr-personal-theme="light"]:not(:has(#gameScreen))
+ .pkr-brand-mark--hero{opacity:.12!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-pc-entrance,.pkr-pc-player-scene,.pkr-cf-hero,
+  .pkr-pc-members-hero,.pkr-pc-results-hero,.pkr-pc-cashier-hero){
+  isolation:isolate;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-pc-identity,.pkr-cf-hero-copy,.pkr-pc-members-intro,
+  .pkr-pc-results-heading,.pkr-pc-cashier-copy){
+  position:relative;z-index:2;
+ }
+ /* Do not place a second spade graphic on top of the actual crest in Players. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-pc-members-felt{display:none!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-brand-mark--members{
+  right:14px!important;top:14px!important;width:68px!important;
+  opacity:.52!important;transform:rotate(-8deg);
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen))
+ .pkr-brand-mark--members{opacity:.20!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-brand-mark--results{right:12px!important;top:13px!important;width:104px!important;opacity:.14!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-brand-mark--payments{right:20px!important;top:56px!important;width:110px!important;opacity:.13!important}
+ html[data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-brand-mark--games{right:20px!important;top:64px!important;opacity:.17!important}
+ /* Header mark must remain perfectly sharp at 320px and small PWA viewports. */
+ @media(max-width:359px){
+  .pkr-primary-mobile-mark:has(.pkr-brand-mark--header){
+   flex-basis:31px!important;min-width:31px!important;width:31px!important;
+  }
+  .pkr-primary-mobile-mark .pkr-brand-mark--header{width:30px!important;height:30px!important}
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-brand-mark--hero{
+   width:79px!important;right:8px!important;opacity:.13!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-brand-mark--members{width:55px!important;right:8px!important;top:10px!important}
+ }
+ @media(prefers-reduced-motion:reduce){
+  .pkr-brand-mark{transition:none!important;animation:none!important}
+ }
+}
