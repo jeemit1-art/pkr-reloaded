@@ -518,3 +518,14 @@
   }
  }
 }
+
+
+/* Small phones: preserve an exclusive text lane beside the illustrated cards.
+   The Games title must never extend beneath decorative artwork. */
+@layer pkr-personal {
+ @media(max-width:600px) {
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-event .pkr-experience-stage.pkr-experience-games h1{
+   box-sizing:border-box!important;width:60%!important;max-width:60%!important;
+  }
+ }
+}
