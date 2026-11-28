@@ -232,7 +232,7 @@ export default function ResultsPage(){
   <nav className="pkr-section-tabs" aria-label="Results sections">
    {([['standings','Standings'],['history','History'],['insights','Insights']] as const).map(([key,title])=>
     <button type="button" key={key} onClick={()=>setSection(key)}
-      aria-current={view===key?'page':undefined}>{title}
+      aria-current={view===key?'page':undefined}><span className="pkr-pc-results-tab-label">{title}</span>
       {key==='history'&&settled.length>0&&<span className="pkr-section-count">{settled.length}</span>}</button>)}
   </nav>
   {error&&<p role="alert" className="pkr-primary-empty">{error}</p>}
