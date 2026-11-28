@@ -24,11 +24,11 @@ async function runOne(browser,engine,viewport,{style='tournament',role='host',em
   if(url.origin===BASE)return route.continue();
   if(url.origin!==API)return route.abort();
   if(empty&&url.pathname==='/events/'+room.id+'/games'&&request.method()==='GET')
-   return route.fulfill({status:200,contentType:'application/json',body:'[]',headers:{'access-control-allow-origin':BASE}});
+   return route.fulfill({status:200,contentType:'application/json',body:'[]',headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
   try{
    const body=fixture.resolve(url,request.method(),request.postData());
    return route.fulfill({status:200,contentType:'application/json',
-    body:JSON.stringify(body),headers:{'access-control-allow-origin':BASE,'access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
+    body:JSON.stringify(body),headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
   }catch(error){unexpected.push(error.message);return route.fulfill({status:404,contentType:'application/json',body:'{"error":"Fictional fixture unavailable"}'});}
  });
  const page=await context.newPage();page.setDefaultTimeout(17000);
