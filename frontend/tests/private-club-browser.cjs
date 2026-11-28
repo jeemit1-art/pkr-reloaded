@@ -81,6 +81,25 @@ async function runHost(browser,device){
   await page.waitForURL(url=>url.pathname.endsWith('/rsvp')&&url.searchParams.get('choice')==='yes',{timeout:12000});
   assert(new URL(page.url()).searchParams.get('choice')==='yes','Going must navigate to authorised RSVP form');
   assert(!failures.some(e=>/Forbidden fixture mutation|Unexpected API write/.test(e)),'No RSVP may be submitted automatically');
+  // Player directory must show one action pathway, not a second hero menu and podium.
+  await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-players').waitFor({state:'visible'});
+  assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-podium').count(),0,
+   'Player rankings belong in Results; do not duplicate podium in Directory');
+  assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-members-actions button').count(),0,
+   'No View Players / Invite Player buttons above the real Players navigation');
+  const directoryNav=page.getByRole('navigation',{name:'Members quick actions'});
+  assert.equal(await directoryNav.locator('button').count(),3,'Keep exactly one Directory, Invite & QR, Approvals action bar for host');
+  assert(await page.locator('#pkr-member-search').isVisible(),'The searchable member list must appear beneath the action bar');
+  assert(await page.getByRole('group',{name:'Filter members by role'}).isVisible(),'All / Admins / Players filters remain available');
+  const heroRect=await page.getByTestId('private-club-players').boundingBox();
+  assert(heroRect&&heroRect.height<=195,'Compact Players header must not consume the entire mobile fold: '+JSON.stringify(heroRect));
+  await validate(page,'compact Players '+name);
+  await page.screenshot({path:path.join(output,'players-'+name+'.png')});
+  await directoryNav.getByRole('button',{name:/Invite & QR/}).click();
+  assert(await page.locator('#pkr-mobile-name').isVisible(),'Invitation and WhatsApp/QR flow remains accessible');
+  await directoryNav.getByRole('button',{name:/Directory/}).click();
+  assert(await page.locator('#pkr-member-search').isVisible(),'Directory must reopen without losing filters or records');
   if(w>=768){
    await page.goto(BASE+'/results?room='+room.id);
    await page.locator('.pkr-results-page').waitFor();
