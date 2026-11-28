@@ -3,33 +3,33 @@
    Protect the live poker table, financial semantics, layout hit targets, and existing callbacks. */
 @layer pkr-personal {
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)){
-  --pkr-no-ink:#0B0D14;--pkr-no-blue:#1046F8;--pkr-no-coral:#FF5A4D;
-  --pkr-no-citron:#C7FF3A;--pkr-no-paper:#F5F5EF;--pkr-no-slate:#182139;
-  --pkr-no-surface:#141C2D;--pkr-no-raised:#1E2942;--pkr-no-border:#364765;
-  --pkr-no-muted:#C0CBDF;--pkr-no-profit:#2ACB91;--pkr-no-loss:#FF7468;
-  --pkr-personal-canvas:#0B0D14;--pkr-personal-surface:#151D2E;--pkr-personal-raised:#1D2940;
-  --pkr-personal-line:#3E5071;--pkr-personal-control:#7486A6;
-  --pkr-personal-ink:#F5F5EF;--pkr-personal-muted:#C0CBDF;--pkr-personal-primary:#1046F8;
-  --pkr-personal-primary-deep:#002BC5;--pkr-personal-accent:#C7FF3A;
-  --pkr-personal-accent-surface:#29384B;--pkr-personal-accent-line:#98BD45;
-  --pkr-personal-nav:#0D1424;--pkr-personal-hero:#1046F8;--pkr-personal-hero-live:#1437B8;
-  --pkr-personal-hero-deep:#071E61;--pkr-personal-hero-glow:#2B5BF3;
-  --pkr-personal-on-dark:#F5F5EF;--pkr-personal-on-dark-muted:#DAE4F3;
-  --pkr-personal-on-dark-gold:#C7FF3A;--pkr-personal-on-dark-gain:#2ACB91;
-  --pkr-personal-on-dark-loss:#FF7468;--pkr-personal-gold-fill:#C7FF3A;
-  --pkr-personal-on-gold:#0B0D14;--pkr-personal-gain:#2ACB91;
-  --pkr-personal-gain-surface:#123A33;--pkr-personal-gain-line:#327C63;
-  --pkr-personal-loss:#FF7468;--pkr-personal-loss-surface:#41242F;--pkr-personal-loss-line:#AA4F58;
-  --pkr-personal-warning:#FFCB88;--pkr-personal-warning-surface:#453322;
-  --pkr-personal-warning-line:#B48B50;--pkr-personal-danger-fill:#AC3742;
-  --pkr-personal-warning-fill:#9C662E;--pkr-personal-shadow:#0007;
-  --pkr-personal-scheme:dark;
-  --casino-rim:#1046F8;--casino-spark:transparent;--casino-cta:#C7FF3A;
-  --casino-cta-ink:#0B0D14;--casino-radius:16px;--casino-nav-glow:transparent;
-  --casino-art:none;--pkr-vg-ink:#F5F5EF;--pkr-vg-cream:#F5F5EF;
-  --pkr-vg-muted:#C0CBDF;--pkr-vg-red:#FF5A4D;--pkr-vg-coral:#FF5A4D;
-  --pkr-vg-gold:#C7FF3A;--pkr-vg-teal:#2ACB91;
-  --pkr-vg-font:var(--font-body),Inter,Arial,sans-serif;
+  --pkr-no-ink:#0B0D14!important;--pkr-no-blue:#1046F8!important;--pkr-no-coral:#FF5A4D!important;
+  --pkr-no-citron:#C7FF3A!important;--pkr-no-paper:#F5F5EF!important;--pkr-no-slate:#182139!important;
+  --pkr-no-surface:#141C2D!important;--pkr-no-raised:#1E2942!important;--pkr-no-border:#364765!important;
+  --pkr-no-muted:#C0CBDF!important;--pkr-no-profit:#2ACB91!important;--pkr-no-loss:#FF7468!important;
+  --pkr-personal-canvas:#0B0D14!important;--pkr-personal-surface:#151D2E!important;--pkr-personal-raised:#1D2940!important;
+  --pkr-personal-line:#3E5071!important;--pkr-personal-control:#7486A6!important;
+  --pkr-personal-ink:#F5F5EF!important;--pkr-personal-muted:#C0CBDF!important;--pkr-personal-primary:#1046F8!important;
+  --pkr-personal-primary-deep:#002BC5!important;--pkr-personal-accent:#C7FF3A!important;
+  --pkr-personal-accent-surface:#29384B!important;--pkr-personal-accent-line:#98BD45!important;
+  --pkr-personal-nav:#0D1424!important;--pkr-personal-hero:#1046F8!important;--pkr-personal-hero-live:#1437B8!important;
+  --pkr-personal-hero-deep:#071E61!important;--pkr-personal-hero-glow:#2B5BF3!important;
+  --pkr-personal-on-dark:#F5F5EF!important;--pkr-personal-on-dark-muted:#DAE4F3!important;
+  --pkr-personal-on-dark-gold:#C7FF3A!important;--pkr-personal-on-dark-gain:#2ACB91!important;
+  --pkr-personal-on-dark-loss:#FF7468!important;--pkr-personal-gold-fill:#C7FF3A!important;
+  --pkr-personal-on-gold:#0B0D14!important;--pkr-personal-gain:#2ACB91!important;
+  --pkr-personal-gain-surface:#123A33!important;--pkr-personal-gain-line:#327C63!important;
+  --pkr-personal-loss:#FF7468!important;--pkr-personal-loss-surface:#41242F!important;--pkr-personal-loss-line:#AA4F58!important;
+  --pkr-personal-warning:#FFCB88!important;--pkr-personal-warning-surface:#453322!important;
+  --pkr-personal-warning-line:#B48B50!important;--pkr-personal-danger-fill:#AC3742!important;
+  --pkr-personal-warning-fill:#9C662E!important;--pkr-personal-shadow:#0007!important;
+  --pkr-personal-scheme:dark!important;
+  --casino-rim:#1046F8!important;--casino-spark:transparent!important;--casino-cta:#C7FF3A!important;
+  --casino-cta-ink:#0B0D14!important;--casino-radius:16px!important;--casino-nav-glow:transparent!important;
+  --casino-art:none!important;--pkr-vg-ink:#F5F5EF!important;--pkr-vg-cream:#F5F5EF!important;
+  --pkr-vg-muted:#C0CBDF!important;--pkr-vg-red:#FF5A4D!important;--pkr-vg-coral:#FF5A4D!important;
+  --pkr-vg-gold:#C7FF3A!important;--pkr-vg-teal:#2ACB91!important;
+  --pkr-vg-font:var(--font-body),Inter,Arial,sans-serif!important;
   color-scheme:dark;
  }
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) body{
