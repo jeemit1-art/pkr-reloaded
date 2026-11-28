@@ -238,6 +238,20 @@ export default function GameNightPayments(){
    <div><p className="pkr-gn-payments-club">{room?.name||'Your poker club'}</p><h1>Payments</h1></div>
    <button type="button" className="pkr-gn-payment-refresh" disabled={loading||busy||(!selectedRoom&&!accountError)} onClick={refresh} aria-label="Refresh payment records"><PaymentIcon name="refresh"/></button>
   </header>
+  <section className="pkr-pc-cashier-hero" data-testid="private-club-cashier" aria-label="Your private club cashier">
+    <div className="pkr-pc-cashier-hero-art" aria-hidden="true"><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-a"/><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-b"/></div>
+    <div className="pkr-pc-cashier-copy">
+      <span className="pkr-pc-overline">♠ YOUR PRIVATE CLUB CASHIER</span>
+      <h1>Cashier <em>&amp; Settlements</em></h1>
+      <p>{room?.name||'Your poker club'}</p>
+      <div className="pkr-pc-cashier-status">
+        <span>{loading?'CHECKING RECORDS':partial?'PARTIAL RECORDS':ready?'SAVED RECORDS READY':'PRIVATE CLUB ACCOUNTS'}</span>
+        <strong>{scope==='club'?'CLUB VIEW':'MY PAYMENTS'}</strong>
+      </div>
+    </div>
+    <button type="button" className="pkr-pc-cashier-refresh" disabled={loading||busy||(!selectedRoom&&!accountError)}
+      onClick={refresh}><PaymentIcon name="refresh"/> Refresh records</button>
+  </section>
 
   {rooms.length>1&&<label className="pkr-gn-payment-room-label">Poker club<select value={selectedRoom} disabled={busy} onChange={event=>chooseRoom(event.target.value)}>{rooms.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
   {canManage?<div className="pkr-gn-payment-scope" role="group" aria-label="Payment view">
