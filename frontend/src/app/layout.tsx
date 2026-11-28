@@ -32,6 +32,8 @@ import './pkr-casino-rebuild.css';
 import './pkr-privateclub.css';
 // Distinct Vegas floor design and sharp, readable iOS typography; scoped to Private Casino Club.
 import './pkr-vegas-floor.css';
+// Private Casino Club: explicit light and dark variants; keep live table unchanged.
+import './pkr-privateclub-light.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
