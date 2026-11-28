@@ -42,6 +42,8 @@ import './pkr-universal-avatars.css';
 import './pkr-rank-chips.css';
 // One real PKR logo, scaled consistently across all themes and the product shell.
 import './pkr-brand-crest.css';
+// Shared public marketing and official PKR identity, without altering app themes/gameplay.
+import './pkr-brand-system.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -49,34 +51,34 @@ import PersistentNavigation from '@/components/PersistentNavigation';
 const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#07160F', colorScheme:'dark',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#0D0B19', colorScheme:'dark',
 };
 export const metadata: Metadata = {
-  applicationName:'PKR', manifest:'/manifest.json',
+  applicationName:'PKR — Your Private Poker Club', manifest:'/manifest.json',
   appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black'},
   icons:{icon:[{url:'/brand/pkr-crest.svg',type:'image/svg+xml'},{url:'/icon-192.png',type:'image/png'}],apple:'/icon-192.png'},
-  title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
+  title: 'PKR — Your Private Poker Club | More Poker. Less Admin.',
   description:
-    'PKR helps you manage private home poker games: track buy-ins and cash-outs, organize players, run tournament blinds, review leaderboards and see who owes whom. From AUD $9.99/month for hosts.',
+    'Organise private poker nights with PKR. Invitations, RSVPs, game tracking, results and settlement records for hosts and players in one connected app.',
   keywords:
     'home poker game tracker, poker buy-in tracker, home poker tournament manager, poker blind timer, poker settlement calculator, private poker group app, poker leaderboard, home poker game app',
   metadataBase: new URL('https://mypkr.app'),
   alternates: {canonical:'/'},
   robots: {index:true,follow:true,googleBot:{index:true,follow:true,'max-image-preview':'large','max-snippet':-1}},
   openGraph: {
-    title: 'PKR — Home Poker Tracker & Tournament Manager',
+    title: 'PKR — More Poker. Less Admin.',
     description:
-      'Track buy-ins, cashouts and settlements in real time. Built for home game hosts. Free 5-day trial.',
+      'Your private poker club, organised. Bring players, RSVPs, games, results and settlement records together with PKR.',
     url: 'https://mypkr.app',
     siteName: 'PKR',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'PKR home poker tracker and tournament manager' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'PKR ruby-and-gold crest: More poker. Less admin.' }],
     type: 'website',
     locale: 'en_AU',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PKR — Home Poker Game Manager',
-    description: 'Track buy-ins, cashouts and settlements in real time. Built for home game hosts.',
+    title: 'PKR — Your Private Poker Club',
+    description: 'More poker. Less admin. Organise private poker nights in one connected app.',
     images: ['/opengraph-image'],
   },
 };

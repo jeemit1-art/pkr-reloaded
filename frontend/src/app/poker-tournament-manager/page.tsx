@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import MarketingBrandHeader from '@/components/MarketingBrandHeader';
 import '../pkr-marketing-screens.css';
 
 export const metadata:Metadata={
@@ -8,7 +9,7 @@ export const metadata:Metadata={
  openGraph:{title:'Run a Home Poker Tournament with PKR',description:'Manage tournament blind levels, players, progress and results at your next private poker night.',url:'/poker-tournament-manager'},
 };
 export default function TournamentPage(){
- return <main className="pkr-marketing-editorial">
+ return <main className="pkr-marketing-editorial"><MarketingBrandHeader/>
   <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Tournament manager</span></nav>
   <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">HOME POKER TOURNAMENT MANAGER</span><h1>Set the blinds.<br/><em>Run the room.</em></h1><p>Organize a private poker tournament with clear blind stages, player seating and a consistent record of the game. PKR keeps the structure visible while you focus on hosting.</p><div className="pkr-marketing-hero-actions"><a className="pkr-marketing-button primary" href="/?subscribe=pro">Explore Pro hosting ↗</a><a className="pkr-marketing-button" href="/pricing">See host plans</a></div></header>
   <div className="pkr-marketing-feature-visual pkr-marketing-launch-visual"><img src="/demo/launch-20261127/mobile-tournament.webp" alt="Current PKR tournament screen with blind levels, timer and fictional game data" width="430" height="873" loading="lazy" decoding="async"/><div><small>YOUR GAME. YOUR FORMAT.</small><strong>Game setup and host controls,<br/>all together.</strong></div></div>

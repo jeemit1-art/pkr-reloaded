@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import MarketingBrandHeader from '@/components/MarketingBrandHeader';
 
 export const metadata:Metadata={
  title:'PKR Pricing Australia — Starter $9.99 & Pro $19.99 / Month',
@@ -15,7 +16,7 @@ const questions=[
 ];
 export default function PricingPage(){
  const freeFirstGame=process.env.NEXT_PUBLIC_PKR_FREE_FIRST_GAME_V1==='1';
- return <main className="pkr-marketing-editorial">
+ return <main className="pkr-marketing-editorial"><MarketingBrandHeader/>
   <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Pricing</span></nav>
   <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">PKR HOST SUBSCRIPTIONS</span><h1>Simple plans.<br/><em>Better game nights.</em></h1><p>Keep every buy-in, tournament blind and player result in one place. Only hosts need a hosting plan; players join their host’s private group without buying a host subscription.</p></header>
   {freeFirstGame&&<section className="pkr-marketing-prose" aria-label="First cash game offer">

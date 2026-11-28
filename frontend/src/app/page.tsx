@@ -8,8 +8,7 @@ import AppDialog from '@/components/AppDialog';
 import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
 import PkrBrandMark from '@/components/PkrBrandMark';
 import './pkr-launch.css';
-import './chip-club-launch.css';
-import './chip-club-launch-coverage.css';
+// The retired Chip Club marketing paint is superseded by PKR's official crest-led brand system.
 
 const steps:{icon:PkrGlyphName;title:string;detail:string}[] = [
   {icon:'users',title:'Bring your people together',detail:'Create a private club, send personal invitations and approve your players.'},
@@ -201,7 +200,7 @@ export default function HomePage() {
       </main>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData).replace(/</g,'\\u003c')}}/>
-      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a><p>Private poker night management.<br/>The game belongs to your crew.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a></nav></footer>
+      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a><p>More poker. Less admin.<br/>From the invitation to the final result.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a><a href="/brand">Brand kit</a></nav></footer>
 
       {loginOpen&&<AppDialog aria-label="Host sign in" onDismiss={()=>setLoginOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setLoginOpen(false);}}>
         <div className="pkr-launch-signin">

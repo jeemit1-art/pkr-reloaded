@@ -1,0 +1,192 @@
+/* PKR unified brand v1: one official identity from landing to marketing and app chrome.
+   Presentation only. Never override private poker table, result semantics or selected themes. */
+:root {
+ --pkr-brand-midnight:#0D0B19;
+ --pkr-brand-velvet:#2B1028;
+ --pkr-brand-ruby:#C94D6C;
+ --pkr-brand-gold:#EEC98A;
+ --pkr-brand-ivory:#FFF4D5;
+ --pkr-brand-felt:#153C31;
+ --pkr-brand-win:#69D59A;
+ --pkr-brand-loss:#FE8A87;
+}
+/* Landing marketing identity: retina-sharp local UI type, contrast without blur. */
+html body .pkr-launch {
+ --launch-ink:#FFF4D5;
+ --launch-muted:#D5C4D1;
+ --launch-accent:#EEC98A;
+ --launch-coral:#EEC98A;
+ --launch-paper:#181121;
+ --launch-line:#66445B;
+ background:#0D0B19;
+ color:#FFF4D5;
+ font-family:var(--font-body),Inter,Arial,sans-serif;
+}
+html body .pkr-launch :is(h1,h2,h3,.pkr-l2-brand){color:#FFF4D5;font-family:var(--font-body),Inter,Arial,sans-serif;letter-spacing:-.045em}
+html body .pkr-launch em{font-style:normal;color:#EEC98A}
+html body .pkr-launch :is(button,a,input,summary):focus-visible{outline:3px solid #FFF4D5;outline-offset:3px}
+html body .pkr-launch .pkr-l2-topbar{background:#130E1B;border-color:#765266;box-shadow:0 2px 0 #D5A86A18}
+html body .pkr-launch .pkr-l2-brand small{color:#EEC98A}
+html body .pkr-launch .pkr-l2-navlinks a,
+html body .pkr-launch .pkr-l2-player-link{color:#FFF4D5}
+html body .pkr-launch .pkr-l2-navlinks a:hover,
+html body .pkr-launch .pkr-l2-player-link:hover{color:#EEC98A}
+html body .pkr-launch :is(.pkr-l2-eyebrow,.pkr-l2-section-kicker,.pkr-tour-overline){color:#EEC98A}
+html body .pkr-launch .pkr-l2-hero{background:radial-gradient(ellipse 59% 78% at 91% 22%,#81335667,transparent 70%),linear-gradient(135deg,#0D0B19 10%,#2B1028 100%);border-bottom:1px solid #8E6A574D}
+html body .pkr-launch .pkr-l2-hero::before{
+ content:"";pointer-events:none;position:absolute;z-index:0;
+ width:clamp(170px,24vw,360px);aspect-ratio:1;right:3%;top:5%;opacity:.055;
+ background:url('/brand/pkr-crest.svg') center/contain no-repeat;
+}
+html body .pkr-launch .pkr-l2-hero h1{font-weight:800;letter-spacing:-.055em;text-shadow:none}
+html body .pkr-launch .pkr-l2-hero-copy>p{color:#E4D6DE}
+html body .pkr-launch .pkr-l2-hero-trust{color:#F1E3DB}
+html body .pkr-launch .pkr-l2-hero-trust svg,
+html body .pkr-launch .pkr-l2-ribbon>div>svg{color:#EEC98A}
+html body .pkr-launch .pkr-l2-hero-copy>p.pkr-launch-availability{color:#D3C5CF}
+html body .pkr-launch .pkr-l2-btn-gold,
+html body .pkr-launch :is(.pkr-tour-cta,.pkr-launch-signin-primary){
+ color:#241522;background:linear-gradient(135deg,#FFF4D5,#EEC98A 64%,#C69860);
+ border:1px solid #F7DCAB;box-shadow:0 9px 30px #0003;
+}
+html body .pkr-launch .pkr-l2-btn-gold:hover,
+html body .pkr-launch :is(.pkr-tour-cta,.pkr-launch-signin-primary):hover{
+ color:#241522;background:#FFF4D5;border-color:#FFF4D5;
+}
+html body .pkr-launch :is(.pkr-l2-btn-outline,.pkr-l2-btn-glass){
+ color:#FFF4D5;background:#332039;border-color:#D0AD7C;
+}
+html body .pkr-launch :is(.pkr-l2-btn-outline,.pkr-l2-btn-glass):hover{background:#4C2B49;border-color:#FFF4D5}
+html body .pkr-launch .pkr-hero-desktop{background:#221527;border-color:#D8AC76;box-shadow:0 22px 66px #08030AA8,0 0 0 1px #EEC98A32}
+html body .pkr-launch .pkr-hero-desktop-header{color:#E6D6D9}
+html body .pkr-launch .pkr-hero-desktop-header>span:first-child{color:#EEC98A}
+html body .pkr-launch .pkr-hero-mobile{background:#1B1121;border-color:#EEC98A;box-shadow:0 15px 34px #0703099C}
+html body .pkr-launch .pkr-hero-real-label{background:#28182D;color:#FFF4D5;border:1px solid #EEC98A}
+html body .pkr-launch .pkr-hero-real::before{background:radial-gradient(circle,#9B4A6855,transparent 65%)}
+html body .pkr-launch .pkr-l2-ribbon{background:#171020;border-color:#79546C}
+html body .pkr-launch .pkr-l2-ribbon>div:not(:last-child){border-color:#79546C}
+html body .pkr-launch .pkr-l2-ribbon small{color:#D9C4D0}
+html body .pkr-launch :is(.pkr-l2-section,.pkr-product-tour,.pkr-mobile-product-showcase){background:#0D0B19;color:#FFF4D5}
+html body .pkr-launch :is(.pkr-l2-section-heading>p,.pkr-product-tour-header>p,.pkr-mobile-product-intro p){color:#D8C6D1}
+html body .pkr-launch .pkr-l2-step{background:#201326;border:1px solid #7C5E68;border-radius:17px}
+html body .pkr-launch .pkr-l2-step p{color:#E0CDD4}
+html body .pkr-launch .pkr-launch-step-icon{background:#42233E;color:#EEC98A}
+html body .pkr-launch .pkr-tour-tab{background:#241628;color:#F3DCD6;border:1px solid #7C5A68}
+html body .pkr-launch .pkr-tour-tab.selected,
+html body .pkr-launch .pkr-tour-tab[aria-selected=true]{background:#EEC98A;color:#241522;border-color:#FFF4D5}
+html body .pkr-launch .pkr-tour-panel{background:linear-gradient(120deg,#28172C,#140F20);border:1px solid #9D7A70;color:#FFF4D5}
+html body .pkr-launch .pkr-tour-copy h3{color:#FFF4D5}
+html body .pkr-launch :is(.pkr-tour-copy p,.pkr-tour-copy li,.pkr-tour-nav,.pkr-tour-nav button){color:#E5D5E0}
+html body .pkr-launch .pkr-tour-screen-top{background:#291D30;color:#F2DCD6;border-color:#AB8A78}
+html body .pkr-launch .pkr-tour-sample-note{background:#291D30;color:#F2DCD6;border-color:#AB8A78}
+html body .pkr-launch .pkr-proof-card{background:#231528;border-color:#7D5F6B;color:#FFF4D5}
+html body .pkr-launch .pkr-proof-card-copy :is(strong,span){color:#E8D7DD}
+html body .pkr-launch .pkr-proof-card-image{background:#19101E;border-color:#79546C}
+html body .pkr-launch .pkr-mobile-device figcaption{color:#FFF4D5}
+html body .pkr-launch .pkr-mobile-device figcaption small{color:#DBC2CD}
+html body .pkr-launch .pkr-l2-pricing{background:#1B1222;border-block:1px solid #806174}
+html body .pkr-launch .pkr-l2-plan{background:#241628;border:1px solid #806174;color:#FFF4D5}
+html body .pkr-launch .pkr-l2-plan-featured{background:#321A33;border:2px solid #EEC98A;box-shadow:0 12px 33px #0004}
+html body .pkr-launch .pkr-l2-plan-name{color:#F1D5A8}
+html body .pkr-launch .pkr-l2-plan :is(p,li){color:#E1CBD8}
+html body .pkr-launch .pkr-l2-plan ul{border-color:#806174}
+html body .pkr-launch .pkr-l2-price{color:#FFF4D5}
+html body .pkr-launch .pkr-l2-price small{color:#DCC6CF}
+html body .pkr-launch .pkr-l2-plan-badge{background:#EEC98A;color:#231526}
+html body .pkr-launch .pkr-l2-pricing-note{color:#D9C6D2}
+html body .pkr-launch .pkr-l2-join-section p{color:#E1D0D7}
+html body .pkr-launch .pkr-l2-join-section p a{color:#EEC98A}
+html body .pkr-launch .pkr-l2-join-form{background:#241528;border-color:#8D6A73;color:#FFF4D5}
+html body .pkr-launch .pkr-l2-join-form :is(label,input){color:#FFF4D5}
+html body .pkr-launch .pkr-l2-join-form input{background:#100E1B;border:1px solid #AC8B8B}
+html body .pkr-launch .pkr-l2-join-form input::placeholder{color:#C6BBC6}
+html body .pkr-launch .pkr-l2-join-form button{background:#EEC98A;color:#241522;border-color:#F1DCAD}
+html body .pkr-launch .pkr-l2-faq-item{background:#231528;border-color:#77586B}
+html body .pkr-launch .pkr-l2-faq-item :is(summary,p){color:#F4E6E2}
+html body .pkr-launch .pkr-l2-faq-item summary b{color:#EEC98A}
+html body .pkr-launch .pkr-l2-last-call{background:radial-gradient(ellipse at 90% 20%,#6B29485E,transparent 62%),#180F21}
+html body .pkr-launch .pkr-l2-last-call h2{color:#FFF4D5}
+html body .pkr-launch .pkr-l2-last-call p{color:#E0CAD6}
+html body .pkr-launch .pkr-l2-last-call>.pkr-launch-closing-screen{background:#231627;border-color:#DDB68B}
+html body .pkr-launch .pkr-l2-footer{background:#0D0B19}
+html body .pkr-launch .pkr-l2-footer p,
+html body .pkr-launch .pkr-l2-footer nav{color:#D9C5CF}
+html body .pkr-launch .pkr-l2-footer nav a:hover{color:#FFF4D5}
+html body .pkr-launch :is(.pkr-launch-signin,.pkr-launch-preview){background:#221629;color:#FFF4D5;border-color:#B89C81}
+html body .pkr-launch :is(.pkr-launch-signin,.pkr-launch-preview) h2{color:#FFF4D5}
+html body .pkr-launch .pkr-launch-signin p{color:#E0CAD6}
+html body .pkr-launch .pkr-launch-signin a{color:#EEC98A}
+html body .pkr-launch .pkr-launch-dialog-close{background:#39253A;color:#FFF4D5}
+html body .pkr-launch .pkr-launch-preview>header :is(p,button){color:#E5D6DF}
+@media(max-width:620px){
+ html body .pkr-launch .pkr-l2-topbar{background:#130E1B}
+ html body .pkr-launch .pkr-l2-ribbon>div:not(:last-child){border-bottom-color:#79546C}
+ html body .pkr-launch .pkr-l2-hero::before{width:180px;right:-52px;top:3%;opacity:.05}
+ html body .pkr-launch .pkr-l2-hero h1{font-size:clamp(40px,10vw,53px);overflow-wrap:normal;hyphens:none}
+ html body .pkr-launch .pkr-l2-hero-inner{min-height:0}
+ html body .pkr-launch .pkr-l2-topbar .pkr-l2-brand small{font-size:8px}
+ html body .pkr-launch .pkr-l2-nav-inner{padding-inline:15px;gap:10px}
+ html body .pkr-launch .pkr-l2-header-actions{gap:8px}
+ html body .pkr-launch .pkr-l2-header-actions .pkr-l2-btn{font-size:12px;padding-inline:10px;min-height:42px}
+}
+@media(prefers-reduced-motion:reduce){
+ html body .pkr-launch *,html body .pkr-launch *::before,html body .pkr-launch *::after{animation:none!important;transition:none!important}
+}
+/* Marketing articles share exactly the PKR palette and crisp type, never gambling advertising. */
+html body .pkr-marketing-editorial{
+ --mk-gold:#EEC98A;--mk-ink:#FFF4D5;--mk-muted:#D8C5CE;
+ background:radial-gradient(ellipse 65% 35% at 95% 0%,#6A2B4E70,transparent 75%),#0D0B19;
+ color:#FFF4D5;font-family:var(--font-body),Inter,Arial,sans-serif;
+}
+html body .pkr-marketing-editorial :is(h1,h2,h3){font-family:var(--font-body),Inter,Arial,sans-serif;color:#FFF4D5}
+html body .pkr-marketing-editorial :is(em,.pkr-marketing-kicker){color:#EEC98A}
+html body .pkr-marketing-editorial :is(a,button,summary):focus-visible{outline:3px solid #FFF4D5;outline-offset:3px}
+html body .pkr-marketing-editorial .pkr-marketing-prose{border-color:#83596970}
+html body .pkr-marketing-editorial .pkr-marketing-steps article,
+html body .pkr-marketing-editorial .pkr-marketing-plan,
+html body .pkr-marketing-editorial .pkr-marketing-prose details{background:#241627;border-color:#97757A}
+html body .pkr-marketing-editorial .pkr-marketing-plan.featured{background:linear-gradient(135deg,#43223E,#26182D);border-color:#EEC98A}
+html body .pkr-marketing-editorial .pkr-marketing-button{background:#35213D;color:#FFF4D5!important;border-color:#AC8C83}
+html body .pkr-marketing-editorial .pkr-marketing-button.primary{background:linear-gradient(120deg,#FFF4D5,#EEC98A);color:#211523!important;border-color:#FFF4D5}
+html body .pkr-marketing-editorial .pkr-marketing-button:hover{border-color:#FFF4D5}
+html body .pkr-marketing-editorial .pkr-marketing-steps article>span,
+html body .pkr-marketing-editorial .pkr-marketing-price{color:#EEC98A}
+html body .pkr-marketing-editorial .pkr-marketing-steps p,
+html body .pkr-marketing-editorial .pkr-marketing-plan p,
+html body .pkr-marketing-editorial .pkr-marketing-plan li,
+html body .pkr-marketing-editorial .pkr-marketing-prose details p{color:#E1CFD8}
+html body .pkr-marketing-editorial .pkr-marketing-feature-visual{background:#28172D;border-color:#9B7479}
+html body .pkr-marketing-editorial .pkr-marketing-feature-visual::after{background:linear-gradient(90deg,#130E1BF2,#1B1124A8 62%,#0E0B1970)}
+/* Marketing logo component: same official mark as the app. */
+.pkr-marketing-brand-header{
+ max-width:1190px;margin:0 auto 27px;padding:0 0 20px;
+ display:flex;align-items:center;justify-content:space-between;gap:18px;
+ border-bottom:1px solid #97757A70;
+}
+.pkr-marketing-brand-link{display:inline-flex;align-items:center;gap:12px;color:#FFF4D5!important;text-decoration:none;font-size:27px;font-weight:850;letter-spacing:-.055em;line-height:1}
+.pkr-marketing-brand-link img{width:46px;height:46px;flex:0 0 46px}
+.pkr-marketing-brand-link span{display:flex;flex-direction:column;gap:5px}
+.pkr-marketing-brand-link small{font-size:10px;color:#EEC98A;letter-spacing:.09em;font-weight:750}
+.pkr-marketing-brand-action{border:1px solid #BC9C82;border-radius:10px;text-decoration:none;color:#FFF4D5!important;padding:11px 16px;min-height:43px;display:inline-flex;align-items:center;font-size:13px;font-weight:750}
+.pkr-marketing-brand-action:hover{background:#3D2640}
+@media(max-width:480px){.pkr-marketing-brand-header{gap:9px;padding-bottom:14px}.pkr-marketing-brand-link{font-size:23px;gap:7px}.pkr-marketing-brand-link img{width:38px;height:38px;flex-basis:38px}.pkr-marketing-brand-link small{font-size:7px}.pkr-marketing-brand-action{font-size:11px;padding:9px 10px}}
+/* Public press kit download gallery; distinct from the account and gameplay surfaces. */
+.pkr-brand-hub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1190px;margin:24px auto 46px}
+.pkr-brand-hub-card{background:#211427;border:1px solid #956D79;border-radius:17px;overflow:hidden}
+.pkr-brand-hub-card figure{display:block;margin:0;padding:22px;background:#291A34;min-height:210px}
+.pkr-brand-hub-card img{display:block;width:100%;max-height:320px;object-fit:contain}
+.pkr-brand-hub-card>div{padding:19px 21px 24px}
+.pkr-brand-hub-card h3{font-size:22px;line-height:1.2;margin:0 0 10px}
+.pkr-brand-hub-card p{font-size:13px;line-height:1.6;color:#DCCBD5;min-height:55px}
+.pkr-brand-hub-card a{display:inline-block;margin-top:15px;border:1px solid #EEC98A;border-radius:9px;padding:10px 14px;text-decoration:none;font-weight:750;font-size:12px;color:#FFF4D5}
+.pkr-brand-hub-card a:hover{background:#443044}
+.pkr-brand-swatches{display:flex;gap:13px;flex-wrap:wrap;margin:22px 0 30px}
+.pkr-brand-swatch{flex:1 1 140px;background:#1E1728;padding:13px;border:1px solid #896E80;border-radius:12px}
+.pkr-brand-swatch i{display:block;height:68px;border-radius:8px;border:1px solid #D4A47A60;margin-bottom:11px}
+.pkr-brand-swatch strong{display:block;font-size:13px}
+.pkr-brand-swatch code{display:block;color:#DCC7D4;font-size:12px;margin-top:5px}
+@media(max-width:930px){.pkr-brand-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.pkr-brand-hub-grid{grid-template-columns:1fr}.pkr-brand-hub-card figure{min-height:0}.pkr-brand-hub-card p{min-height:0}}
+/* Identity across app, not a forced theme. Keep every saved colour style, navigation and layout. */
+html:not(:has(#gameScreen)) .pkr-persistent-brand .pkr-brand-mark--sidebar{filter:drop-shadow(0 2px 3px #0004)}
+html:not(:has(#gameScreen)) .pkr-primary-mobile-mark .pkr-brand-mark--header{image-rendering:auto}

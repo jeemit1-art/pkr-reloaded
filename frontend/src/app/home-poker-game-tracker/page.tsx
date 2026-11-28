@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import MarketingBrandHeader from '@/components/MarketingBrandHeader';
 import '../pkr-marketing-screens.css';
 
 export const metadata:Metadata={
@@ -8,7 +9,7 @@ export const metadata:Metadata={
  openGraph:{title:'A Home Poker Tracker That Keeps the Night Moving | PKR',description:'Track poker buy-ins and rebuys, organize game nights and settle up with clear results.',url:'/home-poker-game-tracker'},
 };
 export default function TrackerPage(){
- return <main className="pkr-marketing-editorial">
+ return <main className="pkr-marketing-editorial"><MarketingBrandHeader/>
   <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Home poker tracker</span></nav>
   <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">HOME POKER GAME TRACKER</span><h1>Stop chasing chips.<br/><em>Start enjoying the game.</em></h1><p>From the first buy-in to the last cash-out, PKR keeps your private home poker night organized. Record every player’s entry, track the session and review clear results afterward.</p><div className="pkr-marketing-hero-actions"><a className="pkr-marketing-button primary" href="/?subscribe=starter">Start your poker room ↗</a><a className="pkr-marketing-button" href="/pricing">Compare host plans</a></div></header>
   <div className="pkr-marketing-feature-visual pkr-marketing-launch-visual"><img src="/demo/launch-20261127/desktop-live-table.webp" alt="Current PKR cash-game table and host controls, shown with fictional players" width="1440" height="900" loading="lazy" decoding="async"/><div><small>THE PKR GAME EXPERIENCE</small><strong>Spend more time playing.<br/>Less time calculating.</strong></div></div>
