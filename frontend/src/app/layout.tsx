@@ -38,6 +38,8 @@ import './pkr-member-directory.css';
 import './pkr-privateclub-light.css';
 // Shared real player avatars and readable fallbacks across every saved appearance.
 import './pkr-universal-avatars.css';
+// One legible rank chip palette for all appearance themes and colour modes.
+import './pkr-rank-chips.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 

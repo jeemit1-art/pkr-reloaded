@@ -6,6 +6,7 @@ Any change to a common PKR feature must work in **all nine selectable styles** (
 - Implement data and interactions in shared components/hooks; avoid separately re-implementing logic for each skin.
 - Use stable room/player identities and room-scoped sources; do not infer game totals, balances or participant identity from visual labels.
 - Confirm each theme supports photos and user-selected emoji, readable fallback avatars and accessible colour contrast.
+- Use the shared position-based rank chip palette throughout Results and Standings: gold, silver and bronze for the top three, then unique shades for ranks 4-20; verify number contrast in all themes and light/dark modes. Do not use the same three alternating rank chip colours for every player.
 - Inspect mobile narrow/large, tablet/desktop, WebKit (iOS) and Chromium, including safe-area/navigation constraints, text clipping and touch targets.
 - Keep the protected live poker table scoped separately unless a task explicitly changes gameplay.
 - Run appearance and functionality regression suites before merging to main. Include all nine styles in a cross-theme browser test when modifying shared presentation.

@@ -2,6 +2,7 @@
 import PkrGlyph from '@/components/PkrGlyph';
 import RecordMetric from '@/components/RecordMetric';
 import RoomPlayerAvatar from '@/components/RoomPlayerAvatar';
+import {rankChipStyle} from '@/lib/rank-chip-palette';
 import type {RoomAvatarSources} from '@/lib/room-player-avatars';
 import type {LeaderboardEntry} from '@/lib/api';
 type Props={club:string;roomId:string;leaders:LeaderboardEntry[];completed:number;onHistory:()=>void;avatarSources:RoomAvatarSources};
@@ -19,7 +20,7 @@ export default function PrivateClubResultsHero({club,roomId,leaders,completed,on
     {top.length?top.map((leader,index)=><RecordMetric bare className={'pkr-pc-results-rank pkr-pc-results-rank-'+index}
      key={leader.user_id}
      request={{kind:'player',title:leader.display_name+' — game history',roomId,playerId:leader.user_id,playerName:leader.display_name}}>
-      <span className="pkr-pc-results-medal">{index===0?<PkrGlyph name="trophy" size={23}/>:index+1}</span>
+      <span className="pkr-pc-results-medal pkr-rank-chip" style={rankChipStyle(index+1)}>{index===0?<PkrGlyph name="trophy" size={23}/>:index+1}</span>
       <RoomPlayerAvatar player={leader} sources={avatarSources} className="pkr-pc-results-face"/>
       <strong>{leader.display_name}</strong>
       <small>{leader.games_played} games played</small>

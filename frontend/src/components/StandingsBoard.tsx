@@ -2,6 +2,7 @@
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import RoomPlayerAvatar,{useRoomPlayerAvatarSources} from '@/components/RoomPlayerAvatar';
+import {rankChipStyle} from '@/lib/rank-chip-palette';
 
 
 import {useMemo,useState} from 'react';
@@ -60,7 +61,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
         <div className="pkr-standings-podium" aria-label="Top three by all-time net results">
           {sortedByNet.slice(0,3).map((p,i)=><button type="button" key={p.user_id||p.display_name} className={'pkr-standings-podium-card pkr-standings-podium-'+(i+1)} onClick={()=>onSelectPlayer(p.display_name)}
             aria-label={'Open '+p.display_name+' game history, rank '+(i+1)}>
-            <span className="pkr-standings-medal" aria-hidden="true"><PkrGlyph name={i===0?'trophy':'medal'} size={28}/></span>
+            <span className="pkr-standings-medal pkr-rank-chip" style={rankChipStyle(i+1)} aria-hidden="true"><PkrGlyph name={i===0?'trophy':'medal'} size={28}/></span>
             <span className="pkr-standings-rank-label">#{i+1} ALL TIME</span>
             <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-standings-podium-avatar"/>
             <strong title={p.display_name}>{p.display_name}</strong>
@@ -82,7 +83,7 @@ export default function StandingsBoard({leaders,settledGames,onSelectPlayer,room
           {rows.length?rows.map((p,i)=><button className="pkr-standings-row" type="button" role="listitem"
             key={p.user_id||p.display_name} onClick={()=>onSelectPlayer(p.display_name)}
             aria-label={'Open '+p.display_name+' profile, '+fmtSign(p.total_net)+' total net'}>
-            <span className="pkr-standings-row-rank">{i+1}</span>
+            <span className="pkr-standings-row-rank pkr-rank-chip" style={rankChipStyle(i+1)}>{i+1}</span>
             <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-standings-avatar"/>
             <span className="pkr-standings-player">
               <strong>{p.display_name}</strong>
