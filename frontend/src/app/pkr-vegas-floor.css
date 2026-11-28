@@ -437,3 +437,138 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
    filter:none!important;
  }
 }
+
+/* Short-iPhone visual QA:
+   Put the table artwork beside the action, not above it. The host CTA must
+   clear the fixed five-tab navigation at initial scroll, including 390x844. */
+@layer pkr-personal {
+ @media(max-width:440px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-empty{
+   display:grid!important;grid-template-columns:112px minmax(0,1fr)!important;
+   align-items:center!important;justify-items:stretch!important;gap:10px!important;
+   min-height:205px!important;height:auto!important;margin:0!important;
+   padding:14px 12px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-tabletop{
+   width:112px!important;max-width:112px!important;height:112px!important;
+   min-height:0!important;align-self:center!important;justify-self:start!important;
+   margin:0!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-rim{
+   width:110px!important;max-width:110px!important;height:99px!important;
+   border-width:10px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-felt-brand{font-size:20px!important}
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-card{
+   width:28px!important;height:43px!important;padding:3px!important;
+   font-size:12px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-chip{
+   width:24px!important;height:24px!important;border-width:4px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content{
+   width:100%!important;max-width:none!important;min-width:0!important;
+   display:flex!important;align-items:flex-start!important;
+   text-align:left!important;justify-content:center!important;gap:5px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content .pkr-cf-kicker{
+   font-size:9px!important;line-height:1.25!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content h2{
+   font-size:19px!important;line-height:1.13!important;text-align:left!important;
+   margin:0!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content p{
+   font-size:11.5px!important;line-height:1.37!important;text-align:left!important;
+   margin:0!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule{
+   width:100%!important;max-width:none!important;min-height:46px!important;
+   font-size:11px!important;line-height:1.22!important;
+   padding:9px 6px!important;margin-top:6px!important;gap:5px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule svg{
+   flex:0 0 16px!important;width:16px!important;height:16px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule span{
+   min-width:0!important;font-size:11px!important;
+   line-height:1.2!important;white-space:normal!important;
+  }
+ }
+ @media(max-width:360px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-empty{
+   grid-template-columns:82px minmax(0,1fr)!important;gap:7px!important;
+   padding:11px 9px!important;min-height:192px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-tabletop{
+   width:81px!important;max-width:81px!important;height:89px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-rim{
+   width:81px!important;max-width:81px!important;height:75px!important;border-width:7px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-card{
+   width:20px!important;height:32px!important;font-size:10px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-table-chip{
+   width:17px!important;height:17px!important;border-width:3px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content h2{font-size:16px!important}
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-empty-content p{font-size:10.5px!important}
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule{
+   min-height:43px!important;font-size:10px!important;padding:7px 5px!important;
+  }
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule span{font-size:10px!important}
+  .pkr-casino-floor .pkr-cf-empty .pkr-cf-schedule>svg:last-child{display:none!important}
+ }
+}
+
+/* Short-screen safety: use vertical space for the game action, not decoration.
+   This affects only the private-club Games view on low-height phones. */
+@layer pkr-personal {
+ @media (max-width:440px) and (max-height:760px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-marquee{
+   height:34px!important;padding-inline:14px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-hero-copy{
+   padding:16px 14px 11px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-hero-metrics button{
+   min-height:54px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-filters{
+   margin:8px 0 10px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-filters button{
+   min-height:44px!important;padding:9px 3px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-section-line{
+   min-height:48px!important;margin-bottom:7px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-host-quick{
+   min-height:40px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-empty{
+   min-height:184px!important;padding:9px!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-empty-content{
+   gap:4px!important;
+  }
+ }
+ @media (max-width:360px) and (max-height:760px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-app.pkr-event .pkr-casino-floor .pkr-cf-schedule span{
+   font-size:11px!important;line-height:1.25!important;
+  }
+ }
+}
