@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "predev": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs",
-    "prebuild": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs && node tests/premium-theme.cjs && node tests/experience-consolidation.cjs && node tests/settlement-integrity.cjs && node tests/casino-themes.cjs && node tests/casino-redesign.cjs"
+    "prebuild": "node scripts/compile-theme-a.cjs && node scripts/generate-app-version.cjs && node tests/premium-theme.cjs && node tests/experience-consolidation.cjs && node tests/settlement-integrity.cjs && node tests/casino-themes.cjs && node tests/casino-redesign.cjs && node tests/private-club.cjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",
