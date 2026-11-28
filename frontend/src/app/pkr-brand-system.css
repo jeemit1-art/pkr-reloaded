@@ -36,7 +36,7 @@ html body .pkr-launch .pkr-l2-hero{background:radial-gradient(ellipse 59% 78% at
 html body .pkr-launch .pkr-l2-hero::before{
  content:"";pointer-events:none;position:absolute;z-index:0;
  width:clamp(170px,24vw,360px);aspect-ratio:1;right:3%;top:5%;opacity:.055;
- background:url('/brand/pkr-crest.svg') center/contain no-repeat;
+ background:url('/brand/pkr-night-mark.svg') center/contain no-repeat;
 }
 html body .pkr-launch .pkr-l2-hero h1{font-weight:800;letter-spacing:-.055em;text-shadow:none}
 html body .pkr-launch .pkr-l2-hero-copy>p{color:#E4D6DE}

@@ -1,26 +1,20 @@
 {
-  "name": "PKR — Your Private Poker Club",
+  "name": "PKR — Your Private Game Club",
   "short_name": "PKR",
-  "description": "More poker. Less admin. Private poker nights: invitations, RSVPs, game tracking, results and settlement records.",
+  "description": "The night is on. Your private poker club for invites, RSVPs, game nights, results and settlement records.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0D0B19",
-  "theme_color": "#0D0B19",
+  "background_color": "#0B0D14",
+  "theme_color": "#0B0D14",
   "icons": [
     {
-      "src": "/brand/pkr-crest.svg",
+      "src": "/brand/pkr-night-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
+      "src": "/icon",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
