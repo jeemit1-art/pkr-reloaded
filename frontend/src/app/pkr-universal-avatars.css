@@ -1,0 +1,103 @@
+/* Shared, readable player avatars in every PKR appearance (Classic, casino,
+ * light, dark and device-controlled). Presentation-only, never live game state. */
+@layer pkr-personal {
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-shared-player-avatar{
+  box-sizing:border-box!important;display:grid!important;place-items:center!important;
+  width:46px!important;height:46px!important;min-width:0!important;min-height:0!important;
+  flex:0 0 46px!important;position:relative!important;isolation:isolate!important;
+  border:2px solid var(--pkr-personal-accent-line,#e5b572)!important;
+  border-radius:50%!important;overflow:hidden!important;
+  background:#682642!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font:850 15px/1 var(--font-body),system-ui,sans-serif!important;
+  opacity:1!important;filter:none!important;text-shadow:none!important;
+  box-shadow:0 2px 8px #0003!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-shared-player-avatar img{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;min-width:0!important;max-width:none!important;
+  object-fit:cover!important;object-position:center!important;border:0!important;
+  opacity:1!important;filter:none!important;visibility:visible!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-shared-player-avatar :is(
+  .pkr-shared-player-initials,.pkr-shared-player-emoji){
+  display:grid!important;place-items:center!important;
+  width:100%!important;height:100%!important;margin:0!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font:850 15px/1 var(--font-body),system-ui,sans-serif!important;
+  letter-spacing:.01em!important;opacity:1!important;filter:none!important;
+  text-shadow:none!important;background:transparent!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-shared-player-avatar .pkr-shared-player-emoji{
+  -webkit-text-fill-color:initial!important;font-size:22px!important;
+ }
+ /* Same avatar presentation and the same strong contrast in all nine looks. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-results-rank .pkr-pc-results-face{
+  width:53px!important;height:53px!important;flex:0 0 53px!important;
+  margin:0 auto!important;border-color:var(--pkr-personal-accent-line,#e4bc81)!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+  .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person){
+  box-sizing:border-box!important;display:grid!important;
+  grid-template-columns:39px minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;column-gap:9px!important;row-gap:2px!important;
+  align-items:center!important;min-width:0!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+  .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person)>.pkr-results-inline-avatar{
+  grid-column:1!important;grid-row:1/span 2!important;
+  width:37px!important;height:37px!important;flex:0 0 37px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+  .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person)>strong{
+  grid-column:2!important;grid-row:1!important;min-width:0!important;
+  overflow-wrap:anywhere!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+  .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person)>small{
+  grid-column:2!important;grid-row:2!important;min-width:0!important;overflow-wrap:anywhere!important;
+ }
+ /* Existing felt-seat chip becomes a small rank badge; image sits beside name. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat{
+  grid-template-columns:30px minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;column-gap:6px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat>.pkr-results-seat-avatar{
+  grid-column:1!important;grid-row:1/span 2!important;width:29px!important;height:29px!important;
+  flex:0 0 29px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat>.pkr-results-seat-chip{
+  position:absolute!important;top:-8px!important;right:-5px!important;left:auto!important;
+  width:19px!important;height:19px!important;z-index:6!important;
+  border-width:2px!important;grid-row:auto!important;grid-column:auto!important;
+  font-size:9px!important;padding:0!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat>.pkr-results-seat-player{
+  grid-column:2!important;grid-row:1!important;min-width:0!important;font-size:11px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-felt-seat>b{
+  grid-column:2!important;grid-row:2!important;min-width:0!important;font-size:11px!important;
+ }
+ /* Room-specific Standings is a separate component from the global Results screen. */
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-row>.pkr-standings-avatar{
+  width:40px!important;height:40px!important;flex:0 0 40px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-podium-card>.pkr-standings-podium-avatar{
+  width:48px!important;height:48px!important;flex:0 0 48px!important;
+ }
+ html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-standings-podium-card{
+  min-height:190px!important;min-width:0!important;
+ }
+ @media(max-width:380px){
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-results-rank .pkr-pc-results-face{
+   width:45px!important;height:45px!important;flex-basis:45px!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+   .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person){
+   grid-template-columns:32px minmax(0,1fr)!important;column-gap:6px!important;
+  }
+  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(
+   .pkr-results-ledger-person,.pkr-results-live-person,.pkr-results-command-person)>.pkr-results-inline-avatar{
+   width:31px!important;height:31px!important;flex-basis:31px!important;
+  }
+ }
+}
