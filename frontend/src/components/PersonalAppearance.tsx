@@ -7,14 +7,14 @@ type AppearanceContext={
  preference:AppearancePreference;choose:(value:AppearancePreference)=>void;
  visualStyle:VisualStyle;chooseStyle:(value:VisualStyle)=>void;ready:boolean;
 };
-const Context=createContext<AppearanceContext>({preference:'light',choose:()=>{},visualStyle:DEFAULT_VISUAL_STYLE,chooseStyle:()=>{},ready:false});
+const Context=createContext<AppearanceContext>({preference:'dark',choose:()=>{},visualStyle:DEFAULT_VISUAL_STYLE,chooseStyle:()=>{},ready:false});
 
 export function PersonalAppearanceProvider({children}:{children:ReactNode}){
  const pathname=usePathname()||'';
- const [preference,setPreference]=useState<AppearancePreference>('light');
+ const [preference,setPreference]=useState<AppearancePreference>('dark');
  const [visualStyle,setVisualStyle]=useState<VisualStyle>(DEFAULT_VISUAL_STYLE);
  const [ready,setReady]=useState(false);
- const current=useRef<AppearancePreference>('light');
+ const current=useRef<AppearancePreference>('dark');
  const currentStyle=useRef<VisualStyle>(DEFAULT_VISUAL_STYLE);
  const apply=useRef<()=>void>(()=>{});
  useLayoutEffect(()=>{
@@ -28,8 +28,8 @@ export function PersonalAppearanceProvider({children}:{children:ReactNode}){
   const root=document.documentElement;
   const sync=()=>{
    if(isAppearanceRoute(window.location.pathname)){
-    root.setAttribute('data-pkr-personal-theme',resolvedAppearance(current.current,media.matches));
-    root.setAttribute('data-pkr-personal-style',currentStyle.current);
+    root.setAttribute('data-pkr-personal-theme','dark');
+    root.setAttribute('data-pkr-personal-style','private-club');
    }else{
     root.removeAttribute('data-pkr-personal-theme');
     root.removeAttribute('data-pkr-personal-style');
@@ -79,40 +79,13 @@ const styles:Array<{id:VisualStyle;name:string;description:string}>=[
  {id:'private-club',name:'Private Casino Club',description:'Vegas poker floor, club lobby and cashier, with light, dark or device colours'},
 ];
 export function PersonalAppearanceSettings(){
- const {preference,choose,visualStyle,chooseStyle,ready}=useContext(Context);
- return <section className="pkr-primary-panel pkr-personal-appearance" data-testid="personal-appearance">
-  <h2>App appearance</h2>
-  <p>Select the look you prefer. Theme and colour mode are personal to this device; the host's shared club layout is a separate setting.</p>
-  <h3>Casino experiences</h3>
-  <p className="pkr-appearance-intro">The approved Private Casino Club design, plus four existing casino looks. Your games, results and payment records stay exactly as they are.</p>
-  <div className="pkr-visual-style-options pkr-visual-style-casino" role="group" aria-label="Casino themes">
-   {styles.filter(option=>['private-club','luxe','neon','vip','tournament'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
-     disabled={!ready} onClick={()=>chooseStyle(option.id)} data-style-option={option.id}>
-    <span className={'pkr-theme-style-swatch pkr-theme-style-'+option.id} aria-hidden="true">
-     <i/><i/><i/>
-    </span>
-    <span className="pkr-theme-style-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
-    <span className="pkr-theme-style-check" aria-hidden="true">{visualStyle===option.id?'✓':''}</span>
-   </button>)}
+ return <section className="pkr-primary-panel pkr-personal-appearance pkr-no-appearance" data-testid="personal-appearance">
+  <h2>PKR identity</h2>
+  <div className="pkr-no-brand-identity">
+   <img src="/brand/pkr-night-logo.svg" alt="PKR — Your Private Game Club" width={260} height={89}/>
+   <span>THE NIGHT IS ON.</span>
   </div>
-  <h3>Original PKR looks</h3>
-  <div className="pkr-visual-style-options pkr-visual-style-original" role="group" aria-label="Original themes">
-   {styles.filter(option=>['standard','noir','clubhouse','studio'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
-     disabled={!ready} onClick={()=>chooseStyle(option.id)} data-style-option={option.id}>
-    <span className={'pkr-theme-style-swatch pkr-theme-style-'+option.id} aria-hidden="true"><i/><i/><i/></span>
-    <span className="pkr-theme-style-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
-    <span className="pkr-theme-style-check" aria-hidden="true">{visualStyle===option.id?'✓':''}</span>
-   </button>)}
-  </div>
-  <h3>Colour mode</h3>
-  <div className="pkr-appearance-options" role="group" aria-label="App colour mode">
-   {modes.map(mode=><button key={mode} type="button" aria-pressed={preference===mode} disabled={!ready} onClick={()=>choose(mode)}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-     {mode==='light'?<><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></>:mode==='dark'?<path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/>:<><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></>}
-    </svg>
-    <span>{mode==='light'?'Light':mode==='dark'?'Dark':'Follow device'}</span>
-   </button>)}
-  </div>
-  <p className="pkr-appearance-note">PKR remembers your settings on this device. Game recording, payments and the live poker table are not altered by choosing a theme.</p>
+  <p>Every club now uses PKR's approved identity: ink, electric blue, coral and citron. The appearance is consistent across Home, Games, Players, Results and Payments.</p>
+  <p>Previous theme choices are preserved in your device settings for rollback, but no longer change the official PKR app design. Your game records, notifications and payment history remain unchanged.</p>
  </section>;
 }

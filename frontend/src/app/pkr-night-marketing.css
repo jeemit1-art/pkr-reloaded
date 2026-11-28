@@ -1,0 +1,183 @@
+/* PKR / THE NIGHT IS ON. Public marketing uses the same logo and colour system as the product.
+   No abstract background pictures or stock casino scenes. The real app has its own record-backed screens. */
+html body .pkr-launch{
+ --launch-ink:#F5F5EF;--launch-muted:#C4D1E3;--launch-accent:#C7FF3A;
+ --launch-coral:#FF5A4D;--launch-paper:#0B0D14;--launch-line:#415676;
+ background:#0B0D14!important;color:#F5F5EF!important;
+ font-family:var(--font-body),Inter,Arial,sans-serif!important;
+}
+html body .pkr-launch :is(h1,h2,h3,.pkr-l2-brand){font-family:var(--font-body),Inter,Arial,sans-serif!important;color:#F5F5EF!important}
+html body .pkr-launch :is(h1,h2,h3){font-weight:850!important;text-shadow:none!important;letter-spacing:-.045em!important}
+html body .pkr-launch em{font-style:italic!important;color:#C7FF3A!important;-webkit-text-fill-color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-topbar{
+ background:#0D1424!important;background-image:none!important;border-color:#334C78!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+html body .pkr-launch .pkr-l2-brand{display:inline-flex!important;align-items:center!important;text-decoration:none!important;padding:0!important}
+html body .pkr-launch .pkr-no-marketing-logo{display:block!important;width:clamp(155px,18vw,208px)!important;height:auto!important;max-height:72px!important;object-fit:contain!important}
+html body .pkr-launch .pkr-l2-navlinks a,
+html body .pkr-launch .pkr-l2-player-link{color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-navlinks a:hover,
+html body .pkr-launch .pkr-l2-player-link:hover{color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-hero{
+ position:relative!important;overflow:hidden!important;
+ background:#0B0D14!important;background-image:none!important;border-bottom:2px solid #1046F8!important;
+}
+html body .pkr-launch .pkr-l2-hero::before{
+ content:"";position:absolute;inset:auto -100px -130px auto;width:360px;height:360px;
+ background:#1046F8!important;clip-path:polygon(100% 0,0 100%,100% 100%)!important;
+ opacity:.17!important;z-index:0!important;pointer-events:none;
+}
+html body .pkr-launch .pkr-l2-hero::after{
+ content:"";position:absolute;right:0;top:0;width:160px;height:160px;
+ background:#FF5A4D!important;clip-path:polygon(30% 0,100% 0,100% 100%)!important;
+ opacity:.9!important;pointer-events:none;
+}
+html body .pkr-launch .pkr-l2-hero-inner{position:relative;z-index:1}
+html body .pkr-launch .pkr-l2-hero h1{
+ font:900 italic clamp(50px,7vw,100px)/1.02 var(--font-body),Inter,sans-serif!important;
+ color:#F5F5EF!important;max-width:690px!important;letter-spacing:-.065em!important;
+ text-shadow:none!important;overflow-wrap:normal!important;
+}
+html body .pkr-launch .pkr-l2-hero h1 em{font:inherit!important;color:#C7FF3A!important;-webkit-text-fill-color:#C7FF3A!important}
+html body .pkr-launch :is(.pkr-l2-eyebrow,.pkr-l2-section-kicker,.pkr-tour-overline){
+ color:#C7FF3A!important;-webkit-text-fill-color:#C7FF3A!important;font-weight:850!important;letter-spacing:.13em!important;
+}
+html body .pkr-launch .pkr-l2-hero-copy>p{color:#CFD9EA!important}
+html body .pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary){
+ color:#0B0D14!important;-webkit-text-fill-color:#0B0D14!important;
+ background:#C7FF3A!important;background-image:none!important;border-color:#C7FF3A!important;
+ box-shadow:0 4px 0 #30440D!important;font-weight:850!important;border-radius:11px!important;
+}
+html body .pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary):hover{background:#DDFF8A!important;border-color:#DDFF8A!important}
+html body .pkr-launch :is(.pkr-l2-btn-gold,.pkr-tour-cta,.pkr-launch-signin-primary) :is(svg,span,strong){
+ color:#0B0D14!important;-webkit-text-fill-color:#0B0D14!important;
+}
+html body .pkr-launch :is(.pkr-l2-btn-outline,.pkr-l2-btn-glass){
+ color:#F5F5EF!important;background:#1D2B43!important;border-color:#5E779F!important;
+ border-radius:11px!important;box-shadow:none!important;
+}
+html body .pkr-launch .pkr-l2-hero-trust{color:#D3E0F0!important}
+html body .pkr-launch .pkr-l2-hero-trust svg{color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-hero-copy>p.pkr-launch-availability{color:#C0CFE4!important}
+html body .pkr-launch .pkr-hero-real{filter:none!important}
+html body .pkr-launch .pkr-hero-real::before{display:none!important}
+html body .pkr-launch .pkr-hero-desktop{
+ background:#15233D!important;border:2px solid #1046F8!important;border-radius:17px!important;
+ box-shadow:0 15px 40px #0006!important;
+}
+html body .pkr-launch .pkr-hero-desktop-header{background:#15213B!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-hero-desktop-header>span:first-child{color:#C7FF3A!important}
+html body .pkr-launch .pkr-hero-mobile{background:#121A31!important;border-color:#1046F8!important;box-shadow:0 14px 25px #0008!important}
+html body .pkr-launch .pkr-hero-real-label{background:#20345A!important;border-color:#C7FF3A!important;color:#F5F5EF!important;box-shadow:none!important}
+html body .pkr-launch :is(.pkr-l2-ribbon,.pkr-l2-pricing){
+ background:#121C2F!important;border-color:#3C5276!important;
+}
+html body .pkr-launch .pkr-l2-ribbon>div:not(:last-child){border-color:#3C5276!important}
+html body .pkr-launch .pkr-l2-ribbon :is(strong,small){color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-ribbon svg{color:#C7FF3A!important}
+html body .pkr-launch :is(.pkr-l2-section,.pkr-product-tour,.pkr-mobile-product-showcase){
+ background:#0B0D14!important;background-image:none!important;color:#F5F5EF!important;
+}
+html body .pkr-launch :is(.pkr-l2-section-heading>p,.pkr-product-tour-header>p,.pkr-mobile-product-intro>p){color:#C0CFE4!important}
+html body .pkr-launch :is(.pkr-l2-step,.pkr-l2-plan,.pkr-tour-panel,.pkr-proof-card,.pkr-mobile-device){
+ background:#18233A!important;background-image:none!important;border:1px solid #435778!important;
+ color:#F5F5EF!important;box-shadow:0 5px 18px #0003!important;border-radius:15px!important;
+}
+html body .pkr-launch :is(.pkr-l2-step,.pkr-l2-plan,.pkr-tour-panel,.pkr-proof-card) :is(h2,h3,strong){color:#F5F5EF!important}
+html body .pkr-launch :is(.pkr-l2-step,.pkr-l2-plan,.pkr-tour-panel,.pkr-proof-card) :is(p,li,small){color:#D0DBEB!important}
+html body .pkr-launch :is(.pkr-launch-step-icon,.pkr-l2-plan-badge){
+ background:#1046F8!important;color:#F5F5EF!important;border-color:#1046F8!important;
+}
+html body .pkr-launch .pkr-l2-plan-featured{border:2px solid #C7FF3A!important;background:#1E2D48!important;box-shadow:0 0 0 1px #C7FF3A55!important}
+html body .pkr-launch .pkr-l2-plan-name{color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-price{color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-price small{color:#D7E2F0!important}
+html body .pkr-launch .pkr-tour-tabs{scrollbar-color:#1046F8 transparent!important}
+html body .pkr-launch .pkr-tour-tab{color:#F5F5EF!important;background:#203354!important;border-color:#546D92!important}
+html body .pkr-launch .pkr-tour-tab.selected,
+html body .pkr-launch .pkr-tour-tab[aria-selected=true]{background:#1046F8!important;color:#FFF!important;border-color:#688AFF!important}
+html body .pkr-launch .pkr-tour-tab.selected>span{color:#C7FF3A!important}
+html body .pkr-launch .pkr-tour-copy :is(h3,p,li){color:#F5F5EF!important}
+html body .pkr-launch .pkr-tour-copy li>span{color:#C7FF3A!important}
+html body .pkr-launch .pkr-tour-screen-top{background:#23365B!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-tour-sample-note{background:#23365B!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-proof-card-image{background:#101A2C!important;border-color:#4E6382!important}
+html body .pkr-launch .pkr-l2-pricing-note{color:#D0DCE9!important}
+html body .pkr-launch .pkr-l2-join-section{background:#101A2E!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-join-form{background:#1B2B49!important;border-color:#476087!important}
+html body .pkr-launch .pkr-l2-join-form :is(label,p){color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-join-form input{
+ background:#0D1627!important;color:#F5F5EF!important;border-color:#7185A4!important;
+}
+html body .pkr-launch .pkr-l2-join-form button{
+ background:#C7FF3A!important;color:#0B0D14!important;border-color:#C7FF3A!important;
+}
+html body .pkr-launch .pkr-l2-faq-item{background:#16233A!important;color:#F5F5EF!important;border-color:#3E5376!important}
+html body .pkr-launch .pkr-l2-faq-item :is(summary,p){color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-faq-item summary b{color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-last-call{
+ background:#1046F8!important;background-image:none!important;border-top:3px solid #C7FF3A!important;
+}
+html body .pkr-launch .pkr-l2-last-call h2{color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-last-call p{color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-last-call>.pkr-launch-closing-screen{background:#12309C!important;border-color:#C7FF3A!important}
+html body .pkr-launch .pkr-l2-footer{background:#0B0D14!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-l2-footer :is(nav,p){color:#BAC9DF!important}
+html body .pkr-launch .pkr-l2-footer nav a:hover{color:#C7FF3A!important}
+html body .pkr-launch :is(.pkr-launch-signin,.pkr-launch-preview){
+ background:#141F34!important;border-color:#50688F!important;color:#F5F5EF!important;
+}
+html body .pkr-launch :is(.pkr-launch-signin,.pkr-launch-preview) :is(h2,p,span){color:#F5F5EF!important}
+html body .pkr-launch .pkr-launch-dialog-close{background:#253653!important;color:#F5F5EF!important}
+html body .pkr-launch .pkr-launch-signin-mark img{display:block!important;width:48px!important;height:48px!important}
+html body :is(.pkr-marketing-editorial,.pkr-no-brand-hub){
+ --mk-gold:#C7FF3A;--mk-ink:#F5F5EF;--mk-muted:#C0CFE4;
+ background:#0B0D14!important;background-image:none!important;color:#F5F5EF!important;
+ font-family:var(--font-body),Inter,Arial,sans-serif!important;
+}
+html body .pkr-marketing-editorial :is(h1,h2,h3){color:#F5F5EF!important;font-family:var(--font-body),Inter,Arial,sans-serif!important}
+html body .pkr-marketing-editorial em{color:#C7FF3A!important;-webkit-text-fill-color:#C7FF3A!important}
+html body .pkr-marketing-editorial :is(.pkr-marketing-kicker,.pkr-marketing-steps article>span){color:#C7FF3A!important}
+html body .pkr-marketing-editorial :is(p,small){color:#CED8E7!important}
+html body .pkr-marketing-editorial :is(.pkr-marketing-plan,.pkr-marketing-steps article,.pkr-marketing-prose details){
+ background:#17243D!important;border-color:#435D86!important;
+}
+html body .pkr-marketing-editorial .pkr-marketing-plan.featured{border-color:#C7FF3A!important}
+html body .pkr-marketing-editorial .pkr-marketing-price{color:#C7FF3A!important}
+html body .pkr-marketing-editorial .pkr-marketing-button.primary{
+ background:#C7FF3A!important;color:#0B0D14!important;border-color:#C7FF3A!important;
+}
+html body .pkr-marketing-editorial .pkr-marketing-button{
+ background:#253555!important;color:#F5F5EF!important;border-color:#586F99!important;
+}
+html body .pkr-marketing-editorial .pkr-marketing-feature-visual{
+ background:#192842!important;border-color:#456693!important;
+}
+html body .pkr-marketing-editorial .pkr-marketing-feature-visual::after{background:linear-gradient(90deg,#0B0D14F0,#0B0D1460)!important}
+html body .pkr-marketing-editorial .pkr-marketing-launch-visual{background:#16243D!important;border-color:#48699E!important}
+html body .pkr-marketing-editorial .pkr-marketing-launch-visual :is(strong,small){color:#F5F5EF!important}
+html body .pkr-marketing-editorial .pkr-marketing-brand-header{border-color:#3B5077!important}
+html body .pkr-marketing-editorial .pkr-marketing-brand-link img{
+ width:205px!important;height:auto!important;max-height:73px!important;object-fit:contain!important;
+}
+html body .pkr-marketing-editorial .pkr-marketing-brand-link{width:auto!important;min-width:0!important}
+html body .pkr-marketing-editorial .pkr-marketing-brand-action{
+ color:#0B0D14!important;background:#C7FF3A!important;border-color:#C7FF3A!important;
+}
+html body .pkr-marketing-editorial .pkr-brand-hub-card{background:#172239!important;border-color:#49658D!important}
+html body .pkr-marketing-editorial .pkr-brand-hub-card figure{background:#111D34!important}
+html body .pkr-marketing-editorial .pkr-brand-hub-card>div p{color:#CCD7E8!important}
+html body .pkr-marketing-editorial .pkr-brand-hub-card a{color:#0B0D14!important;background:#C7FF3A!important;border-color:#C7FF3A!important}
+html body .pkr-marketing-editorial .pkr-brand-swatch{background:#182741!important;border-color:#53719D!important;color:#F5F5EF!important}
+html body .pkr-marketing-editorial .pkr-brand-swatch code{color:#DCE4F2!important}
+html body .pkr-marketing-editorial :is(a,button,input,summary):focus-visible,
+html body .pkr-launch :is(a,button,input,summary):focus-visible{
+ outline:3px solid #C7FF3A!important;outline-offset:3px!important;
+}
+@media(max-width:660px){
+ html body .pkr-launch .pkr-l2-hero h1{font-size:clamp(43px,10.8vw,70px)!important}
+ html body .pkr-launch .pkr-no-marketing-logo{width:147px!important;max-height:55px!important}
+ html body .pkr-launch .pkr-l2-hero::after{width:92px;height:100px;opacity:.7}
+ html body .pkr-marketing-editorial .pkr-marketing-brand-link img{width:152px!important}
+}

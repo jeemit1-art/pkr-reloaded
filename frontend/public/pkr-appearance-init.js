@@ -1,10 +1,8 @@
-/* Apply personal palette and style before React hydration to avoid a theme flash. */
+/* Brand is canonical, not a per-device casino skin. Apply before hydration. */
 (()=>{try{
  const p=location.pathname;
- if(!/^\/(instant|dashboard|events|games|results|payments|account|insights|schedule|install|invite|phone-invite|mobile-login)(\/|$)/.test(p)||/^\/games\/[^/]+\/(play|tv)(\/|$)/.test(p)||/^\/games\/live(\/|$)/.test(p))return;
- const stored=localStorage.getItem('pkr_personal_appearance_v1');
- const mode=stored==='dark'||(stored==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
- const style=localStorage.getItem('pkr_personal_visual_style_v1');
- document.documentElement.setAttribute('data-pkr-personal-theme',mode);
- document.documentElement.setAttribute('data-pkr-personal-style',style==='standard'||style==='noir'||style==='clubhouse'||style==='studio'||style==='luxe'||style==='neon'||style==='vip'||style==='tournament'||style==='private-club'?style:'private-club');
-}catch{/* Storage can be blocked; the React provider retains safe defaults. */}})();
+ if(!/^\/(instant|dashboard|events|games|results|payments|account|insights|schedule|install|invite|phone-invite|mobile-login)(\/|$)/.test(p)
+   ||/^\/games\/[^/]+\/(play|tv)(\/|$)/.test(p)||/^\/games\/live(\/|$)/.test(p))return;
+ document.documentElement.setAttribute('data-pkr-personal-theme','dark');
+ document.documentElement.setAttribute('data-pkr-personal-style','private-club');
+}catch{/* The React provider has the same safe defaults if storage is disabled. */}})();
