@@ -911,3 +911,58 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   color-scheme:dark!important;
  }
 }
+
+
+/* Actual image elements ensure the approved casino photography renders even
+   when other saved themes suppress CSS background images. Interactive UI is
+   a higher stacking layer and remains fully accessible. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance > .pkr-pc-entrance-photo{
+  display:block!important;position:absolute!important;inset:0!important;
+  width:100%!important;height:100%!important;max-width:none!important;
+  object-fit:cover!important;object-position:75% 42%!important;
+  z-index:1!important;opacity:1!important;visibility:visible!important;
+  filter:saturate(1.07) contrast(1.06)!important;pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance::before{
+  content:"";position:absolute!important;inset:0!important;z-index:2!important;
+  background:linear-gradient(180deg,rgba(0,13,8,.03) 0%,rgba(0,16,9,.08) 35%,rgba(0,19,12,.49) 66%,rgba(0,15,9,.94) 95%);
+  pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance > .pkr-pc-scene{
+  z-index:0!important;opacity:0!important;pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance > .pkr-pc-identity{
+  z-index:3!important;position:relative!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero > .pkr-pc-lobby-photo{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;max-width:none!important;
+  object-fit:cover!important;object-position:76% 50%!important;
+  z-index:0!important;opacity:1!important;visibility:visible!important;
+  filter:saturate(1.08)!important;pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero::before{
+  content:"";position:absolute!important;inset:0!important;z-index:1!important;
+  background:linear-gradient(90deg,rgba(0,17,11,.96) 0%,rgba(0,20,13,.84) 45%,rgba(0,17,10,.13) 100%);
+  pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero .pkr-pc-lobby-hero-content{
+  z-index:3!important;position:relative!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-player-scene > .pkr-pc-player-photo{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;max-width:none!important;
+  object-fit:cover!important;object-position:72% 45%!important;
+  z-index:0!important;opacity:1!important;visibility:visible!important;
+  pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-player-scene::before{
+  content:"";position:absolute!important;inset:0!important;z-index:1!important;
+  background:linear-gradient(180deg,rgba(0,12,8,.05),rgba(0,17,12,.43) 57%,rgba(0,14,9,.95) 100%);
+  pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-player-scene > :not(.pkr-pc-player-photo){
+  position:relative!important;z-index:2!important;
+ }
+}
