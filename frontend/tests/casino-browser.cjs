@@ -85,7 +85,8 @@ async function runOne(browser,engine,viewport,{style='tournament',role='host',em
    const action=emptyArena.getByRole('button',{name:role==='host'?'Schedule your first game':'Open game calendar'});
    await action.click();
    if(role==='host')await page.getByRole('heading',{name:'Schedule a game',exact:true}).waitFor({state:'visible'});
-   else assert(page.url().includes('/schedule'),'Player empty-state action must open calendar');
+   else {await page.waitForURL(url=>url.pathname==='/schedule',{timeout:12000});
+    assert(page.url().includes('/schedule'),'Player empty-state action must open calendar');}
   }else{
    assert(visual.labels.length===3,'Must retain three real record drilldowns');
    if(role==='host'){
