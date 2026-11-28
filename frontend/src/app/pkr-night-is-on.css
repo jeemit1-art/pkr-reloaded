@@ -1085,3 +1085,26 @@
   box-shadow:none!important;
  }
 }
+
+/* Host's second functional dashboard is not another brand theme. Keep it discoverable.
+   The retired casino CSS hid this tab, making existing manager features unreachable. */
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch:has(+ .pkr-privateclub-host-surface){
+  display:flex!important;gap:6px!important;align-items:center!important;
+  background:#18243A!important;border:1px solid #465C82!important;
+  padding:5px!important;margin:0 0 14px!important;border-radius:12px!important;
+  position:relative!important;z-index:1!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch:has(+ .pkr-privateclub-host-surface)>button{
+  flex:1 1 0!important;min-width:0!important;min-height:43px!important;
+  color:#DBE4F3!important;background:transparent!important;background-image:none!important;
+  border:1px solid transparent!important;border-radius:9px!important;
+  text-shadow:none!important;font:800 12px/1.3 var(--font-body),Inter,Arial,sans-serif!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch:has(+ .pkr-privateclub-host-surface)>button[aria-pressed="true"]{
+  color:#F5F5EF!important;background:#1046F8!important;border-color:#3B68FF!important;
+ }
+}
