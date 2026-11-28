@@ -82,7 +82,7 @@ export default function PrivateClubGamesLobby(p:Props){
        {liveNow?<button type="button" className="pkr-pc-lobby-primary" onClick={()=>p.isHost?p.onOpenTable(game.id):game.live_token?p.onWatch(game.id):p.onGame(game.id)}>
          <PkrGlyph name="table" size={19}/> {p.isHost?'OPEN LIVE TABLE':game.live_token?'WATCH LIVE TABLE':'VIEW LIVE GAME'}</button>:
         <button type="button" className="pkr-pc-lobby-primary" onClick={()=>completed?p.onGame(game.id):p.onShare(game.id)}>
-         <PkrGlyph name={completed?'trophy':'members'} size={19}/> {completed?'VIEW RESULTS':p.isHost?'MANAGE RSVPs':'VIEW RSVPs'}</button>}
+         <PkrGlyph name={completed?'trophy':'members'} size={19}/> <span>{completed?'VIEW RESULTS':p.isHost?'MANAGE RSVPs':'VIEW RSVPs'}</span></button>}
        <button type="button" onClick={()=>completed?p.onResults():p.onShare(game.id)}>
          <PkrGlyph name={completed?'history':'share'} size={19}/> {completed?'HISTORY':'SHARE & INVITE'}</button>
      </div>
