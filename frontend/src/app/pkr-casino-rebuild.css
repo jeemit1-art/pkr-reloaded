@@ -377,3 +377,121 @@
   .pkr-casino-stage-art *, .pkr-casino-empty-arena *{animation:none!important;transition:none!important}
  }
 }
+
+/* Consistent premium composition across Home, Results, Players and Payments.
+   This preserves the existing dashboard modes, data and recording actions. */
+@layer pkr-personal {
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero{
+  overflow:hidden!important;isolation:isolate!important;
+  border:2px solid var(--pkrc-casino-line)!important;
+  border-radius:24px!important;
+  background-color:var(--pkrc-hero-panel)!important;
+  background-image:radial-gradient(ellipse at 84% 14%,var(--pkrc-glow),transparent 51%),linear-gradient(130deg,var(--pkrc-hero-panel),var(--pkr-personal-hero-deep))!important;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.18),0 18px 31px rgba(0,0,0,.26)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-image{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-casino-stage-art{
+  position:absolute!important;right:27px!important;top:14px!important;z-index:1!important;
+  width:230px!important;height:212px!important;display:block!important;pointer-events:none!important;
+  transform:scale(1.01)!important;transform-origin:top right!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text{
+  box-sizing:border-box!important;position:relative!important;z-index:3!important;
+  min-width:0!important;max-width:calc(100% - 215px)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text h3{
+  font:850 clamp(25px,3.5vw,44px)/1.08 "PKR Casino Sans",var(--font-body),sans-serif!important;
+  letter-spacing:-.045em!important;overflow-wrap:anywhere!important;
+  color:#FFF9EA!important;-webkit-text-fill-color:#FFF9EA!important;
+  text-shadow:0 3px 8px rgba(0,0,0,.36)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text p{
+  font:600 13px/1.5 "PKR Casino Sans",var(--font-body),sans-serif!important;
+  color:#FAEFE5!important;-webkit-text-fill-color:#FAEFE5!important;
+  text-shadow:none!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-gold-button{
+  background:var(--casino-cta)!important;
+  color:var(--casino-cta-ink)!important;-webkit-text-fill-color:var(--casino-cta-ink)!important;
+  border:1px solid #FFEDB9!important;box-shadow:0 6px 17px var(--pkrc-glow)!important;
+  text-shadow:none!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-gold-button :is(span,svg){
+  color:inherit!important;-webkit-text-fill-color:inherit!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root :is(.pkr-dual-metrics,.pkr-dual-data-grid,.pkr-dual-nextgame){
+  min-width:0!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-metrics>*{
+  box-sizing:border-box!important;
+  border-radius:15px!important;
+  border:1px solid var(--pkr-personal-accent-line)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 7px 19px rgba(0,0,0,.14)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-results-command-hero,.pkr-results-live-hero){
+  border:2px solid var(--pkrc-casino-line)!important;border-radius:22px!important;
+  background-color:var(--pkrc-hero-panel)!important;
+  background-image:radial-gradient(ellipse at 80% 22%,var(--pkrc-glow),transparent 50%),linear-gradient(132deg,var(--pkrc-hero-panel),var(--pkr-personal-hero-deep))!important;
+  box-shadow:0 13px 31px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.18)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-results-command-hero,.pkr-results-live-hero) h1{
+  font:850 clamp(29px,5vw,42px)/1.03 "PKR Casino Sans",var(--font-body),sans-serif!important;
+  color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important;letter-spacing:-.05em!important;
+  text-shadow:0 3px 12px rgba(0,0,0,.3)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-command-stats>div{
+  background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,236,180,.48)!important;
+  border-radius:14px!important;min-width:0!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-command-stats :is(small,strong){
+  color:#FFF5E6!important;-webkit-text-fill-color:#FFF5E6!important;text-shadow:none!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-command-stats strong{
+  color:var(--pkrc-gold)!important;-webkit-text-fill-color:var(--pkrc-gold)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-results-board,.pkr-results-card,.pkr-gn-payment-card,.pkr-dual-data-card,.gn-player-card){
+  min-width:0!important;border:1px solid var(--pkr-personal-accent-line)!important;
+  border-radius:17px!important;box-shadow:0 10px 23px rgba(0,0,0,.15)!important;
+ }
+ html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-totals>*{
+  min-width:0!important;border-radius:15px!important;
+  border:1px solid var(--pkr-personal-accent-line)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 5px 15px rgba(0,0,0,.12)!important;
+ }
+ @media(max-width:600px){
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero{
+   display:block!important;min-height:300px!important;padding:22px 18px!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text{
+   max-width:100%!important;width:100%!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text h3{
+   max-width:61%!important;font-size:28px!important;line-height:1.1!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text p{
+   max-width:60%!important;font-size:11px!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-casino-stage-art{
+   right:6px!important;top:42px!important;width:155px!important;height:167px!important;
+   transform:scale(.78)!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-buttons{
+   position:relative!important;z-index:4!important;width:100%!important;
+   display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;
+   margin-top:69px!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-buttons button{
+   width:100%!important;min-width:0!important;min-height:48px!important;
+   padding:9px!important;font:800 12px/1.25 "PKR Casino Sans",sans-serif!important;
+   overflow-wrap:anywhere!important;
+  }
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-command-hero{min-width:0!important;padding:16px!important}
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-command-stats strong{font-size:21px!important;overflow-wrap:anywhere!important}
+ }
+ @media(max-width:365px){
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-casino-stage-art{transform:scale(.62)!important;right:-5px!important}
+  html:is([data-pkr-personal-style="luxe"],[data-pkr-personal-style="neon"],[data-pkr-personal-style="vip"],[data-pkr-personal-style="tournament"])[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-dual-root .pkr-dual-hero .pkr-dual-hero-text h3{max-width:66%!important;font-size:26px!important}
+ }
+}
