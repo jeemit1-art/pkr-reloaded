@@ -18,33 +18,33 @@ export async function createPkrResultsImage(details:CardDetails):Promise<Blob> {
   const ctx=canvas.getContext('2d');
   if(!ctx)throw new Error('Image generation is unavailable on this device.');
   const bg=ctx.createLinearGradient(0,0,1080,1350);
-  bg.addColorStop(0,'#2B1028');bg.addColorStop(1,'#0D0B19');
+  bg.addColorStop(0,'#182139');bg.addColorStop(1,'#0B0D14');
   ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1350);
-  ctx.strokeStyle='rgba(238,201,138,.8)';ctx.lineWidth=3;
+  ctx.strokeStyle='rgba(16,70,248,.85)';ctx.lineWidth=3;
   ctx.strokeRect(44,44,992,1262);
-  ctx.strokeStyle='rgba(238,201,138,.22)';ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(16,70,248,.25)';ctx.lineWidth=1;
   ctx.strokeRect(58,58,964,1234);
 
-  // Decorative poker chips are drawn into the exported artwork, with no external assets.
+  // Official chip segments from PKR visual language, no stock image.
   for(const [x,y,r] of [[928,196,112],[102,1220,75]] as Array<[number,number,number]>) {
-    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle='#2D1A33';ctx.fill();
-    ctx.lineWidth=15;ctx.strokeStyle='#EEC98A';ctx.stroke();
-    ctx.beginPath();ctx.arc(x,y,r-24,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle='#AB6F57';ctx.stroke();
-    ctx.beginPath();ctx.arc(x,y,r-43,0,Math.PI*2);ctx.lineWidth=8;ctx.strokeStyle='#803E5D';ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle='#182139';ctx.fill();
+    ctx.lineWidth=15;ctx.strokeStyle='#C7FF3A';ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y,r-24,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle='#1046F8';ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y,r-43,0,Math.PI*2);ctx.lineWidth=8;ctx.strokeStyle='#FF5A4D';ctx.stroke();
   }
 
-  // Use the same official crest as all nine app themes; never replace it with a generic spade.
+  // Use the same approved Open Chip K mark as all app screens; never replace it with a generic spade.
   try{
-    const crest=new Image();crest.src='/brand/pkr-crest.svg';
+    const crest=new Image();crest.src='/brand/pkr-night-mark.svg';
     await crest.decode();ctx.drawImage(crest,89,77,88,88);
   }catch{/* Keep sharing available if an asset is temporarily unavailable. */}
-  ctx.fillStyle='#EEC98A';ctx.textAlign='left';ctx.font='700 29px Arial, sans-serif';
-  ctx.fillText('PKR  /  YOUR PRIVATE POKER CLUB',195,136);
-  ctx.fillStyle='#FFF4D5';ctx.font='700 76px Georgia, serif';ctx.fillText('Game Results',95,275);
-  ctx.font='600 37px Arial, sans-serif';ctx.fillStyle='#F0DAD8';
+  ctx.fillStyle='#C7FF3A';ctx.textAlign='left';ctx.font='700 29px Arial, sans-serif';
+  ctx.fillText('PKR  /  YOUR PRIVATE GAME CLUB',195,136);
+  ctx.fillStyle='#F5F5EF';ctx.font='900 italic 76px Arial, sans-serif';ctx.fillText('THE RESULTS.',95,275);
+  ctx.font='600 37px Arial, sans-serif';ctx.fillStyle='#D3E1F5';
   ctx.fillText(fit(ctx,details.room,750),96,350);
-  ctx.font='29px Arial, sans-serif';ctx.fillStyle='#DDC7D3';ctx.fillText(fit(ctx,details.date,720),96,404);
-  ctx.strokeStyle='rgba(238,201,138,.38)';ctx.lineWidth=2;ctx.beginPath();
+  ctx.font='29px Arial, sans-serif';ctx.fillStyle='#B9C8E5';ctx.fillText(fit(ctx,details.date,720),96,404);
+  ctx.strokeStyle='rgba(16,70,248,.7)';ctx.lineWidth=2;ctx.beginPath();
   ctx.moveTo(95,452);ctx.lineTo(980,452);ctx.stroke();
 
   const ordered=[...details.players].sort((a,b)=>(b.net??0)-(a.net??0));
@@ -55,25 +55,25 @@ export async function createPkrResultsImage(details:CardDetails):Promise<Blob> {
   }
   top.forEach((p,i)=>{
     const y=515+i*81;
-    ctx.fillStyle=i===0?'rgba(238,201,138,.15)':'rgba(255,255,255,.045)';
+    ctx.fillStyle=i===0?'rgba(16,70,248,.2)':'rgba(255,255,255,.045)';
     ctx.fillRect(95,y,885,68);
-    ctx.fillStyle=i===0?'#EEC98A':'#CDBFCB';
+    ctx.fillStyle=i===0?'#C7FF3A':'#BBC8DC';
     ctx.font='700 33px Arial, sans-serif';ctx.fillText(String(i+1).padStart(2,'0'),115,y+46);
-    ctx.fillStyle='#FFF4D5';ctx.font='600 34px Arial, sans-serif';
+    ctx.fillStyle='#F5F5EF';ctx.font='600 34px Arial, sans-serif';
     ctx.fillText(fit(ctx,p.display_name,details.includeAmounts?500:730),198,y+46);
     if(details.includeAmounts&&Number.isSafeInteger(p.net)){
-      ctx.fillStyle=(p.net??0)>0?'#69D59A':(p.net??0)<0?'#FE8A87':'#D6C4CE';
+      ctx.fillStyle=(p.net??0)>0?'#2ACB91':(p.net??0)<0?'#FF7468':'#BBC8DC';
       ctx.font='700 29px Arial, sans-serif';ctx.textAlign='right';
       ctx.fillText(((p.net??0)>0?'+':'')+amt(p.net??0),955,y+44);
       ctx.textAlign='left';
     }
   });
   if(ordered.length>8){
-    ctx.fillStyle='#D9C6CF';ctx.font='28px Arial, sans-serif';
+    ctx.fillStyle='#BBC8DC';ctx.font='28px Arial, sans-serif';
     ctx.fillText('+ '+(ordered.length-8)+' more players',96,1210);
   }
-  ctx.strokeStyle='rgba(238,201,138,.25)';ctx.beginPath();ctx.moveTo(95,1230);ctx.lineTo(980,1230);ctx.stroke();
-  ctx.fillStyle='#DCCBD5';ctx.font='24px Arial, sans-serif';ctx.textAlign='center';
+  ctx.strokeStyle='rgba(16,70,248,.4)';ctx.beginPath();ctx.moveTo(95,1230);ctx.lineTo(980,1230);ctx.stroke();
+  ctx.fillStyle='#B9C8DC';ctx.font='24px Arial, sans-serif';ctx.textAlign='center';
   ctx.fillText('PKR · mypkr.app · Group results shared by host · No payment instructions',540,1270);
 
   const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/png'));

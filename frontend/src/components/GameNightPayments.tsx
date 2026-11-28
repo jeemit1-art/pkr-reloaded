@@ -239,11 +239,11 @@ export default function GameNightPayments(){
    <div><p className="pkr-gn-payments-club">{room?.name||'Your poker club'}</p><h1>Payments</h1></div>
    <button type="button" className="pkr-gn-payment-refresh" disabled={loading||busy||(!selectedRoom&&!accountError)} onClick={refresh} aria-label="Refresh payment records"><PaymentIcon name="refresh"/></button>
   </header>
-  <section className="pkr-pc-cashier-hero" data-testid="private-club-cashier" aria-label="Your private club cashier">
+  <section className="pkr-pc-cashier-hero pkr-no-payments-hero" data-testid="private-club-cashier" aria-label="Your private club cashier">
     <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--payments"/>
-    <div className="pkr-pc-cashier-hero-art" aria-hidden="true"><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-a"/><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-b"/></div>
+    <span className="pkr-no-payments-cut" aria-hidden="true"/>
     <div className="pkr-pc-cashier-copy">
-      <span className="pkr-pc-overline">♠ YOUR PRIVATE CLUB CASHIER</span>
+      <span className="pkr-pc-overline">PKR / PAYMENT RECORDS</span>
       <h1>Cashier <em>&amp; Settlements</em></h1>
       <p>{room?.name||'Your poker club'}</p>
       <div className="pkr-pc-cashier-status">

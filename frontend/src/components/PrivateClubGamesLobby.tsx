@@ -40,28 +40,16 @@ export default function PrivateClubGamesLobby(p:Props){
    ?(p.isHost?'Pick a date, invite the crew and get the cards moving.':'Your host has not scheduled the next session yet.')
    :filter==='live'?'Your next live game will appear right here.':'Your completed game nights will appear here when a host settles the results.';
  const openGame=(game:Game)=>p.onGame(game.id);
- return <section className="pkr-privateclub-games pkr-casino-floor" data-testid="private-club-games" aria-label="Private Casino Club game lobby">
-  <header className="pkr-cf-hero">
-    <img src="/images/casino/real-casino-props.webp" className="pkr-cf-hero-photo" alt="" aria-hidden="true" decoding="async"/>
-    <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--games"/>
-    <div className="pkr-cf-hero-pattern" aria-hidden="true"><span className="pkr-cf-holo-card">A<PkrGlyph name="spade" size={33}/></span><span className="pkr-cf-holo-chip">PKR</span></div>
-    <div className="pkr-cf-marquee"><span className="pkr-cf-marquee-dot" aria-hidden="true"/><span>PRIVATE CASINO · GAME NIGHT</span></div>
-    <div className="pkr-cf-hero-copy">
-      <span className="pkr-cf-hero-kicker">{heroLabel}</span>
-      <h1>THE <em>POKER</em><span>FLOOR.</span></h1>
-      <p>{p.club}</p>
-    </div>
-    <div className="pkr-cf-hero-metrics" aria-label="Current club game counts">
-      <button type="button" onClick={()=>setFilter('upcoming')} aria-label={counts.upcoming+' upcoming games; show upcoming games'}>
-        <strong>{counts.upcoming}</strong><span>UPCOMING</span>
-      </button>
-      <button type="button" onClick={()=>setFilter('live')} aria-label={counts.live+' live games; show live games'}>
-        <strong>{counts.live}</strong><span><i className="pkr-cf-live-dot" aria-hidden="true"/> LIVE</span>
-      </button>
-      <button type="button" onClick={()=>setFilter('completed')} aria-label={counts.completed+' completed games; show completed games'}>
-        <strong>{counts.completed}</strong><span>PLAYED</span>
-      </button>
-    </div>
+ return <section className="pkr-privateclub-games pkr-casino-floor pkr-no-games" data-testid="private-club-games" aria-label="PKR Games">
+  <header className="pkr-cf-hero pkr-no-games-hero">
+   <span className="pkr-no-hero-cut" aria-hidden="true"/>
+   <div className="pkr-no-hero-meta"><span>PKR / PRIVATE GAME CLUB</span><span className="pkr-no-role">{p.isHost?'HOST':'PLAYER'}</span></div>
+   <div className="pkr-cf-hero-copy"><span className="pkr-cf-hero-kicker">{heroLabel}</span><h1>THE NIGHT <em>IS ON.</em></h1><p>{p.club}</p></div>
+   <div className="pkr-cf-hero-metrics" aria-label="Club games at a glance">
+    <button type="button" onClick={()=>setFilter('upcoming')}><strong>{counts.upcoming}</strong><span>UPCOMING</span></button>
+    <button type="button" onClick={()=>setFilter('live')}><strong>{counts.live}</strong><span>LIVE</span></button>
+    <button type="button" onClick={()=>setFilter('completed')}><strong>{counts.completed}</strong><span>PLAYED</span></button>
+   </div>
   </header>
 
   <nav className="pkr-pc-lobby-filter pkr-cf-filters" aria-label="Game lobby filters">
@@ -101,7 +89,7 @@ export default function PrivateClubGamesLobby(p:Props){
        <span className="pkr-pc-lobby-seats"><PkrGlyph name="members" size={16}/> {typeof game.player_count==='number'?game.player_count+' players':'Player list available'}
         {Number.isFinite(game.seats)&&game.seats>0?' · '+game.seats+' seats':''}</span>
       </div>
-      <div className="pkr-cf-ticket-art" aria-hidden="true"><span>♠</span><span>♥</span></div>
+      <span className="pkr-no-ticket-index" aria-hidden="true">{String(index+1).padStart(2,'0')}</span>
      </div>
      {!liveNow&&!done&&<div className="pkr-pc-rsvp-quick" aria-label="Open RSVP response form">
       <button type="button" onClick={()=>p.onRsvp(game.id,'yes')}><PkrGlyph name="check" size={18}/><span>Going</span></button>
@@ -127,13 +115,7 @@ export default function PrivateClubGamesLobby(p:Props){
    })}
   </div>:
   <section className="pkr-cf-empty" role="status" aria-label={filter==='upcoming'?'No upcoming games':filter==='live'?'No live games':'No completed games'}>
-   <div className="pkr-cf-tabletop" aria-hidden="true">
-    <div className="pkr-cf-table-rim"><div className="pkr-cf-felt">
-      <span className="pkr-cf-felt-brand">PKR</span>
-      <span className="pkr-cf-table-card one">A<br/>♠</span><span className="pkr-cf-table-card two">K<br/>♥</span>
-      <span className="pkr-cf-table-chip chip-one"/><span className="pkr-cf-table-chip chip-two"/>
-     </div></div>
-   </div>
+   <span className="pkr-no-empty-icon" aria-hidden="true"><PkrBrandMark/></span>
    <div className="pkr-cf-empty-content">
     <h2>{filter==='upcoming'?'Ready for the next deal?':filter==='live'?'No live table right now':'No completed nights yet'}</h2>
     <button type="button" className="pkr-cf-schedule" onClick={filter==='upcoming'&&p.isHost?p.onSchedule:filter==='completed'?p.onResults:p.onCalendar}>

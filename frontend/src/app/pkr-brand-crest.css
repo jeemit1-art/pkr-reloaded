@@ -1,4 +1,4 @@
-/* PKR brand crest. One original, sharp SVG shared by every visual theme.
+/* PKR Open Chip K official logo. One original, sharp SVG shared by every visual theme.
  * Repeat subtly, never on top of live gameplay or interactive controls.
  * All marks are decorative except the surrounding navigation / landing links. */
 .pkr-brand-mark{
@@ -52,12 +52,12 @@
   content:"";position:absolute;right:8px;top:4px;
   width:clamp(32px,5vw,54px);height:clamp(32px,5vw,54px);
   pointer-events:none;user-select:none;z-index:0;opacity:.11;
-  background:url('/brand/pkr-crest.svg') center/contain no-repeat;
+  background:url('/brand/pkr-night-mark.svg') center/contain no-repeat;
  }
  html[data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
   .pkr-primary-page-head,.pkr-gn-payments-heading,.pkr-results-room-bar
  ) > *{position:relative;z-index:1}
- /* Hero crest placement: restrained, behind copy and clear of all buttons. */
+ /* Hero brand mark placement: restrained, behind copy and clear of all buttons. */
  html[data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-brand-mark--hero{
   position:absolute!important;right:clamp(10px,3vw,31px)!important;
   top:clamp(48px,11vw,74px)!important;
@@ -80,7 +80,7 @@
   .pkr-pc-results-heading,.pkr-pc-cashier-copy){
   position:relative;z-index:2;
  }
- /* Do not place a second spade graphic on top of the actual crest in Players. */
+ /* Do not place a second spade graphic on top of the actual brand mark in Players. */
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
  .pkr-pc-members-felt{display:none!important}
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))

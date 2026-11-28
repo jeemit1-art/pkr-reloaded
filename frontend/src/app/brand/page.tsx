@@ -1,26 +1,24 @@
 import type {Metadata} from 'next';
 import MarketingBrandHeader from '@/components/MarketingBrandHeader';
-
 export const metadata:Metadata={
- title:'PKR Brand & Media Kit | Your Private Poker Club',
- description:'Official PKR logo, approved brand colours and share-ready marketing artwork for your private poker club.',
+ title:'PKR Brand Kit — The Night Is On',
+ description:'Approved PKR Open Chip K logo, bold private-club colours and official share artwork.',
  alternates:{canonical:'/brand'},
 };
 const assets=[
- {name:'Official logo on dark',img:'/brand/pkr-horizontal-on-dark.svg',desc:'Horizontal official crest and wordmark for dark backgrounds.'},
- {name:'Official logo on light',img:'/brand/pkr-horizontal-on-light.svg',desc:'The official wordmark optimised for light backgrounds.'},
- {name:'Landscape campaign',img:'/brand/pkr-social-landscape.svg',desc:'Wide sharing artwork for social posts and link previews.'},
- {name:'Square social post',img:'/brand/pkr-social-square.svg',desc:'Square launch campaign artwork for feeds.'},
- {name:'Vertical story',img:'/brand/pkr-social-story.svg',desc:'Portrait 9:16 story artwork for mobile sharing.'},
+ {name:'PKR wordmark',img:'/brand/pkr-night-logo.svg',desc:'The approved Open Chip K and custom PKR letters for dark backgrounds.'},
+ {name:'Open Chip K symbol',img:'/brand/pkr-night-mark.svg',desc:'The recognisable PKR club identity for navigation and member passes.'},
+ {name:'PKR app icon',img:'/brand/pkr-night-icon.svg',desc:'Official home-screen icon, built from the brand emblem.'},
+ {name:'The Night Is On campaign',img:'/brand/pkr-night-cover.svg',desc:'Branded social and messaging cover image. No abstract imagery.'},
 ];
-const colours=[['Midnight','#0D0B19'],['Velvet','#2B1028'],['Ruby','#C94D6C'],['Antique gold','#EEC98A'],['Ivory','#FFF4D5'],['Felt','#153C31']];
-export default function BrandHub(){return <main className="pkr-marketing-editorial">
+const colours=[['PKR Ink','#0B0D14'],['PKR Blue','#1046F8'],['PKR Coral','#FF5A4D'],['PKR Citron','#C7FF3A'],['PKR Paper','#F5F5EF'],['PKR Slate','#182139']];
+export default function BrandHub(){return <main className="pkr-marketing-editorial pkr-no-brand-hub">
  <MarketingBrandHeader/>
  <nav className="pkr-marketing-breadcrumb" aria-label="Breadcrumb"><a href="/">PKR Home</a><span>›</span><span>Brand & media</span></nav>
- <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">OFFICIAL PKR BRAND KIT</span><h1>One crest.<br/><em>One unmistakable club.</em></h1><p>Original PKR artwork for your club and promotional sharing. Each download keeps our official ruby-and-gold spade crest, sharp typography and consistent colours.</p></header>
+ <header className="pkr-marketing-hero"><span className="pkr-marketing-kicker">THE OFFICIAL PKR IDENTITY</span><h1>THE NIGHT <em>IS ON.</em></h1><p>A new PKR identity for your private game club. The Open Chip K, distinctive cut-corner cards, player stamps and bold blue/coral/citron visual language now connect the whole product.</p></header>
  <div className="pkr-brand-hub-grid">{assets.map(asset=><article className="pkr-brand-hub-card" key={asset.img}>
   <figure><img src={asset.img} alt={asset.name} loading="lazy"/></figure>
-  <div><h3>{asset.name}</h3><p>{asset.desc}</p><a href={asset.img} download>Download SVG ↗</a></div>
+  <div><h3>{asset.name}</h3><p>{asset.desc}</p><a href={asset.img} download>Download SVG</a></div>
  </article>)}</div>
- <section className="pkr-marketing-prose"><span className="pkr-marketing-kicker">VISUAL IDENTITY</span><h2>Built for the <em>private poker club.</em></h2><p>Deep midnight, velvet ruby and antique gold form the PKR identity. The felt green supports the game experience; it does not replace our official crest. Our app's nine selectable looks remain available.</p><div className="pkr-brand-swatches">{colours.map(([label,hex])=><div className="pkr-brand-swatch" key={hex}><i style={{background:hex}}/><strong>{label}</strong><code>{hex}</code></div>)}</div><p>Use genuine PKR screenshots with fictional data. PKR organises privately arranged games and records results; it does not take wagers, hold player funds or transfer settlement money.</p><p><a href="/pricing">Explore PKR plans</a> · <a href="/install">Install PKR</a></p></section>
+ <section className="pkr-marketing-prose"><span className="pkr-marketing-kicker">PKR VISUAL SYSTEM</span><h2>YOUR TABLE. <em>YOUR PEOPLE.</em></h2><p>One approved mark and a repeatable graphic language, not another casino theme. Functional app controls use the same identity while live game records and player avatars remain genuine.</p><div className="pkr-brand-swatches">{colours.map(([label,hex])=><div className="pkr-brand-swatch" key={hex}><i style={{background:hex}}/><strong>{label}</strong><code>{hex}</code></div>)}</div><p>PKR helps organisers manage privately arranged games. It does not accept wagers, hold funds or execute transfers.</p><p><a href="/pricing">PKR host plans</a> · <a href="/install">Install PKR</a></p></section>
  </main>}

@@ -280,7 +280,7 @@ async function check(engine,size){
   });
   await context.addInitScript(({installed})=>{
     localStorage.setItem('pkr_token','synthetic-only-session');
-     // Legacy white-header contract applies to Classic, not the premium cream/Noir variants.
+     // Even a saved old Classic preference must render the approved canonical PKR brand.
      localStorage.setItem('pkr_personal_visual_style_v1','standard');
     if(installed)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
   },{installed:!!size.installed});
@@ -319,13 +319,13 @@ async function check(engine,size){
     });
     assert.equal(canvas.standalone,true,'The installed Safari code path must be exercised');
     assert.equal(canvas.dark,true,'The phone must request dark system appearance');
-    assert.equal(canvas.root,'rgb(255, 255, 255)','Classic saved theme keeps its existing light canvas');
-    assert.equal(canvas.body,'rgb(255, 255, 255)','Classic theme body canvas remains unchanged');
+    assert.equal(canvas.root,'rgb(11, 13, 20)','Approved PKR ink must extend behind native status chrome');
+    assert.equal(canvas.body,'rgb(11, 13, 20)','Approved PKR body canvas must be ink');
     assert.equal(canvas.rootImage,'none');assert.equal(canvas.bodyImage,'none');
-    assert.equal(canvas.colourScheme,'light');assert.equal(canvas.metaScheme,'dark');
-    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#0d0b19'),'Every native theme-colour hint must match the dark installed status bar');
-    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#0d0b19');
-    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#0d0b19');
+    assert.equal(canvas.colourScheme,'dark');assert.equal(canvas.metaScheme,'dark');
+    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#0b0d14'),'Every native theme-colour hint must match the dark installed status bar');
+    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#0b0d14');
+    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#0b0d14');
     assert.equal(canvas.manifest?.display,'standalone');
     await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll'));
     await stationaryRoot(page,'Installed initial view');
@@ -425,14 +425,14 @@ async function check(engine,size){
     },{safeTop:size.safeTop||0,safeBottom:size.safeBottom||0});
     assert(Math.abs(masks.height-(64+(size.safeTop||0)))<=1,'Safe area must be reserved once: '+JSON.stringify(masks));
     assert(masks.paddingTop>=(size.safeTop||0)+8,'Header controls intrude into status bar');
-    assert.equal(masks.colour,'rgb(255, 255, 255)','The Lounge in-app header must be opaque white');
-    assert.equal(masks.cap,'rgb(255, 255, 255)','Header safe-area cap must match the in-app header');
+    assert.equal(masks.colour,'rgb(13, 20, 36)','The fixed PKR header must be opaque ink/navy');
+    assert.equal(masks.cap,'rgb(13, 20, 36)','Native inset cap must match the PKR header');
     assert.equal(masks.image,'none');assert.equal(masks.opacity,'1');assert.equal(masks.blur,'none');
     assert(masks.fullWidth,'Scrolled header must cover the entire app content width: '+JSON.stringify(masks));
     await page.screenshot({path:path.join(output,engine.name()+'-'+size.name+'-scrolled.png'),fullPage:false});
     assert(masks.topCovered,'Scrolled content is exposed in the status-bar inset: '+JSON.stringify(masks));
     assert(masks.bottomCovered,'Scrolled content is exposed beneath bottom navigation');
-    assert.equal(masks.footerColour,'rgb(255, 255, 255)','The Lounge footer must be opaque white');
+    assert.equal(masks.footerColour,'rgb(13, 20, 36)','PKR bottom bar must have solid background');
     assert(masks.footerPadding>=(size.safeBottom||0),'Footer lost home-indicator clearance');
     if(size.installed){
       assert.equal(masks.footerPosition,'fixed','Installed footer must remain fixed while the body scrolls');

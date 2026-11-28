@@ -9,10 +9,10 @@ import type {LeaderboardEntry} from '@/lib/api';
 type Props={club:string;roomId:string;leaders:LeaderboardEntry[];completed:number;onHistory:()=>void;avatarSources:RoomAvatarSources};
 export default function PrivateClubResultsHero({club,roomId,leaders,completed,onHistory,avatarSources}:Props){
  const top=leaders.filter(p=>p.user_id).slice().sort((a,b)=>b.total_net-a.total_net).slice(0,3);
- return <section className="pkr-pc-results-hero" data-testid="private-club-results" aria-label="Casino club hall of fame">
-   <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--results"/>
+ return <section className="pkr-pc-results-hero pkr-no-results" data-testid="private-club-results" aria-label="PKR club results">
+   <span className="pkr-no-results-chip" aria-hidden="true"><PkrBrandMark/></span>
    <div className="pkr-pc-results-heading"><span className="pkr-pc-overline"><PkrGlyph name="trophy" size={15}/> HALL OF FAME</span>
-     <h1>The <em>Leaderboard</em></h1><p>{club} · Every game has a story.</p>
+     <h1>THE <em>RESULTS.</em></h1><p>{club} · Every game has a story.</p>
    </div>
    <div className="pkr-pc-results-ribbon">
     <RecordMetric bare request={{kind:'games',title:'Completed games',roomId,filter:'settled'}}><strong>{completed}</strong><small>Completed games</small></RecordMetric>

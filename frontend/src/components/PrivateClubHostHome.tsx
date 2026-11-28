@@ -1,5 +1,4 @@
 'use client';
-
 import type {ComponentProps} from 'react';
 import PkrGlyph from '@/components/PkrGlyph';
 import PkrBrandMark from '@/components/PkrBrandMark';
@@ -8,96 +7,60 @@ import type GameNightHostHome from '@/components/GameNightHostHome';
 type Props=ComponentProps<typeof GameNightHostHome>;
 const zone='Australia/Brisbane';
 const datePart=(value:number,options:Intl.DateTimeFormatOptions)=>new Date(value*1000).toLocaleDateString('en-AU',{...options,timeZone:zone});
-const initials=(name:string)=>name.trim().split(/\s+/).slice(0,2).map(word=>word.charAt(0)).join('').toUpperCase();
+const hour=(value:number)=>new Date(value*1000).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit',timeZone:zone});
 
-/** A real, data-bound club entrance. This UI never fabricates games, RSVPs or settlements. */
+/** PKR / The Night Is On. All game, RSVP and payment information comes from the live record. */
 export default function PrivateClubHostHome(p:Props){
  const game=p.featured;
- const isFinished=game?.status==='settled'||game?.status==='completed';
- const showRsvps=p.attendanceState==='ready'&&!isFinished&&!p.active;
- const when=game?datePart(game.scheduled_at,{weekday:'short'}).toUpperCase():'';
- const day=game?datePart(game.scheduled_at,{day:'2-digit'}):'';
- const month=game?datePart(game.scheduled_at,{month:'short'}).toUpperCase():'';
- const start=game?new Date(game.scheduled_at*1000).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit',timeZone:zone}):'';
- const fullDate=game?datePart(game.scheduled_at,{weekday:'long',day:'numeric',month:'long'}):'';
- const guests=p.going.slice(0,4);
- const primary=p.active?'RESUME LIVE TABLE':game?'VIEW NEXT GAME':p.canManageGames?'SCHEDULE A GAME':'VIEW GAME CALENDAR';
- const openPrimary=game?p.onGame:p.canManageGames?p.onSchedule:p.onCalendar;
- return <section className="pkr-privateclub-home" data-testid="private-club-host-home" aria-label="Private Casino Club home">
-  <div className="pkr-pc-entrance">
-   <img className="pkr-pc-entrance-photo" src="/images/pkr-approved-hero-desktop.webp"
-      alt="" aria-hidden="true" decoding="async" fetchPriority="high"/>
-   <div className="pkr-pc-scene" aria-hidden="true">
-    <span className="pkr-pc-scene-beam"/><span className="pkr-pc-scene-felt"/>
-    <span className="pkr-pc-scene-chip pkr-pc-chip-one"/><span className="pkr-pc-scene-chip pkr-pc-chip-two"/>
-    <span className="pkr-pc-scene-card pkr-pc-card-one">A<PkrGlyph name="spade" size={23}/></span>
-    <span className="pkr-pc-scene-card pkr-pc-card-two">A<PkrGlyph name="heart" size={23}/></span>
+ const done=game?.status==='settled'||game?.status==='completed';
+ const live=!!p.active;
+ const date=game?datePart(game.scheduled_at,{weekday:'short',day:'numeric',month:'short',year:'numeric'}):'Not scheduled';
+ const confirmed=p.attendanceState==='ready'&&!done;
+ const primary=live?'OPEN LIVE TABLE':game?'VIEW GAME NIGHT':p.canManageGames?'SCHEDULE YOUR GAME':'GAME CALENDAR';
+ const goPrimary=game?p.onGame:p.canManageGames?p.onSchedule:p.onCalendar;
+ return <section className="pkr-privateclub-home pkr-no-host" data-testid="private-club-host-home" aria-label="PKR game night host home">
+  <header className="pkr-no-hero pkr-no-host-hero">
+   <span className="pkr-no-hero-cut" aria-hidden="true"/>
+   <div className="pkr-no-hero-meta"><span>PKR / YOUR PRIVATE GAME CLUB</span><span className="pkr-no-role">HOST</span></div>
+   <span className="pkr-no-hero-kicker">{live?'LIVE TABLE':game?'UPCOMING GAME':'YOUR NEXT GAME NIGHT'}</span>
+   <h1>THE NIGHT <em>IS ON.</em></h1>
+   <p>{game?date+' · '+hour(game.scheduled_at):'Your crew. Your table. Your night.'}</p>
+   <div className="pkr-no-hero-actions">
+    <button type="button" className="pkr-no-hero-cta" onClick={goPrimary}>{primary}<PkrGlyph name="chevron-right" size={21}/></button>
+    {game&&<span className="pkr-no-hero-foot">{confirmed?p.going.length+' confirmed RSVPs':live?'Game in progress':'Session details ready'}</span>}
    </div>
-   <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--host"/>
-   <div className="pkr-pc-identity">
-    <span className="pkr-pc-overline"><span aria-hidden="true">✦</span> YOUR PRIVATE CLUB <span aria-hidden="true">✦</span></span>
-    <h1>{p.room.name}</h1>
-    <div className="pkr-pc-honor"><span aria-hidden="true">♠</span>
-      <span>{p.active?'TABLE LIVE NOW':game?'NEXT GAME NIGHT':'WELCOME TO THE CLUB'}</span>
-      <span aria-hidden="true">♠</span></div>
+  </header>
+  <div className="pkr-no-section-heading"><span>YOUR CLUB</span><h2>{p.room.name}</h2><p>Everything for the next game, in one place.</p></div>
+  <section className="pkr-no-next-ticket" aria-label={game?'Next game details':'Next game'}>
+   <div className="pkr-no-ticket-intro"><span>01 / GAME NIGHT PASS</span><PkrBrandMark className="pkr-no-ticket-mark"/></div>
+   <div className="pkr-no-ticket-info">
+    <div className="pkr-no-ticket-date"><strong>{game?datePart(game.scheduled_at,{day:'2-digit'}):'--'}</strong><span>{game?datePart(game.scheduled_at,{month:'short'}).toUpperCase():'TBA'}</span></div>
+    <div className="pkr-no-ticket-copy"><h3>{live?'Game in progress':game?'Next game night':'No game scheduled'}</h3>
+     <p><PkrGlyph name="clock" size={16}/>{game?hour(game.scheduled_at)+' · '+date:'Schedule a game to bring your crew together'}</p>
+     {game?.location&&<p><PkrGlyph name="map-pin" size={16}/>{game.location}</p>}
+     {confirmed&&<span className="pkr-no-confirmed">{p.going.length} confirmed{Number.isFinite(game?.seats)&&game!.seats>0?' / '+game!.seats+' seats':''}</span>}
+    </div>
    </div>
-  </div>
-
-  <section className="pkr-pc-ticket" aria-label={game?'Next poker session':'Plan your next poker night'}>
-   {game?<div className="pkr-pc-ticket-body">
-    <div className="pkr-pc-datebox"><span>{when}</span><strong>{day}</strong><span>{month}</span></div>
-    <div className="pkr-pc-ticket-info">
-     <span className="pkr-pc-ticket-kicker"><PkrGlyph name="schedule" size={16}/> {p.active?'LIVE GAME':'NEXT SESSION'}</span>
-     <h2>{p.active?'The table is live':'Game Night'}</h2>
-     <p><PkrGlyph name="clock" size={16}/> {start} <span aria-hidden="true">·</span> {fullDate}</p>
-     {game.location&&<p className="pkr-pc-ticket-location"><PkrGlyph name="map-pin" size={16}/> {game.location}</p>}
-     <div className="pkr-pc-attendance">
-      {showRsvps?<><div className="pkr-pc-avatars" aria-hidden="true">{guests.map((r,i)=>
-       <span key={r.id||r.display_name} className={'pkr-pc-avatar pkr-pc-avatar-'+i}>{initials(r.display_name)}</span>)}</div>
-       <span><strong>{p.going.length}</strong>{Number.isFinite(game.seats)&&game.seats>0?' / '+game.seats:''} confirmed</span></>:
-       <span>{p.active?'Game in progress':p.attendanceState==='loading'?'Checking RSVPs…':p.attendanceState==='unavailable'?'RSVPs unavailable':'Game details ready'}</span>}
-     </div>
-    </div>
-    <div className="pkr-pc-ticket-cards" aria-hidden="true"><span>A <PkrGlyph name="spade" size={34}/></span><span>A <PkrGlyph name="heart" size={34}/></span></div>
-   </div>:<div className="pkr-pc-ticket-body pkr-pc-ticket-empty">
-    <span className="pkr-pc-ticket-no-date"><PkrGlyph name="schedule" size={33}/></span>
-    <div className="pkr-pc-ticket-info">
-     <span className="pkr-pc-ticket-kicker">THE NEXT CHAPTER</span>
-     <h2>Your next great game starts here.</h2>
-     <p>{p.canManageGames?'Choose a date and bring everyone back to the table.':'Your host has not scheduled the next game yet.'}</p>
-    </div>
-   </div>}
+   <div className="pkr-no-ticket-footer">
+    <button type="button" onClick={game?p.onRsvp:p.onCalendar}><PkrGlyph name="members" size={18}/>{game?'RSVPs & seats':'Calendar'}</button>
+    <button type="button" onClick={game?p.onSharing:p.onInvite}><PkrGlyph name="share" size={18}/>Share</button>
+   </div>
   </section>
-
-  <button className="pkr-pc-main-action" type="button" onClick={openPrimary}>
-   <span>{primary}</span><PkrGlyph name="chevron-right" size={22}/>
-  </button>
-
-  <div className="pkr-pc-shortcuts" aria-label="Club quick actions">
-   <button type="button" onClick={p.canManageGames?p.onSchedule:p.onCalendar}>
-    <PkrGlyph name="schedule" size={25}/><strong>{p.canManageGames?'Host Game':'Calendar'}</strong>
-   </button>
-   <button type="button" onClick={p.canInvite?p.onInvite:p.onSharing}>
-    <PkrGlyph name={p.canInvite?'user-add':'share'} size={25}/><strong>{p.canInvite?'Invite':'Share'}</strong>
-   </button>
-   <button type="button" onClick={p.onResults}>
-    <PkrGlyph name="trophy" size={25}/><strong>Leaderboard</strong>
-   </button>
+  <div className="pkr-no-stats" aria-label="Club at a glance">
+   <button type="button" onClick={p.onRsvp} className="pkr-no-stat"><span>RSVPs</span><strong>{confirmed?p.going.length:'—'}</strong><small>{confirmed?'Going to next game':'View attendance'}</small></button>
+   <button type="button" onClick={p.onPayments} className="pkr-no-stat"><span>PAYMENTS</span><strong>{p.paymentState==='ready'?p.payments.length:'—'}</strong><small>Review records</small></button>
+   <button type="button" onClick={p.onResults} className="pkr-no-stat"><span>RESULTS</span><strong><PkrGlyph name="trophy" size={28}/></strong><small>Club leaderboard</small></button>
   </div>
-
-  <div className="pkr-pc-next-actions">
-   <button type="button" onClick={game?p.onRsvp:p.onCalendar}>
-    <span className="pkr-pc-tool-icon"><PkrGlyph name="members" size={21}/></span>
-    <span><strong>{game?'RSVPs & seats':'Upcoming games'}</strong><small>{game?'Attendance and seat assignments':'View your club calendar'}</small></span><PkrGlyph name="chevron-right" size={19}/>
-   </button>
-   <button type="button" onClick={p.onPayments}>
-    <span className="pkr-pc-tool-icon"><PkrGlyph name="settle" size={21}/></span>
-    <span><strong>Cashier & settlements</strong><small>{p.paymentState==='loading'?'Checking outstanding payments':p.paymentState==='ready'?p.payments.length+' transfers pending':'Review saved payment records'}</small></span><PkrGlyph name="chevron-right" size={19}/>
-   </button>
-   <button type="button" onClick={p.onAppearance}>
-    <span className="pkr-pc-tool-icon"><PkrGlyph name="grid" size={21}/></span>
-    <span><strong>Club control centre</strong><small>All management tools and reporting</small></span><PkrGlyph name="chevron-right" size={19}/>
-   </button>
-  </div>
+  <section className="pkr-no-tools" aria-label="Host shortcuts">
+   <div className="pkr-no-section-heading pkr-no-section-heading-small"><span>HOST CONTROLS</span><h2>Keep the night moving.</h2></div>
+   <div className="pkr-no-tools-grid">
+    <button type="button" onClick={p.canManageGames?p.onSchedule:p.onCalendar}><PkrGlyph name="schedule" size={22}/><span>{p.canManageGames?'Host a game':'Calendar'}</span><PkrGlyph name="chevron-right" size={17}/></button>
+    <button type="button" onClick={p.canInvite?p.onInvite:p.onSharing}><PkrGlyph name={p.canInvite?'user-add':'share'} size={22}/><span>{p.canInvite?'Invite players':'Share club'}</span><PkrGlyph name="chevron-right" size={17}/></button>
+    <button type="button" onClick={p.onPayments}><PkrGlyph name="settle" size={22}/><span>Settlement records</span><PkrGlyph name="chevron-right" size={17}/></button>
+    <button type="button" onClick={p.onAppearance}><PkrGlyph name="grid" size={22}/><span>Full dashboard</span><PkrGlyph name="chevron-right" size={17}/></button>
+   </div>
+   {p.refreshError&&<p className="pkr-no-error" role="alert">{p.refreshError}</p>}
+   <button type="button" className="pkr-no-refresh" onClick={p.onRefresh} disabled={p.refreshing}>{p.refreshing?'Refreshing club…':'Refresh club information'}</button>
+  </section>
  </section>;
 }

@@ -44,9 +44,12 @@ const structuredData = {
 export default function HomePage() {
   const router = useRouter();
   const [loginOpen,setLoginOpen] = useState(false);
+  const [reviewAvailable,setReviewAvailable]=useState(false);
   const [selectedPlan,setSelectedPlan] = useState<'starter'|'pro'|null>(null);
   const [inviteLink,setInviteLink] = useState('');
   const [inviteError,setInviteError] = useState('');
+
+  useEffect(()=>{setReviewAvailable(window.location.hostname.endsWith('.vercel.app') || window.location.hostname==='localhost');},[]);
 
   useEffect(() => {
     try {
@@ -118,12 +121,13 @@ export default function HomePage() {
       <a className="pkr-launch-skip" href="#main-content">Skip to content</a>
       <header className="pkr-l2-topbar">
         <div className="pkr-l2-nav-inner">
-          <a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a>
+          <a className="pkr-l2-brand" href="/" aria-label="PKR home"><img className="pkr-no-marketing-logo" src="/brand/pkr-night-logo.svg" alt="PKR — Your Private Game Club" width={225} height={77}/></a>
           <nav className="pkr-l2-navlinks" aria-label="Landing page">
             <a href="#product-tour">See the app</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
           </nav>
           <div className="pkr-l2-header-actions">
-            <a className="pkr-l2-player-link" href="/mobile-login">Player login</a>
+            {reviewAvailable&&<a className="pkr-l2-player-link" href="/design-review" style={{color:'#C7FF3A',fontWeight:850}}>View app demo</a>}
+             <a className="pkr-l2-player-link" href="/mobile-login">Player login</a>
             <button type="button" className="pkr-l2-btn pkr-l2-btn-outline" onClick={()=>setLoginOpen(true)}>Host sign in</button>
           </div>
         </div>
@@ -133,23 +137,23 @@ export default function HomePage() {
         <section className="pkr-l2-hero" aria-labelledby="pkr-l2-main-heading">
           <div className="pkr-l2-hero-inner">
             <div className="pkr-l2-hero-copy">
-              <span className="pkr-l2-eyebrow">FOR YOUR NEXT GREAT GAME NIGHT</span>
-              <h1 id="pkr-l2-main-heading">More poker.<br/><em>Less admin.</em></h1>
-              <p>The people, the plan, the game and every result. Keep your private poker club together in one app.</p>
+              <span className="pkr-l2-eyebrow">YOUR TABLE. YOUR PEOPLE.</span>
+              <h1 id="pkr-l2-main-heading">THE NIGHT<br/><em>IS ON.</em></h1>
+              <p>One private game club. Your players, invitations, RSVPs, games and results — together in PKR.</p>
               <div className="pkr-l2-hero-actions">
                 <button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start your poker club</button>
-                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">Take a look inside</a>
+                {reviewAvailable?<a className="pkr-l2-btn pkr-l2-btn-glass" href="/design-review">Explore all 5 app screens — no login</a>:<a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">Explore PKR</a>}
               </div>
               <div className="pkr-l2-hero-trust"><span><PkrGlyph name="lock" size={17}/> Private clubs</span><span><PkrGlyph name="users" size={17}/> Players join free</span><span><PkrGlyph name="phone" size={17}/> Phone, tablet &amp; desktop</span></div>
               <p className="pkr-launch-availability">Available now in your browser. Add PKR to your Home Screen.</p>
             </div>
             <div className="pkr-hero-real" aria-label="Current PKR desktop and phone screens with fictional club data">
               <div className="pkr-hero-desktop">
-                <div className="pkr-hero-desktop-header"><span>YOUR CLUB. ALL TOGETHER.</span><span>mypkr.app</span></div>
+                <div className="pkr-hero-desktop-header"><span>THE NIGHT IS ON.</span><span>mypkr.app</span></div>
                 <img src="/demo/launch-20261127/desktop-home.webp" alt="Current PKR Home dashboard with games, players, payments and results for the fictional River City Poker club" width="1440" height="900" fetchPriority="high"/>
               </div>
               <div className="pkr-hero-mobile" aria-hidden="true"><img src="/demo/launch-20261127/mobile-home.webp" alt="" width="430" height="873" loading="eager"/></div>
-              <div className="pkr-hero-real-label"><PkrGlyph name="check" size={17}/> Actual app screens · Demo club</div>
+              <div className="pkr-hero-real-label"><PkrGlyph name="check" size={17}/> Product tour · Fictional club data</div>
             </div>
           </div>
         </section>
@@ -200,17 +204,18 @@ export default function HomePage() {
       </main>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData).replace(/</g,'\\u003c')}}/>
-      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a><p>More poker. Less admin.<br/>From the invitation to the final result.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a><a href="/brand">Brand kit</a></nav></footer>
+      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><img className="pkr-no-marketing-logo" src="/brand/pkr-night-logo.svg" alt="PKR — Your Private Game Club" width={225} height={77}/></a><p>THE NIGHT IS ON.<br/>Your people. Your table. Your game.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a><a href="/brand">Brand kit</a></nav></footer>
 
       {loginOpen&&<AppDialog aria-label="Host sign in" onDismiss={()=>setLoginOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setLoginOpen(false);}}>
         <div className="pkr-launch-signin">
           <button type="button" className="pkr-launch-dialog-close" aria-label="Close sign in" onClick={()=>setLoginOpen(false)}><PkrGlyph name="close" size={22}/></button>
-          <span className="pkr-launch-signin-mark"><PkrGlyph name="spade" size={36}/></span><h2>Host your poker night</h2>
+          <span className="pkr-launch-signin-mark"><PkrBrandMark/></span><h2>Host your poker night</h2>
           <p>{selectedPlan
   ? 'Sign in with Google to review and activate the '+(selectedPlan==='pro'?'Pro':'Starter')+' host plan. No charge is made until you confirm Stripe checkout.'
   : 'Sign in to create a room. Players join through their private invitation after host approval.'}</p>
           <button type="button" className="pkr-launch-signin-primary" onClick={hostSignIn}>Continue with Google (host)</button>
           <a href="/mobile-login">Already a player? Sign in here</a>
+           {reviewAvailable&&<a href="/design-review" style={{display:'block',marginTop:12,color:'#C7FF3A',fontWeight:800}}>Review the new app as host or player — no login needed</a>}
         </div>
       </AppDialog>}
     </div>

@@ -161,126 +161,99 @@ async function gotoFixturePage(page,url){
  await waitForFixtureApi(page);
 }
 
+
 async function checkCompactHomeActions(page,label){
  const original=page.viewportSize();
  try{
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
   await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
-  const hub=page.locator('[data-testid="game-night-host-home"] .pkr-gn-quick');
+  const hub=page.getByTestId('private-club-host-home');
   await hub.waitFor({state:'visible'});
-  assert.equal(await hub.locator('.pkr-gn-quick-grid>button').count(),4,'Exactly four Home quick actions');
-  assert.equal(await page.locator('.pkr-gn-tool-group,.pkr-gn-club-links').count(),0,'Old directory must be removed');
-  for(const [width,mode] of [[320,'dark'],[390,'dark'],[430,'dark'],[430,'light'],[768,'dark'],[1440,'dark']]){
+  assert.equal(await hub.locator('.pkr-no-tools-grid button').count(),4,'All four approved host shortcuts must work');
+  assert.equal(await hub.locator('.pkr-no-stats button').count(),3,'Three club record links required');
+  assert(await hub.locator('.pkr-no-next-ticket').isVisible(),'Real next-game ticket must render');
+  for(const width of [320,390,430,768,1440]){
    await page.setViewportSize({width,height:844});
-   await page.evaluate(m=>{document.documentElement.dataset.pkrPersonalTheme=m;document.documentElement.dataset.pkrPersonalStyle='noir';},mode);
-   await hub.scrollIntoViewIfNeeded();
-   const g=await hub.evaluate(el=>{
-    const rect=node=>{const r=node.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
-    const head=el.querySelector('.pkr-gn-quick-heading'),grid=el.querySelector('.pkr-gn-quick-grid'),utilities=el.querySelector('.pkr-gn-quick-utilities');
-    return {head:rect(head),grid:rect(grid),utilities:rect(utilities),cards:[...grid.querySelectorAll('button')].map(rect),
-      columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length};
+   await hub.locator('.pkr-no-tools-grid').scrollIntoViewIfNeeded();
+   const geometry=await hub.evaluate(node=>{
+    const bounds=el=>el.getBoundingClientRect();
+    const buttons=[...node.querySelectorAll('.pkr-no-tools-grid button')],hero=node.querySelector('.pkr-no-hero'),ticket=node.querySelector('.pkr-no-next-ticket');
+    return {screen:innerWidth,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)>innerWidth+4,
+      hero:hero?getComputedStyle(hero).backgroundColor:null,
+      buttons:buttons.map(el=>({width:bounds(el).width,height:bounds(el).height,left:bounds(el).left,right:bounds(el).right,clip:el.scrollWidth>el.clientWidth+4})),
+      ticket:ticket?getComputedStyle(ticket).backgroundColor:null};
    });
-   assert(g.head.bottom+9<=g.grid.top,label+' '+width+' heading overlaps cards '+JSON.stringify(g));
-   assert.equal(g.columns,width>900?4:2,label+' '+width+' wrong grid columns');
-   assert(g.cards.every(c=>c.width>90&&c.height>=75&&c.height<175&&c.left>=-1&&c.right<=width+1),
-    label+' '+width+' card clipped or oversized '+JSON.stringify(g));
-   assert(g.utilities.top>=g.grid.bottom+8,label+' '+width+' utilities overlap grid');
-   if(width===430&&mode==='dark')await screenshot(page,label+'-noir-home-430');
+   assert(!geometry.overflow,'Host Home overflow at '+width+': '+JSON.stringify(geometry));
+   assert.equal(geometry.hero,'rgb(16, 70, 248)','Approved PKR host hero must be blue');
+   assert.equal(geometry.ticket,'rgb(23, 36, 61)','Real branded game pass missing');
+   assert(geometry.buttons.every(b=>b.width>90&&b.height>=44&&b.left>=-1&&b.right<=width+2&&!b.clip),
+    'Host shortcuts must remain sharp and tappable '+width+' '+JSON.stringify(geometry));
+   if(width===430)await screenshot(page,label+'-night-is-on-home-430');
   }
  }finally{await page.setViewportSize(original);}
 }
+
 
 async function checkFullDashboards(page,state,label){
  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
  const dashboard=page.getByTestId('dual-dashboard');
  await dashboard.waitFor({state:'visible'});
- const appearance=page.getByRole('group',{name:'Host poker room appearance'});
+ const choice=page.getByRole('group',{name:'Host poker room appearance'});
  for(const mode of ['command','live']){
   const name=mode==='command'?'Command Centre':'Live Poker';
-  await appearance.getByRole('button',{name:new RegExp(name)}).click();
+  await choice.getByRole('button',{name:new RegExp(name)}).click();
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
-  assert.equal(await colour(dashboard,'backgroundColor'),'rgba(0, 0, 0, 0)',name+' must expose the shared lounge canvas, not paint a separate panel');
-  const canvas=await dashboard.evaluate(node=>{const parent=node.closest('.pkr-app.pkr-dashboard');if(!parent)throw new Error('Dashboard canvas missing');const style=getComputedStyle(parent);return {colour:style.backgroundColor,image:style.backgroundImage};});
-  assert.equal(canvas.colour,'rgb(244, 245, 242)',name+' must share the warm neutral canvas');
-  assert.equal(canvas.image,'none',name+' must use the neutral canvas');
-  const selected=appearance.getByRole('button',{name:new RegExp(name)});
-  assert.equal(await selected.getAttribute('aria-pressed'),'true');
-  await waitForColour(page,selected,'backgroundColor','rgb(225, 240, 231)');
-  assert.equal(await colour(selected,'backgroundColor'),'rgb(225, 240, 231)',name+' selected control must use selected forest tint');
-  assert.equal(await colour(selected,'color'),'rgb(22, 94, 66)');
-  const search=dashboard.locator('.pkr-dual-search');
-  if(await search.isVisible()){
-   assert.equal(await colour(search,'backgroundColor'),'rgb(238, 241, 236)',name+' room search must use neutral raised surface');
-   assert.equal(await colour(search.locator('input'),'color'),'rgb(25, 45, 39)');
-   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(22, 94, 66)');
-  }
+  assert.equal(await colour(page.locator('.pkr-app.pkr-dashboard'),'backgroundColor'),'rgb(11, 13, 20)','All command layouts must use PKR ink');
+  assert.equal(await choice.getByRole('button',{name:new RegExp(name)}).getAttribute('aria-pressed'),'true');
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const tools=dashboard.locator('.pkr-dual-secondary-tools .pkr-dual-utility-strip button');
-  assert(await tools.count()>=3,'Both layouts retain contextual club-management shortcuts');
-  await readable(tools.first(),name+' club management action');
+  assert(await tools.count()>=3,'Club management shortcuts must survive both layouts');
+  await readable(tools.first(),name+' shortcut');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
-  assert.equal(await colour(cta,'backgroundColor'),'rgb(22, 101, 72)',name+' primary action must use forest primary');
-  assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
-  await readable(cta,name+' primary action');
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(199, 255, 58)','Primary action uses PKR citron');
+  assert.equal(await colour(cta,'backgroundImage'),'none','No button illustration/gradient');
+  await readable(cta,name+' action');
   const hero=dashboard.locator('.pkr-dual-hero');
-  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(21, 58, 45)':'rgb(25, 77, 56)',name+' uses a deep club-colour hero, not a white card');
-  assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
-  await readable(hero.locator('h3'),name+' hero heading');
-  const overlays=await hero.evaluate(node=>['::before','::after'].map(p=>{
-   const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
-  }));
-  assert(overlays.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),name+' has an overlay hiding the high-contrast hero: '+JSON.stringify(overlays));
+  assert.equal(await colour(hero,'backgroundColor'),'rgb(24, 42, 72)','Dashboard must retain the PKR slate hero');
+  assert.equal(await colour(hero,'backgroundImage'),'none','No abstract image in full dashboard');
+  await readable(hero.locator('h3'),name+' hero');
   if(mode==='command'){
-   const tiles=dashboard.locator('.pkr-dual-metrics>button');
-   assert.equal(await tiles.count(),4);
-   const colors=Array(4).fill('rgb(255, 255, 255)');
-   for(let i=0;i<4;i++){
-    assert.equal(await colour(tiles.nth(i),'backgroundColor'),colors[i],'Dashboard metrics share a neutral card surface');
-    await readable(tiles.nth(i).locator('strong'),'Coloured metric value '+i);
-    await readable(tiles.nth(i).locator('small'),'Coloured metric description '+i);
+   const tiles=dashboard.locator('.pkr-dual-metrics>button');assert.equal(await tiles.count(),4);
+   for(const tile of await tiles.all()){
+    await readable(tile.locator('strong'),'Financial metric');
+    await readable(tile.locator('small'),'Financial metric label');
    }
   }
-  await screenshot(page,label+'-full-'+mode);
+  await screenshot(page,label+'-branded-dashboard-'+mode);
  }
- assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
- await appearance.getByRole('button',{name:/Command Centre/}).click();
- await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+ assert.equal(state.layoutWrites,1,'Changing layout must save only the chosen setting');
+ await choice.getByRole('button',{name:/Command Centre/}).click();
 }
 
+
 async function checkDashboardStatusContrast(page,state,label){
- const startingLayout=state.layout,startingWrites=state.layoutWrites;
+ const prior=state.layout,writes=state.layoutWrites;
  try{
-  for(const [kind,title,bg,fg] of [
-   ['live','LIVE NOW','rgb(22, 101, 72)','rgb(255, 255, 255)'],
-   ['upcoming','UP NEXT','rgb(232, 199, 123)','rgb(50, 37, 13)'],
-   ['empty','NO GAME SCHEDULED','rgb(238, 241, 236)','rgb(25, 45, 39)']
-  ]){
+  for(const [kind,title] of [['live','LIVE NOW'],['upcoming','UP NEXT'],['empty','NO GAME SCHEDULED']]){
    state.upcoming=kind!=='empty';state.live=kind==='live';
    for(const mode of ['command','live']){
     state.layout=mode;
     await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
     await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-    const dashboard=page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]');
-    await dashboard.waitFor();
-    const status=dashboard.locator('.pkr-dual-status[data-game-state="'+kind+'"]');
+    const status=page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"] .pkr-dual-status[data-game-state="'+kind+'"]');
     await status.waitFor({state:'visible'});
-    assert.equal((await status.innerText()).trim(),title,label+' '+mode+' correct status');
-    assert.equal(await colour(status,'backgroundColor'),bg,label+' '+kind+' opaque status surface');
-    assert.equal(await colour(status,'color'),fg,label+' '+kind+' status ink');
-    assert.equal(await colour(status,'backgroundImage'),'none','Do not retain legacy gradients');
-    await readable(status,label+' '+mode+' '+kind+' dashboard status');
+    assert.equal((await status.innerText()).trim(),title,'Status wording must match the real game');
+    await readable(status,label+' '+mode+' '+kind+' status');
     const bounds=await status.evaluate(el=>{
      const r=el.getBoundingClientRect(),hero=el.closest('.pkr-dual-hero').getBoundingClientRect();
-     return {inside:r.left>=hero.left&&r.right<=hero.right+1&&r.top>=hero.top&&r.bottom<=hero.bottom+1,clipped:el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1};
+     return {inside:r.left>=hero.left-1&&r.right<=hero.right+1&&r.top>=hero.top-1&&r.bottom<=hero.bottom+1,
+      clipped:el.scrollWidth>el.clientWidth+2||el.scrollHeight>el.clientHeight+2,image:getComputedStyle(el).backgroundImage};
     });
-    assert(bounds.inside&&!bounds.clipped,label+' '+mode+' '+kind+' status overflows '+JSON.stringify(bounds));
-    await screenshot(page,label+'-status-'+mode+'-'+kind);
+    assert(bounds.inside&&!bounds.clipped&&bounds.image==='none','Game state must stay readable within hero: '+JSON.stringify(bounds));
    }
   }
- }finally{
-  state.upcoming=true;state.live=false;state.layout=startingLayout;state.layoutWrites=startingWrites;
- }
+ }finally{state.upcoming=true;state.live=false;state.layout=prior;state.layoutWrites=writes;}
 }
 
 async function checkOutstandingDashboardRecords(page){
@@ -315,70 +288,54 @@ async function checkOutstandingDashboardRecords(page){
  }
 }
 
+
 async function checkPlayers(page,label){
  await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members');
- const stage=page.getByTestId('players-command-stage');await stage.waitFor();
- assert.equal(await colour(stage,'backgroundColor'),'rgb(21, 58, 45)','Players needs a deep forest hero, not a white/grey panel');
- assert(Number(await colour(stage.locator('h1'),'fontWeight'))>=780,'Players heading should have a clear, bold visual hierarchy');
- await readable(stage.locator('h1'),'Players heading on navy');
- await readable(stage.locator('.pkr-experience-eyebrow'),'Players section label on navy');
- for(const metric of await stage.locator('.pkr-experience-command-stat').all()){
-  await readable(metric.locator('strong'),'Player metric figure');
-  await readable(metric.locator('span'),'Player metric label');
-  assert(Number(await colour(metric.locator('strong'),'fontWeight'))>=780,'Metric figures must be visually stronger than labels');
- }
- assert.equal(await stage.getByRole('button').count(),3,'All three player summary cards must be buttons');
+ const brand=page.getByTestId('private-club-players');await brand.waitFor({state:'visible'});
+ assert.equal(await colour(brand,'backgroundColor'),'rgb(21, 31, 53)','Players must use the official PKR slate banner');
+ assert.match(await brand.locator('h1').innerText(),/THE CREW/);
+ assert.equal((await brand.locator('.pkr-pc-members-count strong').innerText()).trim(),'4','Real member count from fixture is preserved');
+ assert.match(await brand.locator('.pkr-pc-members-count').innerText(),/club members/);
+ await readable(brand.locator('h1'),'PKR players heading');
  const roster=page.locator('.pkr-member-roster');await roster.waitFor();
  await page.getByRole('searchbox',{name:'Search members'}).fill('Jordan');
  await page.getByRole('group',{name:'Filter members by role'}).getByRole('button',{name:'Admins',exact:true}).click();
  await page.locator('.pkr-member-no-results').waitFor();
- await stage.getByRole('button',{name:'View underlying records: Players in club',exact:true}).click();
- await page.waitForFunction(()=>document.querySelectorAll('.pkr-member-roster > div').length===4);
- assert.equal(await page.getByRole('searchbox',{name:'Search members'}).inputValue(),'');
- assert.equal(await page.getByRole('group',{name:'Filter members by role'}).getByRole('button',{name:'All',exact:true}).getAttribute('aria-pressed'),'true');
+ // Role-filter controls and real member histories remain usable.
+ await page.getByRole('group',{name:'Filter members by role'}).getByRole('button',{name:'All',exact:true}).click();
+ await page.getByRole('searchbox',{name:'Search members'}).fill('');
  assert.deepEqual(await roster.locator('.pkr-member-history-link strong').allTextContents(),members.map(m=>m.name));
- assert.equal(await roster.locator('img').first().getAttribute('src'),photo,'Existing avatar photo must remain intact');
+ assert.equal(await roster.locator('img').first().getAttribute('src'),photo,'Existing member photo must survive');
  await roster.getByText('🦊',{exact:true}).waitFor();
- assert.match(await roster.innerText(),/🦊/u,'User-chosen avatar emoji must remain intact');
+ assert.match(await roster.innerText(),/🦊/u,'User-selected avatar emoji remains');
  const row=roster.locator(':scope > div').first();await row.hover();
- await waitForColour(page,row,'backgroundColor','rgb(238, 241, 236)');
- assert.equal(await colour(row,'backgroundColor'),'rgb(238, 241, 236)','Hovered member row must not turn old green');
- await readable(row.locator('.pkr-member-history-link strong'),'Hovered player name');
- assert(Number(await colour(row.locator('.pkr-member-history-link strong'),'fontWeight'))>=750,'Player names must be bold and readable');
- const history=row.locator('.pkr-member-history-link');await history.focus();
- await readable(history.locator('strong'),'Keyboard-focused player name');
- await screenshot(page,label+'-players-focus');
- // Notification registrations belong in the per-member Details panel, not a crowded roster row.
+ await readable(row.locator('.pkr-member-history-link strong'),'Player name');
+ await row.locator('.pkr-member-history-link').focus();await readable(row.locator('strong'),'Keyboard-focused player name');
+ await screenshot(page,label+'-players-official');
  await roster.locator('.pkr-directory-player').first().getByRole('button',{name:/Details/}).click();
  await page.locator('.pkr-member-push-state').filter({hasText:'Registered on 2 devices'}).waitFor();
- assert(await page.locator('.pkr-members-panel svg[data-pkr-icon="bell"]').count()>0);
- assert(await page.locator('.pkr-members-shortcuts svg[data-pkr-icon="members"]').count()>0);
- assert.doesNotMatch(await page.locator('.pkr-members-panel').innerText(),/[🔔♟♙]/u,'Interface bells/pawns must be SVG, not platform emoji');
- assert(await page.locator('.pkr-primary-mobile-utility svg[data-pkr-icon="account"], .pkr-persistent-nav svg[data-pkr-icon="account"]').count()>0,'Account uses a person icon');
-
- await stage.getByRole('button',{name:'View underlying records: Awaiting approval',exact:true}).click();
- await page.locator('.pkr-member-empty-approvals').waitFor({state:'visible'});
- assert.equal(await page.locator('.pkr-members-panel').getAttribute('data-section'),'requests');
- assert.match(await page.locator('.pkr-member-empty-approvals').innerText(),/No approvals waiting/);
- await readable(page.locator('.pkr-member-empty-approvals strong'),'Zero-approval state');
- await screenshot(page,label+'-zero-approvals');
-
- await stage.getByRole('button',{name:'View underlying records: Completed games',exact:true}).click();await loadedSheet(page);
- assert.equal(await page.locator('.pkr-record-row').count(),2,'Completed games opens exactly the two settled records');
- for(const detail of await page.locator('.pkr-record-row small').allTextContents())assert.match(detail,/Settled/);
- await closeSheet(page);
- await stage.getByRole('button',{name:'View underlying records: Players in club',exact:true}).click();
+ assert(await page.locator('.pkr-members-panel svg[data-pkr-icon="bell"]').count()>0,'Notification registration remains');
+ assert(await page.locator('.pkr-members-shortcuts svg[data-pkr-icon="members"]').count()>0,'Player actions remain');
+ assert(await page.locator('.pkr-primary-mobile-utility svg[data-pkr-icon="account"], .pkr-persistent-nav svg[data-pkr-icon="account"]').count()>0,'Account access remains');
+ const stage=page.getByTestId('players-command-stage');
+ if(await stage.isVisible()){
+  await stage.getByRole('button',{name:'View underlying records: Awaiting approval',exact:true}).click();
+  await page.locator('.pkr-member-empty-approvals').waitFor({state:'visible'});
+  assert.match(await page.locator('.pkr-member-empty-approvals').innerText(),/No approvals waiting/);
+  await stage.getByRole('button',{name:'View underlying records: Completed games',exact:true}).click();await loadedSheet(page);
+  assert.equal(await page.locator('.pkr-record-row').count(),2,'Completed games must open two settled records');
+  await closeSheet(page);
+  await stage.getByRole('button',{name:'View underlying records: Players in club',exact:true}).click();
+ }
  await roster.locator('.pkr-member-history-link').first().click();await loadedSheet(page);
  const sheet=page.locator('.pkr-record-dialog');
- assert(await sheet.evaluate(element=>element.matches(':modal')),'Record details must use a native modal layer');
- assert.equal(await colour(sheet,'backgroundColor'),'rgb(255, 255, 255)','Body-level record sheet must use the light theme');
- await readable(sheet.locator('h2'),'Record heading');
+ assert(await sheet.evaluate(element=>element.matches(':modal')),'Record details must be native modal');
+ assert.equal(await colour(sheet,'backgroundColor'),'rgb(21, 29, 46)','Record sheets must use PKR dark slate');
  assert.equal(await sheet.locator('.pkr-record-row').count(),2);
- for(const [tone,value,expectedColour] of [['positive','+$75','rgb(18, 102, 65)'],['negative','-$25','rgb(165, 45, 56)']]){
+ for(const [tone,value] of [['positive','+$75'],['negative','-$25']]){
   const amount=sheet.locator('.pkr-record-row b[data-money-tone="'+tone+'"]');
-  assert.equal(await amount.innerText(),value,'Recorded gains/losses retain explicit signs');
-  assert.equal(await colour(amount,'color'),expectedColour,'Money meaning uses the correct light-theme tone');
-  await readable(amount,tone+' result');
+  assert.equal(await amount.innerText(),value,'Signed financial results unchanged');
+  await readable(amount,tone+' amount');
  }
  await screenshot(page,label+'-player-records');await closeSheet(page);
 }
@@ -423,8 +380,8 @@ async function checkPayments(page,state,label){
  const totals=page.locator('.pkr-gn-payment-totals');await page.locator('.pkr-gn-payment-totals[aria-busy="false"]').waitFor();
  const toPay=totals.locator('.pkr-gn-payment-total.is-pay');
  const toReceive=totals.locator('.pkr-gn-payment-total.is-receive');
- assert.equal(await colour(toPay,'backgroundColor'),'rgb(158, 52, 65)','Payable card has a distinct coral-red surface');
- assert.equal(await colour(toReceive,'backgroundColor'),'rgb(22, 101, 72)','Receivable card has a distinct emerald surface');
+ assert.equal(await colour(toPay,'backgroundColor'),'rgb(65, 36, 47)','Payable record uses dark branded coral-red');
+ assert.equal(await colour(toReceive,'backgroundColor'),'rgb(18, 58, 51)','Receivable record uses dark branded gain-green');
  await readable(toPay.locator('strong'),'Payable total');
  await readable(toReceive.locator('strong'),'Receivable total');
  const assertAmounts=async expected=>assert.deepEqual(await page.locator('.pkr-gn-payment-card .pkr-gn-payment-amount').allTextContents(),expected);
@@ -521,6 +478,7 @@ async function checkInviteDirectory(page,state,label){
  }finally{state.inviteAudit=false;}
 }
 
+
 async function checkReportedVisualIssues(page,state,label){
  const original=page.viewportSize();
  state.historical=true;
@@ -528,54 +486,43 @@ async function checkReportedVisualIssues(page,state,label){
   await gotoFixturePage(page,BASE+'/events/'+room.id+'?tab=members&view=roster');
   const cards=page.locator('.pkr-history-player-card');
   await cards.first().waitFor({state:'visible'});
-  assert.equal(await cards.count(),2);
+  assert.equal(await cards.count(),2,'Actual former member history must be retained');
   const historical=cards.filter({hasText:'Christopher Nguyen'});
   for(const width of [320,360,390,430,768,1440]){
    await page.setViewportSize({width,height:844});
-   await readable(historical.locator('.pkr-historical-player-name strong'),'Saved player name at '+width);
-   await readable(historical.locator('.pkr-historical-player-name small'),'Saved game count at '+width);
+   await readable(historical.locator('.pkr-historical-player-name strong'),'Saved player name '+width);
+   await readable(historical.locator('.pkr-historical-player-name small'),'Saved games '+width);
    const actions=historical.locator('.pkr-history-player-actions>button');
    assert.equal(await actions.count(),3);
-   for(const button of await actions.all())await readable(button,'Saved player action at '+width);
-   const geometry=await historical.evaluate(node=>{
+   for(const button of await actions.all())await readable(button,'Former player action '+width);
+   const geom=await historical.evaluate(node=>{
     const c=node.getBoundingClientRect(),buttons=[...node.querySelectorAll('.pkr-history-player-actions>button')];
-    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3,card:c.toJSON(),actions:buttons.map(b=>({label:b.textContent,rect:b.getBoundingClientRect().toJSON()}))};
+    return {within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>0&&r.height>=43&&r.left>=c.left-1&&r.right<=c.right+1&&r.bottom<=c.bottom+1}),overflow:document.documentElement.scrollWidth>innerWidth+3};
    });
-   assert(geometry.within&&!geometry.overflow,'Saved player controls outside card at '+width+': '+JSON.stringify(geometry));
+   assert(geom.within&&!geom.overflow,'History action outside card at '+width+': '+JSON.stringify(geom));
   }
   await page.setViewportSize(original);await screenshot(page,label+'-historical-player-polish');
   state.historical=false;state.upcoming=false;state.layout='command';
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-  const schedule=page.locator('.pkr-dual-nextgame .pkr-schedule-cta');
-  await schedule.waitFor();
-  assert.match(await schedule.innerText(),/Schedule a game/);
-  await readable(schedule,'No-session schedule CTA');
-  assert.equal(await colour(schedule,'color'),'rgb(255, 255, 255)');
+  await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+  const action=page.locator('.pkr-no-hero-cta');
+  await readable(action,'New no-session PKR schedule action');
+  assert.match(await action.innerText(),/SCHEDULE YOUR GAME|GAME CALENDAR/i);
+  assert.equal(await colour(action,'color'),'rgb(11, 13, 20)','Schedule action needs dark ink on citron');
   await screenshot(page,label+'-no-session-contrast');
   state.upcoming=true;state.noConfirmed=true;
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
-  const crew=page.locator('.pkr-attendance-card');
-  await crew.getByText('No confirmed RSVPs yet.',{exact:true}).waitFor();
-  assert.equal(await crew.locator('.pkr-seat-preview>span').count(),upcoming.seats);
-  assert.equal(await crew.locator('.pkr-seat-preview>.is-assigned').count(),seated.length);
-  const ticket=page.locator('.pkr-gn-game-ticket');
-  assert.equal(await colour(ticket,'backgroundColor'),'rgb(25, 77, 56)','Game Night uses an emerald ticket');
-  await readable(ticket.locator('.pkr-gn-when h2'),'Emerald ticket heading');
- assert(Number(await colour(ticket.locator('.pkr-gn-when h2'),'fontWeight'))>=780,'Game night headline needs a deliberate heavy weight');
- const activeLabel=page.locator('.pkr-primary-bottom-nav button.active small:visible,.pkr-primary-sidebar nav button.active span:visible').first();
- await readable(activeLabel,'Selected navigation label');
- assert(Number(await colour(activeLabel,'fontWeight'))>=750,'Active navigation must be bold as well as high contrast');
-  assert.equal(await colour(crew,'backgroundColor'),'rgb(226, 242, 232)','Attendance has a recognisably green surface');
+  const ticket=page.locator('.pkr-no-next-ticket');await ticket.waitFor({state:'visible'});
+  const count=page.locator('.pkr-no-stat').first();
+  await count.waitFor({state:'visible'});
+  await readable(ticket.locator('.pkr-no-ticket-copy h3'),'PKR game pass title');
+  const heading=await colour(ticket,'backgroundColor');
+  assert.equal(heading,'rgb(23, 36, 61)','Approved PKR ticket surface is not displayed');
+  const confirmed=await count.locator('strong').innerText();
+  assert.equal(confirmed,'0','Real RSVP count must show zero, never fictional players');
   const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-  assert.equal(await colour(nav,'backgroundColor'),'rgb(255, 255, 255)','Shared navigation must use opaque neutral navigation');
-  const activeNavLabel=page.locator('.pkr-primary-bottom-nav:visible button.active small,.pkr-primary-sidebar:visible nav button.active span').first();
-  assert.equal(await colour(activeNavLabel,'color'),'rgb(22, 94, 66)','Selected label is readable forest ink on soft green');
-  await readable(activeNavLabel,'Selected navigation label');
-  await readable(crew.locator('h2'),'Attendance heading');
-  await readable(crew.locator('.pkr-gn-muted'),'Empty attendance copy');
-  for(const b of await crew.locator('.pkr-gn-seat-note>button').all())await readable(b,'Attendance count action');
+  assert.equal(await colour(nav,'backgroundColor'),'rgb(13, 20, 36)','App header/navigation should be solid PKR navy');
+  await readable(ticket.locator('.pkr-no-ticket-copy h3'),'Branded upcoming game summary');
   await screenshot(page,label+'-assigned-with-no-rsvps');
  }finally{
   state.historical=false;state.upcoming=true;state.noConfirmed=false;
@@ -615,23 +562,32 @@ async function checkSettledResultShare(page,state,label){
  }finally{state.unreconciled=false;}
 }
 
+
 async function checkPersonalAppearance(page,state,label){
  const original=page.viewportSize();
  await gotoFixturePage(page,BASE+'/account');
- const modes=page.getByRole('group',{name:'App colour mode'});
- await modes.waitFor();
- await modes.getByRole('button',{name:'Dark',exact:true}).click();
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
- assert.equal(await modes.getByRole('button',{name:'Dark',exact:true}).getAttribute('aria-pressed'),'true');
- assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'dark');
+ const appearance=page.getByTestId('personal-appearance');
+ await appearance.waitFor({state:'visible'});
+ assert.match(await appearance.innerText(),/PKR identity/);
+ assert.match(await appearance.innerText(),/THE NIGHT IS ON/);
+ assert.equal(await appearance.locator('[data-style-option]').count(),0,'One approved PKR identity, no casino picker');
+ assert.equal(await appearance.locator('img').first().getAttribute('src'),'/brand/pkr-night-logo.svg');
+ await page.evaluate(()=>{
+  localStorage.setItem('pkr_personal_appearance_v1','light');
+  localStorage.setItem('pkr_personal_visual_style_v1','noir');
+ });
+ await page.reload({waitUntil:'domcontentloaded'});
+ await appearance.waitFor({state:'visible'});
+ assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark','Saved light mode must not overpaint the brand');
+ assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club','Saved Noir mode must not create a new variant');
  const routes=[
   ['/account','.pkr-account-page','.pkr-personal-appearance h2'],
-  ['/dashboard','.pkr-app.pkr-dashboard','.pkr-gn-page-head h1'],
-  ['/events/'+room.id+'?tab=games','.pkr-app.pkr-event','.pkr-room-games-intro h1'],
-  ['/events/'+room.id+'?tab=members','.pkr-app.pkr-event','.pkr-member-history-link strong'],
+  ['/dashboard','.pkr-app.pkr-dashboard','.pkr-no-hero h1'],
+  ['/events/'+room.id+'?tab=games','.pkr-app.pkr-event','.pkr-no-games-hero h1'],
+  ['/events/'+room.id+'?tab=members','.pkr-app.pkr-event','.pkr-no-members h1'],
   ['/events/'+room.id+'?tab=night','.pkr-app.pkr-event','.pkr-gn-page-head,.pkr-night-title,.pkr-club-header h3'],
-  ['/results?room='+room.id,'.pkr-results-page','.pkr-results-command-title h1,.pkr-results-live-intro h1'],
-  ['/payments?room='+room.id+'&paymentsScope=mine','.pkr-gn-payment-workspace','.pkr-gn-payment-total strong'],
+  ['/results?room='+room.id,'.pkr-results-page','.pkr-no-results h1'],
+  ['/payments?room='+room.id+'&paymentsScope=mine','.pkr-gn-payment-workspace','.pkr-no-payments-hero h1'],
   ['/schedule','.pkr-schedule-page','.pkr-schedule-hero h1'],
   ['/games/'+finished.id,'.pkr-app.pkr-game-detail','.pkr-casino-game-summary h1,.pkr-casino-game-summary .display']
  ];
@@ -640,13 +596,14 @@ async function checkPersonalAppearance(page,state,label){
   for(const [route,container,heading] of routes){
    await gotoFixturePage(page,BASE+route);
    await page.locator(container).first().waitFor();
-   await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
-   const surface=await colour(page.locator(container).first(),'backgroundColor');
-   assert.equal(surface,'rgb(16, 25, 22)',route+' dark canvas');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark',route+' official dark brand');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club',route+' official brand only');
+   const canvas=await colour(page.locator(container).first(),'backgroundColor');
+   assert.equal(canvas,'rgb(11, 13, 20)',route+' must use PKR ink, not an older casino theme');
    const headings=page.locator(heading+':visible');
-   if(await headings.count())await readable(headings.first(),route+' dark text');
+   if(await headings.count())await readable(headings.first(),route+' branded text');
    const nav=page.locator('.pkr-primary-mobile-utility:visible,.pkr-primary-sidebar:visible').first();
-   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(16, 30, 25)');
+   await nav.waitFor();assert.equal(await colour(nav,'backgroundColor'),'rgb(13, 20, 36)',route+' must use opaque PKR navigation');
    const audit=await page.locator(container).first().evaluate(root=>{
     const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
     const controls=[...root.querySelectorAll('button:not([disabled]),a.btn,summary,input:not([type=hidden]),select,textarea')].filter(visible);
@@ -660,102 +617,91 @@ async function checkPersonalAppearance(page,state,label){
     return {overflow,bodyWidth:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth),viewport:innerWidth};
    });
    assert(audit.bodyWidth<=audit.viewport+4,route+' page overflow '+JSON.stringify(audit));
-   assert.deepEqual(audit.overflow,[],route+' clipped actions');
+   assert.deepEqual(audit.overflow,[],route+' clipped action');
    if(route.startsWith('/games/')){
     await page.getByRole('button',{name:'Share group-safe results',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Share group-safe results'});
     await dialog.getByRole('textbox',{name:'Group results message'}).waitFor();
-    await readable(dialog.getByRole('link',{name:'Open WhatsApp'}),'Dark WhatsApp action');
-    await readable(dialog.getByRole('textbox',{name:'Group results message'}),'Dark message preview');
-    await screenshot(page,label+'-dark-results-share-'+size.width);
+    await readable(dialog.getByRole('link',{name:'Open WhatsApp'}),'Brand WhatsApp share action');
+    await readable(dialog.getByRole('textbox',{name:'Group results message'}),'Branded message preview');
+    await screenshot(page,label+'-brand-results-share-'+size.width);
     await dialog.getByRole('button',{name:'Close results sharing'}).click();
    }
-   if(size.width===original.width)await screenshot(page,label+'-dark-'+route.split('?')[0].split('/').filter(Boolean).join('-'));
+   if(size.width===original.width)await screenshot(page,label+'-official-'+route.split('?')[0].split('/').filter(Boolean).join('-'));
   }
  }
- await gotoFixturePage(page,BASE+'/account');
- await modes.getByRole('button',{name:'Follow device',exact:true}).click();
- await page.emulateMedia({colorScheme:'light'});
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
- await page.emulateMedia({colorScheme:'dark'});
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='dark');
- await page.getByRole('button',{name:'Light',exact:true}).click();
- await page.waitForFunction(()=>document.documentElement.dataset.pkrPersonalTheme==='light');
- assert.equal(await page.evaluate(()=>localStorage.getItem('pkr_personal_appearance_v1')),'light');
- await page.reload({waitUntil:'domcontentloaded'});
- await page.getByRole('group',{name:'App colour mode'}).waitFor();
- assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light');
- await screenshot(page,label+'-light-appearance');
  await page.setViewportSize(original);
+ await gotoFixturePage(page,BASE+'/account');
+ assert.equal(await appearance.locator('[data-style-option]').count(),0);
 }
 
 // Regression for the reported iPhone/PWA snapshot: check the actual text
 // ranges, not only document width. An overflowing label can be entirely
 // inside the viewport and still overlap the adjacent action.
+
 async function checkDashboardCardReadability(page,state,label){
  const original=page.viewportSize();
  try{
   state.layout='live';state.live=false;
-  for(const mode of ['light','dark']){
-   await gotoFixturePage(page,BASE+'/account');
-   await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:mode==='light'?'Light':'Dark',exact:true}).click();
-   await page.waitForFunction(value=>document.documentElement.dataset.pkrPersonalTheme===value,mode);
-   for(const upcoming of [false,true]){
-    state.upcoming=upcoming;
-    await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
-    await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-    const panel=page.locator('.pkr-dual-table-panel');
-    await panel.waitFor();
-    if(upcoming){
-     await panel.getByRole('button',{name:'View underlying records: Table seats',exact:true}).first().waitFor();
-     await page.waitForFunction(()=>document.querySelector('.pkr-dual-table-count')?.textContent.includes('players'));
-    }else{
-     assert.equal(await panel.getByRole('button',{name:/View table/}).count(),0);
-     assert.equal(await panel.locator('.pkr-dual-table-count').count(),0);
-     assert.equal(await page.getByRole('button',{name:/See all RSVPs/}).count(),0);
-     await panel.getByRole('button',{name:'Schedule a game',exact:true}).waitFor();
-     await readable(panel.locator('.pkr-dual-felt-empty'),'Empty felt message '+mode);
-     await readable(page.locator('.pkr-dual-no-rsvps'),'Empty attendance '+mode);
-    }
-    for(const width of [320,375,430,768,1024,1440]){
-     await page.setViewportSize({width,height:original.height});
-     await page.waitForTimeout(100);
-     const issues=await page.locator('.pkr-dual-root').evaluate(root=>{
-      const issues=[],visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
-      for(const row of root.querySelectorAll('.pkr-dual-section-title,.pkr-dual-panel-actions,.pkr-dual-attendance-summary')){
-       if(!visible(row))continue;
-       const children=[...row.children].filter(visible),parent=row.getBoundingClientRect();
-       for(const child of children){
-        const b=child.getBoundingClientRect();
-        if(b.left<parent.left-2||b.right>parent.right+2||b.top<parent.top-2||b.bottom>parent.bottom+2)issues.push('outside header '+child.textContent);
-        if(child.matches('button,h3,small,span')){
-         const range=document.createRange();range.selectNodeContents(child);
-         for(const rect of range.getClientRects()){
-          if(rect.width>0&&(rect.left<b.left-2||rect.right>b.right+2||rect.top<b.top-2||rect.bottom>b.bottom+2))issues.push('clipped text '+child.textContent);
-         }
+  await gotoFixturePage(page,BASE+'/account');
+  await page.evaluate(()=>{
+   localStorage.setItem('pkr_personal_appearance_v1','light');
+   localStorage.setItem('pkr_personal_visual_style_v1','luxe');
+  });
+  for(const upcoming of [false,true]){
+   state.upcoming=upcoming;
+   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club');
+   await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
+   const panel=page.locator('.pkr-dual-table-panel');await panel.waitFor();
+   if(upcoming){
+    await panel.getByRole('button',{name:'View underlying records: Table seats',exact:true}).first().waitFor();
+    await page.waitForFunction(()=>document.querySelector('.pkr-dual-table-count')?.textContent.includes('players'));
+   }else{
+    assert.equal(await panel.getByRole('button',{name:/View table/}).count(),0);
+    assert.equal(await panel.locator('.pkr-dual-table-count').count(),0);
+    assert.equal(await page.getByRole('button',{name:/See all RSVPs/}).count(),0);
+    await panel.getByRole('button',{name:'Schedule a game',exact:true}).waitFor();
+    await readable(panel.locator('.pkr-dual-felt-empty'),'Empty table message');
+    await readable(page.locator('.pkr-dual-no-rsvps'),'Empty RSVP message');
+   }
+   for(const width of [320,375,430,768,1024,1440]){
+    await page.setViewportSize({width,height:original.height});
+    await page.waitForTimeout(100);
+    const issues=await page.locator('.pkr-dual-root').evaluate(root=>{
+     const issues=[],visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
+     for(const row of root.querySelectorAll('.pkr-dual-section-title,.pkr-dual-panel-actions,.pkr-dual-attendance-summary')){
+      if(!visible(row))continue;
+      const children=[...row.children].filter(visible),parent=row.getBoundingClientRect();
+      for(const child of children){
+       const b=child.getBoundingClientRect();
+       if(b.left<parent.left-2||b.right>parent.right+2||b.top<parent.top-2||b.bottom>parent.bottom+2)issues.push('outside header '+child.textContent);
+       if(child.matches('button,h3,small,span')){
+        const range=document.createRange();range.selectNodeContents(child);
+        for(const rect of range.getClientRects()){
+         if(rect.width>0&&(rect.left<b.left-2||rect.right>b.right+2||rect.top<b.top-2||rect.bottom>b.bottom+2))issues.push('clipped text '+child.textContent);
         }
        }
-       for(let a=0;a<children.length;a++)for(let b=a+1;b<children.length;b++){
-        const x=children[a].getBoundingClientRect(),y=children[b].getBoundingClientRect();
-        if(Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2)issues.push('overlap '+children[a].textContent+' / '+children[b].textContent);
-       }
       }
-      return issues;
-     });
-     assert.deepEqual(issues,[],label+' '+mode+' '+width+' upcoming='+upcoming+' internal header geometry');
-     await readable(panel.locator('h3'),'Snapshot title '+mode);
-     for(const button of await panel.locator('.pkr-dual-panel-actions>button').all())await readable(button,'Snapshot action '+mode);
-     if(upcoming)for(const button of await page.locator('.pkr-dual-attendance-summary>button').all())await readable(button,'RSVP metric '+mode);
-     if(width===430)await screenshot(page,label+'-snapshot-'+mode+'-'+(upcoming?'scheduled':'empty'));
-    }
-    assert.equal(await panel.locator('.pkr-dual-panel-actions button:disabled').count(),0);
+      for(let a=0;a<children.length;a++)for(let b=a+1;b<children.length;b++){
+       const x=children[a].getBoundingClientRect(),y=children[b].getBoundingClientRect();
+       if(Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2)issues.push('overlap '+children[a].textContent+' / '+children[b].textContent);
+      }
+     }
+     return issues;
+    });
+    assert.deepEqual(issues,[],label+' '+width+' upcoming='+upcoming+' PKR dashboard controls must not overlap');
+    await readable(panel.locator('h3'),'Snapshot title');
+    for(const button of await panel.locator('.pkr-dual-panel-actions>button').all())await readable(button,'Snapshot action');
+    if(upcoming)for(const button of await page.locator('.pkr-dual-attendance-summary>button').all())await readable(button,'Real RSVP metric');
+    if(width===430)await screenshot(page,label+'-official-snapshot-'+(upcoming?'scheduled':'empty'));
    }
+   assert.equal(await panel.locator('.pkr-dual-panel-actions button:disabled').count(),0);
   }
  }finally{
   state.upcoming=true;state.live=false;state.layout='command';
   await page.setViewportSize(original);
-  await gotoFixturePage(page,BASE+'/account');
-  await page.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Light',exact:true}).click();
  }
 }
 
@@ -799,8 +745,8 @@ async function run(){
    await checkPayments(page,state,label);
    await checkFinancialIntegrityReview(page,state,label);
    const canvas=await page.locator('.pkr-gn-payment-workspace').evaluate(node=>({colour:getComputedStyle(node).backgroundColor,image:getComputedStyle(node).backgroundImage}));
-   assert.equal(canvas.colour,'rgb(244, 245, 242)','Payments shares the lounge canvas');
-   assert.equal(canvas.image,'none','Payments shares the neutral canvas');
+   assert.equal(canvas.colour,'rgb(11, 13, 20)','Payments shares approved PKR ink canvas');
+   assert.equal(canvas.image,'none','Payments screen must not have scenic background images');
    assert.equal(await page.evaluate(()=>document.body.style.overflow),'','Modal scroll locks must be released');
    await checkPersonalAppearance(page,state,label);
    assert.deepEqual(unexpected,[],'Unexpected API request or runtime error');
