@@ -864,3 +864,36 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   border-color:#FFF2CB!important;text-shadow:none!important;
  }
 }
+
+
+/* Approved photographic hero: premium felt, genuine cards and gold/black chips.
+   Drawn props were a fallback for the old dark overhead image, not the final artwork. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene{
+  z-index:0!important;
+  background-image:linear-gradient(180deg,rgba(0,14,9,.05) 0%,rgba(0,21,11,.10) 35%,rgba(0,19,11,.68) 70%,#03140EFA 96%),
+    url('/images/pkr-approved-hero-desktop.webp')!important;
+  background-size:cover!important;background-position:76% 43%!important;
+  background-color:#09261C!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance :is(.pkr-pc-scene-card,.pkr-pc-scene-chip){
+  display:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero{
+  background-image:linear-gradient(90deg,#061F16F7 0%,#08251BCB 38%,rgba(0,18,11,.14) 100%),
+    url('/images/pkr-approved-hero-desktop.webp')!important;
+  background-size:cover!important;background-position:73% center!important;
+  background-color:#07251A!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-chip-art{
+  display:none!important;
+ }
+ @media(max-width:430px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene{
+    background-position:70% 42%!important;
+  }
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-lobby-hero{
+    background-position:64% center!important;
+  }
+ }
+}
