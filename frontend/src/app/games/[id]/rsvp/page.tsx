@@ -65,6 +65,13 @@ export default function RsvpPage(){
           }
         }
       }catch{}
+      // Opening Going / Maybe / Out from the club lobby only selects an
+      // available response. No RSVP is submitted until the member confirms.
+      const selectedChoice=new URLSearchParams(window.location.search).get('choice');
+      if(selectedChoice==='yes'||selectedChoice==='maybe'||selectedChoice==='no'){
+        const match=getRsvpReplies(data).find(reply=>reply.status===selectedChoice);
+        if(match)setArrival(match.value);
+      }
       if(getToken())Promise.all([api.auth.me(),api.events.get(data.event.id)])
         .then(([user,event])=>setIsHost(event.members.some(m=>m.id===user.id&&(m.role==='host'||m.role==='cohost'))))
         .catch(()=>{});
