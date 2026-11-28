@@ -16,6 +16,7 @@ import GameNightTools from '@/components/GameNightTools';
 import GamesSectionTabs from '@/components/GamesSectionTabs';
 import GamesEmptyArena from '@/components/GamesEmptyArena';
 import PrivateClubGamesLobby from '@/components/PrivateClubGamesLobby';
+import PrivateClubMembersHero from '@/components/PrivateClubMembersHero';
 import {PokerClubStage} from '@/components/PokerClubStage';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
@@ -672,6 +673,11 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>
+            <PrivateClubMembersHero club={event.name} roomId={id} members={event.members||[]}
+              leaders={leaders} pending={joinRequests.length} isOwner={isGroupOwner}
+              onRoster={()=>{setMemberQuery('');setMemberFilter('all');focusMemberSection('roster');}}
+              onInvite={()=>focusMemberSection('invite')}
+              onRequests={()=>focusMemberSection('requests')}/>
             <header className="pkr-member-summary pkr-member-summary-experience">
               <PokerClubStage kind="players" title="Players" subtitle="Your private poker club."
                 club={event.name}
