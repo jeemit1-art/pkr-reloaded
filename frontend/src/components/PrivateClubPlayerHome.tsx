@@ -9,6 +9,8 @@ export default function PrivateClubPlayerHome(p:Props){
  const game=p.next;const live=game&&isLiveGame(game);
  return <section className="pkr-privateclub-player" data-testid="private-club-player-home" aria-label="Private Club player home">
   <div className="pkr-pc-player-scene">
+   <img className="pkr-pc-player-photo" src="/images/pkr-approved-hero-desktop.webp"
+     alt="" aria-hidden="true" decoding="async"/>
    <span className="pkr-pc-overline">WELCOME TO YOUR PRIVATE CLUB</span>
    <h1>{p.room.name}</h1>
    <span className="pkr-pc-honor"><PkrGlyph name="spade" size={17}/>{live?'A GAME IS LIVE':game?'YOUR NEXT POKER NIGHT':'THE TABLE IS READY WHEN YOU ARE'}</span>
