@@ -1,9 +1,10 @@
 'use client';
 
+import type {ComponentProps} from 'react';
 import PkrGlyph from '@/components/PkrGlyph';
 import type GameNightHostHome from '@/components/GameNightHostHome';
 
-type Props=React.ComponentProps<typeof GameNightHostHome>;
+type Props=ComponentProps<typeof GameNightHostHome>;
 const zone='Australia/Brisbane';
 const datePart=(value:number,options:Intl.DateTimeFormatOptions)=>new Date(value*1000).toLocaleDateString('en-AU',{...options,timeZone:zone});
 const initials=(name:string)=>name.trim().split(/\s+/).slice(0,2).map(word=>word.charAt(0)).join('').toUpperCase();
