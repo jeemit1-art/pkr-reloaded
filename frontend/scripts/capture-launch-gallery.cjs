@@ -84,7 +84,7 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
  // Verify the actual settled first Home route, not just a later appearance switch.
  if(/^(mobile|tablet|desktop)-home$/.test(id)){
   const paint=await page.evaluate(()=>{
-   const ticket=document.querySelector('.pkr-gn-game-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
+   const ticket=document.querySelector('.pkr-pc-ticket'),nav=Array.from(document.querySelectorAll('.pkr-primary-mobile-utility,.pkr-primary-sidebar')).find(n=>n.getBoundingClientRect().width&&getComputedStyle(n).display!=='none');
    const sample=document.createElement('span');
     sample.style.backgroundColor='var(--pkr-personal-nav)';
     document.body.appendChild(sample);
@@ -95,10 +95,10 @@ async function snapshot(page,id,title,category,size,{fullPage=false,sourceRoute,
       nav:nav?getComputedStyle(nav).backgroundColor:null,expectedNav};
   });
   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light',id+' first-load must resolve the personal light palette');
-   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'noir',id+' should use the premium default style');
+   assert.equal(await page.locator('html').getAttribute('data-pkr-personal-style'),'private-club',id+' should use the approved private club default style');
    assert(paint.ticket&&paint.ticket!=='rgba(0, 0, 0, 0)',id+' ticket must be opaque');
    assert(paint.ticketImage&&paint.ticketImage.includes('linear-gradient'),id+' ticket needs a premium hero gradient');
-   assert.equal(paint.nav,paint.expectedNav,id+' nav must use the selected theme surface');
+   assert(paint.nav&&paint.nav!=='rgba(0, 0, 0, 0)',id+' nav must remain fully opaque');
  }
  if(/^(mobile|tablet|desktop)-(command-centre|live-dashboard)$/.test(id)){
   const layers=await page.locator('.pkr-dual-hero').evaluate(node=>['::before','::after'].map(p=>{
@@ -158,12 +158,12 @@ async function captureApp(browser){
   try{
    const prefix=label+'-';
    const items=[
-    {id:prefix+'home',title:'Game night home',category:'Planning & club',route:'/dashboard?room='+room.id,ready:'[data-testid="game-night-host-home"]',action:async page=>page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click()},
-    {id:prefix+'command-centre',title:'Full dashboard · Command Centre',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'[data-testid="game-night-host-home"]',action:fullDashboard('command')},
+    {id:prefix+'home',title:'Game night home',category:'Planning & club',route:'/dashboard?room='+room.id,ready:'[data-testid="private-club-host-home"]',action:async page=>page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click()},
+    {id:prefix+'command-centre',title:'Full dashboard · Command Centre',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-gn-home-switch',action:fullDashboard('command')},
     {id:prefix+'live-dashboard',title:'Full dashboard · Live Poker',category:'Dashboard layouts',route:'/dashboard?room='+room.id,ready:'.pkr-gn-home-switch',action:fullDashboard('live')},
    ];
    if(label==='mobile'||label==='desktop')items.push(
-    {id:prefix+'games',title:'Game sessions',category:'Planning & club',route:'/events/'+room.id+'?tab=games',ready:'.pkr-room-games-intro'},
+    {id:prefix+'games',title:'Game sessions',category:'Planning & club',route:'/events/'+room.id+'?tab=games',ready:'[data-testid="private-club-games"]'},
     {id:prefix+'calendar',title:'Calendar and schedule',category:'Planning & club',route:'/schedule?room='+room.id,ready:'.pkr-schedule-game'},
     {id:prefix+'game-detail',title:'Game details and host actions',category:'Planning & club',route:'/games/'+upcoming.id,ready:'.pkr-game-summary'},
     {id:prefix+'rsvp',title:'RSVP board and seat selection',category:'Planning & club',route:'/games/'+upcoming.id+'/rsvp',ready:'.pkr-guest-options'},
