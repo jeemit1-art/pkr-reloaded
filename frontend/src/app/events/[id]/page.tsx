@@ -96,6 +96,7 @@ export default function EventPage() {
   const [linkError,setLinkError]=useState('');
   const [phoneName,setPhoneName]=useState('');
   const [memberQuery,setMemberQuery]=useState('');
+  const [expandedMemberId,setExpandedMemberId]=useState<string|null>(null);
   const [roomProfiles,setRoomProfiles]=useState<Record<string,RoomPlayerProfile>>({});
   const [knownRoomPlayers,setKnownRoomPlayers]=useState<Array<{display_name:string;games_played:number}>>([]);
   const [hiddenHistoricalNames,setHiddenHistoricalNames]=useState<string[]>([]);
@@ -915,65 +916,63 @@ export default function EventPage() {
                 <div className="empty-state-text">No members yet. Use the invite button to add co-hosts or members.</div>
               </div>
             ) : (
-              <div className="card pkr-member-roster" style={{marginBottom:14}}>
+              <div className="card pkr-member-roster pkr-directory-roster" style={{marginBottom:14}}>
                 {visibleMembers.length===0&&<p className="pkr-member-no-results">No members match this search or filter.</p>}
-                {visibleMembers.map((m:any, i:number) => (
-                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',
-                    borderBottom:i<visibleMembers.length-1?'1px solid var(--border-sub)':'none'}}>
-                    <div style={{width:38,height:38,borderRadius:'50%',background:'var(--bg3)',
-                      border:'1px solid var(--border-sub)',display:'flex',alignItems:'center',
-                      justifyContent:'center',fontSize:16,flexShrink:0,overflow:'hidden'}}>
-                      {roomProfiles['member:'+m.id]?.avatar_data
-                        ? <img src={roomProfiles['member:'+m.id].avatar_data!} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                        : roomProfiles['member:'+m.id]?.avatar_emoji
-                          ? <span aria-hidden="true">{roomProfiles['member:'+m.id].avatar_emoji}</span>
-                          : m.avatar_url
-                            ? <img src={m.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                            : <span style={{color:'var(--gold)',fontFamily:'serif'}}>{(m.name||'?')[0].toUpperCase()}</span>}
+                {visibleMembers.map((m:any, i:number) => {
+                  const profile=roomProfiles['member:'+m.id];
+                  const expanded=expandedMemberId===m.id;
+                  const canEdit=isHost||user?.id===m.id;
+                  const canRemove=isGroupOwner&&m.role!=='host';
+                  const gamesPlayed=leaders.find((leader:any)=>leader.user_id===m.id)?.games_played;
+                  return <div key={m.id} className={'pkr-directory-player'+(expanded?' is-expanded':'')}>
+                    <div className="pkr-directory-avatar" aria-hidden="true">
+                      {profile?.avatar_data?<img src={profile.avatar_data} alt=""/>:
+                       profile?.avatar_emoji?<span>{profile.avatar_emoji}</span>:
+                       m.avatar_url?<img src={m.avatar_url} alt=""/>:
+                       <span>{(m.name||'?').trim().charAt(0).toUpperCase()}</span>}
                     </div>
-                    <div style={{flex:1,minWidth:0}}>
+                    <div className="pkr-directory-identity">
                       <RecordMetric request={{kind:'player',title:m.name+' — game history',roomId:id,playerId:m.id,playerName:m.name}}
-                        className="pkr-member-history-link" style={{minHeight:44,alignItems:'flex-start',justifyContent:'center',gap:3}}>
-                        <strong style={{fontSize:14,color:'var(--white)',fontFamily:'var(--font-display),sans-serif',fontWeight:600,
-                          overflowWrap:'anywhere',textAlign:'left'}}>{roomProfiles['member:'+m.id]?.screen_name||m.name}</strong>
-                        {roomProfiles['member:'+m.id]?.screen_name&&<small className="pkr-member-profile-identity">{m.name}</small>}
-                        <small style={{fontSize:11,color:'var(--pkr-a-primary)'}}>View game history ›</small>
+                        className="pkr-member-history-link pkr-directory-history" style={{minHeight:44,alignItems:'flex-start',justifyContent:'center',gap:3}}>
+                        <strong>{profile?.screen_name||m.name}</strong>
+                        {profile?.screen_name&&<small className="pkr-member-profile-identity">{m.name}</small>}
+                        <small className="pkr-directory-history-cta">Game history ›</small>
                       </RecordMetric>
-                      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--font-body),sans-serif',marginTop:2}}>
-                        <span style={{
-                          padding:'1px 6px',borderRadius:2,fontSize:9,fontWeight:600,letterSpacing:'0.1em',
-                          textTransform:'uppercase',fontFamily:'var(--font-body),sans-serif',
-                          background: m.role==='host'?'var(--pkr-personal-warning-surface)':m.role==='cohost'?'var(--pkr-personal-gain-surface)':'var(--pkr-personal-raised)',
-                          color: m.role==='host'?'var(--gold)':m.role==='cohost'?'var(--green)':'var(--muted)',
-                        }}>{m.role}</span>
-                        {m.email && <span style={{marginLeft:8}}>{m.email}</span>}
+                      <div className="pkr-directory-facts">
+                        <span className={'pkr-directory-role role-'+String(m.role||'member')}>{m.role==='host'?'Host':m.role==='cohost'?'Co-host':'Player'}</span>
+                        {typeof gamesPlayed==='number'&&<span className="pkr-directory-games">{gamesPlayed} {gamesPlayed===1?'game':'games'}</span>}
                       </div>
-                      {isGroupOwner&&(
-                        <div className="pkr-member-push-state" aria-label={'Notification registration for '+m.name}>
-                          <span className="pkr-member-push-on"><PkrGlyph name="shield-check" size={16}/> Approved member</span>
-                          <span style={{marginLeft:8}}>
-                            {pushRegistrationLoading
-                              ?'Checking notification setup…'
-                              :pushRegistrationStatus
-                                ?(pushRegistrationStatus[m.id]||0)>0
-                                  ?<><PkrGlyph name="bell" size={16}/> Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</>
-                                  :'Notifications not enabled on this member’s device'
-                                :'Notification setup not available'}
-                          </span>
-                        </div>
-                      )}
                     </div>
-                    {(isHost||user?.id===m.id)&&<button type="button" className="pkr-member-profile-edit" disabled={!!roomProfileError}
-                      aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
-                      onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
-                    {isGroupOwner && m.role !== 'host' && (
-                      <button className="btn btn-ghost" style={{fontSize:10,padding:'5px 10px',color:'var(--red)',borderColor:'var(--pkr-personal-loss-line)',flexShrink:0}}
-                        onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
+                    {(canEdit||canRemove||isGroupOwner||!!m.email)&&
+                      <button type="button" className="pkr-directory-more"
+                        aria-expanded={expanded} aria-controls={'pkr-member-extra-'+i}
+                        onClick={()=>setExpandedMemberId(current=>current===m.id?null:m.id)}>
+                        {expanded?'Less':'Details'} <span aria-hidden="true">{expanded?'⌃':'⌄'}</span>
+                      </button>}
+                    {expanded&&<div id={'pkr-member-extra-'+i} className="pkr-directory-extra">
+                      {m.email&&<p className="pkr-directory-email">{m.email}</p>}
+                      {isGroupOwner&&<div className="pkr-member-push-state pkr-directory-notifications" aria-label={'Notification registration for '+m.name}>
+                        <span className="pkr-member-push-on"><PkrGlyph name="shield-check" size={16}/> Approved member</span>
+                        <span>
+                          {pushRegistrationLoading
+                            ?'Checking notification setup…'
+                            :pushRegistrationStatus
+                              ?(pushRegistrationStatus[m.id]||0)>0
+                                ?<><PkrGlyph name="bell" size={16}/> Registered on {pushRegistrationStatus[m.id]} device{pushRegistrationStatus[m.id]===1?'':'s'}</>
+                                :'Notifications not enabled on this member’s device'
+                              :'Notification setup not available'}
+                        </span>
+                      </div>}
+                      {(canEdit||canRemove)&&<div className="pkr-directory-actions">
+                        {canEdit&&<button type="button" className="pkr-member-profile-edit" disabled={!!roomProfileError}
+                          aria-label={'Edit player profile for '+m.name} title={roomProfileError||'Edit this room profile'}
+                          onClick={()=>setEditingRoomProfile({key:'member:'+m.id,name:m.name,avatarUrl:m.avatar_url||null})}>Edit profile</button>}
+                        {canRemove&&<button type="button" className="btn btn-ghost pkr-directory-remove"
+                          onClick={()=>setConfirmRemoveMember({id:m.id,name:m.name})}>Remove member</button>}
+                      </div>}
+                    </div>}
+                  </div>;
+                })}
               </div>
             )}
             {historicalVisibilityError&&<p role="alert" className="pkr-insights-alert">{historicalVisibilityError}</p>}
