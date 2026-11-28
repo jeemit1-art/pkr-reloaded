@@ -120,12 +120,12 @@ async function runEmptyHost(browser){
   });
   assert(computed,'CTA/button must have real text nodes');
   assert.equal(computed.textFilter,'none','Do not darken/blend the button text through a CSS filter');
-  assert.equal(computed.textOpacity,'1','Gold button wording must not be translucent');
+  assert.equal(computed.textOpacity,'1','CTA wording must not be translucent');
   assert.equal(computed.bgColor,'rgb(36, 20, 35)','CTA must have an opaque dark background beneath light text: '+JSON.stringify(computed));
   assert(computed.bgImage.includes('linear-gradient'),'CTA must retain the casino button treatment');
   assert.equal(computed.textColor,'rgb(255, 204, 157)','Button text must remain solid light casino ink: '+JSON.stringify(computed));
   assert.equal(computed.textFill,'rgb(255, 204, 157)','WebKit light text fill must be solid: '+JSON.stringify(computed));
-  const luminance=rgb=>(rgb.match(/\\d+/g)||[]).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+  const luminance=rgb=>(rgb.match(/\d+/g)||[]).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
   const fg=luminance(computed.textColor),bg=luminance(computed.bgColor),contrast=(Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05);
   assert(contrast>=7,'CTA text/background WCAG AAA contrast must be at least 7:1 (actual '+contrast.toFixed(2)+'): '+JSON.stringify(computed));
   assert(computed.fontFamily.includes('Helvetica Neue')||computed.fontFamily.includes('-apple-system'),
