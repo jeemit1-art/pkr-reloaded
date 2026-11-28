@@ -28,6 +28,8 @@ export default function PrivateClubGamesLobby(p:Props){
  const featured=visible[0]||null;
  return <section className="pkr-privateclub-games" data-testid="private-club-games" aria-label="Private Casino Club game lobby">
   <header className="pkr-pc-lobby-hero">
+   <img className="pkr-pc-lobby-photo" src="/images/pkr-approved-hero-desktop.webp"
+      alt="" aria-hidden="true" decoding="async"/>
    <div className="pkr-pc-lobby-hero-content">
     <span className="pkr-pc-overline"><PkrGlyph name="spade" size={15}/> PKR PRIVATE CASINO CLUB</span>
     <h1>Game <em>Lobby</em></h1>
