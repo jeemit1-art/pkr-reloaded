@@ -262,7 +262,7 @@ async function captureApp(browser){
  }
  // Member and signed-out entry are separate actual application states.
  for(const [id,title,options,route,ready] of [
-  ['mobile-player-home','The player’s club dashboard',{role:'member'},'/dashboard?room='+room.id,'[data-testid="player-dashboard"]'],
+  ['mobile-player-home','The player’s club dashboard',{role:'member'},'/dashboard?room='+room.id,'[data-testid="private-club-player-home"]'],
   ['mobile-player-login','Member sign-in and recovery',{signedIn:false},'/mobile-login','.pkr-classic-mobile-login'],
  ]){
   const {context,page,errors}=await contextFor(browser,sizes.mobile,options);
