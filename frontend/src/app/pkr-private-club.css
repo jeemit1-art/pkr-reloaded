@@ -1,0 +1,433 @@
+/* PKR PRIVATE CASINO CLUB — approved immersive, usable mobile experience.
+   28 November 2026. Safe opt-in styling, no live gameplay or data mutations. */
+@font-face{font-family:'PKR Club';src:url('/fonts/PlusJakartaSansVariable.ttf') format('truetype');font-weight:300 900;font-style:normal;font-display:swap}
+.pkr-privateclub-host-surface,.pkr-pc-new-games,.pkr-pc-members-hero,.pkr-pc-results-hero {display:none!important}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)){
+ --pkr-personal-canvas:#03130f;--pkr-personal-surface:#09291f;
+ --pkr-personal-raised:#123a2d;--pkr-personal-line:#4a7559;
+ --pkr-personal-control:#c6a466;--pkr-personal-ink:#fff9ea;
+ --pkr-personal-muted:#c9d0c4;--pkr-personal-primary:#0a6843;
+ --pkr-personal-primary-deep:#07462f;--pkr-personal-accent:#ffd780;
+ --pkr-personal-accent-surface:#3d321c;--pkr-personal-accent-line:#d6ae60;
+ --pkr-personal-nav:#031713;--pkr-personal-hero:#063525;
+ --pkr-personal-hero-live:#07563a;--pkr-personal-hero-deep:#031710;
+ --pkr-personal-hero-glow:#287a4e;--pkr-personal-hero-live-glow:#209165;
+ --pkr-personal-gold-fill:#efc371;--pkr-personal-on-gold:#271909;
+ --pkr-personal-gain:#9cfdc1;--pkr-personal-loss:#ffa5ae;
+ --pkr-personal-gain-surface:#154a31;--pkr-personal-loss-surface:#4d222b;
+ --pkr-personal-warning:#ffe2a0;--pkr-personal-warning-surface:#493b22;
+ --pkr-personal-scheme:dark;--pkr-personal-shadow:#0000008a;
+ --pkr-personal-gain-line:#648c72;--pkr-personal-loss-line:#ae6772;
+ --pkr-personal-warning-line:#a99565;--pkr-personal-on-dark:#fff;
+ --pkr-personal-on-dark-muted:#e2ebe4;--pkr-personal-on-dark-gold:#ffe5ae;
+ --pkr-personal-on-dark-gain:#92f8b6;--pkr-personal-on-dark-loss:#ffc0bd;
+ --pkr-personal-danger-fill:#962d46;--pkr-personal-warning-fill:#875e25;
+ --casino-rim:#eac779;--casino-cta:linear-gradient(165deg,#ffedb2,#f1c36a 62%,#c18931);
+ --casino-cta-ink:#281709;--casino-spark:rgba(255,192,80,.22);
+ --casino-radius:16px;--casino-nav-glow:#e7b85638;
+ --pkrc-gold:#ffdf8d;--pkrc-casino-line:#e7bc65;
+ --pkr-pc-gold:#f5d58a;--pkr-pc-cream:#fff8e8;
+ --pkr-pc-card:#2b090f;--pkr-pc-green:#003321;
+ color-scheme:dark;
+}
+@layer pkr-personal {
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(body,.pkr-app,.pkr-primary-page,.pkr-results-page,.pkr-gn-payment-workspace,.pkr-schedule-page){
+ color:var(--pkr-pc-cream)!important;
+ --bg:var(--pkr-personal-canvas)!important;
+ background-color:#031510!important;
+ background-image:radial-gradient(ellipse 72% 38% at 50% 0%,#114c3261,transparent 84%),
+ linear-gradient(170deg,#051d17,#03130f 52%)!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app .pkr-content{
+ box-sizing:border-box!important;min-width:0!important;max-width:1050px!important;
+ padding-top:14px!important;padding-bottom:calc(var(--pkr-navigation-height,90px) + 30px)!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-dashboard .pkr-content{
+ max-width:1090px!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-mobile-utility{
+ background:#031611!important;background-image:linear-gradient(180deg,#071d16,#031611)!important;
+ color:var(--pkr-pc-cream)!important;border-bottom:1px solid #ad8749a8!important;
+ box-shadow:0 7px 20px #0005!important;isolation:isolate!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;z-index:250!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-mobile-mark{
+ color:var(--pkr-pc-gold)!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-club-name,
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-mobile-utility select{
+ color:#fff8e9!important;-webkit-text-fill-color:#fff8e9!important;
+ font:800 15px/1.25 'PKR Club',Inter,sans-serif!important;
+ text-shadow:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-account{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:41px!important;gap:6px!important;padding:8px 12px!important;
+ background:#09261e!important;border:1px solid #ae8a50!important;border-radius:50px!important;
+ color:#ffe2a3!important;-webkit-text-fill-color:#ffe2a3!important;
+ font:750 12px/1.2 'PKR Club',sans-serif!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav.pkr-universal-bottom-nav{
+ background:#031510!important;background-image:linear-gradient(180deg,#07271d,#020d0a)!important;
+ box-shadow:0 -5px 24px #0007!important;
+ border-top:1px solid #a88043!important;isolation:isolate!important;z-index:250!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav button{
+ color:#d1d8cd!important;-webkit-text-fill-color:#d1d8cd!important;
+ text-shadow:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav button.active{
+ color:var(--pkr-pc-gold)!important;-webkit-text-fill-color:var(--pkr-pc-gold)!important;
+ background:linear-gradient(180deg,#b18a432d,transparent)!important;
+ border:0!important;border-bottom:3px solid var(--pkr-pc-gold)!important;
+ border-radius:8px!important;box-shadow:0 9px 16px -12px #f5c26e!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-bottom-nav button.active :is(svg,small,span){
+ color:var(--pkr-pc-gold)!important;-webkit-text-fill-color:var(--pkr-pc-gold)!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-primary-sidebar{
+ background:linear-gradient(170deg,#0a2b1f,#020d0a)!important;
+ border-right:1px solid #ad8d55!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-persistent-nav .pkr-persistent-brand{
+ color:#eac57a!important;font:900 24px/1 'PKR Club',sans-serif!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-persistent-nav nav button.active{
+ border:1px solid #d2a95d!important;background:#26341e!important;color:#ffdc8b!important;
+}
+/* Opt-in real compositions. Existing dashboard and games remain for all eight old styles. */
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-privateclub-host-surface,.pkr-pc-new-games,.pkr-pc-members-hero,.pkr-pc-results-hero){
+ display:block!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-privateclub-original-host,.pkr-pc-old-games,.pkr-casino-stage-art,.pkr-gn-home>.pkr-gn-game-ticket){
+ display:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-event:has(.pkr-pc-new-games) nav[aria-label="Games sections"]{
+ display:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-event:has(.pkr-pc-new-games) .pkr-room-mobile-actions{
+ display:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app.pkr-event:has(.pkr-pc-new-games) .pkr-topbar{
+ display:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home-switch{
+ margin:0 0 8px!important;padding:0!important;border:0!important;box-shadow:none!important;
+ background:transparent!important;min-height:34px!important;display:flex!important;
+ gap:8px!important;justify-content:flex-end!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home-switch button{
+ border-radius:40px!important;border:1px solid #a28557!important;background:#09281d!important;
+ color:#fff0c6!important;font:750 11px/1.2 'PKR Club',sans-serif!important;
+ padding:7px 13px!important;min-height:33px!important;text-shadow:none!important;
+}
+html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-home-switch button[aria-pressed="true"]{
+ background:#e7c071!important;color:#281909!important;
+}
+.pkr-privateclub-home,.pkr-privateclub-games,.pkr-pc-members-hero,.pkr-pc-results-hero{
+ box-sizing:border-box;min-width:0;color:var(--pkr-pc-cream);
+ font-family:'PKR Club',Inter,sans-serif;
+}
+.pkr-privateclub-home *,.pkr-privateclub-games *{box-sizing:border-box}
+.pkr-privateclub-home :is(button,a),.pkr-privateclub-games :is(button,a){
+ font-family:'PKR Club',Inter,sans-serif;cursor:pointer;
+}
+.pkr-privateclub-home button:focus-visible,.pkr-privateclub-games button:focus-visible,
+.pkr-pc-members-hero button:focus-visible,.pkr-pc-results-hero button:focus-visible{
+ outline:3px solid #ffebae!important;outline-offset:3px!important;
+}
+.pkr-pc-overline{display:flex;align-items:center;justify-content:center;gap:9px;
+ color:#ffe7a5;font:850 10px/1.35 'PKR Club',sans-serif;letter-spacing:.19em;text-shadow:0 2px 5px #000b}
+.pkr-pc-entrance{
+ position:relative;isolation:isolate;overflow:hidden;border-radius:21px 21px 0 0;
+ height:340px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+ padding:18px 18px 20px;background-color:#061b15;
+ background-image:linear-gradient(180deg,#06140d0a 0%,#03140f24 35%,#01120eef 90%,#00140c 100%),
+   url('/images/pkr-approved-hero-desktop.webp');
+ background-size:cover;background-position:center 42%;
+ border:1px solid #5c533ac9;border-bottom:none;
+ box-shadow:0 10px 31px #0007,inset 0 0 34px #0006;
+}
+.pkr-pc-entrance:before{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;
+ background:radial-gradient(ellipse at 50% 8%,#f0be6242,transparent 57%),
+ linear-gradient(180deg,#0000 24%,#021a15b8 76%,#00110eea);
+}
+.pkr-pc-identity{position:relative;z-index:3;text-align:center;width:100%;min-width:0}
+.pkr-pc-identity h1{
+ margin:7px auto 11px!important;max-width:96%!important;
+ font:900 clamp(27px,5vw,41px)/1.1 'PKR Club',Inter,sans-serif!important;
+ letter-spacing:-.045em;color:#fffdfa!important;-webkit-text-fill-color:#fffdfa!important;
+ text-shadow:0 2px 16px #000c!important;text-wrap:balance;overflow-wrap:anywhere;
+}
+.pkr-pc-honor{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+ padding:7px 13px;border-radius:50px;border:1px solid #e8be6f;
+ background:#071b15db;color:#f6d898;font:750 10px/1.2 'PKR Club',sans-serif;
+ letter-spacing:.065em;box-shadow:0 3px 12px #0007}
+.pkr-pc-honor>span:first-child,.pkr-pc-honor>span:last-child{font-size:14px;color:#f8d994}
+.pkr-pc-scene{position:absolute;z-index:1;inset:0;pointer-events:none;overflow:hidden}
+.pkr-pc-scene-beam{position:absolute;top:12%;left:12%;width:76%;height:57%;
+ background:radial-gradient(ellipse,#f7cc7432,transparent 70%);filter:blur(14px)}
+.pkr-pc-scene-felt{position:absolute;bottom:28%;left:14%;width:73%;height:20%;
+ border-radius:50%;background:linear-gradient(180deg,#207c54a0,#043322a0);
+ border:8px solid #6b3926c9;box-shadow:0 5px 15px #0008,inset 0 0 0 2px #cb8b4890;
+ transform:rotate(-6deg);opacity:.45}
+.pkr-pc-scene-card{position:absolute;top:18%;right:18%;width:64px;height:89px;
+ display:flex;flex-direction:column;justify-content:space-between;padding:8px 7px;
+ background:linear-gradient(140deg,#fff,#eadbc1);color:#2b1514;font:900 16px/1 Georgia,serif;
+ border-radius:6px;box-shadow:0 10px 18px #0009;border:1px solid #fff;opacity:.9}
+.pkr-pc-card-one{transform:rotate(-17deg) translateX(-24px);color:#151818}
+.pkr-pc-card-two{transform:rotate(13deg)}
+.pkr-pc-scene-chip{position:absolute;top:43%;right:13%;width:50px;height:50px;
+ border-radius:50%;background:#c7a250;border:6px dashed #151a1c;outline:3px solid #ecce84;
+ box-shadow:0 4px 12px #0009}
+.pkr-pc-chip-two{right:21%;top:48%;background:#a92840}
+.pkr-pc-ticket{position:relative;isolation:isolate;overflow:hidden;min-width:0;
+ border:2px solid #e5b96b;border-radius:16px;margin:-2px 3px 12px;
+ background:linear-gradient(110deg,#480a17,#6a0b21 55%,#350b17);
+ box-shadow:0 7px 21px #0007,inset 0 0 0 1px #ffd39154}
+.pkr-pc-ticket:before{content:"";position:absolute;inset:5px;border:1px solid #f8d49455;
+ border-radius:10px;pointer-events:none}
+.pkr-pc-ticket:after{content:"♠";position:absolute;right:22px;bottom:-26px;
+ color:#f2d3890e;font:200px/1 Georgia,serif;pointer-events:none}
+.pkr-pc-ticket-body{display:grid;grid-template-columns:88px minmax(0,1fr);
+ padding:18px;align-items:center;gap:16px;position:relative;z-index:1}
+.pkr-pc-datebox{display:flex;flex-direction:column;justify-content:center;align-items:center;
+ padding:1px 14px 1px 0;gap:1px;border-right:1px dashed #edc77d8c;min-height:109px;
+ color:#fff9ec}
+.pkr-pc-datebox span{font:800 13px/1.15 'PKR Club',sans-serif;letter-spacing:.07em}
+.pkr-pc-datebox strong{font:900 54px/1 'PKR Club',sans-serif;letter-spacing:-.08em}
+.pkr-pc-ticket-kicker{display:flex;align-items:center;gap:6px;
+ font:850 10px/1.3 'PKR Club',sans-serif;color:#ffe2a0;letter-spacing:.12em}
+.pkr-pc-ticket-info{min-width:0;position:relative;z-index:2}
+.pkr-pc-ticket-info h2{font:850 clamp(18px,3vw,27px)/1.16 'PKR Club',sans-serif!important;
+ color:#fff9e9!important;margin:4px 0 7px!important;letter-spacing:-.035em!important;
+ overflow-wrap:anywhere}
+.pkr-pc-ticket-info p{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;
+ margin:0 0 6px!important;color:#f5e5d8!important;font:600 11px/1.35 'PKR Club',sans-serif!important}
+.pkr-pc-ticket-location{color:#f4d7a1!important}
+.pkr-pc-avatars{display:flex;min-width:0;align-items:center;padding-left:2px}
+.pkr-pc-avatar{display:grid;place-items:center;margin-right:-8px;width:29px;height:29px;
+ border:2px solid #f6d18a;border-radius:50%;background:#23473a;color:#fff3d3;
+ font:850 10px/1 'PKR Club',sans-serif;box-shadow:0 2px 5px #0006}
+.pkr-pc-avatar-1{background:#8a4435}.pkr-pc-avatar-2{background:#1e6261}
+.pkr-pc-avatar-3{background:#6b3b6c}
+.pkr-pc-attendance{display:flex;align-items:center;gap:13px;margin-top:6px;min-width:0;
+ font:700 11px/1.25 'PKR Club',sans-serif;color:#fff7e5;white-space:normal}
+.pkr-pc-ticket-cards{display:none}
+.pkr-pc-ticket-empty{min-height:148px}
+.pkr-pc-ticket-no-date{width:77px;height:77px;border:2px solid #f3cb76;
+ border-radius:50%;display:grid;place-items:center;background:#2e1215;color:#ffd995}
+.pkr-pc-main-action{width:calc(100% - 6px);margin:0 3px 11px;min-height:56px;
+ display:flex;align-items:center;justify-content:center;gap:17px;padding:12px 17px;
+ border:1px solid #ffebae;border-radius:15px;
+ background:linear-gradient(170deg,#fff0b4,#efbb5d 58%,#bd7c27)!important;
+ box-shadow:0 4px 0 #724812,0 9px 19px #0008,inset 0 2px 1px #fff8cc;
+ color:#291905!important;-webkit-text-fill-color:#291905!important;
+ font:900 15px/1.25 'PKR Club',sans-serif;letter-spacing:.02em;text-shadow:none!important}
+.pkr-pc-main-action svg{color:#291905!important}
+.pkr-pc-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+ margin:0 3px 13px}
+.pkr-pc-shortcuts button{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:7px;min-width:0;min-height:81px;padding:10px 5px;border-radius:14px;
+ border:1px solid #577a63;background:linear-gradient(150deg,#0b382a,#041c15)!important;
+ color:#f7d990!important;-webkit-text-fill-color:#f7d990!important;
+ box-shadow:inset 0 1px 0 #ffffff21,0 7px 15px #0006}
+.pkr-pc-shortcuts strong{font:800 12px/1.2 'PKR Club',sans-serif;color:#fffdf1!important;-webkit-text-fill-color:#fffdf1!important}
+.pkr-pc-next-actions{display:grid;gap:7px;padding:6px 3px 15px}
+.pkr-pc-next-actions button{width:100%;display:flex;align-items:center;gap:12px;min-width:0;
+ padding:13px 12px;min-height:63px;text-align:left;border:1px solid #3b6350;border-radius:14px;
+ background:linear-gradient(120deg,#0d3529,#051b15)!important;
+ color:#fff6e6!important;-webkit-text-fill-color:#fff6e6!important}
+.pkr-pc-tool-icon{width:36px;height:36px;flex:0 0 36px;border:1px solid #a58c57;
+ display:grid;place-items:center;border-radius:10px;color:#ffd995}
+.pkr-pc-next-actions button>span:nth-child(2){display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.pkr-pc-next-actions button strong{font:800 13px/1.3 'PKR Club',sans-serif;color:#fff9e9}
+.pkr-pc-next-actions button small{font:550 10px/1.3 'PKR Club',sans-serif;color:#bfcec4}
+.pkr-pc-next-actions button>svg{color:#ffdc83}
+.pkr-pc-lobby-hero{min-height:210px;position:relative;isolation:isolate;overflow:hidden;
+ display:flex;align-items:flex-end;border-radius:18px 18px 0 0;border:1px solid #c7a05b;border-bottom:0;
+ padding:27px 23px;background:#06271b;box-shadow:0 12px 26px #0007}
+.pkr-pc-lobby-hero:before{content:"";position:absolute;inset:0;z-index:1;
+ background:linear-gradient(90deg,#031b15 15%,#052b1fce 48%,#00351c31 100%),
+ radial-gradient(ellipse at 80% 15%,#f0c87030,transparent 65%);pointer-events:none}
+.pkr-pc-lobby-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+ object-position:50% 40%;z-index:0;filter:saturate(1.1) contrast(1.09)}
+.pkr-pc-lobby-hero-content{position:relative;z-index:3;min-width:0}
+.pkr-pc-lobby-hero-content .pkr-pc-overline{justify-content:flex-start}
+.pkr-pc-lobby-hero h1{font:900 clamp(33px,5vw,48px)/1 'PKR Club',sans-serif!important;
+ margin:13px 0 6px!important;letter-spacing:-.07em;color:#fffdf7!important;text-shadow:0 4px 12px #0008}
+.pkr-pc-lobby-hero h1 em{font-style:normal;color:#f4d08c}
+.pkr-pc-lobby-hero p{margin:0!important;font:600 15px/1.35 'PKR Club',sans-serif!important;color:#ecf0e9!important}
+.pkr-pc-lobby-chip-art{position:absolute;z-index:2;right:5%;top:24%;display:flex}
+.pkr-pc-lobby-chip-art span{width:46px;height:46px;border:7px dashed #f7dfa5;
+ border-radius:50%;background:#af2138;outline:3px solid #261012;
+ box-shadow:0 4px 11px #0008}
+.pkr-pc-lobby-chip-art span:nth-child(2){background:#d19a45;margin-left:-18px;margin-top:-12px}
+.pkr-pc-lobby-chip-art span:nth-child(3){background:#19242e;margin-left:-19px;margin-top:15px}
+.pkr-pc-lobby-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+ margin:0 0 15px;padding:6px!important;border:1px solid #9d8458!important;
+ border-radius:0 0 18px 18px;background:linear-gradient(145deg,#0a3526,#031f16)!important}
+.pkr-pc-lobby-filter button{display:flex;align-items:center;justify-content:center;gap:6px;
+ min-height:44px;padding:7px 6px;border:1px solid transparent;border-radius:12px;
+ background:transparent;color:#f4e8cd;font:800 12px/1.2 'PKR Club',sans-serif}
+.pkr-pc-lobby-filter button[aria-current="page"]{border-color:#ffefbd;
+ background:linear-gradient(150deg,#fcedb3,#eabd67 66%,#be8538)!important;
+ color:#291809!important;box-shadow:0 3px 12px #0005}
+.pkr-pc-lobby-filter button small{font:900 10px/1 'PKR Club',sans-serif}
+.pkr-pc-lobby-context{display:flex;justify-content:space-between;align-items:center;gap:9px;
+ margin:10px 3px 12px}
+.pkr-pc-lobby-context>span{font:850 10px/1.3 'PKR Club',sans-serif;letter-spacing:.16em;color:#f8dc9d}
+.pkr-pc-lobby-context button{min-height:37px;display:flex;align-items:center;gap:6px;
+ padding:7px 12px;border:1px solid #e9c27b;border-radius:30px;
+ background:#163b29;color:#f8e9bf;font:700 12px/1.2 'PKR Club',sans-serif}
+.pkr-pc-lobby-featured{display:flex;align-items:center;gap:9px;padding:0 5px 12px;
+ color:#ddc99f;font:700 10px/1.25 'PKR Club',sans-serif}
+.pkr-pc-lobby-featured span{display:flex;align-items:center;gap:7px;font-weight:850;letter-spacing:.1em}
+.pkr-pc-lobby-featured b{color:#f8ddaa}
+.pkr-pc-lobby-tickets{display:grid;gap:13px}
+.pkr-pc-lobby-ticket{position:relative;overflow:hidden;min-width:0;
+ border:2px solid #deb268;border-radius:17px;background:linear-gradient(120deg,#4c0919,#6f1128 56%,#280c18);
+ box-shadow:0 7px 19px #0008,inset 0 0 0 1px #ffffff2d}
+.pkr-pc-lobby-ticket.is-live{background:linear-gradient(125deg,#0a4c32,#086345 56%,#073220)}
+.pkr-pc-lobby-ticket-top{display:flex;align-items:center;justify-content:space-between;
+ padding:9px 13px;border-bottom:1px solid #f3c97b59}
+.pkr-pc-lobby-ticket-top>span{display:flex;align-items:center;gap:7px;
+ color:#ffe09f;font:850 11px/1.25 'PKR Club',sans-serif;letter-spacing:.13em}
+.pkr-pc-ticket-chevron{min-width:30px;min-height:30px;display:grid;place-items:center;
+ border:1px solid #e9c77c;border-radius:50%;background:#0004!important;color:#ffe2a6}
+.pkr-pc-lobby-ticket-main{display:grid;grid-template-columns:72px minmax(0,1fr) 65px;
+ align-items:center;gap:12px;padding:12px 14px;min-width:0}
+.pkr-pc-lobby-date{border-right:1px solid #efc87a83;padding-right:12px;
+ display:flex;align-items:center;flex-direction:column;gap:1px;color:#fffbec}
+.pkr-pc-lobby-date span{font:800 12px/1.2 'PKR Club',sans-serif;letter-spacing:.09em}
+.pkr-pc-lobby-date strong{font:900 43px/1 'PKR Club',sans-serif}
+.pkr-pc-lobby-session-copy{min-width:0}
+.pkr-pc-lobby-session-copy h2{font:850 clamp(17px,3vw,25px)/1.15 'PKR Club',sans-serif!important;
+ color:#fffaf2!important;margin:0 0 9px!important;overflow-wrap:anywhere;letter-spacing:-.035em}
+.pkr-pc-lobby-session-copy p{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+ margin:0 0 5px!important;color:#ffe8c7!important;font:650 12px/1.25 'PKR Club',sans-serif!important}
+.pkr-pc-lobby-seats{display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+ color:#ffe3b1;font:650 11px/1.3 'PKR Club',sans-serif}
+.pkr-pc-lobby-cards{display:flex;align-items:center;justify-content:center;
+ position:relative;min-height:90px}
+.pkr-pc-lobby-cards span{display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+ padding:8px 4px;width:53px;height:77px;border-radius:6px;border:1px solid #fff;
+ background:linear-gradient(145deg,#fff,#e8d9c4);box-shadow:0 5px 10px #0008;
+ color:#162420;font:900 16px/1 Georgia,serif;transform:rotate(-17deg)}
+.pkr-pc-lobby-cards span+span{margin-left:-35px;transform:rotate(15deg);color:#c92b3d}
+.pkr-pc-rsvp-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+ margin:0 13px 10px}
+.pkr-pc-rsvp-quick button{display:flex;align-items:center;justify-content:center;gap:5px;
+ min-height:42px;min-width:0;padding:8px 5px;border-radius:10px;border:1px solid #9b8c69;
+ background:#1a2821;color:#f5f0e1;font:750 12px/1.25 'PKR Club',sans-serif}
+.pkr-pc-rsvp-quick button:first-child{background:#146535;border-color:#3ca95d;color:#fff}
+.pkr-pc-lobby-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+ margin:0 13px 11px}
+.pkr-pc-lobby-actions button{display:flex;align-items:center;justify-content:center;gap:7px;
+ min-height:46px;min-width:0;padding:8px 7px;border:1px solid #e7c07e;border-radius:12px;
+ background:#1b271f;color:#ffe9b7;font:850 11px/1.35 'PKR Club',sans-serif;
+ white-space:normal;text-align:center}
+.pkr-pc-lobby-actions .pkr-pc-lobby-primary{background:linear-gradient(170deg,#f8e5a9,#dbaf5a)!important;
+ color:#2c1c07!important;-webkit-text-fill-color:#2c1c07!important;border-color:#ffebae!important}
+.pkr-pc-host-tools{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap;
+ padding:2px 12px 10px}
+.pkr-pc-host-tools button{min-height:31px;background:transparent;color:#f4d8ad;
+ font:650 10px/1.25 'PKR Club',sans-serif;border:0;padding:6px 7px;
+ display:flex;align-items:center;gap:4px}
+.pkr-pc-lobby-empty{display:flex;align-items:center;flex-direction:column;text-align:center;
+ gap:11px;padding:26px 18px 22px;margin:4px 0 12px;border:1px solid #8a7a55;
+ border-radius:16px;background:radial-gradient(ellipse at center,#165236,#051a14)}
+.pkr-pc-lobby-empty-art{height:85px;width:135px;display:grid;place-items:center;border-radius:50%;
+ border:10px solid #794a2b;box-shadow:inset 0 0 0 2px #e1b45c,0 6px 12px #0008;
+ background:linear-gradient(145deg,#146345,#063a2b);color:#f3d491}
+.pkr-pc-lobby-empty h2{margin:0!important;font:850 22px/1.15 'PKR Club',sans-serif!important;color:#fff9e9!important}
+.pkr-pc-lobby-empty p{margin:0!important;font:600 12px/1.5 'PKR Club',sans-serif!important;color:#d8e4d8!important}
+.pkr-pc-lobby-empty button{min-height:45px;display:flex;align-items:center;gap:8px;padding:10px 17px;
+ border:1px solid #ffdfa0;border-radius:12px;background:linear-gradient(140deg,#f5d794,#e5ad4d);
+ color:#2f210a;font:850 12px/1.2 'PKR Club',sans-serif}
+.pkr-pc-unfinished{margin:16px 0}
+.pkr-pc-unfinished-summary{display:flex;align-items:center;gap:9px;
+ padding:13px;border:1px solid #ac8c60;border-radius:12px;background:#2d3024}
+.pkr-pc-unfinished-summary>span{display:flex;flex-direction:column;gap:4px}
+.pkr-pc-unfinished-summary strong{font:800 12px/1.3 'PKR Club',sans-serif;color:#ffe5a8}
+.pkr-pc-unfinished-summary small{font:550 11px/1.3 'PKR Club',sans-serif;color:#ddd3bd}
+.pkr-pc-unfinished-list{display:flex;flex-direction:column;gap:6px;padding:9px}
+.pkr-pc-unfinished-list button{width:100%;display:flex;align-items:center;justify-content:space-between;
+ padding:10px;border:1px solid #385744;border-radius:10px;background:#092b20;color:#f1e2bd}
+.pkr-pc-lobby-bottom-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+ margin:17px 0 10px}
+.pkr-pc-lobby-bottom-actions button{min-height:53px;display:flex;align-items:center;justify-content:center;
+ flex-direction:column;gap:4px;padding:7px 3px;background:#102e24;border:1px solid #7a7850;
+ border-radius:11px;color:#f7d997;font:700 10px/1.2 'PKR Club',sans-serif;text-align:center}
+@media(min-width:780px){
+ .pkr-pc-entrance{height:385px;background-position:center 46%}
+ .pkr-pc-identity h1{font-size:47px!important}
+ .pkr-pc-ticket-cards{display:flex;position:absolute;right:14px;top:18px;opacity:.45}
+ .pkr-pc-ticket-cards span{background:#fff;color:#172921;width:64px;height:90px;padding:8px;
+   display:flex;flex-direction:column;justify-content:space-between;transform:rotate(-14deg);border-radius:5px}
+ .pkr-pc-ticket-cards span+span{margin-left:-33px;transform:rotate(13deg);color:#a32235}
+ .pkr-pc-lobby-hero{min-height:256px}
+ .pkr-pc-lobby-photo{object-position:center 40%}
+}
+@media(max-width:600px){
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-app .pkr-content{
+   padding:8px 13px calc(var(--pkr-navigation-height,90px) + 26px)!important;
+ }
+ .pkr-pc-entrance{height:304px;padding:15px 12px 18px;background-position:50% 48%;border-radius:17px 17px 0 0}
+ .pkr-pc-identity h1{font-size:31px!important}
+ .pkr-pc-overline{font-size:9px;letter-spacing:.14em}
+ .pkr-pc-scene-card{width:47px;height:68px;right:10%;top:24%;padding:6px;font-size:12px}
+ .pkr-pc-scene-card svg{width:18px}
+ .pkr-pc-scene-chip{width:38px;height:38px;top:43%;right:9%;border-width:5px}
+ .pkr-pc-chip-two{right:19%;top:48%}
+ .pkr-pc-ticket-body{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:13px 12px}
+ .pkr-pc-datebox{padding-right:9px;min-height:100px}
+ .pkr-pc-datebox strong{font-size:43px}
+ .pkr-pc-datebox span{font-size:11px}
+ .pkr-pc-ticket-info h2{font-size:20px!important}
+ .pkr-pc-ticket-info p{font-size:11px!important;gap:4px}
+ .pkr-pc-avatar{width:24px;height:24px;font-size:9px;margin-right:-6px}
+ .pkr-pc-avatars{flex-shrink:0}
+ .pkr-pc-attendance{gap:10px;font-size:10px}
+ .pkr-pc-main-action{min-height:52px;font-size:14px}
+ .pkr-pc-shortcuts button{min-height:74px}
+ .pkr-pc-next-actions{gap:7px}
+ .pkr-pc-lobby-hero{min-height:167px;padding:19px 16px}
+ .pkr-pc-lobby-hero h1{font-size:32px!important}
+ .pkr-pc-lobby-hero p{font-size:12px!important}
+ .pkr-pc-lobby-chip-art{top:35%;right:5%;transform:scale(.74);transform-origin:top right}
+ .pkr-pc-lobby-featured{flex-wrap:wrap}
+ .pkr-pc-lobby-date strong{font-size:38px}
+ .pkr-pc-lobby-ticket-main{grid-template-columns:61px minmax(0,1fr) 41px;gap:7px;padding:10px}
+ .pkr-pc-lobby-date{padding-right:7px}
+ .pkr-pc-lobby-date span{font-size:10px}
+ .pkr-pc-lobby-session-copy h2{font-size:17px!important}
+ .pkr-pc-lobby-session-copy p{font-size:11px!important}
+ .pkr-pc-lobby-seats{font-size:10px}
+ .pkr-pc-lobby-cards{min-height:68px}
+ .pkr-pc-lobby-cards span{width:40px;height:60px;font-size:12px;padding:5px 3px}
+ .pkr-pc-lobby-cards span+span{margin-left:-30px}
+ .pkr-pc-lobby-cards svg{width:23px}
+ .pkr-pc-lobby-actions button{font-size:10px}
+ .pkr-pc-rsvp-quick button{font-size:11px}
+ .pkr-pc-lobby-context button{font-size:11px}
+ .pkr-pc-lobby-filter button{font-size:11px}
+}
+@media(max-width:360px){
+ .pkr-pc-entrance{height:270px}
+ .pkr-pc-identity h1{font-size:26px!important}
+ .pkr-pc-lobby-hero{min-height:151px}
+ .pkr-pc-lobby-ticket-main{grid-template-columns:52px minmax(0,1fr);gap:7px}
+ .pkr-pc-lobby-cards{display:none}
+ .pkr-pc-lobby-date strong{font-size:31px}
+ .pkr-pc-lobby-ticket-top>span{font-size:10px}
+ .pkr-pc-lobby-context{flex-wrap:wrap}
+ .pkr-pc-shortcuts strong{font-size:11px}
+}
+@media(prefers-reduced-motion:no-preference){
+ .pkr-pc-main-action,.pkr-pc-shortcuts button,.pkr-pc-lobby-primary,.pkr-pc-lobby-filter button{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+ .pkr-pc-main-action:active,.pkr-pc-shortcuts button:active,.pkr-pc-lobby-primary:active{transform:scale(.98)}
+}
+}
