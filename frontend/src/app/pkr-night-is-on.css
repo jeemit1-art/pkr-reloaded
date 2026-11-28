@@ -1125,3 +1125,25 @@
   display:none!important;background-image:none!important;visibility:hidden!important;
  }
 }
+
+
+/* Retirement audit: remove all route-level casino photos from Command/Live
+   layouts as well; only live in-person game content and member avatars are real. */
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-night-session,.pkr-room-games-intro,.pkr-member-summary,
+ .pkr-vnext-insights-top,.pkr-experience-stage.pkr-experience-players,
+ .pkr-payments-stage .pkr-experience-stage){
+  background-image:none!important;background-color:#182A48!important;
+  border-color:#506A98!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-night-session,.pkr-room-games-intro,.pkr-member-summary,
+ .pkr-vnext-insights-top,.pkr-experience-stage.pkr-experience-players) :is(h1,h2,h3,small,p,strong){
+  color:#F5F5EF!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-pc-entrance .pkr-pc-scene,.pkr-pc-lobby-hero,.pkr-pc-player-scene){
+  background-image:none!important;box-shadow:none!important;
+ }
+}
