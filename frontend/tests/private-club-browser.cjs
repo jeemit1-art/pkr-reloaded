@@ -27,7 +27,7 @@ async function boot(browser,w,h,role='host'){
   try{
    const body=fixture.resolve(url,request.method(),request.postData());
    return route.fulfill({status:200,body:JSON.stringify(body),contentType:'application/json',
-    headers:{'access-control-allow-origin':BASE,'access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
+    headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
   }catch(error){failures.push(String(error));return route.fulfill({status:404,body:'{"error":"No fictional record"}',contentType:'application/json'});}
  });
  return {page,ctx,fixture,failures};
