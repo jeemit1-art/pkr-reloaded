@@ -87,7 +87,7 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  }
  /* The old golden CTA had pale/hidden letters: cancel every inherited filter. */
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
- .pkr-cf-schedule,.pkr-cf-schedule *,.pkr-pc-main-action,.pkr-pc-main-action *,
+ .pkr-pc-main-action,.pkr-pc-main-action *,
  .pkr-pc-lobby-primary,.pkr-pc-lobby-primary *,.pkr-pc-members-primary,.pkr-pc-members-primary *,
  .pkr-pc-results-history,.pkr-pc-results-history *){
   color:#17111a!important;-webkit-text-fill-color:#17111a!important;
@@ -311,14 +311,15 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   justify-content:center!important;gap:8px!important;flex-wrap:nowrap!important;
   min-height:55px!important;width:100%!important;max-width:340px!important;
   margin-top:6px!important;padding:12px 12px!important;
-  border:1px solid #ffe5c4!important;border-radius:11px!important;
-  background:linear-gradient(145deg,#ffedcd 0%,#ffbd7c 90%)!important;
-  box-shadow:inset 0 1px 0 #fff9e0,0 5px 0 #71472d,0 9px 15px #0008!important;
-  color:#17111a!important;-webkit-text-fill-color:#17111a!important;
+  border:2px solid #f6b486!important;border-radius:11px!important;
+  background:linear-gradient(145deg,#62253f 0%,#241423 90%)!important;
+  background-color:#241423!important;
+  box-shadow:inset 0 1px 0 #ffb2a43f,0 5px 0 #140912,0 9px 16px #0009!important;
+  color:#ffcc9d!important;-webkit-text-fill-color:#ffcc9d!important;
   font:900 13px/1.2 var(--pkr-vg-font)!important;
   letter-spacing:0!important;text-shadow:none!important;filter:none!important;opacity:1!important}
- .pkr-cf-schedule :is(span,svg){color:#17111a!important;
-  -webkit-text-fill-color:#17111a!important;filter:none!important;opacity:1!important;
+ .pkr-cf-schedule :is(span,svg){color:#ffcc9d!important;
+  -webkit-text-fill-color:#ffcc9d!important;filter:none!important;opacity:1!important;
   text-shadow:none!important}
  .pkr-cf-last-night{display:flex;align-items:center;gap:12px;min-width:0;margin-top:14px;
   padding:13px 14px;border:1px solid #875b6a;border-radius:13px;background:#201a27}
@@ -416,8 +417,8 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
 
 /*
  * iPhone regression: the old Games empty-state selector was cascading onto the
- * new action despite its different composition. Bind readable contrast to the
- * actual Vegas action itself and its text child, not a generic legacy button.
+ * new action despite its different composition. The new button has its own
+ * opaque dark fill so that the inherited light lettering is clearly visible.
  */
 @layer pkr-personal {
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) 
@@ -429,8 +430,8 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) 
  .pkr-app.pkr-event .pkr-pc-new-games .pkr-casino-floor
  .pkr-cf-empty .pkr-cf-empty-content > button.pkr-cf-schedule > svg{
-   color:#17111a!important;
-   -webkit-text-fill-color:#17111a!important;
+   color:#ffcc9d!important;
+   -webkit-text-fill-color:#ffcc9d!important;
    text-shadow:none!important;
    opacity:1!important;
    filter:none!important;
