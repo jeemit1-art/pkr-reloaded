@@ -897,3 +897,17 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   }
  }
 }
+
+
+/* iOS Safari and installed-PWA native safe-area canvas: eliminate the white strip
+   under the approved dark club theme without changing legacy light page canvases. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility),
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)):has(.pkr-primary-mobile-utility) body{
+  background:#07160F!important;background-color:#07160F!important;background-image:none!important;
+  color-scheme:dark!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)){
+  color-scheme:dark!important;
+ }
+}
