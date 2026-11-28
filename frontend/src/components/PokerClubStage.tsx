@@ -41,7 +41,7 @@ type StageProps={
  * Uses only real counts/names passed by the parent.
  */
 /** Decorative vector cards and chips, deliberately separate from game data and controls. */
-function CasinoStageArt({kind}:{kind:'games'|'players'|'payments'}){
+export function CasinoStageArt({kind}:{kind:'games'|'players'|'payments'}){
  const suit=kind==='players'?'club':kind==='payments'?'diamond':'spade';
  return <div className="pkr-casino-stage-art" aria-hidden="true">
    <span className="pkr-casino-art-halo"/>
