@@ -44,9 +44,12 @@ const structuredData = {
 export default function HomePage() {
   const router = useRouter();
   const [loginOpen,setLoginOpen] = useState(false);
+  const [reviewAvailable,setReviewAvailable]=useState(false);
   const [selectedPlan,setSelectedPlan] = useState<'starter'|'pro'|null>(null);
   const [inviteLink,setInviteLink] = useState('');
   const [inviteError,setInviteError] = useState('');
+
+  useEffect(()=>{setReviewAvailable(window.location.hostname.endsWith('.vercel.app') || window.location.hostname==='localhost');},[]);
 
   useEffect(() => {
     try {
@@ -123,7 +126,8 @@ export default function HomePage() {
             <a href="#product-tour">See the app</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
           </nav>
           <div className="pkr-l2-header-actions">
-            <a className="pkr-l2-player-link" href="/mobile-login">Player login</a>
+            {reviewAvailable&&<a className="pkr-l2-player-link" href="/design-review" style={{color:'#C7FF3A',fontWeight:850}}>View app demo</a>}
+             <a className="pkr-l2-player-link" href="/mobile-login">Player login</a>
             <button type="button" className="pkr-l2-btn pkr-l2-btn-outline" onClick={()=>setLoginOpen(true)}>Host sign in</button>
           </div>
         </div>
@@ -138,7 +142,7 @@ export default function HomePage() {
               <p>One private game club. Your players, invitations, RSVPs, games and results — together in PKR.</p>
               <div className="pkr-l2-hero-actions">
                 <button type="button" className="pkr-l2-btn pkr-l2-btn-gold" onClick={()=>setLoginOpen(true)}>Start your poker club</button>
-                <a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">Explore PKR</a>
+                {reviewAvailable?<a className="pkr-l2-btn pkr-l2-btn-glass" href="/design-review">Explore all 5 app screens — no login</a>:<a className="pkr-l2-btn pkr-l2-btn-glass" href="#product-tour">Explore PKR</a>}
               </div>
               <div className="pkr-l2-hero-trust"><span><PkrGlyph name="lock" size={17}/> Private clubs</span><span><PkrGlyph name="users" size={17}/> Players join free</span><span><PkrGlyph name="phone" size={17}/> Phone, tablet &amp; desktop</span></div>
               <p className="pkr-launch-availability">Available now in your browser. Add PKR to your Home Screen.</p>
@@ -211,6 +215,7 @@ export default function HomePage() {
   : 'Sign in to create a room. Players join through their private invitation after host approval.'}</p>
           <button type="button" className="pkr-launch-signin-primary" onClick={hostSignIn}>Continue with Google (host)</button>
           <a href="/mobile-login">Already a player? Sign in here</a>
+           {reviewAvailable&&<a href="/design-review" style={{display:'block',marginTop:12,color:'#C7FF3A',fontWeight:800}}>Review the new app as host or player — no login needed</a>}
         </div>
       </AppDialog>}
     </div>
