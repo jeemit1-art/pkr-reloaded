@@ -3,9 +3,14 @@
 // Fictional fixtures only: no live user, room, database, payment or external service.
 const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
 const {BASE,API,room,members,leaders,createFixture,initialStorage}=require('../scripts/launch-fixture.cjs');
 const ranked=[...leaders].sort((a,b)=>b.total_net-a.total_net||b.games_won-a.games_won);
 const styles=['private-club','luxe','neon','vip','tournament','standard','noir','clubhouse','studio'];
+const palette=[...fs.readFileSync(path.join(__dirname,'../src/lib/rank-chip-palette.ts'),'utf8').matchAll(/\['(#[A-Fa-f0-9]{6})','(#[A-Fa-f0-9]{6})','(#[A-Fa-f0-9]{6})'\]/g)].map(m=>m.slice(1,4));
+assert.equal(palette.length,20,'Twenty ranked-player chip colours must exist');
+assert.equal(new Set(palette.map(x=>x[0])).size,20,'Every rank 1-20 requires a unique chip background');
 const saved={
  [ranked[0].user_id]:{type:'photo'},
  [ranked[1].user_id]:{type:'emoji',emoji:'🃏'},
@@ -18,6 +23,25 @@ function contrast(a,b){
   return c[0]*.2126+c[1]*.7152+c[2]*.0722;
  };
  const x=light(a),y=light(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+}
+const asRgb=hex=>'rgb('+hex.match(/[a-f0-9]{2}/gi).map(v=>parseInt(v,16)).join(', ')+')';
+for(const [bg,,ink] of palette){
+ assert(contrast(asRgb(bg),asRgb(ink))>=4.5,'Rank number fails contrast: '+bg);
+}
+async function checkRankChips(page,selector,count,label){
+ const chips=page.locator(selector);
+ await chips.first().waitFor({state:'attached'});
+ const data=await chips.evaluateAll(nodes=>nodes.map(el=>{
+  const paint=getComputedStyle(el);
+  return {bg:paint.backgroundColor,ink:paint.color,width:el.getBoundingClientRect().width};
+ }));
+ assert(data.length>=count,label+' expected '+count+' chip badges; found '+data.length);
+ assert.equal(new Set(data.slice(0,count).map(x=>x.bg)).size,count,label+' colours repeat');
+ for(const chip of data.slice(0,count)){
+  assert(chip.width>=19,label+' badge clipped: '+JSON.stringify(chip));
+  assert(contrast(chip.bg,chip.ink)>=4.5,label+' unreadable rank badge: '+JSON.stringify(chip));
+ }
+ return data.slice(0,count).map(x=>x.bg);
 }
 async function scenario(browser,style,mode,screen,kind){
  const fixture=createFixture();
@@ -88,7 +112,12 @@ async function scenario(browser,style,mode,screen,kind){
   });
   assert(contrast(score.background,score.foreground)>=4.5,'Default initials contrast should be accessible: '+JSON.stringify(score));
   assert(score.width>=29&&score.opacity==='1','Default initials must be clearly visible: '+JSON.stringify(score));
+  const globalChips=await checkRankChips(page,
+   '.pkr-results-live-ranking .pkr-results-live-chip,.pkr-results-command-ranking .pkr-results-ledger-position',
+   ranked.length,'Results '+style+'/'+mode);
   if(style==='private-club'){
+   const podiumChips=await checkRankChips(page,'.pkr-pc-results-podium .pkr-pc-results-medal',3,'Results top-three podium');
+   assert.deepEqual(podiumChips,globalChips.slice(0,3),'Podium colours must match list colours');
    assert(await podium.first().isVisible(),'The Private Club podium should be on screen');
    const [photo,emoji,account]=await Promise.all([podium.nth(0).locator('img').isVisible(),podium.nth(1).isVisible(),podium.nth(2).locator('img').isVisible()]);
    assert(photo&&emoji&&account,'Top three saved avatars must be visible on the Private Club podium');
@@ -100,6 +129,10 @@ async function scenario(browser,style,mode,screen,kind){
    assert(await secondary.first().isVisible(),'Room standings must show avatars as well as global Results');
    const rows=page.locator('.pkr-standings-row .pkr-standings-avatar');
    assert(await rows.first().isVisible(),'Room standings player rows must also display avatars');
+   const roomChips=await checkRankChips(page,'.pkr-standings-row .pkr-standings-row-rank',ranked.length,'Room standings');
+   assert.deepEqual(roomChips,globalChips,'Standings ranks should match global Results ranks');
+   const podiumChips=await checkRankChips(page,'.pkr-standings-podium-card .pkr-standings-medal',3,'Room podium');
+   assert.deepEqual(podiumChips,globalChips.slice(0,3),'Room podium colours should match Results');
   }
   assert.deepEqual(failures,[],kind+' '+style+' '+mode+' browser/API failures');
   return kind+' '+style+' '+mode;
@@ -119,5 +152,5 @@ async function scenario(browser,style,mode,screen,kind){
   outputs.push(await scenario(safari,'private-club','light',{width:390,height:844},'webkit'));
   outputs.push(await scenario(safari,'private-club','dark',{width:390,height:844},'webkit'));
  }finally{await safari.close()}
- console.log('PASS universal player avatars: '+outputs.join(', '));
+ console.log('PASS universal player avatars and twenty unique high-contrast rank chips: '+outputs.join(', '));
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});
