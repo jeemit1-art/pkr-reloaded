@@ -14,6 +14,7 @@ import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
 import GamesSectionTabs from '@/components/GamesSectionTabs';
+import GamesEmptyArena from '@/components/GamesEmptyArena';
 import {PokerClubStage} from '@/components/PokerClubStage';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
@@ -595,11 +596,9 @@ export default function EventPage() {
               </PokerClubStage>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon"><PkrGlyph name="games" size={32}/></div>
-                <div className="empty-state-text">No games scheduled yet.</div>
-                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
-              </div>
+              <GamesEmptyArena isHost={isHost}
+                onSchedule={()=>setShowCreate(true)}
+                onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
             )}
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
