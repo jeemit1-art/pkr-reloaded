@@ -1109,3 +1109,19 @@
   color:#F5F5EF!important;background:#1046F8!important;border-color:#3B68FF!important;
  }
 }
+
+/* Remove old global SVG noise and decorative pseudo-image overlays in every
+   authenticated screen. Genuine avatars, logos and the live poker table survive. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) body::before,
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) body::after{
+  content:none!important;display:none!important;background:none!important;
+  background-image:none!important;filter:none!important;opacity:0!important;
+  pointer-events:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ :is(.pkr-casino-art-asset,.pkr-pc-scene,.pkr-pc-entrance-photo,.pkr-cf-hero-photo,
+     .pkr-cf-tabletop,.pkr-casino-stage-art,.pkr-hero-grain,.pkr-hero-texture){
+  display:none!important;background-image:none!important;visibility:hidden!important;
+ }
+}
