@@ -8,6 +8,7 @@ import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import GameNightHostHome from '@/components/GameNightHostHome';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
+import {CasinoStageArt} from '@/components/PokerClubStage';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import './RoomDashboardDual.css';
@@ -354,6 +355,7 @@ export default function RoomDashboardDual({
             </div>
           </div>
           <div className="pkr-dual-hero-image" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
+          <CasinoStageArt kind="games"/>
         </section>
         <RoomOutstandingCard roomId={room.id}/>
         <section className={'pkr-dual-nextgame'+(!featured?' pkr-nextgame-empty':'')}>
@@ -423,6 +425,7 @@ export default function RoomDashboardDual({
               <button type="button" className="pkr-dual-outline-button" onClick={openRoom}>Game room ↗</button>
             </div>
           </div><div className="pkr-dual-hero-image pkr-dual-hero-cards" aria-hidden="true"><PkrGlyph name="spade" size={72}/></div>
+          <CasinoStageArt kind="games"/>
         </section>
         <div className="pkr-dual-highlights">
           <button type="button" onClick={goPayments}><span><DashIcon name="wallet"/></span><strong>{paymentLabel}</strong><small>Outstanding payments</small></button>
