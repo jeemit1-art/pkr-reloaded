@@ -2,6 +2,7 @@
 
 import type {ComponentProps} from 'react';
 import PkrGlyph from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import type GameNightHostHome from '@/components/GameNightHostHome';
 
 type Props=ComponentProps<typeof GameNightHostHome>;
@@ -32,6 +33,7 @@ export default function PrivateClubHostHome(p:Props){
     <span className="pkr-pc-scene-card pkr-pc-card-one">A<PkrGlyph name="spade" size={23}/></span>
     <span className="pkr-pc-scene-card pkr-pc-card-two">A<PkrGlyph name="heart" size={23}/></span>
    </div>
+   <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--host"/>
    <div className="pkr-pc-identity">
     <span className="pkr-pc-overline"><span aria-hidden="true">✦</span> YOUR PRIVATE CLUB <span aria-hidden="true">✦</span></span>
     <h1>{p.room.name}</h1>
