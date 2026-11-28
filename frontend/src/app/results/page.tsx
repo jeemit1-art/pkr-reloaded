@@ -4,7 +4,7 @@ import {useRouter} from 'next/navigation';
 import {isRestoringPageScroll,scrollPageTo} from '@/lib/page-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
-import {useRoomExperience} from '@/components/PokerClubStage';
+import {useRoomExperience,CasinoStageArt} from '@/components/PokerClubStage';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -200,6 +200,7 @@ export default function ResultsPage(){
          request={ordered[0]?{kind:'player',title:ordered[0].display_name+' — game history',roomId:selected,playerId:ordered[0].user_id,playerName:ordered[0].display_name}:
            {kind:'leaders',title:'Top performers',roomId:selected}}><small>Top performer</small><strong className="pkr-results-command-winner">{ordered[0]?.display_name||'—'}</strong></RecordMetric></div>
      </div>
+     <CasinoStageArt kind="games"/>
     </header>:
     <header className="pkr-results-live-hero" data-testid="live-results-stage"
      aria-label="Live Poker results table">
