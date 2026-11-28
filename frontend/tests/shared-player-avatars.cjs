@@ -85,6 +85,24 @@ async function scenario(browser,style,mode,screen,kind){
  });
  try{
   await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
+  // Shared crest is the real asset in every saved appearance, not an image mockup.
+  const brand=page.locator('.pkr-primary-mobile-utility .pkr-brand-mark--header');
+  if(screen.width<1100){
+   await brand.waitFor({state:'visible'});
+   const dims=await brand.evaluate(el=>{
+    const rect=el.getBoundingClientRect();
+    const img=el;
+    const title=document.querySelector('.pkr-primary-mobile-utility .pkr-primary-club-name');
+    const account=document.querySelector('.pkr-primary-mobile-utility .pkr-primary-account');
+    const titleRect=title?.getBoundingClientRect(),accountRect=account?.getBoundingClientRect();
+    return {w:rect.width,h:rect.height,natural:img.naturalWidth,
+      brandRight:rect.right,titleLeft:titleRect?.left,accountLeft:accountRect?.left};
+   });
+   assert(dims.natural>0,'Shared PKR SVG crest must load in '+style+'/'+mode);
+   assert(dims.w>=28&&dims.h>=28,'Shared PKR logo must stay crisp on a phone '+JSON.stringify(dims));
+   assert(dims.titleLeft===undefined||dims.brandRight<=dims.titleLeft+2,'Logo must not overlap the club name '+JSON.stringify(dims));
+  }
+
   const podium=page.locator('.pkr-pc-results-rank .pkr-pc-results-face');
   await podium.first().waitFor({state:'attached'});
   await page.waitForFunction(()=>{
