@@ -124,7 +124,7 @@ export default function PrivateClubGamesLobby(p:Props){
     </article>;
    })}
   </div>:
-  <section className="pkr-pc-lobby-empty pkr-cf-empty" role="status" aria-label={filter==='upcoming'?'No upcoming games':filter==='live'?'No live games':'No completed games'}>
+  <section className="pkr-cf-empty" role="status" aria-label={filter==='upcoming'?'No upcoming games':filter==='live'?'No live games':'No completed games'}>
    <div className="pkr-cf-tabletop" aria-hidden="true">
     <div className="pkr-cf-table-rim"><div className="pkr-cf-felt">
       <span className="pkr-cf-felt-brand">PKR</span>
