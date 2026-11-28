@@ -4,18 +4,19 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
-const {BASE,API,room,createFixture,initialStorage}=require('../scripts/launch-fixture.cjs');
+const {BASE,API,room,createFixture,initialStorage,FIXED_TIME}=require('../scripts/launch-fixture.cjs');
 const output=path.resolve(__dirname,'../../artifacts/casino-redesign');
 fs.mkdirSync(output,{recursive:true});
 const sizes=[{name:'small',width:320,height:700},{name:'iphone',width:430,height:932},{name:'tablet',width:768,height:1024}];
 function intersects(a,b){return a.left<b.right-2&&a.right>b.left+2&&a.top<b.bottom-2&&a.bottom>b.top+2;}
 async function runOne(browser,engine,viewport,{style='tournament',role='host',empty=false,mode='dark'}={}){
  const fixture=createFixture();fixture.state.role=role;
- const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU'});
+ const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU',timezoneId:'Australia/Brisbane',isMobile:viewport.width<=430,hasTouch:viewport.width<=430});
  await context.addInitScript(({stored,visual,appearance})=>{
   for(const [key,value] of Object.entries(stored))localStorage.setItem(key,value);
   localStorage.setItem('pkr_personal_visual_style_v1',visual);
   localStorage.setItem('pkr_personal_appearance_v1',appearance);
+  if(window.innerWidth<=430)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
  },{stored:initialStorage,visual:style,appearance:mode});
  const unexpected=[];
  await context.route('**/*',async route=>{
@@ -31,11 +32,17 @@ async function runOne(browser,engine,viewport,{style='tournament',role='host',em
   }catch(error){unexpected.push(error.message);return route.fulfill({status:404,contentType:'application/json',body:'{"error":"Fictional fixture unavailable"}'});}
  });
  const page=await context.newPage();page.setDefaultTimeout(17000);
+ await page.clock.setFixedTime(new Date(FIXED_TIME));
  page.on('pageerror',error=>unexpected.push('Browser: '+error.message));
  try{
+  await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
   const stage=page.locator('.pkr-experience-stage.pkr-experience-games');
-  await stage.waitFor({state:'visible'});
+  try{await stage.waitFor({state:'visible'});}catch(error){
+   const snapshot=await page.evaluate(()=>({url:location.href,style:document.documentElement.getAttribute('data-pkr-personal-style'),theme:document.documentElement.getAttribute('data-pkr-personal-theme'),body:document.body.innerText.slice(0,1400),dom:!!document.querySelector('.pkr-experience-stage'),errors:document.querySelectorAll('[role="alert"]').length}));
+   console.error('CASINO BROWSER DIAGNOSTICS',JSON.stringify({snapshot,unexpected}));
+   await page.screenshot({path:path.join(output,'failed-'+engine+'-'+viewport.name+'.png')}).catch(()=>{});throw error;
+  }
   await page.locator('html[data-pkr-personal-style="'+style+'"][data-pkr-personal-theme="'+mode+'"]').waitFor();
   await page.evaluate(()=>document.fonts.ready);
   const nav=page.locator('.pkr-section-tabs button');
