@@ -37,11 +37,11 @@ import PersistentNavigation from '@/components/PersistentNavigation';
 const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#FFFFFF', colorScheme:'light',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#07160F', colorScheme:'dark',
 };
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
-  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'default'},
+  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black'},
   icons:{icon:'/icon-192.png',apple:'/icon-192.png'},
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
   description:
