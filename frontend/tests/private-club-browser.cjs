@@ -81,6 +81,9 @@ async function runHost(browser,device){
   await page.waitForURL(url=>url.pathname.endsWith('/rsvp')&&url.searchParams.get('choice')==='yes',{timeout:12000});
   assert(new URL(page.url()).searchParams.get('choice')==='yes','Going must navigate to authorised RSVP form');
   assert(!failures.some(e=>/Forbidden fixture mutation|Unexpected API write/.test(e)),'No RSVP may be submitted automatically');
+  // Keep Safari's existing RSVP flow separate from the dedicated directory test:
+  // rapid WebKit navigation can cancel unsettled fixture requests.
+  if(name!=='safari-iphone'){
   // Player directory must show one action pathway, not a second hero menu and podium.
   await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-players').waitFor({state:'visible'});
@@ -103,6 +106,7 @@ async function runHost(browser,device){
   assert(await page.locator('#pkr-mobile-name').isVisible(),'Invitation and WhatsApp/QR flow remains accessible');
   await directoryNav.getByRole('button',{name:/Directory/}).click();
   assert(await page.locator('#pkr-member-search').isVisible(),'Directory must reopen without losing filters or records');
+  }
   if(w>=768){
    await page.goto(BASE+'/results?room='+room.id);
    await page.locator('.pkr-results-page').waitFor();
@@ -183,6 +187,29 @@ async function runEmptyHost(browser,width=390,height=844){
  }finally{await ctx.close();}
 }
 
+async function runSafariMembers(browser){
+ const {page,ctx,failures}=await boot(browser,390,844,'host');
+ try{
+  await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-players').waitFor({state:'visible'});
+  assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-podium').count(),0,
+   'Safari directory must not show the duplicate top-three ranking');
+  assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-members-actions button').count(),0,
+   'Safari directory must not show duplicate View/Invite actions');
+  const nav=page.getByRole('navigation',{name:'Members quick actions'});
+  assert.equal(await nav.locator('button').count(),3,'Safari must retain all member destinations');
+  const rect=await page.locator('.pkr-member-search-label').boundingBox();
+  assert(rect&&rect.height>=43&&rect.height<=62,'Safari member search must be a normal single-line field: '+JSON.stringify(rect));
+  await validate(page,'safari directory');
+  await page.screenshot({path:path.join(output,'players-safari-iphone.png')});
+  await nav.getByRole('button',{name:/Invite & QR/}).click();
+  assert(await page.locator('#pkr-mobile-name').isVisible(),'Safari invitation must be accessible');
+  await nav.getByRole('button',{name:'Directory',exact:true}).click();
+  assert(await page.locator('#pkr-member-search').isVisible(),'Safari directory must return');
+  assert.deepEqual(failures,[],'Standalone Safari directory browser/API errors');
+  cases.push('players-safari-iphone');
+ }finally{await ctx.close()}
+}
 async function runPlayer(browser){
  const {page,ctx,failures}=await boot(browser,430,873,'member');
  try{
@@ -207,6 +234,9 @@ async function runPlayer(browser){
   await runPlayer(browser);
  }finally{await browser.close();}
  const safari=await webkit.launch({headless:true});
- try{await runHost(safari,['safari-iphone',390,844]);}finally{await safari.close();}
+ try{
+  await runHost(safari,['safari-iphone',390,844]);
+  await runSafariMembers(safari);
+ }finally{await safari.close();}
  console.log('PASS Private Casino Club browser: '+cases.join(', '));
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
