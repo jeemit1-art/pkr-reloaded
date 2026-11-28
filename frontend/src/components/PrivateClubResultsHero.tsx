@@ -25,7 +25,7 @@ export default function PrivateClubResultsHero({club,roomId,leaders,completed,on
     </RecordMetric>):<p className="pkr-pc-results-placeholder">The first completed game starts your hall of fame.</p>}
    </div>
    <button type="button" className="pkr-pc-results-history" onClick={onHistory}>
-    <PkrGlyph name="history" size={18}/> VIEW COMPLETED NIGHTS <PkrGlyph name="chevron-right" size={18}/>
+    <PkrGlyph name="history" size={18}/> <span>VIEW COMPLETED NIGHTS</span> <PkrGlyph name="chevron-right" size={18}/>
    </button>
   </section>;
 }
