@@ -738,3 +738,106 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   .pkr-members-panel .pkr-members-shortcuts button{font-size:11px!important;padding:7px 2px!important;gap:3px!important}
  }
 }
+
+/* Players — concise, readable cards. History is always visible, while
+ * contact details, device registration and host actions expand per member. */
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-roster{
+  box-sizing:border-box!important;padding:0!important;margin-top:0!important;
+  overflow:hidden!important;border-radius:15px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-player{
+  box-sizing:border-box!important;display:grid!important;
+  grid-template-columns:47px minmax(0,1fr) auto!important;
+  grid-template-rows:auto!important;align-items:center!important;
+  column-gap:11px!important;row-gap:0!important;
+  padding:11px 12px!important;min-height:80px!important;
+  border:0!important;border-bottom:1px solid var(--pkr-personal-line)!important;
+  background:var(--pkr-personal-surface)!important;
+  color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-player:last-child{border-bottom:0!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-avatar{
+  box-sizing:border-box!important;display:grid!important;place-items:center!important;
+  width:46px!important;height:46px!important;overflow:hidden!important;
+  border:2px solid var(--pkr-personal-accent-line)!important;
+  border-radius:50%!important;background:var(--pkr-personal-accent-surface)!important;
+  color:var(--pkr-personal-ink)!important;font:800 16px/1 var(--pkr-vg-font)!important;
+ }
+ .pkr-directory-avatar img{width:100%!important;height:100%!important;object-fit:cover!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-identity{min-width:0!important;display:flex;flex-direction:column;gap:3px!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-history{
+  box-sizing:border-box!important;width:100%!important;min-width:0!important;min-height:36px!important;
+  height:auto!important;display:flex!important;flex-direction:column!important;
+  align-items:flex-start!important;gap:3px!important;padding:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;text-align:left!important;color:var(--pkr-personal-ink)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-history strong{
+  font:800 14px/1.26 var(--pkr-vg-font)!important;
+  color:var(--pkr-personal-ink)!important;-webkit-text-fill-color:var(--pkr-personal-ink)!important;
+  overflow-wrap:anywhere!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-history small{
+  font:650 11px/1.24 var(--pkr-vg-font)!important;
+  color:var(--pkr-personal-muted)!important;-webkit-text-fill-color:var(--pkr-personal-muted)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-history .pkr-directory-history-cta{
+  color:var(--pkr-personal-accent)!important;-webkit-text-fill-color:var(--pkr-personal-accent)!important;
+ }
+ .pkr-directory-facts{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+ .pkr-directory-role{font:750 10px/1.3 var(--pkr-vg-font)!important;padding:3px 7px;border-radius:6px}
+ .pkr-directory-role.role-host{background:var(--pkr-personal-warning-surface);color:var(--pkr-personal-warning)}
+ .pkr-directory-role.role-cohost{background:var(--pkr-personal-gain-surface);color:var(--pkr-personal-gain)}
+ .pkr-directory-role.role-member{background:var(--pkr-personal-raised);color:var(--pkr-personal-muted)}
+ .pkr-directory-games{font:700 11px/1.3 var(--pkr-vg-font);color:var(--pkr-personal-muted)}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-more{
+  box-sizing:border-box!important;min-height:44px!important;min-width:62px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;
+  padding:7px 6px!important;border:1px solid var(--pkr-personal-accent-line)!important;
+  border-radius:9px!important;background:var(--pkr-personal-accent-surface)!important;
+  color:var(--pkr-personal-accent)!important;-webkit-text-fill-color:var(--pkr-personal-accent)!important;
+  font:750 11px/1.2 var(--pkr-vg-font)!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-directory-extra{
+  display:grid!important;grid-column:1/-1!important;grid-row:auto!important;
+  gap:11px!important;margin-top:12px!important;padding:12px!important;min-width:0!important;
+  border:1px solid var(--pkr-personal-line)!important;border-radius:10px!important;
+  background:var(--pkr-personal-raised)!important;color:var(--pkr-personal-ink)!important;
+ }
+ .pkr-directory-email{margin:0!important;font:600 12px/1.35 var(--pkr-vg-font)!important;overflow-wrap:anywhere}
+ .pkr-directory-notifications{display:flex!important;flex-wrap:wrap!important;gap:7px!important;font-size:11px!important}
+ .pkr-directory-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-directory-actions button{
+  box-sizing:border-box!important;min-height:40px!important;min-width:0!important;
+  padding:9px 12px!important;font:700 12px/1.2 var(--pkr-vg-font)!important;
+  border-radius:9px!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-directory-actions .pkr-directory-remove{
+  border:1px solid var(--pkr-personal-loss-line)!important;
+  color:var(--pkr-personal-loss)!important;
+  -webkit-text-fill-color:var(--pkr-personal-loss)!important;
+  background:var(--pkr-personal-loss-surface)!important;
+ }
+ @media (max-width:360px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-directory-player{grid-template-columns:42px minmax(0,1fr) auto!important;column-gap:8px!important;padding:10px 8px!important}
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-directory-avatar{width:42px!important;height:42px!important}
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-directory-more{min-width:54px!important;font-size:10px!important}
+ }
+}
