@@ -286,3 +286,92 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:no
   background:#fffdfb!important;border-color:#e7d5dc!important;
  }
 }
+
+/* Light casino lounge: brighten the first fold, not just the working panels. */
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-entrance,.pkr-privateclub-player .pkr-pc-player-scene,.pkr-cf-hero){
+  background-color:#faf0eb!important;border-color:#d29cae!important;
+  box-shadow:0 12px 25px #4c2d4023,inset 0 0 0 1px #fffdf8!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-entrance-photo,.pkr-pc-player-photo,.pkr-cf-hero-photo){
+  opacity:.43!important;filter:saturate(.82) contrast(.94) brightness(1.24)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-entrance::before{
+  background:linear-gradient(180deg,#fff9f1ab 0%,#fff2e6ce 42%,#fcf1e9f2 93%)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-scene{
+  opacity:.42!important;
+  background-image:linear-gradient(180deg,#fffaf0a5 0%,#fff1e4da 88%),
+   url('/images/casino/real-casino-props.webp')!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-entrance .pkr-pc-identity h1,
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-privateclub-player .pkr-pc-player-scene h1{
+  color:#3d2637!important;-webkit-text-fill-color:#3d2637!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-entrance .pkr-pc-overline,.pkr-privateclub-player .pkr-pc-overline){
+  color:#74314d!important;-webkit-text-fill-color:#74314d!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-entrance .pkr-pc-honor,.pkr-privateclub-player .pkr-pc-honor){
+  background:#fff6f0ed!important;border-color:#c28da2!important;
+  color:#72304e!important;-webkit-text-fill-color:#72304e!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-privateclub-player .pkr-pc-player-scene::before{
+  background:linear-gradient(180deg,#fffaf4a8,#fff1e2d6 55%,#ffefe6f7)!important;
+ }
+ /* Next-session ticket stays decorative but switches to a bright parchment card. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-ticket,.pkr-pc-player-ticket){
+  background:linear-gradient(140deg,#fffbf7,#f8e6e5 88%)!important;
+  background-color:#fffbf7!important;border-color:#cc93a9!important;
+  box-shadow:0 9px 22px #5d314222,inset 0 0 0 2px #fffdf6!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) :is(
+  .pkr-pc-ticket-info,.pkr-pc-ticket-info h2,.pkr-pc-ticket-info p,
+  .pkr-pc-ticket-info p svg,.pkr-pc-datebox,.pkr-pc-datebox span,.pkr-pc-datebox strong,
+  .pkr-pc-ticket-kicker,.pkr-pc-attendance,.pkr-pc-attendance strong){
+  color:#3c2939!important;-webkit-text-fill-color:#3c2939!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-datebox{
+  border-right-color:#bf92a4!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-pc-ticket:before{
+  border-color:#c9a4b6!important;
+ }
+ /* The Games marquee and its real session counts also switch with the mode. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero::before{
+  background:linear-gradient(90deg,#fffaf6f8 3%,#fff5f1e9 48%,#f5e2e6a6 100%),
+   radial-gradient(circle at 80% 28%,#ffdfbe77,transparent 62%)!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-marquee{
+  background:#f6e5e9!important;border-bottom-color:#d6b1c0!important;
+  color:#75384f!important;-webkit-text-fill-color:#75384f!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-kicker{
+  color:#853551!important;-webkit-text-fill-color:#853551!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-copy :is(h1,h1>span){
+  color:#382738!important;-webkit-text-fill-color:#382738!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-copy h1 em{
+  color:#9d3659!important;-webkit-text-fill-color:#9d3659!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-copy p{
+  color:#503745!important;-webkit-text-fill-color:#503745!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-metrics{
+  background:linear-gradient(90deg,#fbe9ea,#f7e4eb)!important;border-top-color:#cba6b5!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-metrics button strong{
+  color:#412939!important;-webkit-text-fill-color:#412939!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-metrics button span{
+  color:#6a485a!important;-webkit-text-fill-color:#6a485a!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme="light"]:not(:has(#gameScreen)) .pkr-cf-hero-metrics button:not(:last-child){
+  border-right-color:#d2b2be!important;
+ }
+}
