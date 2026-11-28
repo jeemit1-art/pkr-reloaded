@@ -6,6 +6,7 @@ import AppDialog from '@/components/AppDialog';
 import {api,fmt,type Event} from '@/lib/api';
 import {historyStateForQueryUpdate} from '@/lib/page-scroll';
 import FinancialIntegrityReview from '@/components/FinancialIntegrityReview';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import {loadRoomTransfers,outstandingRoomTransfers,totalTransferCents,type RoomTransferLoad,type RoomTransferRecord} from '@/lib/room-payment-schedule';
 import {canTakePaymentAction,filterPaymentOverview,paymentRowKey,paymentSummaryRecords,readPaymentOverviewQuery,
  type PaymentAction,type PaymentControlState,type PaymentFilter,type PaymentScope,type PaymentGroup} from '@/lib/payment-overview';
@@ -239,6 +240,7 @@ export default function GameNightPayments(){
    <button type="button" className="pkr-gn-payment-refresh" disabled={loading||busy||(!selectedRoom&&!accountError)} onClick={refresh} aria-label="Refresh payment records"><PaymentIcon name="refresh"/></button>
   </header>
   <section className="pkr-pc-cashier-hero" data-testid="private-club-cashier" aria-label="Your private club cashier">
+    <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--payments"/>
     <div className="pkr-pc-cashier-hero-art" aria-hidden="true"><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-a"/><span className="pkr-pc-cashier-chip pkr-pc-cashier-chip-b"/></div>
     <div className="pkr-pc-cashier-copy">
       <span className="pkr-pc-overline">♠ YOUR PRIVATE CLUB CASHIER</span>
