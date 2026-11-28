@@ -248,6 +248,14 @@ async function runLightMode(browser){
   const filter=await page.locator('.pkr-cf-filters').evaluate(el=>getComputedStyle(el).backgroundColor);
   assert(bright(filter),'Light Games filters must be bright, not forced dark: '+filter);
   await page.screenshot({path:path.join(output,'games-light-iphone.png')});
+  await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-results').waitFor({state:'visible'});
+  const results=await page.locator('.pkr-pc-results-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(results),'Light Results hero must be a light working surface: '+results);
+  await page.goto(BASE+'/payments?room='+room.id,{waitUntil:'domcontentloaded'});
+  await page.locator('.pkr-pc-cashier-hero').waitFor({state:'visible'});
+  const payments=await page.locator('.pkr-pc-cashier-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(payments),'Light Payments hero must be a light working surface: '+payments);
   await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
   const settings=page.getByTestId('personal-appearance');
   await settings.waitFor({state:'visible'});
