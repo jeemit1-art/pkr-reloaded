@@ -686,7 +686,7 @@ export default function EventPage() {
             </header>
             <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
               {([
-                {id:'roster',text:'Directory ('+(event.members?.length||0)+')',icon:'members',visible:true},
+                {id:'roster',text:'Directory',icon:'members',visible:true},
                 {id:'invite',text:'Invite & QR',icon:'qr',visible:isGroupOwner},
                 {id:'requests',text:'Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),icon:'shield-check',visible:isGroupOwner},
               ] as const).filter(action=>action.visible).map(action=>
