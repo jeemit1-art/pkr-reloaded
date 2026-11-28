@@ -1033,12 +1033,12 @@ async function test(){
          errors.push(size.name+' private invitations missing from Players');
        if(await page.locator('.pkr-member-roster').isVisible())
          errors.push(size.name+' invitation area did not hide the player roster');
-       await page.getByRole('button',{name:/Players \(/}).click();
+       await page.getByRole('button',{name:'Directory',exact:true}).click();
        await page.locator('.pkr-member-roster').waitFor({state:'visible'});
        if(size.width>=1100){
          await page.getByRole('button',{name:'+ Invite Member by Mobile'}).click();
          await page.getByLabel('WhatsApp mobile number').waitFor({state:'visible',timeout:5000});
-         await page.getByRole('button',{name:/Players \(/}).click();
+         await page.getByRole('button',{name:'Directory',exact:true}).click();
          await page.locator('.pkr-member-roster').waitFor({state:'visible'});
        }
        const search=page.locator('#pkr-member-search');
