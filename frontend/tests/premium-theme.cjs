@@ -50,9 +50,9 @@ for(const style of ['standard','noir','clubhouse','studio'])assert(settings.incl
 for(const mode of modes)assert(settings.includes("'"+mode+"'"),'Colour mode missing: '+mode);
 assert(settings.includes("'system'"),'Follow-device colour mode must be available');
 assert(settings.includes('chooseStyle(option.id)'),'Theme option must be interactive');
-assert(lib.includes("DEFAULT_VISUAL_STYLE:VisualStyle='noir'"),'PKR Noir should be the default for users without a saved style');
+assert(lib.includes("DEFAULT_VISUAL_STYLE:VisualStyle='private-club'"),'Private Casino Club must be the default for new users without a saved style');
 assert(settings.includes('useRef<VisualStyle>(DEFAULT_VISUAL_STYLE)'),'Provider must honour default premium style');
-assert(bootstrap.includes("?style:'noir'"),'Early appearance script must apply premium default before hydration');
+assert(bootstrap.includes("?style:'private-club'"),'Early appearance script must apply the approved casino default before hydration');
 assert(bootstrap.includes("style==='standard'"),'Previously selected Classic must remain supported');
 assert(bootstrap.includes('pkr_personal_visual_style_v1'),'Reload must restore personal style');
 assert(lib.includes('!/^\\/games\\/[^/]+\\/(play|tv)'),'Live poker table must be excluded from personal themes');

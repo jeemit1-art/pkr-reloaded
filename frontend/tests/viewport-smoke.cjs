@@ -1068,7 +1068,10 @@ async function test(){
        await page.locator('.pkr-results-ledger-row').first().waitFor({state:'visible',timeout:15000});
         await page.waitForTimeout(180);
         const resultsLanding=await page.evaluate(()=>{
-          const heading=document.querySelector('.pkr-results-page h1');
+          // Measure the visible heading: the legacy Results hero remains mounted but is hidden in the new theme.
+          const heading=[...document.querySelectorAll('.pkr-results-page h1')].find(el=>{
+            const b=el.getBoundingClientRect();return b.width>0&&b.height>0&&getComputedStyle(el).visibility!=='hidden';
+          });
           const utility=document.querySelector('.pkr-primary-mobile-utility');
           return {scrollY:window.scrollY,headingTop:heading?.getBoundingClientRect().top??null,
             headerBottom:utility&&getComputedStyle(utility).display!=='none'?utility.getBoundingClientRect().bottom:0};

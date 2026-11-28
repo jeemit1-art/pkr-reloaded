@@ -14,6 +14,9 @@ import {playerCountLabel} from '@/lib/game-player-count';
 import RoomPlayerProfileEditor from '@/components/RoomPlayerProfileEditor';
 import GameNightTools from '@/components/GameNightTools';
 import GamesSectionTabs from '@/components/GamesSectionTabs';
+import GamesEmptyArena from '@/components/GamesEmptyArena';
+import PrivateClubGamesLobby from '@/components/PrivateClubGamesLobby';
+import PrivateClubMembersHero from '@/components/PrivateClubMembersHero';
 import {PokerClubStage} from '@/components/PokerClubStage';
 import { subscribePush, unsubscribePush, ensurePushForRoom, canUsePush, isPWAInstalled, isIOS, isSafari } from '@/lib/push';
 import PkrMobileNav from '@/components/PkrMobileNav';
@@ -571,9 +574,27 @@ export default function EventPage() {
           </button>}
         </div>
 
+        {/* The approved lounge is a true alternate composition. The old view stays functional for original styles. */}
+        {tab==='games'&&<div className="pkr-pc-new-games">
+          <PrivateClubGamesLobby club={event.name} games={games} upcoming={upcoming}
+            unfinished={unfinished} settled={settled} isHost={isHost} isOwner={isGroupOwner}
+            onSchedule={()=>setShowCreate(true)}
+            onGame={gameId=>router.push('/games/'+encodeURIComponent(gameId))}
+            onOpenTable={gameId=>router.push('/games/'+encodeURIComponent(gameId)+'/play')}
+            onWatch={gameId=>{const game=games.find(g=>g.id===gameId);if(game?.live_token)router.push('/games/live/'+encodeURIComponent(game.live_token));else router.push('/games/'+encodeURIComponent(gameId));}}
+            onRsvp={(gameId,choice)=>router.push('/games/'+encodeURIComponent(gameId)+'/rsvp'+(choice?'?choice='+choice:''))}
+            onShare={gameId=>openGameNight(gameId)}
+            onRsvpSettings={gameId=>router.push('/games/'+encodeURIComponent(gameId)+'/rsvp?settings=1#pkr-rsvp-settings')}
+            onQuickSeat={gameId=>{setQuickSeatGameId(gameId);setShowQuickSeat(true);}}
+            onCancel={gameId=>setConfirmDelete(gameId)}
+            onDelete={gameId=>setConfirmDelete(gameId+':delete')}
+            onResults={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}
+            onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}
+            onSharing={()=>openGameNight()}/>
+        </div>}
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
-          <div>
+          <div className="pkr-pc-old-games">
             <div className="pkr-room-games-intro pkr-room-games-intro-experience">
               <PokerClubStage kind="games" title="Games" subtitle="Your sessions, tables and live RSVPs."
                 club={event.name}
@@ -595,11 +616,16 @@ export default function EventPage() {
               </PokerClubStage>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
-              <div className="empty-state">
+              <>
+              <GamesEmptyArena isHost={isHost}
+                onSchedule={()=>setShowCreate(true)}
+                onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
+              <div className="empty-state pkr-casino-original-empty">
                 <div className="empty-state-icon"><PkrGlyph name="games" size={32}/></div>
                 <div className="empty-state-text">No games scheduled yet.</div>
-                {isHost && <div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
+                {isHost&&<div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
               </div>
+              </>
             )}
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
@@ -648,6 +674,11 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>
+            <PrivateClubMembersHero club={event.name} roomId={id} members={event.members||[]}
+              leaders={leaders} pending={joinRequests.length} isOwner={isGroupOwner}
+              onRoster={()=>{setMemberQuery('');setMemberFilter('all');focusMemberSection('roster');}}
+              onInvite={()=>focusMemberSection('invite')}
+              onRequests={()=>focusMemberSection('requests')}/>
             <header className="pkr-member-summary pkr-member-summary-experience">
               <PokerClubStage kind="players" title="Players" subtitle="Your private poker club."
                 club={event.name}

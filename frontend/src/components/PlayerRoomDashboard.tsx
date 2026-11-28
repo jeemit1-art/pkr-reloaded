@@ -6,6 +6,7 @@ import {api,fmt,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from
 import {isCurrentGame,isLiveGame} from '@/lib/game-status';
 import {loadRoomTransfers,outstandingRoomTransfers,type RoomTransferLoad} from '@/lib/room-payment-schedule';
 import PlayerGameNightAccess from './PlayerGameNightAccess';
+import PrivateClubPlayerHome from './PrivateClubPlayerHome';
 import ClubEngagementPanel from './ClubEngagementPanel';
 import ClubExtrasPanel from './ClubExtrasPanel';
 import RecordMetric from './RecordMetric';
@@ -155,6 +156,10 @@ export default function PlayerRoomDashboard({
   const date=next?new Date(next.scheduled_at*1000):null;
   return <section className={'pkr-player-home pkr-game-night-player'+(paymentsOnly?' payments-only':'')}
     data-testid="player-dashboard" aria-label={paymentsOnly?'My payments':'Player dashboard'}>
+    {!paymentsOnly&&<PrivateClubPlayerHome room={room} next={next} loading={loadingGames} error={gameError||''}
+      onGame={()=>next?openGame(next):goTab('games')} onRsvp={goRsvp}
+      onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(room.id))}
+      onResults={goResults} onPayments={goPayments} onMembers={()=>goTab('members')}/>}
     {!paymentsOnly&&<section className="gn-player-next" aria-label={live?'Your live game':'Your next game'} aria-busy={loadingGames}>
       <div className="gn-player-next-top">
         <span className="gn-player-label">{live?'Your game is live':next?'Your next game':'Your game night'}</span>

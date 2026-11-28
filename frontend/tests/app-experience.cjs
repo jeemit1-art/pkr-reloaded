@@ -85,7 +85,8 @@ async function run(){
   try{for(const [name,width,height] of engine==='webkit'?sizes.filter(x=>['phone','short-phone','landscape'].includes(x[0])):sizes){
    selectedLayout='command';layoutWrites=0;simulateMember=false;
    const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block'});
-   await context.addInitScript(()=>localStorage.setItem('pkr_token','synthetic-ui-test-only'));
+   // Legacy Command Centre regression deliberately selects the saved original style.
+   await context.addInitScript(()=>{localStorage.setItem('pkr_token','synthetic-ui-test-only');localStorage.setItem('pkr_personal_visual_style_v1','standard');});
    const page=await context.newPage();page.setDefaultTimeout(15000);
    const unexpected=[];
    page.on('pageerror',error=>unexpected.push('Client runtime error: '+(error.stack||error.message)));

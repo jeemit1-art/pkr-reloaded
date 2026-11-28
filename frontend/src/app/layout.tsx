@@ -26,6 +26,10 @@ import './pkr-premium-styles.css';
 import './pkr-experience-consolidation.css';
 // Four distinct, user-selectable casino designs; never overrides the protected live gameplay screen.
 import './pkr-casino-themes.css';
+// New responsive casino compositions; only the four opt-in experiences are affected.
+import './pkr-casino-rebuild.css';
+// Approved Private Casino Club: real screens, retained workflows and responsive navigation.
+import './pkr-privateclub.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
@@ -33,11 +37,11 @@ import PersistentNavigation from '@/components/PersistentNavigation';
 const bodyFont = localFont({src:'./fonts/InterVariable.woff2',weight:'100 900',variable:'--font-body',display:'swap'});
 
 export const viewport: Viewport = {
-  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#FFFFFF', colorScheme:'light',
+  width:'device-width', initialScale:1, viewportFit:'cover', themeColor:'#07160F', colorScheme:'dark',
 };
 export const metadata: Metadata = {
   applicationName:'PKR', manifest:'/manifest.json',
-  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'default'},
+  appleWebApp:{capable:true,title:'PKR',statusBarStyle:'black'},
   icons:{icon:'/icon-192.png',apple:'/icon-192.png'},
   title: 'PKR — Home Poker Game Tracker, Tournament Manager & Settlement App',
   description:

@@ -76,6 +76,7 @@ const styles:Array<{id:VisualStyle;name:string;description:string}>=[
  {id:'neon',name:'Neon Casino',description:'Glowing violet, electric cyan and vivid pink casino lights'},
  {id:'vip',name:'VIP Lounge',description:'Burgundy velvet, bronze details and champagne gold'},
  {id:'tournament',name:'Playful Tournament',description:'Bright red, teal, trophies and colourful game-night energy'},
+ {id:'private-club',name:'Private Casino Club',description:'The approved cinematic emerald-and-gold club, game-ticket lobby and cashier'},
 ];
 export function PersonalAppearanceSettings(){
  const {preference,choose,visualStyle,chooseStyle,ready}=useContext(Context);
@@ -83,9 +84,9 @@ export function PersonalAppearanceSettings(){
   <h2>App appearance</h2>
   <p>Select the look you prefer. Theme and colour mode are personal to this device; the host's shared club layout is a separate setting.</p>
   <h3>Casino experiences</h3>
-  <p className="pkr-appearance-intro">Four distinct looks inspired by the approved casino concepts. Your games, results and payment records stay exactly as they are.</p>
+  <p className="pkr-appearance-intro">The approved Private Casino Club design, plus four existing casino looks. Your games, results and payment records stay exactly as they are.</p>
   <div className="pkr-visual-style-options pkr-visual-style-casino" role="group" aria-label="Casino themes">
-   {styles.filter(option=>['luxe','neon','vip','tournament'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
+   {styles.filter(option=>['private-club','luxe','neon','vip','tournament'].includes(option.id)).map(option=><button key={option.id} type="button" aria-pressed={visualStyle===option.id}
      disabled={!ready} onClick={()=>chooseStyle(option.id)} data-style-option={option.id}>
     <span className={'pkr-theme-style-swatch pkr-theme-style-'+option.id} aria-hidden="true">
      <i/><i/><i/>

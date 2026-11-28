@@ -40,6 +40,20 @@ type StageProps={
  * rooms. This is actual alternate markup, not a class that recolours one card.
  * Uses only real counts/names passed by the parent.
  */
+/** Decorative vector cards and chips, deliberately separate from game data and controls. */
+export function CasinoStageArt({kind}:{kind:'games'|'players'|'payments'}){
+ const suit=kind==='players'?'club':kind==='payments'?'diamond':'spade';
+ return <div className="pkr-casino-stage-art" aria-hidden="true">
+   <span className="pkr-casino-art-halo"/>
+   <span className="pkr-casino-art-card pkr-casino-art-card-back"><small>PKR</small><PkrGlyph name="spade" size={24}/></span>
+   <span className="pkr-casino-art-card pkr-casino-art-card-front"><b>A</b><PkrGlyph name={suit} size={31}/><b>A</b></span>
+   <span className="pkr-casino-art-chip pkr-casino-art-chip-rear"><PkrGlyph name="diamond" size={24}/></span>
+   <span className="pkr-casino-art-chip pkr-casino-art-chip-front"><PkrGlyph name={suit} size={30}/></span>
+   <span className="pkr-casino-art-spark pkr-casino-art-spark-a"/>
+   <span className="pkr-casino-art-spark pkr-casino-art-spark-b"/>
+  </div>;
+}
+
 export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],children}:StageProps){
  const mode=useRoomExperience();
  const metric=(item:StageMetric,index:number,live=false)=>{
@@ -69,6 +83,7 @@ export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],chil
       {players.slice(0,4).map((name,i)=><span className={'pkr-experience-felt-seat seat-'+i} key={name+i}
         title={name}>{name.split(' ')[0]}</span>)}
     </div>
+    <CasinoStageArt kind={kind}/>
    </section>;
  }
  return <section className={'pkr-experience-stage pkr-experience-stage-command pkr-experience-command pkr-experience-'+kind}
@@ -81,5 +96,6 @@ export function PokerClubStage({kind,title,subtitle,club,metrics,players=[],chil
    <div className="pkr-experience-command-stats">
      {metrics.map((item,index)=>metric(item,index))}
    </div>
+   <CasinoStageArt kind={kind}/>
   </section>;
 }
