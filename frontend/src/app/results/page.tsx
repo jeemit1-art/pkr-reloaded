@@ -5,6 +5,7 @@ import {isRestoringPageScroll,scrollPageTo} from '@/lib/page-scroll';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import {useRoomExperience,CasinoStageArt} from '@/components/PokerClubStage';
+import PrivateClubResultsHero from '@/components/PrivateClubResultsHero';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -183,6 +184,8 @@ export default function ResultsPage(){
       {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
      </select></label>}
    </div>
+   <PrivateClubResultsHero club={room?.name||'Your private poker club'} roomId={selected}
+     leaders={ordered} completed={settled.length} onHistory={()=>setSection('history')}/>
    {experience==='command'?
     <header className="pkr-results-command-hero" data-testid="command-results-stage"
      aria-label="Command Centre results overview">
