@@ -674,11 +674,7 @@ export default function EventPage() {
         {/* ── Members tab ── */}
         {tab==='members' && (
           <div className="pkr-members-panel" data-section={memberSection}>
-            <PrivateClubMembersHero club={event.name} roomId={id} members={event.members||[]}
-              leaders={leaders} pending={joinRequests.length} isOwner={isGroupOwner}
-              onRoster={()=>{setMemberQuery('');setMemberFilter('all');focusMemberSection('roster');}}
-              onInvite={()=>focusMemberSection('invite')}
-              onRequests={()=>focusMemberSection('requests')}/>
+            <PrivateClubMembersHero club={event.name} members={event.members||[]}/>
             <header className="pkr-member-summary pkr-member-summary-experience">
               <PokerClubStage kind="players" title="Players" subtitle="Your private poker club."
                 club={event.name}
@@ -690,7 +686,7 @@ export default function EventPage() {
             </header>
             <nav className="pkr-members-shortcuts" aria-label="Members quick actions">
               {([
-                {id:'roster',text:'Players ('+(event.members?.length||0)+')',icon:'members',visible:true},
+                {id:'roster',text:'Directory',icon:'members',visible:true},
                 {id:'invite',text:'Invite & QR',icon:'qr',visible:isGroupOwner},
                 {id:'requests',text:'Approvals'+(joinRequests.length?' ('+joinRequests.length+')':''),icon:'shield-check',visible:isGroupOwner},
               ] as const).filter(action=>action.visible).map(action=>
