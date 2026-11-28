@@ -406,3 +406,10 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   .pkr-cf-schedule:active,.pkr-cf-explore button:active{transform:scale(.985)}
  }
 }
+
+/* Visual QA: content-sized marquee — no empty 50px blank panel below real counters. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-cf-hero {
+  min-height:0!important;height:auto!important;
+ }
+}
