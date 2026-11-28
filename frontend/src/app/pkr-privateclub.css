@@ -831,3 +831,36 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   .pkr-pc-cashier-chip-b{right:1%;top:27%;width:50px;height:50px}
  }
 }
+
+
+/* Visible-text contrast correction verified against 430px real-app screenshots.
+   Filters apply to foreground children only, never to the metallic button fill. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-pc-main-action > span,
+  .pkr-pc-main-action > svg,
+  .pkr-pc-lobby-actions .pkr-pc-lobby-primary > span,
+  .pkr-pc-lobby-actions .pkr-pc-lobby-primary > svg,
+  .pkr-pc-members-actions .pkr-pc-members-primary > span,
+  .pkr-pc-members-actions .pkr-pc-members-primary > svg,
+  .pkr-pc-results-history > span,
+  .pkr-pc-results-history > svg,
+  .pkr-pc-lobby-filter button[aria-current="page"] > span,
+  .pkr-gn-payment-sections a[aria-current="page"] > span
+ ) {
+  color:#1E150B!important;-webkit-text-fill-color:#1E150B!important;
+  text-shadow:none!important;filter:brightness(0)!important;opacity:1!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(
+  .pkr-pc-main-action > span,
+  .pkr-pc-lobby-actions .pkr-pc-lobby-primary > span,
+  .pkr-pc-members-actions .pkr-pc-members-primary > span,
+  .pkr-pc-results-history > span,
+  .pkr-gn-payment-sections a[aria-current="page"] > span
+ ){font-weight:900!important;letter-spacing:.01em!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payment-sections a[aria-current="page"]{
+  color:#211608!important;-webkit-text-fill-color:#211608!important;
+  background:linear-gradient(160deg,#FFEBAD,#F1CA75 70%,#CF9D49)!important;
+  border-color:#FFF2CB!important;text-shadow:none!important;
+ }
+}
