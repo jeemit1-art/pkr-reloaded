@@ -176,6 +176,7 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  .pkr-pc-ticket,.pkr-pc-player-ticket{
   box-sizing:border-box;position:relative;isolation:isolate;width:100%;min-width:0;
   border:2px solid #E5B866;border-radius:20px;overflow:hidden;
+  background-color:#290B14;
   background:radial-gradient(ellipse at 72% 0%,#9D2639 0%,transparent 65%),
     linear-gradient(135deg,#5D101F 0%,#290B14 65%,#120F14 100%);
   box-shadow:inset 0 0 0 3px #A6533630,0 11px 21px #0008;
@@ -532,5 +533,137 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  }
  @media(prefers-reduced-motion:reduce){
   .pkr-privateclub-home *, .pkr-privateclub-games *, .pkr-privateclub-player *{animation:none!important;transition:none!important}
+ }
+}
+
+
+/* Full five-area Private Casino Club compositions. */
+.pkr-pc-members-hero,.pkr-pc-results-hero,.pkr-pc-cashier-hero{display:none!important}
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-members-hero,.pkr-pc-results-hero,.pkr-pc-cashier-hero){display:block!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-member-summary.pkr-member-summary-experience{display:none!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-results-page :is(.pkr-results-command-hero,.pkr-results-live-hero){display:none!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-gn-payments>.pkr-gn-payments-heading{display:none!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-members-hero{
+  box-sizing:border-box;position:relative;isolation:isolate;min-width:0;overflow:hidden;
+  margin-bottom:20px;padding:27px 20px 22px;border:1px solid #D9B36B;border-radius:22px;
+  background:linear-gradient(100deg,#062018F1 0%,#0B3726E2 64%,#0B312380),url('/images/casino/real-poker-chips.webp') right center/cover;
+  box-shadow:inset 0 1px 0 #FFFFFF25,0 15px 28px #0008;
+ }
+ .pkr-pc-members-intro{position:relative;z-index:2;min-width:0;max-width:75%}
+ .pkr-pc-members-intro h1,.pkr-pc-results-heading h1,.pkr-pc-cashier-copy h1{
+  font:900 clamp(30px,5vw,45px)/1.09 "PKR Casino Sans",Inter,sans-serif!important;
+  letter-spacing:-.05em;color:#FFF!important;-webkit-text-fill-color:#FFF!important;
+  margin:12px 0 7px!important;text-shadow:0 3px 11px #0008!important;
+  overflow-wrap:anywhere;
+ }
+ .pkr-pc-members-intro h1 em,.pkr-pc-results-heading h1 em,.pkr-pc-cashier-copy h1 em{
+  font-style:normal;color:#F4D38D!important;-webkit-text-fill-color:#F4D38D!important;
+ }
+ .pkr-pc-members-intro p,.pkr-pc-results-heading p,.pkr-pc-cashier-copy p{
+  color:#F2EBDE!important;-webkit-text-fill-color:#F2EBDE!important;
+  font:600 13px/1.45 "PKR Casino Sans",sans-serif!important;margin:0!important;
+ }
+ .pkr-pc-members-count{display:inline-flex;align-items:center;gap:7px;margin:18px 0 0;
+  padding:8px 13px;border:1px solid #CEAC68;border-radius:999px;background:#06180FAA;
+  font:750 12px/1.2 "PKR Casino Sans",sans-serif;color:#F9E8C1}
+ .pkr-pc-members-count strong{font-size:18px;color:#FFF}
+ .pkr-pc-members-scene{pointer-events:none;position:absolute;inset:0;z-index:1}
+ .pkr-pc-members-felt{position:absolute;right:6%;top:12%;display:grid;place-items:center;
+  width:110px;height:81px;border:12px solid #543218;border-radius:50%;
+  background:radial-gradient(ellipse,#168357,#084F35);outline:2px solid #E5BA73;
+  color:#F4D18B;transform:rotate(-13deg);box-shadow:0 9px 19px #000A,inset 0 0 0 3px #D2A258}
+ .pkr-pc-podium{position:relative;z-index:3;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;gap:9px;margin:22px 0 16px}
+ .pkr-pc-podium-place,.pkr-pc-results-rank{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:7px;padding:15px 8px 12px;min-width:0;border:1px solid #D2AE6B!important;
+  border-radius:15px!important;background:linear-gradient(150deg,#183B2C,#0A241D)!important;
+  color:#FFF!important;-webkit-text-fill-color:#FFF!important;box-shadow:0 7px 15px #0006!important;
+  text-align:center;cursor:pointer;}
+ .pkr-pc-podium-place:first-child{background:linear-gradient(150deg,#655028,#163C2B)!important;border-color:#F7D99A!important}
+ .pkr-pc-podium-medal,.pkr-pc-results-medal{display:grid;place-items:center;height:25px;color:#F8D692;font:850 15px/1 "PKR Casino Sans",sans-serif}
+ .pkr-pc-podium-avatar,.pkr-pc-results-face{display:grid;place-items:center;
+  width:49px;height:49px;flex:none;border:2px solid #F2D089;border-radius:50%;
+  background:#205F46;color:#FFF!important;font:850 16px/1 "PKR Casino Sans",sans-serif}
+ .pkr-pc-podium-place strong,.pkr-pc-results-rank strong{font:800 11px/1.25 "PKR Casino Sans",sans-serif!important;
+  color:#FFF!important;-webkit-text-fill-color:#FFF!important;overflow-wrap:anywhere}
+ .pkr-pc-podium-place small,.pkr-pc-results-rank small{font:650 10px/1.2 "PKR Casino Sans",sans-serif!important;
+  color:#E3D7BB!important;-webkit-text-fill-color:#E3D7BB!important;}
+ .pkr-pc-members-actions{position:relative;z-index:3;display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px}
+ .pkr-pc-members-actions button,.pkr-pc-results-history,.pkr-pc-cashier-refresh{
+  display:flex;justify-content:center;align-items:center;gap:8px;min-width:0;min-height:47px;
+  padding:10px 12px;border:1px solid #E6C782!important;border-radius:12px!important;
+  background:#133A29!important;color:#FFDF9C!important;-webkit-text-fill-color:#FFDF9C!important;
+  font:850 12px/1.3 "PKR Casino Sans",sans-serif!important;box-shadow:0 4px 12px #0005!important;
+ }
+ .pkr-pc-members-actions button.pkr-pc-members-primary{
+  border-color:#FFF1C1!important;background:var(--casino-cta)!important;color:#201406!important;
+  -webkit-text-fill-color:#201406!important}
+ /* Results: competitive hall of fame with a leaderboard rather than a dashboard. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-results-hero{
+  box-sizing:border-box;position:relative;overflow:hidden;min-width:0;
+  margin:8px 0 17px;padding:24px 18px;border:1px solid #E0B468;border-radius:22px;
+  background:linear-gradient(180deg,#07241DEB,#061A16 75%),url('/images/casino/real-casino-props.webp') center 25%/cover;
+  box-shadow:0 13px 27px #0008;
+ }
+ .pkr-pc-results-heading{text-align:center}
+ .pkr-pc-results-heading h1{margin:12px 0 5px!important}
+ .pkr-pc-results-ribbon{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:21px 0 14px}
+ .pkr-pc-results-ribbon button{display:flex!important;min-height:65px;min-width:0;align-items:center;
+  justify-content:center;flex-direction:column;gap:5px;padding:9px!important;
+  border:1px solid #927F53!important;border-radius:13px!important;background:#0B3025D9!important}
+ .pkr-pc-results-ribbon strong{font:900 24px/1 "PKR Casino Sans",sans-serif;color:#FFE19C!important}
+ .pkr-pc-results-ribbon small{font:700 11px/1.25 "PKR Casino Sans",sans-serif;color:#F2EBDD!important}
+ .pkr-pc-results-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:8px;margin:18px 0 16px}
+ .pkr-pc-results-rank{min-height:141px;justify-content:center}
+ .pkr-pc-results-rank:first-child{min-height:157px;border:2px solid #FFE6AA!important;background:linear-gradient(150deg,#6A5128,#0E402C)!important}
+ .pkr-pc-results-rank:nth-child(2){background:linear-gradient(155deg,#31463F,#12382B)!important}
+ .pkr-pc-results-placeholder{grid-column:1/-1;margin:5px 0 12px!important;text-align:center;color:#F9E6BA!important}
+ .pkr-pc-results-history{width:100%;background:var(--casino-cta)!important;color:#231608!important;-webkit-text-fill-color:#231608!important}
+ /* Cashier: real status/read-only headline, original ledger and confirmations below. */
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) .pkr-pc-cashier-hero{
+  box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;
+  padding:28px 21px 20px;min-height:240px;margin-bottom:15px;
+  border:1px solid #E3B56C;border-radius:21px;
+  background:linear-gradient(115deg,#05281DF9 0%,#0D3425E8 60%,#08291E84),url('/images/casino/real-chip-closeup.webp') right center/cover;
+  box-shadow:0 14px 24px #0008;
+ }
+ .pkr-pc-cashier-hero-art{pointer-events:none;position:absolute;inset:0;z-index:0;opacity:.65}
+ .pkr-pc-cashier-copy{position:relative;z-index:2;max-width:83%}
+ .pkr-pc-cashier-copy h1{font-size:clamp(30px,5vw,40px)!important}
+ .pkr-pc-cashier-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:17px}
+ .pkr-pc-cashier-status span,.pkr-pc-cashier-status strong{
+  display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;
+  font:800 10px/1.2 "PKR Casino Sans",sans-serif;letter-spacing:.04em}
+ .pkr-pc-cashier-status span{border:1px solid #95B897;color:#EAF5DF;background:#153F2A}
+ .pkr-pc-cashier-status strong{border:1px solid #E7B963;color:#F9D78B;background:#3C351E}
+ .pkr-pc-cashier-refresh{position:relative;z-index:2;margin-top:18px;max-width:240px;min-height:41px}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-gn-payment-totals,.pkr-gn-payment-list,.pkr-results-command-ranking,.pkr-members-panel .pkr-member-subpage){
+  min-width:0!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-podium-place,.pkr-pc-results-rank,.pkr-pc-results-history,.pkr-pc-members-actions button,.pkr-pc-cashier-refresh):focus-visible{
+  outline:3px solid #FFE2A1!important;outline-offset:3px!important}
+ @media(max-width:600px){
+  .pkr-pc-members-hero{padding:24px 15px 17px!important}
+  .pkr-pc-members-intro{max-width:100%}
+  .pkr-pc-members-felt{width:77px;height:57px;right:4%;top:4%;opacity:.22}
+  .pkr-pc-podium{gap:6px}
+  .pkr-pc-podium-place{padding:11px 5px}
+  .pkr-pc-podium-place strong,.pkr-pc-results-rank strong{font-size:10px!important}
+  .pkr-pc-podium-avatar,.pkr-pc-results-face{width:43px;height:43px;font-size:13px}
+  .pkr-pc-members-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .pkr-pc-members-actions button:first-child:last-child{grid-column:1/-1}
+  .pkr-pc-results-hero{padding:23px 14px 17px!important}
+  .pkr-pc-results-rank{min-height:130px;padding:11px 5px!important}
+  .pkr-pc-results-rank:first-child{min-height:144px}
+  .pkr-pc-cashier-hero{min-height:230px;padding:24px 16px}
+  .pkr-pc-cashier-copy{max-width:100%}
+  .pkr-pc-cashier-copy h1{max-width:80%;font-size:31px!important}
+ }
+ @media(max-width:360px){
+  .pkr-pc-members-intro h1,.pkr-pc-results-heading h1{font-size:28px!important}
+  .pkr-pc-members-actions{grid-template-columns:minmax(0,1fr)}
+  .pkr-pc-results-rank{padding:8px 3px!important}
+  .pkr-pc-results-rank strong{font-size:9px!important}
+  .pkr-pc-cashier-copy h1{font-size:28px!important}
  }
 }
