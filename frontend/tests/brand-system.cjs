@@ -11,6 +11,9 @@ for(const asset of ['pkr-night-mark.svg','pkr-night-logo.svg','pkr-night-icon.sv
  assert(svg.includes('#1046F8')&&svg.includes('#FF5A4D'),'Exact PKR identity colours missing: '+asset);
 }
 assert(read(brand+'pkr-night-mark.svg').includes('Open Chip K'),'Custom emblem should be named');
+for(const cssFile of ['src/app/pkr-night-is-on.css','src/app/pkr-night-marketing.css']){
+ assert(read(cssFile).includes('PKR EXCLUSIVE PAINT COMPILED'),'The legacy token mapper must not rewrite exact approved PKR colour values: '+cssFile);
+}
 const layout=read('src/app/layout.tsx');
 assert(layout.includes("import './pkr-night-is-on.css'"),'Official identity CSS is mandatory');
 assert(layout.includes("import './pkr-night-marketing.css'"),'Brand must cover public pages');
