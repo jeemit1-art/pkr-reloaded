@@ -6,6 +6,7 @@ import {api,fmt,fmtDate,fmtSign,type Event,type EventMember,type Game,type GameD
   type LeaderboardEntry,type RoomDashboardLayout,type RoomPlayerProfile} from '@/lib/api';
 import RoomOutstandingCard from '@/components/RoomOutstandingCard';
 import GameNightHostHome from '@/components/GameNightHostHome';
+import PrivateClubHostHome from '@/components/PrivateClubHostHome';
 import RecordMetric from '@/components/RecordMetric';
 import PkrGlyph from '@/components/PkrGlyph';
 import {CasinoStageArt} from '@/components/PokerClubStage';
@@ -264,7 +265,21 @@ export default function RoomDashboardDual({
       <button type="button" aria-pressed={homeView==='night'} onClick={()=>selectHomeView('night')}>Game night</button>
       <button type="button" aria-pressed={homeView==='full'} onClick={()=>selectHomeView('full')}>Full dashboard</button>
     </div>
-    {homeView==='night'?<GameNightHostHome room={room} featured={focusGame} active={!!active}
+    {homeView==='night'&&<div className="pkr-privateclub-host-surface">
+      <PrivateClubHostHome room={room} featured={featured} active={!!active}
+       going={going} seated={seated.length} payments={payments} paymentLabel={paymentLabel}
+       paymentState={ledgerError?'unavailable':!ledger?'loading':incomplete?'partial':'ready'}
+       attendanceState={gameError?'unavailable':!featured||gameDetail?.id===featured.id?'ready':'loading'}
+       canInvite={viewerIsHost} canManageGames={canManageGames}
+       onGame={()=>{if(active)openTable();else if(featured)openGame();else goCreate();}}
+       onSchedule={goCreate} onInvite={goInvite} onRsvp={featured?goRsvp:goGameNight}
+       onSharing={goGameNight} onPayments={goPayments} onResults={goLeaders}
+       onCalendar={goSchedule} onMembers={goMembers} onScan={onScan||goMembers}
+       onAppearance={()=>selectHomeView('full')} onRsvpSettings={goRsvpSettings}
+       onAccount={goNotificationSettings} onRoom={openRoom} refreshing={refreshing}
+       refreshError={refreshError} onRefresh={()=>{setRefreshKey(v=>v+1);onRefreshData?.();}}/>
+    </div>}
+    {homeView==='night'?<div className="pkr-privateclub-original-host"><GameNightHostHome room={room} featured={focusGame} active={!!active}
       going={going} seated={seated.length} payments={payments} paymentLabel={paymentLabel}
       paymentState={ledgerError?'unavailable':!ledger?'loading':incomplete?'partial':'ready'}
       attendanceState={gameError?'unavailable':!featured||gameDetail?.id===featured.id?'ready':'loading'}
@@ -275,7 +290,7 @@ export default function RoomDashboardDual({
       onCalendar={goSchedule} onMembers={goMembers} onScan={onScan||goMembers}
       onAppearance={()=>selectHomeView('full')} onRsvpSettings={goRsvpSettings}
       onAccount={goNotificationSettings} onRoom={openRoom} refreshing={refreshing} refreshError={refreshError}
-      onRefresh={()=>{setRefreshKey(v=>v+1);onRefreshData?.();}}/>:null}
+      onRefresh={()=>{setRefreshKey(v=>v+1);onRefreshData?.();}}/></div>:null}
     <section hidden={homeView!=='full'} className={'pkr-dual-root pkr-dual-'+layout} data-testid="dual-dashboard"
     data-layout={layout} data-room-id={room.id} aria-label="Poker room dashboard">
     <div className="pkr-dual-shell">
