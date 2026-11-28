@@ -348,6 +348,8 @@ async function checkPlayers(page,label){
  const history=row.locator('.pkr-member-history-link');await history.focus();
  await readable(history.locator('strong'),'Keyboard-focused player name');
  await screenshot(page,label+'-players-focus');
+ // Notification registrations belong in the per-member Details panel, not a crowded roster row.
+ await roster.locator('.pkr-directory-player').first().getByRole('button',{name:/Details/}).click();
  await page.locator('.pkr-member-push-state').filter({hasText:'Registered on 2 devices'}).waitFor();
  assert(await page.locator('.pkr-members-panel svg[data-pkr-icon="bell"]').count()>0);
  assert(await page.locator('.pkr-members-shortcuts svg[data-pkr-icon="members"]').count()>0);
