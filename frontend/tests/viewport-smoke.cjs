@@ -360,7 +360,6 @@ async function test(){
           visualContract.heroHeading!=='rgb(245, 245, 239)'||visualContract.heroArtwork!=='none'||
           !visualContract.heroOverlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
          errors.push(size.name+' Dashboard should use solid slate and no abstract imagery: '+JSON.stringify(visualContract));
-       }
        // Host switches between BOTH approved variants on every viewport.
        const toggle=page.getByRole('button',{name:/Live Poker/});
        if(!await toggle.isVisible())errors.push(size.name+' host layout chooser missing');
