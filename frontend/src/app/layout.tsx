@@ -26,6 +26,8 @@ import './pkr-premium-styles.css';
 import './pkr-experience-consolidation.css';
 // Four distinct, user-selectable casino designs; never overrides the protected live gameplay screen.
 import './pkr-casino-themes.css';
+// New responsive casino compositions; only the four opt-in experiences are affected.
+import './pkr-casino-rebuild.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
