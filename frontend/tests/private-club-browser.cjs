@@ -49,6 +49,7 @@ async function validate(page,label,ignoreClipped=[]){
 async function verifyBrandMark(page,context,selector){
  const emblem=page.locator(selector);
  await emblem.waitFor({state:'visible'});
+ await emblem.evaluate(async el=>{if(el instanceof HTMLImageElement)await el.decode();});
  const result=await emblem.evaluate(el=>{
   const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
   const image=el;

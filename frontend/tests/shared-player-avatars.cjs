@@ -89,6 +89,7 @@ async function scenario(browser,style,mode,screen,kind){
   const brand=page.locator('.pkr-primary-mobile-utility .pkr-brand-mark--header');
   if(screen.width<1100){
    await brand.waitFor({state:'visible'});
+   await brand.evaluate(async el=>{if(el instanceof HTMLImageElement)await el.decode();});
    const dims=await brand.evaluate(el=>{
     const rect=el.getBoundingClientRect();
     const img=el;
@@ -98,7 +99,7 @@ async function scenario(browser,style,mode,screen,kind){
     return {w:rect.width,h:rect.height,natural:img.naturalWidth,
       brandRight:rect.right,titleLeft:titleRect?.left,accountLeft:accountRect?.left};
    });
-   assert(dims.natural>0,'Shared PKR SVG crest must load in '+style+'/'+mode);
+   assert(dims.natural>0,'Approved PKR SVG emblem must decode in '+style+'/'+mode);
    assert(dims.w>=28&&dims.h>=28,'Shared PKR logo must stay crisp on a phone '+JSON.stringify(dims));
    assert(dims.titleLeft===undefined||dims.brandRight<=dims.titleLeft+2,'Logo must not overlap the club name '+JSON.stringify(dims));
   }

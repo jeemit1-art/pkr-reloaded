@@ -294,7 +294,8 @@ async function checkPlayers(page,label){
  const brand=page.getByTestId('private-club-players');await brand.waitFor({state:'visible'});
  assert.equal(await colour(brand,'backgroundColor'),'rgb(21, 31, 53)','Players must use the official PKR slate banner');
  assert.match(await brand.locator('h1').innerText(),/THE CREW/);
- assert.match(await brand.innerText(),/4 club members/);
+ assert.equal((await brand.locator('.pkr-pc-members-count strong').innerText()).trim(),'4','Real member count from fixture is preserved');
+ assert.match(await brand.locator('.pkr-pc-members-count').innerText(),/club members/);
  await readable(brand.locator('h1'),'PKR players heading');
  const roster=page.locator('.pkr-member-roster');await roster.waitFor();
  await page.getByRole('searchbox',{name:'Search members'}).fill('Jordan');
