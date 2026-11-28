@@ -6,6 +6,7 @@ import {hasApprovedDeviceCredential,renewApprovedDevice} from '@/lib/api';
 import {ProductTour,MobileProductShowcase} from '@/components/ProductShowcase';
 import AppDialog from '@/components/AppDialog';
 import PkrGlyph,{type PkrGlyphName} from '@/components/PkrGlyph';
+import PkrBrandMark from '@/components/PkrBrandMark';
 import './pkr-launch.css';
 import './chip-club-launch.css';
 import './chip-club-launch-coverage.css';
@@ -118,7 +119,7 @@ export default function HomePage() {
       <a className="pkr-launch-skip" href="#main-content">Skip to content</a>
       <header className="pkr-l2-topbar">
         <div className="pkr-l2-nav-inner">
-          <a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrGlyph name="spade" size={34}/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a>
+          <a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a>
           <nav className="pkr-l2-navlinks" aria-label="Landing page">
             <a href="#product-tour">See the app</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
           </nav>
@@ -200,7 +201,7 @@ export default function HomePage() {
       </main>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData).replace(/</g,'\\u003c')}}/>
-      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrGlyph name="spade" size={30}/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a><p>Private poker night management.<br/>The game belongs to your crew.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a></nav></footer>
+      <footer className="pkr-l2-footer"><a className="pkr-l2-brand" href="/" aria-label="PKR home"><span className="pkr-l2-brand-emblem"><PkrBrandMark className="pkr-brand-mark--landing"/></span><span>PKR<small>YOUR PRIVATE POKER CLUB</small></span></a><p>Private poker night management.<br/>The game belongs to your crew.</p><nav aria-label="More about PKR"><a href="/home-poker-game-tracker">Game tracker</a><a href="/poker-tournament-manager">Tournaments</a><a href="/home-poker-settlement">Settlement</a><a href="/pricing">Plans</a><a href="/install">Install</a></nav></footer>
 
       {loginOpen&&<AppDialog aria-label="Host sign in" onDismiss={()=>setLoginOpen(false)} onClick={event=>{if(event.target===event.currentTarget)setLoginOpen(false);}}>
         <div className="pkr-launch-signin">
