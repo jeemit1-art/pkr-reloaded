@@ -323,9 +323,9 @@ async function check(engine,size){
     assert.equal(canvas.body,'rgb(255, 255, 255)','Classic theme body canvas remains unchanged');
     assert.equal(canvas.rootImage,'none');assert.equal(canvas.bodyImage,'none');
     assert.equal(canvas.colourScheme,'light');assert.equal(canvas.metaScheme,'dark');
-    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#07160f'),'Every native theme-colour hint must match the dark installed status bar');
-    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#07160f');
-    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#07160f');
+    assert(canvas.themeColours.length>0&&canvas.themeColours.every(value=>value==='#0d0b19'),'Every native theme-colour hint must match the dark installed status bar');
+    assert.equal(canvas.manifest?.background_color?.toLowerCase(),'#0d0b19');
+    assert.equal(canvas.manifest?.theme_color?.toLowerCase(),'#0d0b19');
     assert.equal(canvas.manifest?.display,'standalone');
     await page.waitForFunction(()=>document.documentElement.classList.contains('pkr-contained-scroll'));
     await stationaryRoot(page,'Installed initial view');
