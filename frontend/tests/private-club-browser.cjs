@@ -46,6 +46,23 @@ async function validate(page,label,ignoreClipped=[]){
  assert.equal(issues.clipped.length,0,label+' clipped text '+JSON.stringify(issues.clipped));
  assert.equal(issues.offscreen.length,0,label+' horizontal control '+JSON.stringify(issues.offscreen));
 }
+async function verifyBrandMark(page,context,selector){
+ const emblem=page.locator(selector);
+ await emblem.waitFor({state:'visible'});
+ const result=await emblem.evaluate(el=>{
+  const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+  const image=el;
+  return {src:image.getAttribute('src'),width:rect.width,height:rect.height,
+    intrinsic:image.naturalWidth,opacity:Number(style.opacity),
+    left:rect.left,right:rect.right,top:rect.top};
+ });
+ assert.equal(result.src,'/brand/pkr-crest.svg',context+' must use the real shared logo');
+ assert(result.intrinsic>0,context+' logo must load correctly: '+JSON.stringify(result));
+ assert(result.width>=28&&result.height>=28,context+' mark is too small: '+JSON.stringify(result));
+ assert(result.opacity>0&&result.opacity<=1,context+' logo must be visible and not obstruct copy');
+ assert(result.left>=-1&&result.right<=await page.evaluate(()=>innerWidth)+1,
+  context+' logo must not stick out of phone viewport '+JSON.stringify(result));
+}
 async function runHost(browser,device){
  const [name,w,h]=device;const {page,ctx,failures}=await boot(browser,w,h);
  try{
@@ -59,6 +76,7 @@ async function runHost(browser,device){
   assert(await page.locator('.pkr-privateclub-original-host').isHidden(),'Old host dashboard should not overlay approved UI');
   assert(await page.locator('.pkr-pc-entrance').isVisible(),'Cinematic lounge must be visible');
   assert(await page.locator('.pkr-pc-ticket').isVisible(),'Real ticket must be visible');
+  await verifyBrandMark(page,name+' Home','.pkr-pc-entrance .pkr-brand-mark--host');
   await validate(page,name+' host');
   await page.screenshot({path:path.join(output,'host-'+name+'.png')});
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
@@ -68,6 +86,7 @@ async function runHost(browser,device){
   assert(await page.getByRole('heading',{name:/THE POKER FLOOR/i}).isVisible(),'The distinctive floor marquee should be readable');
   assert(await page.locator('.pkr-cf-hero-metrics button').count()===3,'Real game metrics must be in the hero');
   assert.equal(await page.locator('.pkr-pc-lobby-filter button').count(),3);
+  await verifyBrandMark(page,name+' Games','.pkr-cf-hero .pkr-brand-mark--games');
   await validate(page,name+' Games');
   await page.screenshot({path:path.join(output,'games-'+name+'.png')});
   await page.getByRole('navigation',{name:'Game lobby filters'}).getByRole('button',{name:/Live/}).click();
@@ -87,6 +106,7 @@ async function runHost(browser,device){
   // Player directory must show one action pathway, not a second hero menu and podium.
   await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-players').waitFor({state:'visible'});
+  await verifyBrandMark(page,name+' Players','.pkr-pc-members-hero .pkr-brand-mark--members');
   assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-podium').count(),0,
    'Player rankings belong in Results; do not duplicate podium in Directory');
   assert.equal(await page.locator('.pkr-pc-members-hero .pkr-pc-members-actions button').count(),0,
@@ -261,10 +281,12 @@ async function runLightMode(browser){
   await page.screenshot({path:path.join(output,'games-light-iphone.png')});
   await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
   await page.getByTestId('private-club-results').waitFor({state:'visible'});
+  await verifyBrandMark(page,'Light Results','.pkr-pc-results-hero .pkr-brand-mark--results');
   const results=await page.locator('.pkr-pc-results-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
   assert(bright(results),'Light Results hero must be a light working surface: '+results);
   await page.goto(BASE+'/payments?room='+room.id,{waitUntil:'domcontentloaded'});
   await page.locator('.pkr-pc-cashier-hero').waitFor({state:'visible'});
+  await verifyBrandMark(page,'Light Payments','.pkr-pc-cashier-hero .pkr-brand-mark--payments');
   const payments=await page.locator('.pkr-pc-cashier-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
   assert(bright(payments),'Light Payments hero must be a light working surface: '+payments);
   await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
