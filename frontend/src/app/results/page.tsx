@@ -7,6 +7,7 @@ import PkrGlyph from '@/components/PkrGlyph';
 import {useRoomExperience,CasinoStageArt} from '@/components/PokerClubStage';
 import PrivateClubResultsHero from '@/components/PrivateClubResultsHero';
 import RoomPlayerAvatar,{useRoomPlayerAvatarSources} from '@/components/RoomPlayerAvatar';
+import {rankChipStyle} from '@/lib/rank-chip-palette';
 import {api,fmtDate,fmtSign,type Event,type Game,type LeaderboardEntry} from '@/lib/api';
 import {playerCountLabel} from '@/lib/game-player-count';
 import {buildResultsShare,whatsappUrl} from '@/lib/whatsapp-sharing';
@@ -224,7 +225,7 @@ export default function ResultsPage(){
         className={'pkr-results-felt-seat pkr-results-felt-seat-'+i}
         request={{kind:'player',title:p.display_name+' — game history',roomId:selected,
          playerId:p.user_id,playerName:p.display_name}}>
-         <span className="pkr-results-seat-chip">#{i+1}</span>
+         <span className="pkr-results-seat-chip pkr-rank-chip" style={rankChipStyle(i+1)}>#{i+1}</span>
          <RoomPlayerAvatar player={p} sources={avatarSources} className="pkr-results-seat-avatar"/>
          <span className="pkr-results-seat-player">{p.display_name}</span>
          <b className={p.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(p.total_net)}</b>
@@ -261,7 +262,7 @@ export default function ResultsPage(){
             className={'pkr-results-command-leader pkr-results-command-leader-'+i}
             request={{kind:'player',title:player.display_name+' — game history',roomId:selected,
               playerId:player.user_id,playerName:player.display_name}}>
-            <span className="pkr-results-command-place">{i===0?<PkrGlyph name="trophy"/>:'0'+(i+1)}</span>
+            <span className="pkr-results-command-place pkr-rank-chip" style={rankChipStyle(i+1)}>{i===0?<PkrGlyph name="trophy"/>:'0'+(i+1)}</span>
             <span className="pkr-results-command-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
               <small>{player.games_played} games · {player.games_won} profitable</small></span>
             <b className={player.total_net>=0?'pkr-vnext-positive':'pkr-vnext-negative'}>{fmtSign(player.total_net)}</b>
@@ -301,7 +302,7 @@ export default function ResultsPage(){
             className="pkr-results-ledger-row" request={{
               kind:'player',title:player.display_name+' — game history',roomId:selected,
               playerId:player.user_id,playerName:player.display_name}}>
-            <span className="pkr-results-ledger-position">{String(i+1).padStart(2,'0')}</span>
+            <span className="pkr-results-ledger-position pkr-rank-chip" style={rankChipStyle(i+1)}>{String(i+1).padStart(2,'0')}</span>
             <span className="pkr-results-ledger-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
              <small>{player.games_played} played · {player.games_won} profitable{player.identity_review_required?' · Identity review':''}</small></span>
             <span className="pkr-results-ledger-games">{player.games_played}<small>played</small></span>
@@ -316,7 +317,7 @@ export default function ResultsPage(){
             className="pkr-results-live-player" request={{
              kind:'player',title:player.display_name+' — game history',roomId:selected,
              playerId:player.user_id,playerName:player.display_name}}>
-            <span className={'pkr-results-live-chip pkr-results-live-chip-'+(i%3)}>{i+1}</span>
+            <span className="pkr-results-live-chip pkr-rank-chip" style={rankChipStyle(i+1)}>{i+1}</span>
             <span className="pkr-results-live-person"><RoomPlayerAvatar player={player} sources={avatarSources} className="pkr-results-inline-avatar"/><strong>{player.display_name}</strong>
              <small>{player.games_played} games · {player.games_won} profitable
                {player.identity_review_required?' · Identity review':''}</small></span>
