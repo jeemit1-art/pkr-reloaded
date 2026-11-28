@@ -30,6 +30,8 @@ import './pkr-casino-themes.css';
 import './pkr-casino-rebuild.css';
 // Approved Private Casino Club: real screens, retained workflows and responsive navigation.
 import './pkr-privateclub.css';
+// Distinct Vegas floor design and sharp, readable iOS typography; scoped to Private Casino Club.
+import './pkr-vegas-floor.css';
 import FinancialNotice from '@/components/FinancialNotice';
 import PersistentNavigation from '@/components/PersistentNavigation';
 
