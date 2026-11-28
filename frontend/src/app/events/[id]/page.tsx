@@ -596,6 +596,7 @@ export default function EventPage() {
               </PokerClubStage>
             </div>
             {upcoming.length===0 && unfinished.length===0 && settled.length===0 && (
+              <>
               <GamesEmptyArena isHost={isHost}
                 onSchedule={()=>setShowCreate(true)}
                 onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
@@ -604,6 +605,7 @@ export default function EventPage() {
                 <div className="empty-state-text">No games scheduled yet.</div>
                 {isHost&&<div style={{fontSize:12,color:'var(--faint)',marginTop:6}}>Click + Game to schedule one.</div>}
               </div>
+              </>
             )}
             {upcoming.length>0 && (
               <div className="pkr-games-heading">
