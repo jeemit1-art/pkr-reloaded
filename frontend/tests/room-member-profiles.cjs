@@ -52,6 +52,9 @@ async function runEngine(engine,browserType,width,height){
      headers:{'access-control-allow-origin':BASE,'access-control-allow-credentials':'true'}});
   });
   await page.goto(BASE+'/events/profile-room?tab=members&view=roster',{waitUntil:'domcontentloaded'});
+  // The compact directory keeps profile editing behind a visible Details action.
+  const memberCard=page.locator('.pkr-directory-player').filter({hasText:'Pocket Rocket'});
+  await memberCard.getByRole('button',{name:/Details/}).click();
   const btn=page.getByRole('button',{name:'Edit player profile for Dhronal Shah'});
   await btn.waitFor({state:'visible'});
   const roomName=page.locator('.pkr-member-roster').getByText('Pocket Rocket',{exact:true});

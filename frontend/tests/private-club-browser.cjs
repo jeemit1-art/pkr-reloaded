@@ -8,15 +8,15 @@ const output=path.resolve(__dirname,'../../artifacts/private-club');
 fs.mkdirSync(output,{recursive:true});
 const devices=[['small-phone',320,700],['iphone',430,873],['tablet',768,1024],['desktop',1440,900]];
 const cases=[];
-async function boot(browser,w,h,role='host'){
+async function boot(browser,w,h,role='host',appearance='dark'){
  const fixture=createFixture();fixture.state.role=role;
  const ctx=await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:'reduce',locale:'en-AU',timezoneId:'Australia/Brisbane',isMobile:w<=430,hasTouch:w<=430});
- await ctx.addInitScript(stored=>{
+ await ctx.addInitScript(({stored,appearance})=>{
   for(const [key,value] of Object.entries(stored))localStorage.setItem(key,value);
   localStorage.setItem('pkr_personal_visual_style_v1','private-club');
-  localStorage.setItem('pkr_personal_appearance_v1','dark');
+  localStorage.setItem('pkr_personal_appearance_v1',appearance);
   if(window.innerWidth<=430)Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true});
- },initialStorage);
+ },{stored:initialStorage,appearance});
  const failures=[],page=await ctx.newPage();page.setDefaultTimeout(19000);
  await page.clock.setFixedTime(new Date(FIXED_TIME));
  page.on('pageerror',error=>failures.push(error.message));
@@ -210,6 +210,75 @@ async function runSafariMembers(browser){
   cases.push('players-safari-iphone');
  }finally{await ctx.close()}
 }
+
+async function runLightMode(browser){
+ const {page,ctx,failures}=await boot(browser,390,844,'host','light');
+ try{
+  await page.goto(BASE+'/events/'+room.id+'?tab=members',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-players').waitFor({state:'visible'});
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light','Light colour preference must apply on private-club routes');
+  const colours=await page.evaluate(()=>{
+   const app=document.querySelector('.pkr-app.pkr-event'),nav=document.querySelector('.pkr-primary-bottom-nav.pkr-universal-bottom-nav');
+   const card=document.querySelector('.pkr-directory-player');
+   return {scheme:getComputedStyle(document.documentElement).colorScheme,
+    canvas:getComputedStyle(app).backgroundColor,nav:getComputedStyle(nav).backgroundColor,
+    card:card?getComputedStyle(card).backgroundColor:null,
+    bodyInk:getComputedStyle(app).color};
+  });
+  const channels=rgb=>(rgb?.match(/\d+/g)||[]).slice(0,3).map(Number);
+  const bright=rgb=>{const a=channels(rgb);return a.length===3&&a.every(v=>v>=215);};
+  const luminance=rgb=>{
+   const a=channels(rgb).map(c=>{const v=c/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
+   return a.length===3?a[0]*0.2126+a[1]*0.7152+a[2]*0.0722:0;
+  };
+  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
+  assert.equal(colours.scheme,'light','Colour mode must set browser light controls '+JSON.stringify(colours));
+  assert(bright(colours.canvas)&&bright(colours.nav)&&bright(colours.card),
+   'Light mode must have bright real canvas, bottom nav and player cards '+JSON.stringify(colours));
+  assert(contrast(colours.bodyInk,colours.canvas)>=4.5,'Light mode must use AA-readable text '+JSON.stringify(colours));
+  const player=page.locator('.pkr-directory-player').first();
+  assert(await player.isVisible(),'At least one member card must render');
+  assert(await player.locator('.pkr-directory-history').isVisible(),'Game history is always one tap away');
+  const details=player.getByRole('button',{name:/Details/});
+  await details.click();
+  assert(await player.locator('.pkr-directory-extra').isVisible(),'Advanced member actions must expand on demand');
+  assert(await player.getByRole('button',{name:/Edit player profile/}).isVisible(),'Profile editing must remain accessible');
+  await player.getByRole('button',{name:/Less/}).click();
+  assert.equal(await player.locator('.pkr-directory-extra').count(),0,'Details must collapse cleanly');
+  await validate(page,'light members');
+  await page.screenshot({path:path.join(output,'players-light-iphone.png')});
+  await page.goto(BASE+'/dashboard',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-host-home').waitFor({state:'visible'});
+  const homeScene=await page.locator('.pkr-pc-entrance').evaluate(el=>getComputedStyle(el).backgroundColor);
+  const homeTicket=await page.locator('.pkr-pc-ticket').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(homeScene)&&bright(homeTicket),'Light Home first fold must be bright, not just the page background: '+JSON.stringify({homeScene,homeTicket}));
+  await page.screenshot({path:path.join(output,'home-light-iphone.png')});
+  await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-games').waitFor({state:'visible'});
+  const filter=await page.locator('.pkr-cf-filters').evaluate(el=>getComputedStyle(el).backgroundColor);
+  const gameScene=await page.locator('.pkr-cf-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(filter)&&bright(gameScene),'Light Games first-fold hero and filters must be bright: '+JSON.stringify({gameScene,filter}));
+  await page.screenshot({path:path.join(output,'games-light-iphone.png')});
+  await page.goto(BASE+'/results?room='+room.id,{waitUntil:'domcontentloaded'});
+  await page.getByTestId('private-club-results').waitFor({state:'visible'});
+  const results=await page.locator('.pkr-pc-results-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(results),'Light Results hero must be a light working surface: '+results);
+  await page.goto(BASE+'/payments?room='+room.id,{waitUntil:'domcontentloaded'});
+  await page.locator('.pkr-pc-cashier-hero').waitFor({state:'visible'});
+  const payments=await page.locator('.pkr-pc-cashier-hero').evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert(bright(payments),'Light Payments hero must be a light working surface: '+payments);
+  await page.goto(BASE+'/account',{waitUntil:'domcontentloaded'});
+  const settings=page.getByTestId('personal-appearance');
+  await settings.waitFor({state:'visible'});
+  await settings.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Dark'}).click();
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'dark','Dark selection must switch immediately');
+  await settings.getByRole('group',{name:'App colour mode'}).getByRole('button',{name:'Light'}).click();
+  assert.equal(await page.locator('html').getAttribute('data-pkr-personal-theme'),'light','Light selection must restore immediately');
+  assert.deepEqual(failures,[],'Light appearance browser/API errors');
+  cases.push('light-theme-and-compact-players');
+ }finally{await ctx.close()}
+}
+
 async function runPlayer(browser){
  const {page,ctx,failures}=await boot(browser,430,873,'member');
  try{
@@ -232,6 +301,7 @@ async function runPlayer(browser){
   await runEmptyHost(browser,390,844);
   await runEmptyHost(browser,320,700);
   await runPlayer(browser);
+  await runLightMode(browser);
  }finally{await browser.close();}
  const safari=await webkit.launch({headless:true});
  try{
