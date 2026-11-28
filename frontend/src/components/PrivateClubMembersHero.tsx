@@ -23,7 +23,7 @@ export default function PrivateClubMembersHero({club,roomId,members,leaders,pend
    </RecordMetric>)}
   </div>}
   <div className="pkr-pc-members-actions">
-   <button type="button" className="pkr-pc-members-primary" onClick={onRoster}><PkrGlyph name="members" size={20}/> VIEW PLAYERS <PkrGlyph name="chevron-right" size={18}/></button>
+   <button type="button" className="pkr-pc-members-primary" onClick={onRoster}><PkrGlyph name="members" size={20}/> <span>VIEW PLAYERS</span> <PkrGlyph name="chevron-right" size={18}/></button>
    {isOwner&&<button type="button" onClick={onInvite}><PkrGlyph name="user-add" size={20}/> INVITE PLAYER</button>}
    {isOwner&&pending>0&&<button type="button" onClick={onRequests}><PkrGlyph name="shield-check" size={20}/> {pending} JOIN REQUEST{pending===1?'':'S'}</button>}
   </div>
