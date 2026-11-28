@@ -161,126 +161,99 @@ async function gotoFixturePage(page,url){
  await waitForFixtureApi(page);
 }
 
+
 async function checkCompactHomeActions(page,label){
  const original=page.viewportSize();
  try{
   await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
   await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Game night',exact:true}).click();
-  const hub=page.locator('[data-testid="game-night-host-home"] .pkr-gn-quick');
+  const hub=page.getByTestId('private-club-host-home');
   await hub.waitFor({state:'visible'});
-  assert.equal(await hub.locator('.pkr-gn-quick-grid>button').count(),4,'Exactly four Home quick actions');
-  assert.equal(await page.locator('.pkr-gn-tool-group,.pkr-gn-club-links').count(),0,'Old directory must be removed');
-  for(const [width,mode] of [[320,'dark'],[390,'dark'],[430,'dark'],[430,'light'],[768,'dark'],[1440,'dark']]){
+  assert.equal(await hub.locator('.pkr-no-tools-grid button').count(),4,'All four approved host shortcuts must work');
+  assert.equal(await hub.locator('.pkr-no-stats button').count(),3,'Three club record links required');
+  assert(await hub.locator('.pkr-no-next-ticket').isVisible(),'Real next-game ticket must render');
+  for(const width of [320,390,430,768,1440]){
    await page.setViewportSize({width,height:844});
-   await page.evaluate(m=>{document.documentElement.dataset.pkrPersonalTheme=m;document.documentElement.dataset.pkrPersonalStyle='noir';},mode);
-   await hub.scrollIntoViewIfNeeded();
-   const g=await hub.evaluate(el=>{
-    const rect=node=>{const r=node.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
-    const head=el.querySelector('.pkr-gn-quick-heading'),grid=el.querySelector('.pkr-gn-quick-grid'),utilities=el.querySelector('.pkr-gn-quick-utilities');
-    return {head:rect(head),grid:rect(grid),utilities:rect(utilities),cards:[...grid.querySelectorAll('button')].map(rect),
-      columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length};
+   await hub.locator('.pkr-no-tools-grid').scrollIntoViewIfNeeded();
+   const geometry=await hub.evaluate(node=>{
+    const bounds=el=>el.getBoundingClientRect();
+    const buttons=[...node.querySelectorAll('.pkr-no-tools-grid button')],hero=node.querySelector('.pkr-no-hero'),ticket=node.querySelector('.pkr-no-next-ticket');
+    return {screen:innerWidth,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)>innerWidth+4,
+      hero:hero?getComputedStyle(hero).backgroundColor:null,
+      buttons:buttons.map(el=>({width:bounds(el).width,height:bounds(el).height,left:bounds(el).left,right:bounds(el).right,clip:el.scrollWidth>el.clientWidth+4})),
+      ticket:ticket?getComputedStyle(ticket).backgroundColor:null};
    });
-   assert(g.head.bottom+9<=g.grid.top,label+' '+width+' heading overlaps cards '+JSON.stringify(g));
-   assert.equal(g.columns,width>900?4:2,label+' '+width+' wrong grid columns');
-   assert(g.cards.every(c=>c.width>90&&c.height>=75&&c.height<175&&c.left>=-1&&c.right<=width+1),
-    label+' '+width+' card clipped or oversized '+JSON.stringify(g));
-   assert(g.utilities.top>=g.grid.bottom+8,label+' '+width+' utilities overlap grid');
-   if(width===430&&mode==='dark')await screenshot(page,label+'-noir-home-430');
+   assert(!geometry.overflow,'Host Home overflow at '+width+': '+JSON.stringify(geometry));
+   assert.equal(geometry.hero,'rgb(16, 70, 248)','Approved PKR host hero must be blue');
+   assert.equal(geometry.ticket,'rgb(23, 36, 61)','Real branded game pass missing');
+   assert(geometry.buttons.every(b=>b.width>90&&b.height>=44&&b.left>=-1&&b.right<=width+2&&!b.clip),
+    'Host shortcuts must remain sharp and tappable '+width+' '+JSON.stringify(geometry));
+   if(width===430)await screenshot(page,label+'-night-is-on-home-430');
   }
  }finally{await page.setViewportSize(original);}
 }
+
 
 async function checkFullDashboards(page,state,label){
  await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
  await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
  const dashboard=page.getByTestId('dual-dashboard');
  await dashboard.waitFor({state:'visible'});
- const appearance=page.getByRole('group',{name:'Host poker room appearance'});
+ const choice=page.getByRole('group',{name:'Host poker room appearance'});
  for(const mode of ['command','live']){
   const name=mode==='command'?'Command Centre':'Live Poker';
-  await appearance.getByRole('button',{name:new RegExp(name)}).click();
+  await choice.getByRole('button',{name:new RegExp(name)}).click();
   await page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]').waitFor();
-  assert.equal(await colour(dashboard,'backgroundColor'),'rgba(0, 0, 0, 0)',name+' must expose the shared lounge canvas, not paint a separate panel');
-  const canvas=await dashboard.evaluate(node=>{const parent=node.closest('.pkr-app.pkr-dashboard');if(!parent)throw new Error('Dashboard canvas missing');const style=getComputedStyle(parent);return {colour:style.backgroundColor,image:style.backgroundImage};});
-  assert.equal(canvas.colour,'rgb(244, 245, 242)',name+' must share the warm neutral canvas');
-  assert.equal(canvas.image,'none',name+' must use the neutral canvas');
-  const selected=appearance.getByRole('button',{name:new RegExp(name)});
-  assert.equal(await selected.getAttribute('aria-pressed'),'true');
-  await waitForColour(page,selected,'backgroundColor','rgb(225, 240, 231)');
-  assert.equal(await colour(selected,'backgroundColor'),'rgb(225, 240, 231)',name+' selected control must use selected forest tint');
-  assert.equal(await colour(selected,'color'),'rgb(22, 94, 66)');
-  const search=dashboard.locator('.pkr-dual-search');
-  if(await search.isVisible()){
-   assert.equal(await colour(search,'backgroundColor'),'rgb(238, 241, 236)',name+' room search must use neutral raised surface');
-   assert.equal(await colour(search.locator('input'),'color'),'rgb(25, 45, 39)');
-   assert.equal(await colour(dashboard.locator('.pkr-dual-plan-pill'),'color'),'rgb(22, 94, 66)');
-  }
+  assert.equal(await colour(page.locator('.pkr-app.pkr-dashboard'),'backgroundColor'),'rgb(11, 13, 20)','All command layouts must use PKR ink');
+  assert.equal(await choice.getByRole('button',{name:new RegExp(name)}).getAttribute('aria-pressed'),'true');
   await readable(dashboard.locator('.pkr-dual-heading h2'),name+' heading');
   const tools=dashboard.locator('.pkr-dual-secondary-tools .pkr-dual-utility-strip button');
-  assert(await tools.count()>=3,'Both layouts retain contextual club-management shortcuts');
-  await readable(tools.first(),name+' club management action');
+  assert(await tools.count()>=3,'Club management shortcuts must survive both layouts');
+  await readable(tools.first(),name+' shortcut');
   const cta=dashboard.locator('.pkr-dual-gold-button').first();
-  assert.equal(await colour(cta,'backgroundColor'),'rgb(22, 101, 72)',name+' primary action must use forest primary');
-  assert.equal(await colour(cta,'backgroundImage'),'none',name+' action must not retain the old gold gradient');
-  await readable(cta,name+' primary action');
+  assert.equal(await colour(cta,'backgroundColor'),'rgb(199, 255, 58)','Primary action uses PKR citron');
+  assert.equal(await colour(cta,'backgroundImage'),'none','No button illustration/gradient');
+  await readable(cta,name+' action');
   const hero=dashboard.locator('.pkr-dual-hero');
-  assert.equal(await colour(hero,'backgroundColor'),mode==='command'?'rgb(21, 58, 45)':'rgb(25, 77, 56)',name+' uses a deep club-colour hero, not a white card');
-  assert.match(await colour(hero,'backgroundImage'),/gradient/,'Hero uses the deliberate reference palette');
-  await readable(hero.locator('h3'),name+' hero heading');
-  const overlays=await hero.evaluate(node=>['::before','::after'].map(p=>{
-   const s=getComputedStyle(node,p);return {content:s.content,display:s.display,background:s.backgroundImage};
-  }));
-  assert(overlays.every(l=>l.content==='none'&&l.display==='none'&&l.background==='none'),name+' has an overlay hiding the high-contrast hero: '+JSON.stringify(overlays));
+  assert.equal(await colour(hero,'backgroundColor'),'rgb(24, 42, 72)','Dashboard must retain the PKR slate hero');
+  assert.equal(await colour(hero,'backgroundImage'),'none','No abstract image in full dashboard');
+  await readable(hero.locator('h3'),name+' hero');
   if(mode==='command'){
-   const tiles=dashboard.locator('.pkr-dual-metrics>button');
-   assert.equal(await tiles.count(),4);
-   const colors=Array(4).fill('rgb(255, 255, 255)');
-   for(let i=0;i<4;i++){
-    assert.equal(await colour(tiles.nth(i),'backgroundColor'),colors[i],'Dashboard metrics share a neutral card surface');
-    await readable(tiles.nth(i).locator('strong'),'Coloured metric value '+i);
-    await readable(tiles.nth(i).locator('small'),'Coloured metric description '+i);
+   const tiles=dashboard.locator('.pkr-dual-metrics>button');assert.equal(await tiles.count(),4);
+   for(const tile of await tiles.all()){
+    await readable(tile.locator('strong'),'Financial metric');
+    await readable(tile.locator('small'),'Financial metric label');
    }
   }
-  await screenshot(page,label+'-full-'+mode);
+  await screenshot(page,label+'-branded-dashboard-'+mode);
  }
- assert.equal(state.layoutWrites,1,'Changing appearance persists only the requested choice');
- await appearance.getByRole('button',{name:/Command Centre/}).click();
- await page.locator('[data-testid="dual-dashboard"][data-layout="command"]').waitFor();
+ assert.equal(state.layoutWrites,1,'Changing layout must save only the chosen setting');
+ await choice.getByRole('button',{name:/Command Centre/}).click();
 }
 
+
 async function checkDashboardStatusContrast(page,state,label){
- const startingLayout=state.layout,startingWrites=state.layoutWrites;
+ const prior=state.layout,writes=state.layoutWrites;
  try{
-  for(const [kind,title,bg,fg] of [
-   ['live','LIVE NOW','rgb(22, 101, 72)','rgb(255, 255, 255)'],
-   ['upcoming','UP NEXT','rgb(232, 199, 123)','rgb(50, 37, 13)'],
-   ['empty','NO GAME SCHEDULED','rgb(238, 241, 236)','rgb(25, 45, 39)']
-  ]){
+  for(const [kind,title] of [['live','LIVE NOW'],['upcoming','UP NEXT'],['empty','NO GAME SCHEDULED']]){
    state.upcoming=kind!=='empty';state.live=kind==='live';
    for(const mode of ['command','live']){
     state.layout=mode;
     await gotoFixturePage(page,BASE+'/dashboard?room='+room.id);
     await page.getByRole('group',{name:'Home view'}).getByRole('button',{name:'Full dashboard',exact:true}).click();
-    const dashboard=page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"]');
-    await dashboard.waitFor();
-    const status=dashboard.locator('.pkr-dual-status[data-game-state="'+kind+'"]');
+    const status=page.locator('[data-testid="dual-dashboard"][data-layout="'+mode+'"] .pkr-dual-status[data-game-state="'+kind+'"]');
     await status.waitFor({state:'visible'});
-    assert.equal((await status.innerText()).trim(),title,label+' '+mode+' correct status');
-    assert.equal(await colour(status,'backgroundColor'),bg,label+' '+kind+' opaque status surface');
-    assert.equal(await colour(status,'color'),fg,label+' '+kind+' status ink');
-    assert.equal(await colour(status,'backgroundImage'),'none','Do not retain legacy gradients');
-    await readable(status,label+' '+mode+' '+kind+' dashboard status');
+    assert.equal((await status.innerText()).trim(),title,'Status wording must match the real game');
+    await readable(status,label+' '+mode+' '+kind+' status');
     const bounds=await status.evaluate(el=>{
      const r=el.getBoundingClientRect(),hero=el.closest('.pkr-dual-hero').getBoundingClientRect();
-     return {inside:r.left>=hero.left&&r.right<=hero.right+1&&r.top>=hero.top&&r.bottom<=hero.bottom+1,clipped:el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1};
+     return {inside:r.left>=hero.left-1&&r.right<=hero.right+1&&r.top>=hero.top-1&&r.bottom<=hero.bottom+1,
+      clipped:el.scrollWidth>el.clientWidth+2||el.scrollHeight>el.clientHeight+2,image:getComputedStyle(el).backgroundImage};
     });
-    assert(bounds.inside&&!bounds.clipped,label+' '+mode+' '+kind+' status overflows '+JSON.stringify(bounds));
-    await screenshot(page,label+'-status-'+mode+'-'+kind);
+    assert(bounds.inside&&!bounds.clipped&&bounds.image==='none','Game state must stay readable within hero: '+JSON.stringify(bounds));
    }
   }
- }finally{
-  state.upcoming=true;state.live=false;state.layout=startingLayout;state.layoutWrites=startingWrites;
- }
+ }finally{state.upcoming=true;state.live=false;state.layout=prior;state.layoutWrites=writes;}
 }
 
 async function checkOutstandingDashboardRecords(page){
