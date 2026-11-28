@@ -70,7 +70,7 @@ async function scenario(browser,style,mode,screen,kind){
     avatars[2].getAttribute('data-avatar-source')==='account-photo';
   });
   assert.equal(await podium.nth(0).locator('img').count(),1,'Saved JPEG photo should render');
-  assert.equal(await podium.nth(1).innerText(),'🃏','Saved emoji should render');
+  assert.equal((await podium.nth(1).innerText()).trim(),'🃏','Saved emoji should render');
   assert.equal(await podium.nth(2).locator('img').count(),1,'Member account photo should render');
   const rank=page.locator('.pkr-results-ledger-person .pkr-results-inline-avatar,.pkr-results-live-person .pkr-results-inline-avatar');
   await rank.first().waitFor({state:'attached'});
