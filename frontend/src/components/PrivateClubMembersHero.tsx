@@ -11,15 +11,15 @@ type Props={club:string;members:EventMember[]};
  * tabs immediately below are the single source of navigation actions.
  */
 export default function PrivateClubMembersHero({club,members}:Props){
- return <section className="pkr-pc-members-hero" aria-label={'Players in '+club} data-testid="private-club-players">
-  <div className="pkr-pc-members-intro">
-   <span className="pkr-pc-overline"><PkrGlyph name="club" size={15}/> THE PEOPLE BEHIND THE GAME</span>
-   <h1>Our <em>Players</em></h1>
-   <div className="pkr-pc-members-count"><PkrGlyph name="members" size={17}/><strong>{members.length}</strong> club members</div>
-  </div>
-  <PkrBrandMark className="pkr-brand-mark--hero pkr-brand-mark--members"/>
-  <div className="pkr-pc-members-scene" aria-hidden="true">
-   <div className="pkr-pc-members-felt"><PkrGlyph name="spade" size={27}/></div>
-  </div>
- </section>;
+ return <section className="pkr-pc-members-hero pkr-no-members" aria-label={'Players in '+club} data-testid="private-club-players">
+   <div className="pkr-pc-members-intro">
+    <span className="pkr-pc-overline">PKR / YOUR PEOPLE</span>
+    <h1>THE <em>CREW.</em></h1>
+    <p>{club}</p>
+    <div className="pkr-pc-members-count"><PkrGlyph name="members" size={17}/><strong>{members.length}</strong> club members</div>
+   </div>
+   <div className="pkr-no-members-stamps" aria-hidden="true">
+    {members.slice(0,3).map((member,index)=><span key={member.id||index} className={'pkr-no-stamp pkr-no-stamp-'+index}>{String(index+1).padStart(2,'0')}</span>)}
+   </div>
+  </section>;
 }
