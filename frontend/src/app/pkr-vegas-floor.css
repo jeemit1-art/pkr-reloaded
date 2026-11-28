@@ -116,6 +116,7 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-ticket,.pkr-pc-player-ticket){
   border-color:#ec9778!important;
   background:linear-gradient(122deg,#49152f,#72243c 57%,#240f21)!important;
+  background-color:#49152f!important;
  }
  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen)) :is(.pkr-pc-shortcuts button,.pkr-pc-next-actions button,.pkr-pc-player-payments-link){
   background:linear-gradient(135deg,#292039,#151421)!important;
