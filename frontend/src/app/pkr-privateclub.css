@@ -667,3 +667,19 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   .pkr-pc-cashier-copy h1{font-size:28px!important}
  }
 }
+
+/* The new lobby must expose *every* historical session and the existing sharing hub. */
+@layer pkr-personal {
+ .pkr-pc-unfinished{display:grid!important;grid-template-columns:minmax(0,1fr);gap:11px!important;align-items:stretch!important}
+ .pkr-pc-unfinished-summary{display:flex;align-items:center;gap:9px;min-width:0}
+ .pkr-pc-unfinished-summary>span{display:grid;gap:2px;min-width:0}
+ .pkr-pc-unfinished-summary strong{color:#FFE4AE;font:800 12px/1.3 "PKR Casino Sans",sans-serif}
+ .pkr-pc-unfinished-summary small{color:#EEE3CF;font:550 11px/1.4 "PKR Casino Sans",sans-serif}
+ .pkr-pc-unfinished-list{display:grid;gap:6px;max-height:270px;overflow:auto;overscroll-behavior:contain}
+ .pkr-pc-unfinished-list button{display:flex;align-items:center;justify-content:space-between;gap:10px;
+   min-height:43px;min-width:0;padding:9px 12px;background:#1D3025!important;
+   border:1px solid #BFA46D!important;border-radius:10px!important;color:#FFF2D5!important;
+   -webkit-text-fill-color:#FFF2D5!important;font:700 12px/1.3 "PKR Casino Sans",sans-serif!important;text-align:left}
+ .pkr-pc-unfinished-list button span{min-width:0;overflow-wrap:anywhere}
+ .pkr-pc-lobby-bottom-actions button:nth-child(3){grid-column:1/-1}
+}
