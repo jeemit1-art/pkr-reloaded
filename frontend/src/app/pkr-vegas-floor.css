@@ -572,3 +572,162 @@ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#
   }
  }
 }
+
+
+/* Private Club / Players — one clear directory workflow, no duplicated CTAs.
+ * Keep the existing directory, invitation and approval logic exactly as-is.
+ * Specific to the opt-in Private Casino Club skin and never the live table. */
+@layer pkr-personal {
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-hero{
+  box-sizing:border-box!important;
+  min-height:0!important;max-width:100%!important;
+  padding:18px 19px 17px!important;margin:0 0 12px!important;
+  border-radius:18px!important;border:1px solid #be7880!important;
+  background-color:#160e21!important;
+  background-image:linear-gradient(105deg,#140d1eee 8%,#27102bdc 66%,#481932a8 100%),
+   url('/images/casino/real-poker-chips.webp')!important;
+  background-position:center,right center!important;background-size:cover!important;
+  box-shadow:0 10px 24px #0007,inset 0 1px 0 #f6b5b221!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-intro{max-width:calc(100% - 68px)!important}
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-intro h1{
+  font:900 clamp(28px,6.5vw,35px)/1.05 var(--pkr-vg-font)!important;
+  margin:7px 0 5px!important;letter-spacing:-.045em!important;
+  color:#fff9f7!important;-webkit-text-fill-color:#fff9f7!important;
+  text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-intro h1 em{
+  color:#ff9dab!important;-webkit-text-fill-color:#ff9dab!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-overline{
+  font:800 10px/1.3 var(--pkr-vg-font)!important;
+  letter-spacing:.11em!important;color:#ffd8af!important;
+  -webkit-text-fill-color:#ffd8af!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-count{
+  display:inline-flex!important;align-items:center!important;gap:8px!important;
+  margin:5px 0 0!important;padding:0!important;border:0!important;
+  border-radius:0!important;background:transparent!important;
+  font:700 12px/1.3 var(--pkr-vg-font)!important;
+  color:#f9e5dc!important;-webkit-text-fill-color:#f9e5dc!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-count strong{
+  font:900 16px/1 var(--pkr-vg-font)!important;
+  color:#fff7eb!important;-webkit-text-fill-color:#fff7eb!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-pc-members-felt{
+  top:25%!important;right:4%!important;width:64px!important;height:60px!important;
+  border:8px solid #754254!important;outline:1px solid #f5ba8a!important;
+  background:radial-gradient(circle,#a02d4b,#391b3d)!important;
+  opacity:.65!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-members-shortcuts{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  padding:5px!important;margin:0 0 12px!important;gap:5px!important;
+  border:1px solid #8e596c!important;border-radius:15px!important;
+  background:#17121f!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-members-shortcuts button{
+  box-sizing:border-box!important;min-height:46px!important;min-width:0!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:5px!important;padding:9px 5px!important;margin:0!important;
+  font:800 12px/1.2 var(--pkr-vg-font)!important;white-space:normal!important;
+  border:1px solid transparent!important;border-radius:10px!important;
+  background:transparent!important;color:#f4e4e7!important;
+  -webkit-text-fill-color:#f4e4e7!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-members-shortcuts button.active{
+  border-color:#d77983!important;background:#542239!important;
+  color:#fff9f6!important;-webkit-text-fill-color:#fff9f6!important;
+  box-shadow:inset 0 0 0 1px #ffb6ac22!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-members-shortcuts button :is(svg,span){
+  color:inherit!important;-webkit-text-fill-color:inherit!important;
+  flex-shrink:0;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-tools{
+  display:flex!important;flex-direction:column!important;gap:10px!important;
+  margin:0 0 12px!important;padding:0!important;
+  border:0!important;background:none!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-label{
+  box-sizing:border-box!important;display:flex!important;align-items:center!important;
+  width:100%!important;min-width:0!important;min-height:51px!important;
+  gap:11px!important;padding:10px 14px!important;margin:0!important;
+  border:1px solid #8d6071!important;border-radius:13px!important;
+  background:#17131f!important;box-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-label:focus-within{
+  outline:2px solid #ffc3a5!important;outline-offset:2px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-label>span{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  color:#efb6ae!important;-webkit-text-fill-color:#efb6ae!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-label input#pkr-member-search{
+  box-sizing:border-box!important;flex:1!important;width:100%!important;min-width:0!important;
+  min-height:28px!important;height:auto!important;margin:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;outline:0!important;
+  color:#fffaf7!important;-webkit-text-fill-color:#fffaf7!important;
+  font:600 15px/1.35 var(--pkr-vg-font)!important;text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-search-label input#pkr-member-search::placeholder{
+  color:#ccb9c3!important;opacity:1!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-role-filters{
+  box-sizing:border-box!important;display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;padding:4px!important;margin:0!important;
+  min-width:0!important;max-width:100%!important;
+  border:1px solid #6c5363!important;border-radius:13px!important;
+  background:#191622!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-role-filters button{
+  box-sizing:border-box!important;min-width:0!important;min-height:42px!important;
+  padding:7px 4px!important;border-radius:9px!important;border:1px solid transparent!important;
+  background:transparent!important;color:#f1e4e9!important;
+  -webkit-text-fill-color:#f1e4e9!important;
+  font:750 12px/1.25 var(--pkr-vg-font)!important;
+  text-shadow:none!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel .pkr-member-role-filters button[aria-pressed="true"]{
+  background:#6b2c48!important;border-color:#ec9b9e!important;
+  color:#fffaf6!important;-webkit-text-fill-color:#fffaf6!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-members-panel :is(.pkr-members-shortcuts button,.pkr-member-role-filters button):focus-visible{
+  outline:2px solid #ffe0b4!important;outline-offset:2px!important;
+ }
+ @media(max-width:360px){
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-pc-members-hero{padding:14px 13px!important}
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-pc-members-intro{max-width:100%!important}
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-pc-members-felt{opacity:.18!important}
+  html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+  .pkr-members-panel .pkr-members-shortcuts button{font-size:11px!important;padding:7px 2px!important;gap:3px!important}
+ }
+}
