@@ -1060,3 +1060,28 @@
   color:#C7FF3A!important;-webkit-text-fill-color:#C7FF3A!important;
  }
 }
+
+
+/* The retired Private Casino Club hid the functional Game Night / Full Dashboard
+   selector entirely. Preserve both real host workflows in the approved identity. */
+@layer pkr-personal{
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch:has(+ .pkr-privateclub-host-surface){
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex-wrap:wrap!important;gap:5px!important;width:fit-content!important;
+  min-height:48px!important;margin:0 auto 16px!important;padding:5px!important;
+  background:#19253C!important;border:1px solid #476086!important;border-radius:12px!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch button{
+  display:inline-flex!important;justify-content:center!important;align-items:center!important;
+  background:transparent!important;border:1px solid transparent!important;color:#CAD8E9!important;
+  border-radius:9px!important;font:800 12px var(--font-body),Inter,sans-serif!important;
+  min-height:44px!important;padding:10px 14px!important;cursor:pointer!important;
+ }
+ html[data-pkr-personal-style="private-club"][data-pkr-personal-theme]:not(:has(#gameScreen))
+ .pkr-gn-home-switch button[aria-pressed="true"]{
+  background:#1046F8!important;border-color:#5780FF!important;color:#F5F5EF!important;
+  box-shadow:none!important;
+ }
+}
