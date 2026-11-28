@@ -35,7 +35,8 @@ async function runOne(browser,engine,viewport,{style='tournament',role='host',em
  await page.clock.setFixedTime(new Date(FIXED_TIME));
  page.on('pageerror',error=>unexpected.push('Browser: '+error.message));
  try{
-  await page.goto(BASE+'/dashboard?room='+room.id,{waitUntil:'domcontentloaded'});
+  // Navigate straight to Games: the synthetic preference already selects this room.
+  // A prior half-loaded Dashboard navigation aborts outstanding fetches in WebKit/Chromium.
   await page.goto(BASE+'/events/'+room.id+'?tab=games',{waitUntil:'domcontentloaded'});
   const stage=page.locator('.pkr-experience-stage.pkr-experience-games');
   try{await stage.waitFor({state:'visible'});}catch(error){
