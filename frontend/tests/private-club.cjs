@@ -4,6 +4,8 @@ const fs=require('node:fs'),path=require('node:path'),postcss=require('postcss')
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const css=read('src/app/pkr-privateclub.css');
+const lightCss=read('src/app/pkr-privateclub-light.css');
+const players=read('src/app/events/[id]/page.tsx');
 const appearance=read('src/lib/personal-appearance.ts');
 const bootstrap=read('public/pkr-appearance-init.js');
 const settings=read('src/components/PersonalAppearance.tsx');
@@ -15,6 +17,13 @@ const dashboard=read('src/components/RoomDashboardDual.tsx');
 const rsvp=read('src/app/games/[id]/rsvp/page.tsx');
 const layout=read('src/app/layout.tsx');
 assert.doesNotThrow(()=>postcss.parse(css),'New visual rules must parse');
+assert.doesNotThrow(()=>postcss.parse(lightCss),'Private Casino Club light palette CSS must parse');
+assert(lightCss.includes('[data-pkr-personal-theme="light"]'),'The club light palette must target the actual saved light mode');
+assert(lightCss.includes('color-scheme:light!important'),'Light mode must restore native light controls');
+assert(lightCss.includes('.pkr-primary-bottom-nav')&&lightCss.includes('.pkr-cf-filters')&&lightCss.includes('.pkr-directory-player'),'Light mode must cover navigation, Games and Players');
+assert(read('src/app/layout.tsx').includes("import './pkr-privateclub-light.css';"),'Load light-mode overrides after Vegas floor');
+assert(players.includes('expandedMemberId')&&players.includes('pkr-directory-extra')&&players.includes('pkr-directory-history'),'Member directory must keep history accessible while allowing details to collapse');
+
 assert(css.includes(':not(:has(#gameScreen))'),'Never style protected gameplay canvas');
 assert(appearance.includes("DEFAULT_VISUAL_STYLE:VisualStyle='private-club'"),'New users should open in approved theme');
 assert(bootstrap.includes("style==='private-club'?style:'private-club'"),'Bootstrap should render approved theme before hydration');
