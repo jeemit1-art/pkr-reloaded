@@ -589,7 +589,8 @@ export default function EventPage() {
             onCancel={gameId=>setConfirmDelete(gameId)}
             onDelete={gameId=>setConfirmDelete(gameId+':delete')}
             onResults={()=>router.push('/results?room='+encodeURIComponent(id)+'&view=history')}
-            onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}/>
+            onCalendar={()=>router.push('/schedule?room='+encodeURIComponent(id))}
+            onSharing={()=>openGameNight()}/>
         </div>}
         {/* Games, schedules and completed sessions */}
         {tab==='games' && (
