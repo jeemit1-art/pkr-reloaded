@@ -589,8 +589,8 @@ async function test(){
          const s=getComputedStyle(node);
          return {colour:s.backgroundColor,image:s.backgroundImage,repeat:s.backgroundRepeat,attachment:s.backgroundAttachment};
        });
-       if(canvas.colour!=='rgb(244, 245, 242)'||canvas.image!=='none')
-         errors.push(size.name+' '+item.id+' shared lounge canvas missing: '+JSON.stringify(canvas));
+       if(canvas.colour!=='rgb(11, 13, 20)'||canvas.image!=='none')
+         errors.push(size.name+' '+item.id+' must use PKR solid ink canvas: '+JSON.stringify(canvas));
      }
      if(item.id==='game-detail'){
        const summary=await page.locator('.pkr-casino-game-summary').evaluate(el=>{
@@ -600,11 +600,10 @@ async function test(){
            surface:s.getPropertyValue('--pkr-a-surface').trim(),
            font:heading.fontFamily};
        });
-       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(255, 255, 255)'||summary.colour!=='rgb(25, 45, 39)')
-         errors.push(size.name+' game detail header must retain its geometry with a white surface, slate heading and no old gradient: '+JSON.stringify(summary));
-       // Production CSS may shorten white from #ffffff to the equivalent #fff.
-       if(!['#fff','#ffffff'].includes(summary.surface.toLowerCase())||!summary.font.toLowerCase().includes('plus jakarta sans'))
-         errors.push(size.name+' game detail header must use Game night surface tokens and Inter: '+JSON.stringify(summary));
+       if(summary.height<245||summary.image!=='none'||summary.background!=='rgb(24, 42, 72)'||summary.colour!=='rgb(245, 245, 239)')
+         errors.push(size.name+' game detail must retain geometry and solid branded slate: '+JSON.stringify(summary));
+       if(summary.surface.toLowerCase()!=='#151d2e'||!/(bodyfont|inter)/i.test(summary.font))
+         errors.push(size.name+' game detail must use official surface token and bundled Inter: '+JSON.stringify(summary));
      }
      if(item.id==='install'&&size.width>=1100){
        const card=await page.locator('.pkr-install-card').first().boundingBox();
@@ -622,46 +621,36 @@ async function test(){
            overlays:['::before','::after'].map(p=>{const a=getComputedStyle(node,p);return {content:a.content,display:a.display,background:a.backgroundImage};})};
        });
        if(item.id==='insights'){
-         if(visual.colour!=='rgb(255, 255, 255)'||visual.background!=='none')
-           errors.push(size.name+' Insights header must use the solid light app surface');
+         if(visual.colour!=='rgb(24, 42, 72)'||visual.background!=='none')
+           errors.push(size.name+' Insights must use solid branded slate header: '+JSON.stringify(visual));
          const insightsTheme=await page.locator('.pkr-vnext-insights').evaluate(node=>{
            const card=node.querySelector('.pkr-insights-kpi');
-           return {background:getComputedStyle(node).backgroundColor,
-             card:card?getComputedStyle(card).backgroundColor:null};
+           return {background:getComputedStyle(node).backgroundColor,card:card?getComputedStyle(card).backgroundColor:null};
          });
-         if(insightsTheme.background!=='rgb(244, 245, 242)'||insightsTheme.card!=='rgb(255, 255, 255)')
-           errors.push(size.name+' standalone Insights retains the previous theme: '+JSON.stringify(insightsTheme));
+         if(insightsTheme.background!=='rgb(11, 13, 20)'||insightsTheme.card!=='rgb(24, 36, 58)')
+           errors.push(size.name+' Insights tiles must use official PKR ink/slate: '+JSON.stringify(insightsTheme));
        }else{
-         const isCommand=visual.colour==='rgb(21, 58, 45)'&&visual.background.includes('40, 101, 77');
-         const isLive=visual.colour==='rgb(25, 77, 56)'&&visual.background.includes('50, 121, 91');
-         if((!isCommand&&!isLive)||!visual.background.includes('radial-gradient')||
-            visual.heading!=='rgb(255, 255, 255)'||visual.art!=='none'||
+         if(visual.colour!=='rgb(24, 42, 72)'||visual.background!=='none'||
+            visual.heading!=='rgb(245, 245, 239)'||visual.art!=='none'||
             !visual.overlays.every(p=>p.content==='none'&&p.display==='none'&&p.background==='none'))
-           errors.push(size.name+' '+item.id+' Lounge saturated hero or heading regressed: '+JSON.stringify(visual));
+           errors.push(size.name+' '+item.id+' hero or no-abstract-image contract regressed: '+JSON.stringify(visual));
        }
        if(visual.width<250||visual.height<140)
          errors.push(size.name+' '+item.id+' premium hero too small: '+JSON.stringify(visual));
      }
      if(['dashboard','room'].includes(item.id)){
-       const prop=page.locator('.pkr-casino-art-asset .pkr-casino-art-props').first();
-       if(await prop.count()){
-         const valid=await prop.evaluate(async image=>{
-           if(!(image instanceof HTMLImageElement))return false;
-           image.loading='eager';await image.decode().catch(()=>{});
-           return image.complete&&image.naturalWidth>500&&
-             image.getAttribute('src')==='/images/pkr-approved-hero-desktop.webp';
-         });
-         if(!valid)errors.push(size.name+' '+item.id+' missing recognisable poker chips/cards image');
-       }
-     }
-     if(item.id==='dashboard'){
+        const props=page.locator('.pkr-casino-art-asset .pkr-casino-art-props');
+        for(const prop of await props.all())if(await prop.isVisible())
+         errors.push(size.name+' '+item.id+' old casino artwork is not allowed in the approved UI');
+      }
+      if(item.id==='dashboard'){
        const primary=await page.locator('.pkr-dual-hero .pkr-dual-gold-button').first().evaluate(el=>{
          const style=getComputedStyle(el),rect=el.getBoundingClientRect();
          return {image:style.backgroundImage,background:style.backgroundColor,color:style.color,height:rect.height,width:rect.width};
        });
-       if(primary.image!=='none'||!['rgb(22, 101, 72)','rgb(22, 94, 66)'].includes(primary.background)||primary.color!=='rgb(255, 255, 255)'||primary.height<44||primary.width<85)
-         errors.push(size.name+' full dashboard Chip Blue action is unreadable or too small: '+JSON.stringify(primary));
-     }
+       if(primary.image!=='none'||primary.background!=='rgb(199, 255, 58)'||primary.color!=='rgb(11, 13, 20)'||primary.height<44||primary.width<85)
+         errors.push(size.name+' Full dashboard CTA should be sharp citron on ink: '+JSON.stringify(primary));
+      }
      if(item.id==='dashboard'){
        const hostPhoto=page.locator('.pkr-dual-leader').filter({hasText:'Alex Morgan'}).locator('.pkr-dual-avatar img');
        const fallback=page.locator('.pkr-dual-leader').filter({hasText:'Jordan Lee'}).locator('.pkr-dual-avatar');
@@ -1065,8 +1054,8 @@ async function test(){
           const name=getComputedStyle(document.querySelector('.pkr-results-ledger-person strong'));
           return {surface:paint.backgroundColor,ink:title.color,weight:Number(title.fontWeight),nameWeight:Number(name.fontWeight)};
         });
-        if(commandPaint.surface!=='rgb(21, 58, 45)'||commandPaint.ink!=='rgb(255, 255, 255)'||commandPaint.weight<780||commandPaint.nameWeight<750)
-          errors.push(size.name+' Command Centre Results colour or typography hierarchy regressed: '+JSON.stringify(commandPaint));
+        if(commandPaint.surface!=='rgb(24, 42, 72)'||commandPaint.ink!=='rgb(245, 245, 239)'||commandPaint.weight<750||commandPaint.nameWeight<750)
+          errors.push(size.name+' Results must use official PKR slate/paper and readable typography: '+JSON.stringify(commandPaint));
         if(size.width<=740){
           const winner=await page.locator('.pkr-results-command-stats>div:last-child').evaluate(tile=>{
             const value=tile.querySelector('strong');
