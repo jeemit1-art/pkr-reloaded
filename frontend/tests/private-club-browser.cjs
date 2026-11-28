@@ -227,11 +227,15 @@ async function runLightMode(browser){
   });
   const channels=rgb=>(rgb?.match(/\d+/g)||[]).slice(0,3).map(Number);
   const bright=rgb=>{const a=channels(rgb);return a.length===3&&a.every(v=>v>=215);};
-  const dark=rgb=>{const a=channels(rgb);return a.length===3&&a.every(v=>v<=110);};
+  const luminance=rgb=>{
+   const a=channels(rgb).map(c=>{const v=c/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
+   return a.length===3?a[0]*0.2126+a[1]*0.7152+a[2]*0.0722:0;
+  };
+  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
   assert.equal(colours.scheme,'light','Colour mode must set browser light controls '+JSON.stringify(colours));
   assert(bright(colours.canvas)&&bright(colours.nav)&&bright(colours.card),
    'Light mode must have bright real canvas, bottom nav and player cards '+JSON.stringify(colours));
-  assert(dark(colours.bodyInk),'Light mode must use dark readable text '+JSON.stringify(colours));
+  assert(contrast(colours.bodyInk,colours.canvas)>=4.5,'Light mode must use AA-readable text '+JSON.stringify(colours));
   const player=page.locator('.pkr-directory-player').first();
   assert(await player.isVisible(),'At least one member card must render');
   assert(await player.locator('.pkr-directory-history').isVisible(),'Game history is always one tap away');
