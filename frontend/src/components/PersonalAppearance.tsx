@@ -76,7 +76,7 @@ const styles:Array<{id:VisualStyle;name:string;description:string}>=[
  {id:'neon',name:'Neon Casino',description:'Glowing violet, electric cyan and vivid pink casino lights'},
  {id:'vip',name:'VIP Lounge',description:'Burgundy velvet, bronze details and champagne gold'},
  {id:'tournament',name:'Playful Tournament',description:'Bright red, teal, trophies and colourful game-night energy'},
- {id:'private-club',name:'Private Casino Club',description:'The approved cinematic emerald-and-gold club, game-ticket lobby and cashier'},
+ {id:'private-club',name:'Private Casino Club',description:'Vegas poker floor, club lobby and cashier, with light, dark or device colours'},
 ];
 export function PersonalAppearanceSettings(){
  const {preference,choose,visualStyle,chooseStyle,ready}=useContext(Context);
